@@ -15,7 +15,7 @@ fn cmake_lvgl() {
         .expect("DEP_LV_CONFIG_PATH must be set (points to dir containing lv_conf.h)");
     let target = std::env::var("TARGET").unwrap_or_default();
     let toolchain = if target.contains("esp32s3") { "toolchain-esp32s3.cmake" } else { "toolchain-esp32.cmake" };
-    let dst = Config::new("/home/openclaw/alternator-regulator/thirdparty/lvgl_rust_sys/lvgl")
+    let dst = Config::new(format!("{}/thirdparty/lvgl_rust_sys/lvgl", manifest_dir))
         .define("CMAKE_TOOLCHAIN_FILE", format!("{}/src/{}", manifest_dir, toolchain))
         .define("CMAKE_BUILD_TYPE", "Release")
         .define("CMAKE_VERBOSE_MAKEFILE", "ON")

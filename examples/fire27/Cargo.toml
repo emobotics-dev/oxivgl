@@ -1,0 +1,38 @@
+# SPDX-License-Identifier: GPL-3.0-only
+[package]
+name = "oxivgl-demo-fire27"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.86"
+publish = false
+
+[[bin]]
+name = "oxivgl-demo-fire27"
+path = "src/main.rs"
+test = false
+bench = false
+
+[dependencies]
+oxivgl          = { path = "../..", features = ["esp-hal", "log-04"] }
+
+# esp-hal family
+esp-alloc            = { git = "https://github.com/emobotics-dev/esp-hal.git", branch = "local", features = ["internal-heap-stats"] }
+esp-backtrace        = { git = "https://github.com/emobotics-dev/esp-hal.git", branch = "local", features = ["esp32", "panic-handler", "custom-halt", "colors", "println"] }
+esp-bootloader-esp-idf = { git = "https://github.com/emobotics-dev/esp-hal.git", branch = "local", features = ["esp32"] }
+esp-hal              = { git = "https://github.com/emobotics-dev/esp-hal.git", branch = "local", features = ["esp32", "unstable"] }
+esp-println          = { git = "https://github.com/emobotics-dev/esp-hal.git", branch = "local", features = ["esp32", "log-04", "colors", "uart"], default-features = false }
+esp-rtos             = { git = "https://github.com/emobotics-dev/esp-hal.git", branch = "local", features = ["esp32", "embassy"] }
+esp-sync             = { git = "https://github.com/emobotics-dev/esp-hal.git", branch = "local", features = ["esp32"] }
+
+# Embassy
+embassy-embedded-hal = { version = "0.5.0", features = ["time"] }
+embassy-executor     = { version = "0.9.1", features = ["nightly"] }
+embassy-sync         = "0.7.2"
+embassy-time         = "0.5.0"
+
+# Display
+lcd-async            = "0.1.1"
+
+# misc
+log                  = "0.4"
+static_cell          = { version = "2.1.1", features = ["nightly"] }
