@@ -27,3 +27,33 @@ log-04 = { package = "log", version = "0.4", optional = true }
 [build-dependencies]
 cmake = "0.1"
 cc = "1.2.38"
+
+[workspace]
+members = ["examples/fire27"]
+
+# ── Local development patches ─────────────────────────────────────────────────
+# These redirect git deps to the local alternator-regulator thirdparty checkouts.
+# Remove or adjust when working outside the emobotics-dev dev environment.
+
+[patch.'https://github.com/emobotics-dev/esp-hal.git']
+esp-hal                = { path = "/home/openclaw/alternator-regulator/thirdparty/esp-hal/esp-hal" }
+esp-alloc              = { path = "/home/openclaw/alternator-regulator/thirdparty/esp-hal/esp-alloc" }
+esp-backtrace          = { path = "/home/openclaw/alternator-regulator/thirdparty/esp-hal/esp-backtrace" }
+esp-bootloader-esp-idf = { path = "/home/openclaw/alternator-regulator/thirdparty/esp-hal/esp-bootloader-esp-idf" }
+esp-println            = { path = "/home/openclaw/alternator-regulator/thirdparty/esp-hal/esp-println" }
+esp-rtos               = { path = "/home/openclaw/alternator-regulator/thirdparty/esp-hal/esp-rtos" }
+esp-sync               = { path = "/home/openclaw/alternator-regulator/thirdparty/esp-hal/esp-sync" }
+
+
+
+[profile.dev]
+opt-level = "s"
+
+[profile.release]
+codegen-units = 1
+debug = 2
+debug-assertions = false
+incremental = false
+lto = "fat"
+opt-level = "s"
+overflow-checks = true
