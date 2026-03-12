@@ -231,6 +231,27 @@ impl<'p> Obj<'p> {
         self
     }
 
+    /// Apply a style to this object for the given selector.
+    /// Pass `0` for default state, `lv_state_t_LV_STATE_PRESSED` (= 128) for pressed.
+    ///
+    /// The `style` must outlive this object (see [`Style`](super::Style) docs).
+    pub fn add_style(&self, style: &super::Style, selector: u32) -> &Self {
+        assert_ne!(self.handle, null_mut(), "Obj handle cannot be null");
+        // SAFETY: handle non-null; style.inner pointer valid for style's lifetime.
+        unsafe {
+            lv_obj_add_style(self.handle, &style.inner as *const lv_style_t, selector)
+        };
+        self
+    }
+
+    /// Remove all styles from this object.
+    pub fn remove_style_all(&self) -> &Self {
+        assert_ne!(self.handle, null_mut(), "Obj handle cannot be null");
+        // SAFETY: handle non-null.
+        unsafe { lv_obj_remove_style_all(self.handle) };
+        self
+    }
+
     pub fn text_color(&self, color: u32) -> &Self {
         assert_ne!(self.handle, null_mut(), "Obj handle cannot be null");
         // SAFETY: handle non-null (asserted above).
