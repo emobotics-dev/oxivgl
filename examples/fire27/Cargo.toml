@@ -12,8 +12,27 @@ path = "src/main.rs"
 test = false
 bench = false
 
+[[bin]]
+name = "ex1"
+path = "src/bin/ex1.rs"
+test = false
+bench = false
+
+[[bin]]
+name = "ex2"
+path = "src/bin/ex2.rs"
+test = false
+bench = false
+
+[[bin]]
+name = "ex3"
+path = "src/bin/ex3.rs"
+test = false
+bench = false
+
 [dependencies]
 oxivgl          = { path = "../..", features = ["esp-hal", "log-04"] }
+lvgl_rust_sys   = { git = "https://github.com/emobotics-dev/lvgl_rust_sys.git", rev = "5cb45972e2ea0f5bcc009e64652f0734f8fd57a1", default-features = false }
 
 # esp-hal family
 esp-alloc            = { git = "https://github.com/emobotics-dev/esp-hal.git", branch = "local", features = ["internal-heap-stats"] }
