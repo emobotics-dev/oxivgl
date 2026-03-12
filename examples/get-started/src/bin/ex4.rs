@@ -26,7 +26,7 @@ unsafe extern "C" fn slider_event_cb(e: *mut lv_event_t) {
         (slider, label, val)
     };
     let mut s = heapless::String::<12>::new();
-    let _ = core::fmt::write(&mut s, format_args!("{}\0", val));
+    let _ = write!(&mut s, "{}\0", val);
     unsafe {
         lv_label_set_text(label, s.as_ptr() as *const core::ffi::c_char);
         lv_obj_align_to(label, slider, Align::OutTopMid as u32, 0, -15);
@@ -39,19 +39,20 @@ fn main() {
 
     let screen = Screen::active().expect("no active screen");
 
-    let _slider = Slider::new(&screen).expect("slider create failed");
-    _slider.width(200).center();
+    let slider = Slider::new(&screen).expect("slider create failed");
+    slider.width(200).center();
 
-    let _label = Label::new(&screen).expect("label create failed");
-    _label.text("0\0").expect("label text failed");
-    _label.align_to(&_slider, Align::OutTopMid, 0, -15);
+    let label = Label::new(&screen).expect("label create failed");
+    label.text("0\0").expect("label text failed");
+    label.align_to(&slider, Align::OutTopMid, 0, -15);
 
     // Register event with label ptr as user_data.
-    _slider.on_event(
+    slider.on_event(
         slider_event_cb,
         lv_event_code_t_LV_EVENT_VALUE_CHANGED,
-        _label.lv_handle() as *mut c_void,
+        label.lv_handle() as *mut c_void,
     );
 
+    // slider and label stay alive for the entire loop.
     oxivgl_examples_get_started::run_host_loop();
 }
