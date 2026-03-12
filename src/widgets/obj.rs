@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
-use core::{marker::PhantomData, ptr::null_mut};
+use core::{ffi::c_void, marker::PhantomData, ptr::null_mut};
 
 use lvgl_rust_sys::*;
 
@@ -276,6 +276,35 @@ impl<'p> Obj<'p> {
         assert_ne!(self.handle, null_mut(), "Obj handle cannot be null");
         // SAFETY: handle non-null (asserted above).
         unsafe { lv_obj_center(self.handle) };
+        self
+    }
+
+    /// Get child widget by index (0-based). Returns `None` if index out of range.
+    /// The returned `Child` does NOT own the pointer — LVGL frees it when the parent is deleted.
+    pub fn get_child(&self, idx: i32) -> Option<super::Child<Obj<'_>>> {
+        assert_ne!(self.handle, null_mut(), "Obj handle cannot be null");
+        // SAFETY: handle non-null (asserted above); LVGL returns NULL for out-of-range idx.
+        let child_ptr = unsafe { lv_obj_get_child(self.handle, idx) };
+        if child_ptr.is_null() {
+            None
+        } else {
+            Some(super::Child::new(Obj::from_raw(child_ptr)))
+        }
+    }
+
+    /// Add an event callback. `cb` is an `extern "C"` function pointer.
+    /// `filter`: use `lv_event_code_t_LV_EVENT_ALL` to receive all events,
+    /// or a specific code like `lv_event_code_t_LV_EVENT_CLICKED`.
+    /// `user_data`: arbitrary pointer passed to the callback; pass `core::ptr::null_mut()` if unused.
+    pub fn on_event(
+        &self,
+        cb: unsafe extern "C" fn(*mut lv_event_t),
+        filter: lv_event_code_t,
+        user_data: *mut c_void,
+    ) -> &Self {
+        assert_ne!(self.handle, null_mut(), "Obj handle cannot be null");
+        // SAFETY: handle non-null; cb is a valid extern "C" fn pointer.
+        unsafe { lv_obj_add_event_cb(self.handle, Some(cb), filter, user_data) };
         self
     }
 
