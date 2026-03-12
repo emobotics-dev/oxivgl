@@ -1,0 +1,65 @@
+# SPDX-License-Identifier: MIT OR Apache-2.0
+# CI: build oxivgl library + fire27 example for ESP32.
+# Runs inside ghcr.io/emobotics-dev/altreg-ci:latest on the self-hosted
+# runner group, which provides the Xtensa toolchain and private-repo access.
+#
+# Note: oxivgl requires a chip feature (e.g. esp32) from the consumer crate;
+# building the library in isolation without a chip context is not meaningful.
+# Building the example implicitly compiles the library with full chip context.
+
+name: CI
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+  workflow_dispatch:
+
+env:
+  CARGO_TERM_COLOR: always
+  RUSTUP_HOME: /opt/rustup
+  CARGO_HOME: /opt/cargo
+  CARGO_NET_GIT_FETCH_WITH_CLI: "true"
+  GIT_TERMINAL_PROMPT: "0"
+
+permissions:
+  contents: read
+  packages: read
+
+jobs:
+  build:
+    name: Build (ESP32)
+    runs-on:
+      group: rust
+      labels: [rust, esp32]
+    container:
+      image: ghcr.io/emobotics-dev/altreg-ci:latest
+      credentials:
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+
+    steps:
+      - name: Fix submodule URLs (relative → sibling-org HTTPS for CI)
+        run: |
+          git config --global credential.helper ""
+          git config --global \
+            url."https://github.com/emobotics-dev/".insteadOf \
+            "https://github.com/emobotics-dev/oxivgl/"
+
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Set ESP libclang + sysroot + PATH for firmware bindgen
+        run: |
+          ESP_LIBCLANG=$(cat /opt/esp_libclang_path)
+          [ -n "$ESP_LIBCLANG" ] && echo "LIBCLANG_PATH=$ESP_LIBCLANG" >> "$GITHUB_ENV"
+          ESP_SYSROOT=$(cat /opt/esp_sysroot_path)
+          [ -n "$ESP_SYSROOT" ] && echo "BINDGEN_EXTRA_CLANG_ARGS=--sysroot=$ESP_SYSROOT" >> "$GITHUB_ENV"
+          ESP_ELF_BIN=$(cat /opt/esp_elf_bin_path)
+          [ -n "$ESP_ELF_BIN" ] && echo "$ESP_ELF_BIN" >> "$GITHUB_PATH"
+
+      - name: Build example fire27 (ESP32)
+        run: cargo build --release -p oxivgl-demo-fire27
