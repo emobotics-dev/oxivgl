@@ -26,6 +26,13 @@ Button 2 uses a fully-rounded (pill) radius.
 
 ![ex3](screenshots/ex3.png)
 
+### Example 4 — Slider
+
+Centered slider; label above shows current value, updated live on `VALUE_CHANGED` events.
+On host (SDL2) the slider is fully interactive via mouse.
+
+![ex4](screenshots/ex4.png)
+
 ## Running on host
 
 ```sh
