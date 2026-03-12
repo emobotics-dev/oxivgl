@@ -1,0 +1,29 @@
+# SPDX-License-Identifier: GPL-3.0-only
+[package]
+name = "oxivgl"
+edition = "2024"
+version = "0.1.0"
+
+[lib]
+
+[features]
+default = []
+esp-hal = ["dep:esp-hal"]
+defmt = ["dep:defmt"]
+log-04 = ["dep:log-04"]
+
+[dependencies]
+lvgl_rust_sys = { path = "thirdparty/lvgl_rust_sys", default-features = false }
+embassy-sync = "0.7.2"
+embassy-time = "0.5.0"
+heapless = { version = "0.9.1", features = ["nightly"] }
+cfg-if = "1"
+thiserror-no-std = "2.0.2"
+critical-section = "1"
+esp-hal = { git = "https://github.com/emobotics-dev/esp-hal.git", branch = "local", features = ["unstable"], optional = true }
+defmt = { version = "1.0.1", optional = true }
+log-04 = { package = "log", version = "0.4", optional = true }
+
+[build-dependencies]
+cmake = "0.1"
+cc = "1.2.38"
