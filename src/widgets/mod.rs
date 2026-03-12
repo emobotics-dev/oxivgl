@@ -26,6 +26,7 @@ mod obj;
 mod palette;
 mod style;
 mod scale;
+mod slider;
 mod value_label;
 
 pub use arc::Arc;
@@ -40,6 +41,7 @@ pub use obj::{Align, AsLvHandle, Obj, Part, Screen, TextAlign};
 pub use palette::{palette_lighten, palette_main, GradDir, Palette};
 pub use style::{darken_filter_cb, ColorFilter, Style};
 pub use scale::{Scale, ScaleMode};
+pub use slider::Slider;
 pub use value_label::ValueLabel;
 
 /// Errors returned by widget constructors and setters.

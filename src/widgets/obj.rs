@@ -38,6 +38,18 @@ pub enum Align {
     LeftMid = 7,
     RightMid = 8,
     Center = 9,
+    OutTopLeft = 10,
+    OutTopMid = 11,
+    OutTopRight = 12,
+    OutBottomLeft = 13,
+    OutBottomMid = 14,
+    OutBottomRight = 15,
+    OutLeftTop = 16,
+    OutLeftMid = 17,
+    OutLeftBottom = 18,
+    OutRightTop = 19,
+    OutRightMid = 20,
+    OutRightBottom = 21,
 }
 
 /// Type-safe wrapper for `lv_text_align_t`.
@@ -297,6 +309,14 @@ impl<'p> Obj<'p> {
         assert_ne!(self.handle, null_mut(), "Obj handle cannot be null");
         // SAFETY: handle non-null (asserted above).
         unsafe { lv_obj_center(self.handle) };
+        self
+    }
+
+    /// Position this object relative to `base` using `lv_obj_align_to`.
+    pub fn align_to(&self, base: &impl AsLvHandle, align: Align, x: i32, y: i32) -> &Self {
+        assert_ne!(self.handle, null_mut(), "Obj handle cannot be null");
+        // SAFETY: handle and base.lv_handle() non-null (asserted / guaranteed by AsLvHandle).
+        unsafe { lv_obj_align_to(self.handle, base.lv_handle(), align as lv_align_t, x, y) };
         self
     }
 
