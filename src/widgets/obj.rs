@@ -265,6 +265,20 @@ impl<'p> Obj<'p> {
         self
     }
 
+    pub fn pos(&self, x: i32, y: i32) -> &Self {
+        assert_ne!(self.handle, null_mut(), "Obj handle cannot be null");
+        // SAFETY: handle non-null (asserted above).
+        unsafe { lv_obj_set_pos(self.handle, x, y) };
+        self
+    }
+
+    pub fn center(&self) -> &Self {
+        assert_ne!(self.handle, null_mut(), "Obj handle cannot be null");
+        // SAFETY: handle non-null (asserted above).
+        unsafe { lv_obj_center(self.handle) };
+        self
+    }
+
     /// Set `lv_obj_set_style_line_width` for the given LVGL style part.
     pub fn line_width(&self, part: Part, width: i32) -> &Self {
         assert_ne!(self.handle, null_mut(), "Obj handle cannot be null");
@@ -350,6 +364,12 @@ impl Screen {
     pub fn pad_right(&self, p: i32) -> &Self {
         // SAFETY: handle non-null (Screen::active() returns None for null).
         unsafe { lv_obj_set_style_pad_right(self.handle, p, 0) };
+        self
+    }
+
+    pub fn text_color(&self, color: u32) -> &Self {
+        // SAFETY: handle non-null (Screen::active() returns None for null).
+        unsafe { lv_obj_set_style_text_color(self.handle, lv_color_hex(color), 0) };
         self
     }
 }
