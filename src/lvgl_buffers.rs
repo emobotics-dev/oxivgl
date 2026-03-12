@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: GPL-3.0-only
+// SPDX-License-Identifier: MIT OR Apache-2.0
 use core::ffi::c_void;
 #[cfg(feature = "esp-hal")]
 use core::slice::from_raw_parts;
