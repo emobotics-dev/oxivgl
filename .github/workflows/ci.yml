@@ -2,6 +2,10 @@
 # CI: build oxivgl library + fire27 example for ESP32.
 # Runs inside ghcr.io/emobotics-dev/altreg-ci:latest on the self-hosted
 # runner group, which provides the Xtensa toolchain and private-repo access.
+#
+# Note: oxivgl requires a chip feature (e.g. esp32) from the consumer crate;
+# building the library in isolation without a chip context is not meaningful.
+# Building the example implicitly compiles the library with full chip context.
 
 name: CI
 
@@ -57,8 +61,5 @@ jobs:
           ESP_ELF_BIN=$(cat /opt/esp_elf_bin_path)
           [ -n "$ESP_ELF_BIN" ] && echo "$ESP_ELF_BIN" >> "$GITHUB_PATH"
 
-      - name: Build lib (ESP32)
-        run: cargo build --release --features esp-hal,log-04
-
-      - name: Build example fire27
+      - name: Build example fire27 (ESP32)
         run: cargo build --release -p oxivgl-demo-fire27
