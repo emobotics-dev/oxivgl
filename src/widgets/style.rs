@@ -124,5 +124,5 @@ pub unsafe extern "C" fn darken_filter_cb(
     opa: lv_opa_t,
 ) -> lv_color_t {
     // SAFETY: lv_color_darken is a pure color computation.
-    lv_color_darken(color, opa)
+    unsafe { lv_color_darken(color, opa) }
 }
