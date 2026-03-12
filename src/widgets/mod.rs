@@ -23,6 +23,7 @@ mod label;
 mod led;
 mod line;
 mod obj;
+mod palette;
 mod scale;
 mod value_label;
 
@@ -35,6 +36,7 @@ pub use label::Label;
 pub use led::Led;
 pub use line::Line;
 pub use obj::{Align, AsLvHandle, Obj, Part, Screen, TextAlign};
+pub use palette::{palette_lighten, palette_main, GradDir, Palette};
 pub use scale::{Scale, ScaleMode};
 pub use value_label::ValueLabel;
 
