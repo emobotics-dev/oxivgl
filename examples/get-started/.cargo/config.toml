@@ -1,5 +1,3 @@
 [build]
 target = "x86_64-unknown-linux-gnu"
 
-[unstable]
-build-std = []
