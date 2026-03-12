@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: GPL-3.0-only
+// SPDX-License-Identifier: MIT OR Apache-2.0
 use embassy_time::{Duration, Timer};
 
 use lvgl_rust_sys::{lv_timer_handler, LV_DEF_REFR_PERIOD};
