@@ -24,6 +24,7 @@ mod led;
 mod line;
 mod obj;
 mod palette;
+mod style;
 mod scale;
 mod value_label;
 
@@ -37,6 +38,7 @@ pub use led::Led;
 pub use line::Line;
 pub use obj::{Align, AsLvHandle, Obj, Part, Screen, TextAlign};
 pub use palette::{palette_lighten, palette_main, GradDir, Palette};
+pub use style::{darken_filter_cb, ColorFilter, Style};
 pub use scale::{Scale, ScaleMode};
 pub use value_label::ValueLabel;
 
