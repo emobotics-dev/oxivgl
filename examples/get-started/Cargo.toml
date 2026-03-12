@@ -1,0 +1,25 @@
+# SPDX-License-Identifier: MIT OR Apache-2.0
+[package]
+name = "oxivgl-examples-get-started"
+version = "0.1.0"
+edition = "2024"
+publish = false
+
+[[bin]]
+name = "ex1"
+path = "src/bin/ex1.rs"
+
+[[bin]]
+name = "ex2"
+path = "src/bin/ex2.rs"
+
+[[bin]]
+name = "ex3"
+path = "src/bin/ex3.rs"
+
+[dependencies]
+oxivgl = { path = "../..", features = ["log-04"] }
+lvgl_rust_sys = { git = "https://github.com/emobotics-dev/lvgl_rust_sys.git", rev = "5cb45972e2ea0f5bcc009e64652f0734f8fd57a1", default-features = false }
+log = "0.4"
+env_logger = "0.11"
+static_cell = { version = "2.1.1", features = ["nightly"] }

@@ -30,7 +30,7 @@ cmake = "0.1"
 cc = "1.2.38"
 
 [workspace]
-members = ["examples/fire27"]
+members = ["examples/fire27", "examples/get-started"]
 
 [profile.dev]
 opt-level = "s"
