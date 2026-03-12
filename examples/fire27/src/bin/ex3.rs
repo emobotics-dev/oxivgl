@@ -124,6 +124,7 @@ impl View for Ex3View {
         let btn1 = Button::new(&screen)?;
         btn1.remove_style_all().pos(10, 10).size(120, 50);
         btn1.add_style(&style_btn, 0);
+        btn1.add_style(&style_pressed, 0x0020); // LV_STATE_PRESSED
 
         let lbl1 = Label::new(&btn1)?;
         lbl1.text("Button\0")?.center();
@@ -132,6 +133,7 @@ impl View for Ex3View {
         btn2.remove_style_all().pos(10, 80).size(120, 50);
         btn2.add_style(&style_btn, 0);
         btn2.add_style(&style_red, 0);
+        btn2.add_style(&style_pressed, 0x0020); // LV_STATE_PRESSED
         unsafe {
             lvgl_rust_sys::lv_obj_set_style_radius(btn2.lv_handle(), LV_RADIUS_CIRCLE, 0);
         }
