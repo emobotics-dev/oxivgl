@@ -8,7 +8,7 @@ use lvgl_rust_sys::*;
 use oxivgl::{
     lvgl::LvglDriver,
     widgets::{
-        Align, AsLvHandle, Button, ColorFilter, GradDir, Label, Palette, Screen, Style,
+        Align, AsLvHandle, Button, ColorFilter, GradDir, Label, Palette, Screen, Slider, Style,
         darken_filter_cb, palette_lighten, palette_main,
     },
 };
@@ -147,5 +147,46 @@ fn screenshots_all() {
         capture("ex3");
         // Drop order (reverse declaration): _lbl2, btn2, _lbl1, btn1, style_red,
         // style_pressed, style_btn, color_filter — widgets before styles, correct.
+    }
+
+    // ── Ex4: Slider ──────────────────────────────────────────────────────────────
+    unsafe { lv_screen_load(lv_obj_create(core::ptr::null_mut())) };
+    {
+        use core::ffi::c_void;
+        use core::fmt::Write as _;
+
+        unsafe extern "C" fn slider_event_cb(e: *mut lv_event_t) {
+            // SAFETY: e is a valid lv_event_t pointer; user_data is the label ptr.
+            let (slider, label, val) = unsafe {
+                let slider = lv_event_get_target_obj(e);
+                let label = lv_event_get_user_data(e) as *mut lv_obj_t;
+                let val = lv_slider_get_value(slider);
+                (slider, label, val)
+            };
+            let mut s = heapless::String::<12>::new();
+            let _ = write!(s, "{}\0", val);
+            unsafe {
+                lv_label_set_text(label, s.as_ptr() as *const core::ffi::c_char);
+                lv_obj_align_to(label, slider, Align::OutTopMid as u32, 0, -15);
+            }
+        }
+
+        let screen = Screen::active().expect("active screen");
+
+        let slider = Slider::new(&screen).expect("slider");
+        slider.width(200).center();
+
+        let label = Label::new(&screen).expect("label");
+        label.text("0\0").expect("text");
+        label.align_to(&slider, Align::OutTopMid, 0, -15);
+
+        slider.on_event(
+            slider_event_cb,
+            lv_event_code_t_LV_EVENT_VALUE_CHANGED,
+            label.lv_handle() as *mut c_void,
+        );
+
+        pump(10);
+        capture("ex4");
     }
 }
