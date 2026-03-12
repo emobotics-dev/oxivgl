@@ -1,6 +1,6 @@
 # oxivgl — Getting Started Examples
 
-Rust ports of the [LVGL Getting Started examples](https://docs.lvgl.io/master/examples.html).
+Rust ports of the [LVGL Getting Started examples](https://docs.lvgl.io/9.3/examples.html).
 
 Each example runs on both **ESP32 (fire27)** via the `examples/fire27` crate and on the
 **x86_64 host** (this crate) for rapid iteration and screenshot capture.
