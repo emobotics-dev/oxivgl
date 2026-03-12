@@ -1,0 +1,3 @@
+[submodule "thirdparty/lvgl_rust_sys"]
+	path = thirdparty/lvgl_rust_sys
+	url = https://github.com/Xila-Project/lvgl_rust_sys.git
