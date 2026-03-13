@@ -1,11 +1,10 @@
 # SPDX-License-Identifier: MIT OR Apache-2.0
-# CI: build oxivgl library + fire27 example for ESP32.
-# Runs inside ghcr.io/emobotics-dev/altreg-ci:latest on the self-hosted
-# runner group, which provides the Xtensa toolchain and private-repo access.
+# CI for oxivgl. Two parallel jobs:
+#   host     — unit, doc, and integration tests on x86_64 (headless SDL2)
+#   firmware — cross-compile example for xtensa-esp32-none-elf
 #
-# Note: oxivgl requires a chip feature (e.g. esp32) from the consumer crate;
-# building the library in isolation without a chip context is not meaningful.
-# Building the example implicitly compiles the library with full chip context.
+# Both run inside ghcr.io/emobotics-dev/altreg-ci:latest on the self-hosted
+# runner group (Xtensa toolchain, libclang, SDL2 pre-installed).
 
 name: CI
 
@@ -28,7 +27,47 @@ permissions:
   packages: read
 
 jobs:
-  build:
+  # ── Host tests ─────────────────────────────────────────────────────────
+  host:
+    name: Host tests
+    runs-on:
+      group: rust
+      labels: [rust, esp32]
+    container:
+      image: ghcr.io/emobotics-dev/altreg-ci:latest
+      credentials:
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+
+    steps:
+      - name: Fix submodule URLs (relative → sibling-org HTTPS for CI)
+        run: |
+          git config --global credential.helper ""
+          git config --global \
+            url."https://github.com/emobotics-dev/".insteadOf \
+            "https://github.com/emobotics-dev/oxivgl/"
+
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Use system 64-bit libclang for host builds
+        run: echo "LIBCLANG_PATH=$(llvm-config --libdir)" >> "$GITHUB_ENV"
+
+      - name: Unit tests
+        run: cargo +nightly test --target x86_64-unknown-linux-gnu --lib
+
+      - name: Doc tests
+        run: cargo +nightly test --target x86_64-unknown-linux-gnu --doc
+
+      - name: Integration tests (headless SDL2)
+        run: |
+          SDL_VIDEODRIVER=dummy cargo +nightly test --test integration \
+            --target x86_64-unknown-linux-gnu -- --test-threads=1
+
+  # ── ESP32 firmware ─────────────────────────────────────────────────────
+  firmware:
     name: Build (ESP32)
     runs-on:
       group: rust
