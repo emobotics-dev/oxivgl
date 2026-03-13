@@ -1,0 +1,46 @@
+#![cfg_attr(target_arch = "xtensa", no_std, no_main)]
+#![cfg_attr(target_arch = "xtensa", feature(impl_trait_in_assoc_type, type_alias_impl_trait))]
+// SPDX-License-Identifier: MIT OR Apache-2.0
+//! Style 5 — Shadow
+
+extern crate alloc;
+
+use alloc::boxed::Box;
+use oxivgl::{
+    view::View,
+    widgets::{Obj, Palette, Screen, Style, WidgetError, palette_lighten, palette_main},
+};
+
+struct Style5 {
+    _obj: Obj<'static>,
+    _style: Box<Style>,
+}
+
+impl View for Style5 {
+    fn create() -> Result<Self, WidgetError> {
+        let screen = Screen::active().ok_or(WidgetError::LvglNullPointer)?;
+
+        let mut style = Box::new(Style::new());
+        style
+            .radius(5)
+            .bg_opa(255)
+            .bg_color(palette_lighten(Palette::Grey, 1))
+            .shadow_width(55)
+            .shadow_color(palette_main(Palette::Blue));
+
+        let obj = Obj::new(&screen)?;
+        obj.add_style(&style, 0);
+        obj.center();
+
+        Ok(Self {
+            _obj: obj,
+            _style: style,
+        })
+    }
+
+    fn update(&mut self) -> Result<(), WidgetError> {
+        Ok(())
+    }
+}
+
+oxivgl_examples_common::example_main!(Style5);
