@@ -1,0 +1,43 @@
+#![cfg_attr(target_arch = "xtensa", no_std, no_main)]
+#![cfg_attr(target_arch = "xtensa", feature(impl_trait_in_assoc_type, type_alias_impl_trait))]
+// SPDX-License-Identifier: MIT OR Apache-2.0
+//! Style 7 — Arc color and width
+
+extern crate alloc;
+
+use alloc::boxed::Box;
+use oxivgl::{
+    view::View,
+    widgets::{Arc, Palette, Screen, Style, WidgetError, palette_main},
+};
+
+struct Style7 {
+    _arc: Arc<'static>,
+    _style: Box<Style>,
+}
+
+impl View for Style7 {
+    fn create() -> Result<Self, WidgetError> {
+        let screen = Screen::active().ok_or(WidgetError::LvglNullPointer)?;
+
+        let mut style = Box::new(Style::new());
+        style
+            .arc_color(palette_main(Palette::Red))
+            .arc_width(4);
+
+        let arc = Arc::new(&screen)?;
+        arc.add_style(&style, 0);
+        arc.center();
+
+        Ok(Self {
+            _arc: arc,
+            _style: style,
+        })
+    }
+
+    fn update(&mut self) -> Result<(), WidgetError> {
+        Ok(())
+    }
+}
+
+oxivgl_examples_common::example_main!(Style7);
