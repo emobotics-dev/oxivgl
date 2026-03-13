@@ -72,6 +72,14 @@ pub mod props {
     /// Border width property.
     pub const BORDER_WIDTH: lv_style_prop_t =
         lvgl_rust_sys::_lv_style_id_t_LV_STYLE_BORDER_WIDTH as lv_style_prop_t;
+    /// Background opacity property.
+    pub const BG_OPA: lv_style_prop_t =
+        lvgl_rust_sys::_lv_style_id_t_LV_STYLE_BG_OPA as lv_style_prop_t;
+    /// Width property.
+    pub const WIDTH: lv_style_prop_t =
+        lvgl_rust_sys::_lv_style_id_t_LV_STYLE_WIDTH as lv_style_prop_t;
+    /// Sentinel: end of property list.
+    pub const LAST: lv_style_prop_t = 0;
 }
 
 /// Bitflags for border side selection. Combine with `|` operator.
@@ -260,6 +268,27 @@ impl Style {
     pub fn pad_left(&mut self, p: i32) -> &mut Self {
         // SAFETY: inner was initialized by lv_style_init.
         unsafe { lv_style_set_pad_left(&mut self.inner, p) };
+        self
+    }
+
+    /// Set right padding.
+    pub fn pad_right(&mut self, p: i32) -> &mut Self {
+        // SAFETY: inner was initialized by lv_style_init.
+        unsafe { lv_style_set_pad_right(&mut self.inner, p) };
+        self
+    }
+
+    /// Set top padding.
+    pub fn pad_top(&mut self, p: i32) -> &mut Self {
+        // SAFETY: inner was initialized by lv_style_init.
+        unsafe { lv_style_set_pad_top(&mut self.inner, p) };
+        self
+    }
+
+    /// Set scrollbar / indicator length.
+    pub fn length(&mut self, l: i32) -> &mut Self {
+        // SAFETY: inner was initialized by lv_style_init.
+        unsafe { lv_style_set_length(&mut self.inner, l) };
         self
     }
 
