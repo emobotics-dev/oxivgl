@@ -23,7 +23,10 @@ mod label;
 mod led;
 mod line;
 mod obj;
+mod palette;
+mod style;
 mod scale;
+mod slider;
 mod value_label;
 
 pub use arc::Arc;
@@ -35,8 +38,23 @@ pub use label::Label;
 pub use led::Led;
 pub use line::Line;
 pub use obj::{Align, AsLvHandle, Obj, Part, Screen, TextAlign};
+pub use palette::{
+    color_black, color_make, color_white, palette_darken, palette_lighten, palette_main, GradDir,
+    Palette,
+};
+pub use style::{
+    LV_STATE_PRESSED, LV_SIZE_CONTENT, BorderSide, ColorFilter, Style, TextDecor, TransitionDsc,
+    anim_path_linear, darken_filter_cb, lv_pct, props,
+};
 pub use scale::{Scale, ScaleMode};
+pub use slider::Slider;
 pub use value_label::ValueLabel;
+
+// Re-export raw event types so example callbacks don't need `lvgl_rust_sys`.
+pub use lvgl_rust_sys::{lv_event_t, lv_event_code_t};
+/// `LV_EVENT_VALUE_CHANGED` — fired by sliders, dropdowns, etc.
+pub const LV_EVENT_VALUE_CHANGED: lv_event_code_t =
+    lvgl_rust_sys::lv_event_code_t_LV_EVENT_VALUE_CHANGED;
 
 /// Errors returned by widget constructors and setters.
 #[derive(Error, Debug)]

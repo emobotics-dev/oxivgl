@@ -58,7 +58,7 @@
     #define LV_DRAW_SW_SUPPORT_RGB565       1
     #define LV_DRAW_SW_SUPPORT_RGB565_SWAPPED 1
     #define LV_DRAW_SW_SUPPORT_RGB565A8     0
-    #define LV_DRAW_SW_SUPPORT_RGB888       0
+    #define LV_DRAW_SW_SUPPORT_RGB888       1
     #define LV_DRAW_SW_SUPPORT_XRGB8888    0
     #define LV_DRAW_SW_SUPPORT_ARGB8888    0
     #define LV_DRAW_SW_SUPPORT_ARGB8888_PREMULTIPLIED 0
@@ -78,7 +78,7 @@
     #endif
 
     #define  LV_USE_DRAW_SW_ASM     LV_DRAW_SW_ASM_NONE
-    #define LV_USE_DRAW_SW_COMPLEX_GRADIENTS    0
+    #define LV_USE_DRAW_SW_COMPLEX_GRADIENTS    1
 #endif
 
 #define LV_USE_DRAW_VGLITE 0
@@ -142,7 +142,7 @@
 
 #define LV_CACHE_DEF_SIZE       0
 #define LV_IMAGE_HEADER_CACHE_DEF_CNT 0
-#define LV_GRADIENT_MAX_STOPS   2
+#define LV_GRADIENT_MAX_STOPS   8
 #define LV_COLOR_MIX_ROUND_OFS  0
 #define LV_OBJ_STYLE_CACHE      0
 #define LV_USE_OBJ_ID           0
@@ -262,7 +262,7 @@
 #define LV_USE_MSGBOX     0
 #define LV_USE_ROLLER     0
 #define LV_USE_SCALE      1
-#define LV_USE_SLIDER     0
+#define LV_USE_SLIDER     1
 #define LV_USE_SPAN       0
 #define LV_USE_SPINBOX    0
 #define LV_USE_SPINNER    0
@@ -279,7 +279,7 @@
 
 #define LV_USE_THEME_DEFAULT 1
 #if LV_USE_THEME_DEFAULT
-    #define LV_THEME_DEFAULT_DARK 1
+    #define LV_THEME_DEFAULT_DARK 0
     #define LV_THEME_DEFAULT_GROW 1
     #define LV_THEME_DEFAULT_TRANSITION_TIME 80
 #endif
