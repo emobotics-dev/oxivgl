@@ -5,8 +5,11 @@ use lvgl_rust_sys::*;
 #[repr(u32)]
 #[derive(Clone, Copy, Debug)]
 pub enum GradExtend {
+    /// Extend by padding with the edge color.
     Pad = lv_grad_extend_t_LV_GRAD_EXTEND_PAD,
+    /// Repeat the gradient pattern.
     Repeat = lv_grad_extend_t_LV_GRAD_EXTEND_REPEAT,
+    /// Reflect (mirror) the gradient pattern.
     Reflect = lv_grad_extend_t_LV_GRAD_EXTEND_REFLECT,
 }
 

@@ -43,6 +43,7 @@ impl<'p> Deref for Bar<'p> {
 }
 
 impl<'p> Bar<'p> {
+    /// Create a new bar (progress bar) widget.
     pub fn new(parent: &impl AsLvHandle) -> Result<Self, WidgetError> {
         let parent_ptr = parent.lv_handle();
         assert_ne!(parent_ptr, null_mut(), "Parent widget cannot be null");

@@ -5,24 +5,43 @@ use lvgl_rust_sys::*;
 #[repr(u32)]
 #[derive(Clone, Copy, Debug)]
 pub enum Palette {
+    /// Material Red.
     Red = 0,
+    /// Material Pink.
     Pink = 1,
+    /// Material Purple.
     Purple = 2,
+    /// Material Deep Purple.
     DeepPurple = 3,
+    /// Material Indigo.
     Indigo = 4,
+    /// Material Blue.
     Blue = 5,
+    /// Material Light Blue.
     LightBlue = 6,
+    /// Material Cyan.
     Cyan = 7,
+    /// Material Teal.
     Teal = 8,
+    /// Material Green.
     Green = 9,
+    /// Material Light Green.
     LightGreen = 10,
+    /// Material Lime.
     Lime = 11,
+    /// Material Yellow.
     Yellow = 12,
+    /// Material Amber.
     Amber = 13,
+    /// Material Orange.
     Orange = 14,
+    /// Material Deep Orange.
     DeepOrange = 15,
+    /// Material Brown.
     Brown = 16,
+    /// Material Blue Grey.
     BlueGrey = 17,
+    /// Material Grey.
     Grey = 18,
 }
 
@@ -30,11 +49,17 @@ pub enum Palette {
 #[repr(u32)]
 #[derive(Clone, Copy, Debug)]
 pub enum GradDir {
+    /// No gradient.
     None = 0,
+    /// Vertical (top to bottom).
     Ver = 1,
+    /// Horizontal (left to right).
     Hor = 2,
+    /// Linear gradient with custom angle.
     Linear = 3,
+    /// Radial gradient from center.
     Radial = 4,
+    /// Conical (sweep) gradient.
     Conical = 5,
 }
 

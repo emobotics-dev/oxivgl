@@ -31,6 +31,7 @@ impl<'p> Deref for Slider<'p> {
 }
 
 impl<'p> Slider<'p> {
+    /// Create a new slider widget.
     pub fn new(parent: &impl AsLvHandle) -> Result<Self, WidgetError> {
         let parent_ptr = parent.lv_handle();
         assert_ne!(parent_ptr, null_mut(), "Parent widget cannot be null");

@@ -40,11 +40,13 @@ impl<'p> Deref for ValueLabel<'p> {
 }
 
 impl<'p> ValueLabel<'p> {
+    /// Create a new value label with the given unit suffix.
     pub fn new(parent: &impl AsLvHandle, unit: &'p str) -> Result<Self, WidgetError> {
         let label = Label::new(parent)?;
         Ok(ValueLabel { label, unit })
     }
 
+    /// Update the displayed value. Formats as "{value:.1}{unit}".
     pub fn set_value(&mut self, value: f32) -> Result<(), WidgetError> {
         let s: String<10> = format!("{:.1}{}", value, self.unit)?;
         self.label.text(s.as_str());
