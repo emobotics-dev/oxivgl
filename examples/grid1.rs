@@ -47,8 +47,8 @@ impl View for Grid1 {
 
             let label = Label::new(&btn)?;
             let mut buf = heapless::String::<12>::new();
-            let _ = core::fmt::Write::write_fmt(&mut buf, format_args!("c{}, r{}\0", col, row));
-            label.text(&buf)?.center();
+            let _ = core::fmt::Write::write_fmt(&mut buf, format_args!("c{}, r{}", col, row));
+            label.text(&buf).center();
 
             let _ = buttons.push(btn);
             let _ = labels.push(label);

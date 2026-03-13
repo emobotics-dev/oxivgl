@@ -51,7 +51,7 @@ impl View for Style11 {
         obj_base.align(Align::LeftMid, 20, 0);
 
         let label_base = Label::new(&obj_base)?;
-        label_base.text("Base\0")?.center();
+        label_base.text("Base").center();
 
         let obj_warn = Obj::new(&screen)?;
         obj_warn.add_style(&style_base, 0);
@@ -59,7 +59,7 @@ impl View for Style11 {
         obj_warn.align(Align::RightMid, -20, 0);
 
         let label_warn = Label::new(&obj_warn)?;
-        label_warn.text("Warning\0")?.center();
+        label_warn.text("Warning").center();
 
         Ok(Self {
             _label_warn: label_warn,

@@ -26,6 +26,11 @@ impl GradDsc {
         }
     }
 
+    /// Create a heap-allocated gradient descriptor.
+    pub fn boxed() -> alloc::boxed::Box<Self> {
+        alloc::boxed::Box::new(Self::new())
+    }
+
     /// Initialize gradient color stops.
     /// `colors`: array of stop colors.
     /// `opas`: per-stop opacity (or empty for all-255).

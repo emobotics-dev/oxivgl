@@ -11,11 +11,8 @@
 //! physical input is missing.
 
 use oxivgl::{
-    view::{Event, View},
-    widgets::{
-        Button, LV_EVENT_CLICKED, LV_EVENT_LONG_PRESSED, LV_EVENT_LONG_PRESSED_REPEAT,
-        LV_EVENT_PRESSED, LV_OBJ_FLAG_EVENT_BUBBLE, Label, Screen, WidgetError,
-    },
+    view::View,
+    widgets::{Button, Event, EventCode, Label, Screen, WidgetError},
 };
 
 struct EventButton {
@@ -35,13 +32,13 @@ impl View for EventButton {
 
         let btn = Button::new(&screen)?;
         btn.size(100, 50).center();
-        btn.add_flag(LV_OBJ_FLAG_EVENT_BUBBLE);
+        btn.bubble_events();
 
         let btn_label = Label::new(&btn)?;
-        btn_label.text("Click me!\0")?.center();
+        btn_label.text("Click me!").center();
 
         let info_label = Label::new(&screen)?;
-        info_label.set_text("The last button event:\nNone");
+        info_label.text("The last button event:\nNone");
 
         Ok(Self {
             btn,
@@ -55,13 +52,13 @@ impl View for EventButton {
             return;
         }
         let text = match event.code() {
-            LV_EVENT_PRESSED => "The last button event:\nLV_EVENT_PRESSED",
-            LV_EVENT_CLICKED => "The last button event:\nLV_EVENT_CLICKED",
-            LV_EVENT_LONG_PRESSED => "The last button event:\nLV_EVENT_LONG_PRESSED",
-            LV_EVENT_LONG_PRESSED_REPEAT => "The last button event:\nLV_EVENT_LONG_PRESSED_REPEAT",
+            EventCode::PRESSED => "The last button event:\nLV_EVENT_PRESSED",
+            EventCode::CLICKED => "The last button event:\nLV_EVENT_CLICKED",
+            EventCode::LONG_PRESSED => "The last button event:\nLV_EVENT_LONG_PRESSED",
+            EventCode::LONG_PRESSED_REPEAT => "The last button event:\nLV_EVENT_LONG_PRESSED_REPEAT",
             _ => return,
         };
-        self.info_label.set_text(text);
+        self.info_label.text(text);
     }
 
     fn update(&mut self) -> Result<(), WidgetError> {

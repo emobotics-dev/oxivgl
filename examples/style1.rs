@@ -35,7 +35,7 @@ impl View for Style1 {
         obj.add_style(&style, 0);
 
         let label = Label::new(&obj)?;
-        label.text("Hello\0")?;
+        label.text("Hello");
 
         Ok(Self {
             _label: label,

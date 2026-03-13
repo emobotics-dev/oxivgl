@@ -10,7 +10,7 @@ use super::{
 
 /// LVGL slider widget (native range 0–100 by default).
 ///
-/// Use [`on_event`](Obj::on_event) with `lv_event_code_t_LV_EVENT_VALUE_CHANGED`
+/// Use [`on_event`](Obj::on_event) with `EventCode::VALUE_CHANGED`
 /// to react to slider movement.
 #[derive(Debug)]
 pub struct Slider<'p> {

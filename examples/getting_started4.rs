@@ -21,7 +21,7 @@ impl View for GettingStarted4 {
         slider.width(200).center();
 
         let label = Label::new(&screen)?;
-        label.text("0\0")?;
+        label.text("0");
         label.align_to(&slider, Align::OutTopMid, 0, -15);
 
         Ok(Self {

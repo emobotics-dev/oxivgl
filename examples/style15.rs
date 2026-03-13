@@ -24,19 +24,19 @@ impl View for Style15 {
         let btn1 = Button::new(&screen)?;
         btn1.size(100, 40).align(Align::Center, 0, -70);
         let label1 = Label::new(&btn1)?;
-        label1.text("Normal\0")?.center();
+        label1.text("Normal").center();
 
         let btn2 = Button::new(&screen)?;
         btn2.size(100, 40).opa(127).align(Align::Center, 0, 0);
         let label2 = Label::new(&btn2)?;
-        label2.text("Opa:50%\0")?.center();
+        label2.text("Opa:50%").center();
 
         let btn3 = Button::new(&screen)?;
         btn3.size(100, 40)
             .opa(178)
             .align(Align::Center, 0, 70);
         let label3 = Label::new(&btn3)?;
-        label3.text("Opa:70%\0")?.center();
+        label3.text("Opa:70%").center();
 
         Ok(Self {
             _label3: label3,

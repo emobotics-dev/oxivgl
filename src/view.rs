@@ -8,43 +8,8 @@ use lvgl_rust_sys::*;
 use crate::{
     lvgl::LvglDriver,
     lvgl_buffers::{lvgl_disp_init, LvglBuffers, DISPLAY_READY},
-    widgets::WidgetError,
+    widgets::{event::Event, EventCode, WidgetError},
 };
-
-/// Safe wrapper around an LVGL event (`lv_event_t`).
-///
-/// Passed to [`View::on_event`] — valid only for the duration of the callback.
-pub struct Event {
-    raw: *mut lv_event_t,
-}
-
-impl Event {
-    pub(crate) fn from_raw(raw: *mut lv_event_t) -> Self {
-        Self { raw }
-    }
-
-    /// Event code (e.g. `LV_EVENT_CLICKED`).
-    pub fn code(&self) -> lv_event_code_t {
-        unsafe { lv_event_get_code(self.raw) }
-    }
-
-    /// Raw handle of the widget that originally received the event.
-    pub fn target_handle(&self) -> *mut lv_obj_t {
-        unsafe { lv_event_get_target_obj(self.raw) }
-    }
-
-    /// Raw handle of the widget whose event handler is currently running
-    /// (differs from target when events bubble).
-    pub fn current_target_handle(&self) -> *mut lv_obj_t {
-        unsafe { lv_event_get_current_target_obj(self.raw) }
-    }
-
-    /// Set a style property on the event target. Convenience for event handlers
-    /// that need to modify the originating widget (e.g. event bubbling).
-    pub fn target_style_bg_color(&self, color: lv_color_t, selector: u32) {
-        unsafe { lv_obj_set_style_bg_color(self.target_handle(), color, selector) };
-    }
-}
 
 /// UI view trait. Implement this for each screen layout.
 ///
@@ -53,7 +18,7 @@ impl Event {
 ///
 /// Override [`on_event`](View::on_event) to handle LVGL widget events (clicks,
 /// presses, etc.) without writing `unsafe extern "C"` callbacks. Widgets that
-/// should deliver events to `on_event` must have `LV_OBJ_FLAG_EVENT_BUBBLE`
+/// should deliver events to `on_event` must have `ObjFlag::EVENT_BUBBLE`
 /// set so the event reaches the screen-level handler.
 ///
 /// For nested widget trees (e.g. buttons inside a container), override
@@ -70,6 +35,7 @@ pub trait View: Sized {
     /// Default registers on the active screen only. Override to register on
     /// additional objects (e.g. containers that catch bubbled events).
     fn register_events(&mut self) {
+        // SAFETY: lv_screen_active() is valid after lv_init().
         register_event_on(self, unsafe { lv_screen_active() });
     }
 }
@@ -89,11 +55,13 @@ pub fn register_view_events<V: View>(view: &mut V) {
 /// or other intermediate objects that don't bubble to the screen.
 pub fn register_event_on<V: View>(view: &mut V, obj: *mut lv_obj_t) {
     let view_ptr = view as *mut V as *mut c_void;
+    // SAFETY: obj must be a valid LVGL object; view_ptr remains valid for the
+    // LVGL display lifetime (guaranteed by run_lvgl / host_main!).
     unsafe {
         lv_obj_add_event_cb(
             obj,
             Some(view_event_trampoline::<V>),
-            lv_event_code_t_LV_EVENT_ALL,
+            EventCode::ALL.0,
             view_ptr,
         );
     };
