@@ -118,6 +118,9 @@ pub unsafe fn lvgl_disp_init<const BYTES: usize>(w: i32, h: i32, bufs: &'static 
         lv_display_set_flush_cb(disp, Some(flush_callback));
         #[cfg(feature = "esp-hal")]
         lv_display_set_flush_wait_cb(disp, Some(wait_callback));
+        // On non-esp-hal targets the flush task never runs; signal ready immediately.
+        #[cfg(not(feature = "esp-hal"))]
+        DISPLAY_READY.signal(());
     }
 }
 

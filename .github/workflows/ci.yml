@@ -61,5 +61,5 @@ jobs:
           ESP_ELF_BIN=$(cat /opt/esp_elf_bin_path)
           [ -n "$ESP_ELF_BIN" ] && echo "$ESP_ELF_BIN" >> "$GITHUB_PATH"
 
-      - name: Build example fire27 (ESP32)
-        run: cargo build --release -p oxivgl-demo-fire27
+      - name: Build example getting_started1 (ESP32)
+        run: cargo +esp -Zbuild-std=alloc,core build --release --example getting_started1
