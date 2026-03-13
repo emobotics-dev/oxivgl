@@ -21,7 +21,7 @@ impl View for GettingStarted2 {
         btn.pos(10, 10).size(120, 50);
 
         let label = Label::new(&btn)?;
-        label.text("Button\0")?.center();
+        label.text("Button").center();
 
         Ok(Self {
             _btn: btn,

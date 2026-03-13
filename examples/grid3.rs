@@ -47,8 +47,8 @@ impl View for Grid3 {
 
             let label = Label::new(&obj)?;
             let mut buf = heapless::String::<8>::new();
-            let _ = core::fmt::Write::write_fmt(&mut buf, format_args!("{},{}\0", col, row));
-            label.text(&buf)?.center();
+            let _ = core::fmt::Write::write_fmt(&mut buf, format_args!("{},{}", col, row));
+            label.text(&buf).center();
 
             let _ = items.push(obj);
             let _ = labels.push(label);

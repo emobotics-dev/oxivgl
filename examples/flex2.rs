@@ -9,8 +9,8 @@
 use oxivgl::{
     view::View,
     widgets::{
-        FlexAlign, FlexFlow, Label, Obj, Screen, Style, WidgetError, LV_LAYOUT_FLEX,
-        LV_OBJ_FLAG_CHECKABLE, LV_SIZE_CONTENT,
+        FlexAlign, FlexFlow, Label, Layout, Obj, ObjFlag, Screen, Style, WidgetError,
+        LV_SIZE_CONTENT,
     },
 };
 
@@ -29,7 +29,7 @@ impl View for Flex2 {
         style
             .flex_flow(FlexFlow::RowWrap)
             .flex_main_place(FlexAlign::SpaceEvenly)
-            .layout(LV_LAYOUT_FLEX);
+            .layout(Layout::Flex);
 
         let cont = Obj::new(&screen)?;
         cont.size(300, 220).center();
@@ -41,12 +41,12 @@ impl View for Flex2 {
         for i in 0..8u32 {
             let obj = Obj::new(&cont)?;
             obj.size(70, LV_SIZE_CONTENT);
-            obj.add_flag(LV_OBJ_FLAG_CHECKABLE);
+            obj.add_flag(ObjFlag::CHECKABLE);
 
             let label = Label::new(&obj)?;
             let mut buf = heapless::String::<4>::new();
-            let _ = core::fmt::Write::write_fmt(&mut buf, format_args!("{}\0", i));
-            label.text(&buf)?.center();
+            let _ = core::fmt::Write::write_fmt(&mut buf, format_args!("{}", i));
+            label.text(&buf).center();
 
             let _ = items.push(obj);
             let _ = labels.push(label);

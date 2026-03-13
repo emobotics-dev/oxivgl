@@ -19,7 +19,7 @@ impl View for GettingStarted1 {
         screen.text_color(0xffffff);
 
         let label = Label::new(&screen)?;
-        label.text("Hello world\0")?.align(Align::Center, 0, 0);
+        label.text("Hello world").align(Align::Center, 0, 0);
 
         Ok(Self { _label: label })
     }

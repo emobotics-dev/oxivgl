@@ -36,7 +36,7 @@ impl View for Grid2 {
         obj.size(LV_SIZE_CONTENT, LV_SIZE_CONTENT);
         obj.set_grid_cell(GridAlign::Start, 0, 1, GridAlign::Start, 0, 1);
         let lbl = Label::new(&obj)?;
-        lbl.set_text("c0, r0");
+        lbl.text("c0, r0");
         let _ = items.push(obj);
         let _ = labels.push(lbl);
 
@@ -45,7 +45,7 @@ impl View for Grid2 {
         obj.size(LV_SIZE_CONTENT, LV_SIZE_CONTENT);
         obj.set_grid_cell(GridAlign::Start, 1, 1, GridAlign::Center, 0, 1);
         let lbl = Label::new(&obj)?;
-        lbl.set_text("c1, r0");
+        lbl.text("c1, r0");
         let _ = items.push(obj);
         let _ = labels.push(lbl);
 
@@ -54,7 +54,7 @@ impl View for Grid2 {
         obj.size(LV_SIZE_CONTENT, LV_SIZE_CONTENT);
         obj.set_grid_cell(GridAlign::Start, 2, 1, GridAlign::End, 0, 1);
         let lbl = Label::new(&obj)?;
-        lbl.set_text("c2, r0");
+        lbl.text("c2, r0");
         let _ = items.push(obj);
         let _ = labels.push(lbl);
 
@@ -63,7 +63,7 @@ impl View for Grid2 {
         obj.size(LV_SIZE_CONTENT, LV_SIZE_CONTENT);
         obj.set_grid_cell(GridAlign::Stretch, 1, 2, GridAlign::Stretch, 1, 1);
         let lbl = Label::new(&obj)?;
-        lbl.set_text("c1-2, r1");
+        lbl.text("c1-2, r1");
         let _ = items.push(obj);
         let _ = labels.push(lbl);
 
@@ -72,7 +72,7 @@ impl View for Grid2 {
         obj.size(LV_SIZE_CONTENT, LV_SIZE_CONTENT);
         obj.set_grid_cell(GridAlign::Stretch, 0, 1, GridAlign::Stretch, 1, 2);
         let lbl = Label::new(&obj)?;
-        lbl.set_text("c0\nr1-2");
+        lbl.text("c0\nr1-2");
         let _ = items.push(obj);
         let _ = labels.push(lbl);
 

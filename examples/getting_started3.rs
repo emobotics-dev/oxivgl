@@ -9,7 +9,7 @@ use alloc::boxed::Box;
 use oxivgl::{
     view::View,
     widgets::{
-        Button, ColorFilter, GradDir, Label, Palette, Screen, Style, WidgetError,
+        Button, ColorFilter, GradDir, Label, ObjState, Palette, Screen, Style, WidgetError,
         darken_filter_cb, palette_lighten, palette_main,
     },
 };
@@ -57,20 +57,20 @@ impl View for GettingStarted3 {
         let btn1 = Button::new(&screen)?;
         btn1.remove_style_all().pos(10, 10).size(120, 50);
         btn1.add_style(&style_btn, 0);
-        btn1.add_style(&style_pressed, 0x0020); // LV_STATE_PRESSED
+        btn1.add_style(&style_pressed, ObjState::PRESSED.0);
 
         let lbl1 = Label::new(&btn1)?;
-        lbl1.text("Button\0")?.center();
+        lbl1.text("Button").center();
 
         let btn2 = Button::new(&screen)?;
         btn2.remove_style_all().pos(10, 80).size(120, 50);
         btn2.add_style(&style_btn, 0);
         btn2.add_style(&style_red, 0);
-        btn2.add_style(&style_pressed, 0x0020); // LV_STATE_PRESSED
+        btn2.add_style(&style_pressed, ObjState::PRESSED.0);
         btn2.radius(0x7fff, 0);
 
         let lbl2 = Label::new(&btn2)?;
-        lbl2.text("Button 2\0")?.center();
+        lbl2.text("Button 2").center();
 
         Ok(Self {
             _lbl2: lbl2,

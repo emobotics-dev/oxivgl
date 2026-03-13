@@ -10,13 +10,12 @@ extern crate alloc;
 
 use alloc::boxed::Box;
 use oxivgl::{
-    view::{Event, View},
+    view::View,
     widgets::{
         anim_path_ease_out, anim_path_linear, anim_path_overshoot, anim_set_height,
-        anim_set_slider_value, anim_set_width, Align, Anim, AnimTimeline, Button, FlexAlign,
-        FlexFlow, Label, Obj, Screen, Slider, WidgetError, ANIM_TIMELINE_PROGRESS_MAX,
-        LV_EVENT_CLICKED, LV_EVENT_VALUE_CHANGED, LV_OBJ_FLAG_CHECKABLE, LV_OBJ_FLAG_EVENT_BUBBLE,
-        LV_OBJ_FLAG_IGNORE_LAYOUT, LV_SCROLLBAR_MODE_OFF, LV_STATE_CHECKED,
+        anim_set_slider_value, anim_set_width, Align, Anim, AnimTimeline, Button, Event,
+        EventCode, FlexAlign, FlexFlow, Label, Obj, ObjFlag, ObjState, Screen, ScrollbarMode,
+        Slider, WidgetError, ANIM_TIMELINE_PROGRESS_MAX,
     },
 };
 
@@ -46,40 +45,40 @@ impl View for AnimTimeline1 {
 
         // Start button (checkable)
         let btn_start = Button::new(&screen)?;
-        btn_start.add_flag(LV_OBJ_FLAG_IGNORE_LAYOUT);
-        btn_start.add_flag(LV_OBJ_FLAG_CHECKABLE);
-        btn_start.add_flag(LV_OBJ_FLAG_EVENT_BUBBLE);
+        btn_start.add_flag(ObjFlag::IGNORE_LAYOUT);
+        btn_start.add_flag(ObjFlag::CHECKABLE);
+        btn_start.bubble_events();
         btn_start.align(Align::TopMid, -100, 20);
         let label_start = Label::new(&btn_start)?;
-        label_start.text("Start\0")?.center();
+        label_start.text("Start").center();
 
         // Pause button
         let btn_pause = Button::new(&screen)?;
-        btn_pause.add_flag(LV_OBJ_FLAG_IGNORE_LAYOUT);
-        btn_pause.add_flag(LV_OBJ_FLAG_EVENT_BUBBLE);
+        btn_pause.add_flag(ObjFlag::IGNORE_LAYOUT);
+        btn_pause.bubble_events();
         btn_pause.align(Align::TopMid, 100, 20);
         let label_pause = Label::new(&btn_pause)?;
-        label_pause.text("Pause\0")?.center();
+        label_pause.text("Pause").center();
 
         // Progress slider
         let slider = Slider::new(&screen)?;
-        slider.add_flag(LV_OBJ_FLAG_IGNORE_LAYOUT);
-        slider.add_flag(LV_OBJ_FLAG_EVENT_BUBBLE);
+        slider.add_flag(ObjFlag::IGNORE_LAYOUT);
+        slider.bubble_events();
         slider.align(Align::BottomMid, 0, -20);
         slider.set_range(0, ANIM_TIMELINE_PROGRESS_MAX as i32);
 
         // 3 objects
         let obj1 = Obj::new(&screen)?;
         obj1.size(OBJ_WIDTH, OBJ_HEIGHT)
-            .set_scrollbar_mode(LV_SCROLLBAR_MODE_OFF);
+            .set_scrollbar_mode(ScrollbarMode::Off);
 
         let obj2 = Obj::new(&screen)?;
         obj2.size(OBJ_WIDTH, OBJ_HEIGHT)
-            .set_scrollbar_mode(LV_SCROLLBAR_MODE_OFF);
+            .set_scrollbar_mode(ScrollbarMode::Off);
 
         let obj3 = Obj::new(&screen)?;
         obj3.size(OBJ_WIDTH, OBJ_HEIGHT)
-            .set_scrollbar_mode(LV_SCROLLBAR_MODE_OFF);
+            .set_scrollbar_mode(ScrollbarMode::Off);
 
         // Animations — slider progress
         let mut a_slider = Anim::new();
@@ -160,16 +159,13 @@ impl View for AnimTimeline1 {
     }
 
     fn on_event(&mut self, event: &Event) {
-        let target = event.target_handle();
-        let code = event.code();
-
-        if code == LV_EVENT_VALUE_CHANGED && target == self.btn_start.handle() {
-            let reverse = self.btn_start.has_state(LV_STATE_CHECKED);
+        if event.matches(&self.btn_start, EventCode::VALUE_CHANGED) {
+            let reverse = self.btn_start.has_state(ObjState::CHECKED);
             self.timeline.set_reverse(reverse);
             self.timeline.start();
-        } else if code == LV_EVENT_CLICKED && target == self.btn_pause.handle() {
+        } else if event.matches(&self.btn_pause, EventCode::CLICKED) {
             self.timeline.pause();
-        } else if code == LV_EVENT_VALUE_CHANGED && target == self.slider.handle() {
+        } else if event.matches(&self.slider, EventCode::VALUE_CHANGED) {
             let progress = self.slider.get_value();
             self.timeline.set_progress(progress as u16);
         }

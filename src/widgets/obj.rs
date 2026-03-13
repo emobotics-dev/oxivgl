@@ -112,8 +112,8 @@ pub enum BaseDir {
 
 /// Implemented by any type that wraps an LVGL object handle.
 ///
-/// Allows widget constructors to accept any [`Obj`], [`Screen`], or other
-/// widget as a parent without exposing raw pointers.
+/// Allows widget constructors to accept any [`Obj`], [`Screen`](super::Screen),
+/// or other widget as a parent without exposing raw pointers.
 pub trait AsLvHandle {
     /// Return the raw `lv_obj_t` pointer. Must be non-null for any live widget.
     fn lv_handle(&self) -> *mut lv_obj_t;
@@ -185,10 +185,11 @@ impl<'p> Obj<'p> {
         self.handle
     }
 
+    // ── Position / size ──────────────────────────────────────────────────
+
     pub fn align(&self, alignment: Align, x_offset: i32, y_offset: i32) -> &Self {
         assert_ne!(self.handle, null_mut(), "Obj handle cannot be null");
-        // SAFETY: handle non-null (asserted above); all lv_obj_* fns safe with valid
-        // pointer.
+        // SAFETY: handle non-null (asserted above).
         unsafe { lv_obj_align(self.handle, alignment as lv_align_t, x_offset, y_offset) };
         self
     }
@@ -228,129 +229,6 @@ impl<'p> Obj<'p> {
         self
     }
 
-    pub fn bg_color(&self, color: u32) -> &Self {
-        assert_ne!(self.handle, null_mut(), "Obj handle cannot be null");
-        // SAFETY: handle non-null (asserted above).
-        unsafe { lv_obj_set_style_bg_color(self.handle, lv_color_hex(color), 0) };
-        self
-    }
-
-    pub fn bg_opa(&self, opa: u8) -> &Self {
-        assert_ne!(self.handle, null_mut(), "Obj handle cannot be null");
-        // SAFETY: handle non-null (asserted above).
-        unsafe { lv_obj_set_style_bg_opa(self.handle, opa as lv_opa_t, 0) };
-        self
-    }
-
-    pub fn border_width(&self, w: i32) -> &Self {
-        assert_ne!(self.handle, null_mut(), "Obj handle cannot be null");
-        // SAFETY: handle non-null (asserted above).
-        unsafe { lv_obj_set_style_border_width(self.handle, w, 0) };
-        self
-    }
-
-    pub fn pad(&self, p: i32) -> &Self {
-        assert_ne!(self.handle, null_mut(), "Obj handle cannot be null");
-        // SAFETY: handle non-null (asserted above).
-        unsafe { lv_obj_set_style_pad_all(self.handle, p, 0) };
-        self
-    }
-
-    pub fn pad_top(&self, p: i32) -> &Self {
-        assert_ne!(self.handle, null_mut(), "Obj handle cannot be null");
-        // SAFETY: handle non-null (asserted above).
-        unsafe { lv_obj_set_style_pad_top(self.handle, p, 0) };
-        self
-    }
-
-    pub fn pad_bottom(&self, p: i32) -> &Self {
-        assert_ne!(self.handle, null_mut(), "Obj handle cannot be null");
-        // SAFETY: handle non-null (asserted above).
-        unsafe { lv_obj_set_style_pad_bottom(self.handle, p, 0) };
-        self
-    }
-
-    pub fn pad_left(&self, p: i32) -> &Self {
-        assert_ne!(self.handle, null_mut(), "Obj handle cannot be null");
-        // SAFETY: handle non-null (asserted above).
-        unsafe { lv_obj_set_style_pad_left(self.handle, p, 0) };
-        self
-    }
-
-    pub fn pad_right(&self, p: i32) -> &Self {
-        assert_ne!(self.handle, null_mut(), "Obj handle cannot be null");
-        // SAFETY: handle non-null (asserted above).
-        unsafe { lv_obj_set_style_pad_right(self.handle, p, 0) };
-        self
-    }
-
-    pub fn remove_scrollable(&self) -> &Self {
-        assert_ne!(self.handle, null_mut(), "Obj handle cannot be null");
-        // SAFETY: handle non-null (asserted above).
-        unsafe { lv_obj_remove_flag(self.handle, lv_obj_flag_t_LV_OBJ_FLAG_SCROLLABLE) };
-        self
-    }
-
-    pub fn remove_clickable(&self) -> &Self {
-        assert_ne!(self.handle, null_mut(), "Obj handle cannot be null");
-        // SAFETY: handle non-null (asserted above).
-        unsafe { lv_obj_remove_flag(self.handle, lv_obj_flag_t_LV_OBJ_FLAG_CLICKABLE) };
-        self
-    }
-
-    /// Apply a style to this object for the given selector.
-    /// Pass `0` for default state, `lv_state_t_LV_STATE_PRESSED` (= 128) for pressed.
-    ///
-    /// The `style` must outlive this object (see [`Style`](super::Style) docs).
-    pub fn add_style(&self, style: &super::Style, selector: u32) -> &Self {
-        assert_ne!(self.handle, null_mut(), "Obj handle cannot be null");
-        // SAFETY: handle non-null; style.inner pointer valid for style's lifetime.
-        unsafe { lv_obj_add_style(self.handle, &style.inner as *const lv_style_t, selector) };
-        self
-    }
-
-    /// Remove all styles from this object.
-    pub fn remove_style_all(&self) -> &Self {
-        assert_ne!(self.handle, null_mut(), "Obj handle cannot be null");
-        // SAFETY: handle non-null.
-        unsafe { lv_obj_remove_style_all(self.handle) };
-        self
-    }
-
-    pub fn text_color(&self, color: u32) -> &Self {
-        assert_ne!(self.handle, null_mut(), "Obj handle cannot be null");
-        // SAFETY: handle non-null (asserted above).
-        unsafe { lv_obj_set_style_text_color(self.handle, lv_color_hex(color), 0) };
-        self
-    }
-
-    pub fn text_font(&self, font: crate::fonts::Font) -> &Self {
-        assert_ne!(self.handle, null_mut(), "Obj handle cannot be null");
-        assert_ne!(font.as_ptr(), null_mut(), "Font pointer cannot be null");
-        // SAFETY: handle and font pointer non-null (asserted above).
-        unsafe { lv_obj_set_style_text_font(self.handle, font.as_ptr(), 0) };
-        self
-    }
-
-    /// Alias for [`text_font`].
-    pub fn font(&self, font: crate::fonts::Font) -> &Self {
-        self.text_font(font)
-    }
-
-    pub fn text_align(&self, align: TextAlign) -> &Self {
-        assert_ne!(self.handle, null_mut(), "Obj handle cannot be null");
-        // SAFETY: handle non-null (asserted above).
-        unsafe { lv_obj_set_style_text_align(self.handle, align as lv_text_align_t, 0) };
-        self
-    }
-
-    pub fn opa(&self, opa: u8) -> &Self {
-        assert_ne!(self.handle, null_mut(), "Obj handle cannot be null");
-        // SAFETY: handle non-null (asserted above).
-        unsafe { lv_obj_set_style_opa(self.handle, opa as lv_opa_t, 0) };
-        self
-    }
-
     pub fn pos(&self, x: i32, y: i32) -> &Self {
         assert_ne!(self.handle, null_mut(), "Obj handle cannot be null");
         // SAFETY: handle non-null (asserted above).
@@ -373,6 +251,146 @@ impl<'p> Obj<'p> {
         self
     }
 
+    // ── Getters ──────────────────────────────────────────────────────────
+
+    pub fn get_x(&self) -> i32 {
+        assert_ne!(self.handle, null_mut());
+        // SAFETY: handle non-null (asserted above).
+        unsafe { lv_obj_get_x(self.handle) }
+    }
+
+    pub fn get_y(&self) -> i32 {
+        assert_ne!(self.handle, null_mut());
+        // SAFETY: handle non-null (asserted above).
+        unsafe { lv_obj_get_y(self.handle) }
+    }
+
+    pub fn get_width(&self) -> i32 {
+        assert_ne!(self.handle, null_mut());
+        // SAFETY: handle non-null (asserted above).
+        unsafe { lv_obj_get_width(self.handle) }
+    }
+
+    pub fn get_height(&self) -> i32 {
+        assert_ne!(self.handle, null_mut());
+        // SAFETY: handle non-null (asserted above).
+        unsafe { lv_obj_get_height(self.handle) }
+    }
+
+    // ── State / flags ────────────────────────────────────────────────────
+
+    pub fn add_state(&self, state: super::ObjState) -> &Self {
+        assert_ne!(self.handle, null_mut());
+        // SAFETY: handle non-null (asserted above).
+        unsafe { lv_obj_add_state(self.handle, state.0) };
+        self
+    }
+
+    pub fn remove_state(&self, state: super::ObjState) -> &Self {
+        assert_ne!(self.handle, null_mut());
+        // SAFETY: handle non-null (asserted above).
+        unsafe { lv_obj_remove_state(self.handle, state.0) };
+        self
+    }
+
+    pub fn has_state(&self, state: super::ObjState) -> bool {
+        assert_ne!(self.handle, null_mut());
+        // SAFETY: handle non-null (asserted above).
+        unsafe { lv_obj_has_state(self.handle, state.0) }
+    }
+
+    pub fn add_flag(&self, flag: super::ObjFlag) -> &Self {
+        assert_ne!(self.handle, null_mut());
+        // SAFETY: handle non-null (asserted above).
+        unsafe { lv_obj_add_flag(self.handle, flag.0) };
+        self
+    }
+
+    pub fn remove_flag(&self, flag: super::ObjFlag) -> &Self {
+        assert_ne!(self.handle, null_mut());
+        // SAFETY: handle non-null (asserted above).
+        unsafe { lv_obj_remove_flag(self.handle, flag.0) };
+        self
+    }
+
+    pub fn remove_scrollable(&self) -> &Self {
+        self.remove_flag(super::ObjFlag::SCROLLABLE)
+    }
+
+    pub fn remove_clickable(&self) -> &Self {
+        self.remove_flag(super::ObjFlag::CLICKABLE)
+    }
+
+    pub fn set_scrollbar_mode(&self, mode: super::ScrollbarMode) -> &Self {
+        assert_ne!(self.handle, null_mut());
+        // SAFETY: handle non-null (asserted above).
+        unsafe { lv_obj_set_scrollbar_mode(self.handle, mode as lv_scrollbar_mode_t) };
+        self
+    }
+
+    // ── Events ───────────────────────────────────────────────────────────
+
+    /// Add an event callback. `cb` is an `extern "C"` function pointer.
+    /// `filter`: use `EventCode::ALL` to receive all events,
+    /// or a specific code like `EventCode::CLICKED`.
+    /// `user_data`: arbitrary pointer passed to the callback; pass `core::ptr::null_mut()` if unused.
+    pub fn on_event(
+        &self,
+        cb: unsafe extern "C" fn(*mut lv_event_t),
+        filter: super::EventCode,
+        user_data: *mut c_void,
+    ) -> &Self {
+        assert_ne!(self.handle, null_mut(), "Obj handle cannot be null");
+        // SAFETY: handle non-null; cb is a valid extern "C" fn pointer.
+        unsafe { lv_obj_add_event_cb(self.handle, Some(cb), filter.0, user_data) };
+        self
+    }
+
+    /// Register a simple per-widget event callback (no View state access).
+    ///
+    /// ```ignore
+    /// btn.on(EventCode::CLICKED, |_event| {
+    ///     // handle click — no access to View fields
+    /// });
+    /// ```
+    ///
+    /// For handlers that need View state, use [`View::on_event`](crate::view::View::on_event)
+    /// with event bubbling instead.
+    pub fn on(&self, code: super::EventCode, cb: fn(&super::event::Event)) -> &Self {
+        assert_ne!(self.handle, null_mut(), "Obj handle cannot be null");
+
+        unsafe extern "C" fn trampoline(e: *mut lv_event_t) {
+            // SAFETY: user_data was set to a fn pointer in on(); transmute
+            // back. fn pointers are pointer-sized.
+            unsafe {
+                let cb_ptr = lv_event_get_user_data(e) as *const ();
+                let cb: fn(&super::event::Event) = core::mem::transmute(cb_ptr);
+                let event = super::event::Event::from_raw(e);
+                cb(&event);
+            }
+        }
+
+        // SAFETY: handle non-null; cb is stored as user_data and retrieved by
+        // trampoline. fn pointers have the same size as *mut c_void.
+        unsafe {
+            lv_obj_add_event_cb(
+                self.handle,
+                Some(trampoline),
+                code.0,
+                cb as *const () as *mut c_void,
+            )
+        };
+        self
+    }
+
+    /// Enable event bubbling on this widget.
+    /// Shorthand for `self.add_flag(ObjFlag::EVENT_BUBBLE)`.
+    pub fn bubble_events(&self) -> &Self {
+        self.add_flag(super::ObjFlag::EVENT_BUBBLE)
+    }
+
+    // ── Children ─────────────────────────────────────────────────────────
+
     /// Get child widget by index (0-based). Returns `None` if index out of range.
     /// The returned `Child` does NOT own the pointer — LVGL frees it when the parent is deleted.
     pub fn get_child(&self, idx: i32) -> Option<super::Child<Obj<'_>>> {
@@ -384,337 +402,5 @@ impl<'p> Obj<'p> {
         } else {
             Some(super::Child::new(Obj::from_raw(child_ptr)))
         }
-    }
-
-    /// Add an event callback. `cb` is an `extern "C"` function pointer.
-    /// `filter`: use `lv_event_code_t_LV_EVENT_ALL` to receive all events,
-    /// or a specific code like `lv_event_code_t_LV_EVENT_CLICKED`.
-    /// `user_data`: arbitrary pointer passed to the callback; pass `core::ptr::null_mut()` if unused.
-    pub fn on_event(
-        &self,
-        cb: unsafe extern "C" fn(*mut lv_event_t),
-        filter: lv_event_code_t,
-        user_data: *mut c_void,
-    ) -> &Self {
-        assert_ne!(self.handle, null_mut(), "Obj handle cannot be null");
-        // SAFETY: handle non-null; cb is a valid extern "C" fn pointer.
-        unsafe { lv_obj_add_event_cb(self.handle, Some(cb), filter, user_data) };
-        self
-    }
-
-    /// Set the corner radius for the given style selector (0 = default state).
-    /// Use `0x7fff` for a pill/capsule shape.
-    pub fn radius(&self, r: i32, selector: u32) -> &Self {
-        assert_ne!(self.handle, null_mut(), "Obj handle cannot be null");
-        // SAFETY: handle non-null (asserted above).
-        unsafe { lv_obj_set_style_radius(self.handle, r, selector) };
-        self
-    }
-
-    /// Set local `bg_color` style for the given selector (part | state).
-    pub fn style_bg_color(&self, color: lv_color_t, selector: u32) -> &Self {
-        assert_ne!(self.handle, null_mut(), "Obj handle cannot be null");
-        unsafe { lv_obj_set_style_bg_color(self.handle, color, selector) };
-        self
-    }
-
-    /// Set local `bg_grad_color` for the given selector.
-    pub fn style_bg_grad_color(&self, color: lv_color_t, selector: u32) -> &Self {
-        assert_ne!(self.handle, null_mut(), "Obj handle cannot be null");
-        unsafe { lv_obj_set_style_bg_grad_color(self.handle, color, selector) };
-        self
-    }
-
-    /// Set local `bg_grad_dir` for the given selector.
-    pub fn style_bg_grad_dir(&self, dir: u32, selector: u32) -> &Self {
-        assert_ne!(self.handle, null_mut(), "Obj handle cannot be null");
-        unsafe { lv_obj_set_style_bg_grad_dir(self.handle, dir as lv_grad_dir_t, selector) };
-        self
-    }
-
-    /// Set transform rotation in 0.1 degree units for the given selector.
-    pub fn style_transform_rotation(&self, angle: i32, selector: u32) -> &Self {
-        assert_ne!(self.handle, null_mut(), "Obj handle cannot be null");
-        unsafe { lv_obj_set_style_transform_rotation(self.handle, angle, selector) };
-        self
-    }
-
-    /// Set uniform transform scale (256 = 1.0x) for the given selector.
-    pub fn style_transform_scale(&self, scale: i32, selector: u32) -> &Self {
-        assert_ne!(self.handle, null_mut(), "Obj handle cannot be null");
-        unsafe {
-            lv_obj_set_style_transform_scale_x(self.handle, scale, selector);
-            lv_obj_set_style_transform_scale_y(self.handle, scale, selector);
-        };
-        self
-    }
-
-    /// Set transform pivot X for the given selector.
-    pub fn style_transform_pivot_x(&self, x: i32, selector: u32) -> &Self {
-        assert_ne!(self.handle, null_mut(), "Obj handle cannot be null");
-        unsafe { lv_obj_set_style_transform_pivot_x(self.handle, x, selector) };
-        self
-    }
-
-    /// Set transform pivot Y for the given selector.
-    pub fn style_transform_pivot_y(&self, y: i32, selector: u32) -> &Self {
-        assert_ne!(self.handle, null_mut(), "Obj handle cannot be null");
-        unsafe { lv_obj_set_style_transform_pivot_y(self.handle, y, selector) };
-        self
-    }
-
-    pub fn get_x(&self) -> i32 {
-        assert_ne!(self.handle, null_mut());
-        unsafe { lv_obj_get_x(self.handle) }
-    }
-
-    pub fn get_y(&self) -> i32 {
-        assert_ne!(self.handle, null_mut());
-        unsafe { lv_obj_get_y(self.handle) }
-    }
-
-    pub fn get_width(&self) -> i32 {
-        assert_ne!(self.handle, null_mut());
-        unsafe { lv_obj_get_width(self.handle) }
-    }
-
-    pub fn get_height(&self) -> i32 {
-        assert_ne!(self.handle, null_mut());
-        unsafe { lv_obj_get_height(self.handle) }
-    }
-
-    pub fn add_state(&self, state: lv_state_t) -> &Self {
-        assert_ne!(self.handle, null_mut());
-        unsafe { lv_obj_add_state(self.handle, state) };
-        self
-    }
-
-    pub fn remove_state(&self, state: lv_state_t) -> &Self {
-        assert_ne!(self.handle, null_mut());
-        unsafe { lv_obj_remove_state(self.handle, state) };
-        self
-    }
-
-    pub fn has_state(&self, state: lv_state_t) -> bool {
-        assert_ne!(self.handle, null_mut());
-        unsafe { lv_obj_has_state(self.handle, state) }
-    }
-
-    pub fn add_flag(&self, flag: lv_obj_flag_t) -> &Self {
-        assert_ne!(self.handle, null_mut());
-        unsafe { lv_obj_add_flag(self.handle, flag) };
-        self
-    }
-
-    pub fn remove_flag(&self, flag: lv_obj_flag_t) -> &Self {
-        assert_ne!(self.handle, null_mut());
-        unsafe { lv_obj_remove_flag(self.handle, flag) };
-        self
-    }
-
-    pub fn set_scrollbar_mode(&self, mode: lv_scrollbar_mode_t) -> &Self {
-        assert_ne!(self.handle, null_mut());
-        unsafe { lv_obj_set_scrollbar_mode(self.handle, mode) };
-        self
-    }
-
-    pub fn set_flex_flow(&self, flow: FlexFlow) -> &Self {
-        assert_ne!(self.handle, null_mut());
-        unsafe { lv_obj_set_flex_flow(self.handle, flow as lv_flex_flow_t) };
-        self
-    }
-
-    pub fn set_flex_align(&self, main: FlexAlign, cross: FlexAlign, track: FlexAlign) -> &Self {
-        assert_ne!(self.handle, null_mut());
-        unsafe {
-            lv_obj_set_flex_align(
-                self.handle,
-                main as lv_flex_align_t,
-                cross as lv_flex_align_t,
-                track as lv_flex_align_t,
-            )
-        };
-        self
-    }
-
-    pub fn set_flex_grow(&self, grow: u8) -> &Self {
-        assert_ne!(self.handle, null_mut());
-        unsafe { lv_obj_set_flex_grow(self.handle, grow) };
-        self
-    }
-
-    pub fn set_style_base_dir(&self, dir: BaseDir, selector: u32) -> &Self {
-        assert_ne!(self.handle, null_mut());
-        unsafe { lv_obj_set_style_base_dir(self.handle, dir as lv_base_dir_t, selector) };
-        self
-    }
-
-    pub fn set_layout(&self, layout: u32) -> &Self {
-        assert_ne!(self.handle, null_mut());
-        unsafe { lv_obj_set_layout(self.handle, layout) };
-        self
-    }
-
-    /// Set grid column/row descriptors and enable grid layout.
-    /// The slices must be `'static` — LVGL stores the pointers internally.
-    pub fn set_grid_dsc_array(
-        &self,
-        col_dsc: &'static [i32],
-        row_dsc: &'static [i32],
-    ) -> &Self {
-        assert_ne!(self.handle, null_mut());
-        unsafe { lv_obj_set_grid_dsc_array(self.handle, col_dsc.as_ptr(), row_dsc.as_ptr()) };
-        self
-    }
-
-    pub fn set_grid_cell(
-        &self,
-        col_align: GridAlign,
-        col: i32,
-        col_span: i32,
-        row_align: GridAlign,
-        row: i32,
-        row_span: i32,
-    ) -> &Self {
-        assert_ne!(self.handle, null_mut());
-        unsafe {
-            lv_obj_set_grid_cell(
-                self.handle,
-                col_align as lv_grid_align_t,
-                col,
-                col_span,
-                row_align as lv_grid_align_t,
-                row,
-                row_span,
-            )
-        };
-        self
-    }
-
-    pub fn set_grid_align(&self, col_align: GridAlign, row_align: GridAlign) -> &Self {
-        assert_ne!(self.handle, null_mut());
-        unsafe {
-            lv_obj_set_grid_align(
-                self.handle,
-                col_align as lv_grid_align_t,
-                row_align as lv_grid_align_t,
-            )
-        };
-        self
-    }
-
-    /// Set `lv_obj_set_style_line_width` for the given LVGL style part.
-    pub fn line_width(&self, part: Part, width: i32) -> &Self {
-        assert_ne!(self.handle, null_mut(), "Obj handle cannot be null");
-        // SAFETY: handle non-null (asserted above).
-        unsafe { lv_obj_set_style_line_width(self.handle, width, part as u32) };
-        self
-    }
-}
-
-/// Non-owning reference to the active LVGL screen. Does **not** delete it on
-/// drop.
-///
-/// Obtain via [`Screen::active()`]. Use as a parent for top-level widgets.
-///
-/// # Examples
-///
-/// ```no_run
-/// use oxivgl::widgets::Screen;
-///
-/// let screen = Screen::active().expect("LVGL not initialized");
-/// screen.bg_color(0x06080f).bg_opa(255).pad_top(6).pad_bottom(6);
-/// ```
-pub struct Screen {
-    handle: *mut lv_obj_t,
-}
-
-impl AsLvHandle for Screen {
-    fn lv_handle(&self) -> *mut lv_obj_t {
-        self.handle
-    }
-}
-
-impl Screen {
-    /// Returns `None` if LVGL has no active screen yet.
-    pub fn active() -> Option<Self> {
-        // SAFETY: lv_screen_active() is safe after lv_init(); NULL result is handled
-        // below.
-        let handle = unsafe { lv_screen_active() };
-        if handle.is_null() {
-            None
-        } else {
-            Some(Screen { handle })
-        }
-    }
-
-    /// Return the raw `lv_obj_t` pointer for this screen.
-    pub fn handle(&self) -> *mut lv_obj_t {
-        self.handle
-    }
-
-    pub fn remove_scrollable(&self) -> &Self {
-        // SAFETY: handle non-null (Screen::active() returns None for null).
-        unsafe { lv_obj_remove_flag(self.handle, lv_obj_flag_t_LV_OBJ_FLAG_SCROLLABLE) };
-        self
-    }
-
-    pub fn bg_color(&self, color: u32) -> &Self {
-        // SAFETY: handle non-null (Screen::active() returns None for null).
-        unsafe { lv_obj_set_style_bg_color(self.handle, lv_color_hex(color), 0) };
-        self
-    }
-
-    pub fn bg_opa(&self, opa: u8) -> &Self {
-        // SAFETY: handle non-null (Screen::active() returns None for null).
-        unsafe { lv_obj_set_style_bg_opa(self.handle, opa as lv_opa_t, 0) };
-        self
-    }
-
-    pub fn pad_top(&self, p: i32) -> &Self {
-        // SAFETY: handle non-null (Screen::active() returns None for null).
-        unsafe { lv_obj_set_style_pad_top(self.handle, p, 0) };
-        self
-    }
-
-    pub fn pad_bottom(&self, p: i32) -> &Self {
-        // SAFETY: handle non-null (Screen::active() returns None for null).
-        unsafe { lv_obj_set_style_pad_bottom(self.handle, p, 0) };
-        self
-    }
-
-    pub fn pad_left(&self, p: i32) -> &Self {
-        // SAFETY: handle non-null (Screen::active() returns None for null).
-        unsafe { lv_obj_set_style_pad_left(self.handle, p, 0) };
-        self
-    }
-
-    pub fn pad_right(&self, p: i32) -> &Self {
-        // SAFETY: handle non-null (Screen::active() returns None for null).
-        unsafe { lv_obj_set_style_pad_right(self.handle, p, 0) };
-        self
-    }
-
-    pub fn text_color(&self, color: u32) -> &Self {
-        // SAFETY: handle non-null (Screen::active() returns None for null).
-        unsafe { lv_obj_set_style_text_color(self.handle, lv_color_hex(color), 0) };
-        self
-    }
-
-    pub fn set_flex_flow(&self, flow: FlexFlow) -> &Self {
-        unsafe { lv_obj_set_flex_flow(self.handle, flow as lv_flex_flow_t) };
-        self
-    }
-
-    pub fn set_flex_align(&self, main: FlexAlign, cross: FlexAlign, track: FlexAlign) -> &Self {
-        unsafe {
-            lv_obj_set_flex_align(
-                self.handle,
-                main as lv_flex_align_t,
-                cross as lv_flex_align_t,
-                track as lv_flex_align_t,
-            )
-        };
-        self
     }
 }
