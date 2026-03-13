@@ -612,4 +612,21 @@ impl Screen {
         unsafe { lv_obj_set_style_text_color(self.handle, lv_color_hex(color), 0) };
         self
     }
+
+    pub fn set_flex_flow(&self, flow: FlexFlow) -> &Self {
+        unsafe { lv_obj_set_flex_flow(self.handle, flow as lv_flex_flow_t) };
+        self
+    }
+
+    pub fn set_flex_align(&self, main: FlexAlign, cross: FlexAlign, track: FlexAlign) -> &Self {
+        unsafe {
+            lv_obj_set_flex_align(
+                self.handle,
+                main as lv_flex_align_t,
+                cross as lv_flex_align_t,
+                track as lv_flex_align_t,
+            )
+        };
+        self
+    }
 }

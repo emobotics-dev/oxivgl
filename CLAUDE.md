@@ -70,6 +70,7 @@ Adding a new example: create an `examples/<name>.rs` with a View struct + `oxivg
 
 ## Key Constraints
 
+- **No `unsafe` or `lvgl_rust_sys` in user code**: This library wraps all unsafe LVGL calls behind safe Rust APIs. Examples and consumer code must never use `unsafe` blocks, `unsafe extern "C" fn`, or import `lvgl_rust_sys` directly. If an LVGL feature is needed but not yet wrapped, add the wrapper to the core lib first.
 - LVGL must run on a **single task** — no concurrent calls from other tasks/interrupts.
 - `LvglBuffers` must be `'static` (allocated as `static mut` by the caller).
 - Physical values → LVGL integer range: `widgets::to_lvgl(v, max)` maps to `0..LVGL_SCALE` (1000).

@@ -70,4 +70,27 @@ impl<'p> Label<'p> {
         unsafe { lv_label_set_text(self.obj.handle(), c_ptr) };
         Ok(self)
     }
+
+    /// Set label text without requiring a NUL terminator. Truncates at 63 bytes.
+    /// LVGL copies the string internally.
+    pub fn set_text(&self, text: &str) -> &Self {
+        assert_ne!(self.obj.handle(), null_mut(), "Label handle cannot be null");
+        let bytes = text.as_bytes();
+        let len = bytes.len().min(63);
+        let mut buf = [0u8; 64];
+        buf[..len].copy_from_slice(&bytes[..len]);
+        unsafe { lv_label_set_text(self.obj.handle(), buf.as_ptr() as *const c_char) };
+        self
+    }
+
+    /// Set label text from a pre-NUL-terminated byte literal.
+    /// Panics in debug mode if the last byte is not `\0`.
+    ///
+    /// Use for long or static strings: `label.set_text_static(b"Hello world\0");`
+    pub fn set_text_static(&self, text: &[u8]) -> &Self {
+        assert_ne!(self.obj.handle(), null_mut(), "Label handle cannot be null");
+        debug_assert!(text.last() == Some(&0), "text must be NUL-terminated");
+        unsafe { lv_label_set_text(self.obj.handle(), text.as_ptr() as *const c_char) };
+        self
+    }
 }

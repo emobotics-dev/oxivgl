@@ -6,26 +6,16 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
 //! Anim 2 — Playback animation
 
-use core::ffi::c_void;
-use lvgl_rust_sys::*;
 use oxivgl::{
     view::View,
     widgets::{
-        anim_path_ease_in_out, palette_main, Align, Anim, Obj, Palette, Screen, WidgetError,
-        ANIM_REPEAT_INFINITE,
+        anim_path_ease_in_out, anim_set_size, anim_set_x, palette_main, Align, Anim, Obj, Palette,
+        Screen, WidgetError, ANIM_REPEAT_INFINITE,
     },
 };
 
 struct Anim2 {
     _obj: Obj<'static>,
-}
-
-unsafe extern "C" fn anim_x_cb(var: *mut c_void, v: i32) {
-    unsafe { lv_obj_set_x(var as *mut lv_obj_t, v) };
-}
-
-unsafe extern "C" fn anim_size_cb(var: *mut c_void, v: i32) {
-    unsafe { lv_obj_set_size(var as *mut lv_obj_t, v, v) };
 }
 
 impl View for Anim2 {
@@ -48,10 +38,10 @@ impl View for Anim2 {
             .set_repeat_count(ANIM_REPEAT_INFINITE)
             .set_path_cb(Some(anim_path_ease_in_out));
 
-        a.set_exec_cb(Some(anim_size_cb));
+        a.set_exec_cb(Some(anim_set_size));
         a.start();
 
-        a.set_exec_cb(Some(anim_x_cb));
+        a.set_exec_cb(Some(anim_set_x));
         a.set_values(10, 240);
         a.start();
 

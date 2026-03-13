@@ -106,3 +106,32 @@ pub unsafe extern "C" fn anim_path_bounce(a: *const lv_anim_t) -> i32 {
 
 /// `LV_ANIM_REPEAT_INFINITE`
 pub const ANIM_REPEAT_INFINITE: u32 = LV_ANIM_REPEAT_INFINITE;
+
+// ── Common animation exec callbacks (lv_anim_exec_xcb_t) ──
+
+/// Exec callback: `lv_obj_set_x(var, v)`.
+pub unsafe extern "C" fn anim_set_x(var: *mut c_void, v: i32) {
+    unsafe { lv_obj_set_x(var as *mut lv_obj_t, v) };
+}
+
+/// Exec callback: `lv_obj_set_size(var, v, v)` — uniform width+height.
+pub unsafe extern "C" fn anim_set_size(var: *mut c_void, v: i32) {
+    unsafe { lv_obj_set_size(var as *mut lv_obj_t, v, v) };
+}
+
+// ── Common animation custom exec callbacks (lv_anim_custom_exec_cb_t) ──
+
+/// Custom exec callback: `lv_obj_set_width(anim.var, v)`.
+pub unsafe extern "C" fn anim_set_width(a: *mut lv_anim_t, v: i32) {
+    unsafe { lv_obj_set_width((*a).var as *mut lv_obj_t, v) };
+}
+
+/// Custom exec callback: `lv_obj_set_height(anim.var, v)`.
+pub unsafe extern "C" fn anim_set_height(a: *mut lv_anim_t, v: i32) {
+    unsafe { lv_obj_set_height((*a).var as *mut lv_obj_t, v) };
+}
+
+/// Custom exec callback: `lv_slider_set_value(anim.var, v, false)`.
+pub unsafe extern "C" fn anim_set_slider_value(a: *mut lv_anim_t, v: i32) {
+    unsafe { lv_slider_set_value((*a).var as *mut lv_obj_t, v, false) };
+}

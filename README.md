@@ -1,18 +1,19 @@
 # oxivgl
 
-Generic LVGL Rust bindings for embedded (no_std) and host (std/SDL2) targets. Provides widget wrappers, the LVGL driver/buffer layer, a `View` trait with generic render loop, and a custom RPM font. Used by the alternator-regulator UI.
+Safe Rust bindings for LVGL on embedded (`no_std`) and host (`std`/SDL2) targets. Wraps all unsafe LVGL calls behind type-safe APIs — user code never touches `unsafe` or `lvgl_rust_sys` directly.
 
 ## Architecture
 
 ```
-  altreg-fire27 / altreg-cores3
-  (implements DisplayOutput)
+  examples/*.rs / consumer crate
+  (implements View trait)
           │
           ▼
   oxivgl::view::run_lvgl::<V: View>()
   ├── LvglDriver::init()          — tick source, log bridge
   ├── lvgl_disp_init()            — display + DMA buffers, flush_cb
   ├── V::create()                 — build widget tree
+  ├── register_view_events()      — safe event dispatch via on_event()
   └── loop: V::update() + lv_timer_handler()
 ```
 
@@ -20,55 +21,63 @@ Generic LVGL Rust bindings for embedded (no_std) and host (std/SDL2) targets. Pr
 
 | Module | Purpose |
 |--------|---------|
+| `view` | `View` trait (`create`/`update`/`on_event`) + `Event` wrapper + `run_lvgl::<V>()` |
+| `widgets` | Type-safe wrappers: `Obj`, `Label`, `Button`, `Slider`, `Switch`, `Arc`, `Bar`, `Scale`, `Led`, `Line`, `Image`, `Style`, `Anim`, `AnimTimeline`, `GradDsc` |
 | `lvgl` | `LvglDriver`: init tick source + log forwarding |
 | `lvgl_buffers` | `DisplayOutput` trait; DMA frame buffer; `flush_frame_buffer` task |
-| `view` | `View` trait (`create`/`update`) + `run_lvgl::<V>()` |
-| `widgets` | Type-safe wrappers: `Obj`, `Arc`, `Bar`, `Label`, `Scale`, `Meter`, `Led`, … |
-| `fonts` | `Font` type + `ALTREG_RPM` custom font (generated C source) |
+| `fonts` | `Font` type + `ALTREG_RPM` custom font |
 
 ## Key Types
 
 ```rust
-// Implement this to define your UI screen:
 pub trait View: Sized {
     fn create() -> Result<Self, WidgetError>;
     fn update(&mut self) -> Result<(), WidgetError>;
+    fn on_event(&mut self, _event: &Event) {}  // safe event dispatch
 }
+```
 
-// Supply this from the board crate:
-pub trait DisplayOutput: Send {
-    fn flush(&mut self, op: DrawOperation);
-    fn wait_for_flush(&mut self);
-}
+## Examples
 
-// Entry point (async task):
-pub async fn run_lvgl<V: View>() -> !;
+Self-contained examples in `examples/*.rs` — each implements `View` + uses the `example_main!` macro. Run on host via SDL2 or flash to ESP32.
+
+| Chapter | Examples |
+|---------|----------|
+| Getting Started | `getting_started{1-4}` — label, button, slider event, style intro |
+| Styles | `style{1-18}` — backgrounds, borders, shadows, transforms, transitions, gradients |
+| Animations | `anim1` (switch event), `anim2` (playback), `anim_timeline1` (timeline) |
+| Events | `event_click`, `event_button`, `event_bubble`, `event_trickle` |
+
+```sh
+# Run example on host (SDL2 viewer):
+./run_host.sh getting_started1
+
+# Flash to ESP32:
+./run_fire27.sh event_trickle
+
+# Capture all screenshots:
+./run_screenshots.sh
 ```
 
 ## Features
 
 | Feature | Effect |
 |---------|--------|
-| `esp-hal` | Enables ESP32 tick source (`get_tick_ms` via `esp_hal::time`) |
+| `esp-hal` | ESP32 tick source (`esp_hal::time`) |
 | `defmt` | `defmt` logging |
 | `log-04` | `log` v0.4 logging |
 
-## Build System
+## Build
 
-`build.rs` compiles LVGL from source via cmake + cc. It expects:
-- `DEP_LV_CONFIG_PATH` env var → directory containing `lv_conf.h`
-- cmake toolchain files in `oxivgl/src/` for cross-compilation
-
-**cmake include priority**: `target_include_directories` takes precedence over `-I` cflags. Do not rely on `cflag()` in `build.rs` to override a file in the cmake source tree — remove the competing file instead.
-
-**Absolute paths**: `build.rs` uses `std::env::var("CARGO_MANIFEST_DIR")` for all cmake paths because relative paths resolve from the cmake build dir, not the crate root.
-
-## Host Testing / SDL2 Viewer
-
-On host (x86_64-unknown-linux-gnu), `oxivgl` links against the host's SDL2 via `init_host_display`. The SDL2 viewer binary lives in `alternator-regulator/src/bin/sdl_viewer.rs`.
-
-Run:
 ```sh
-LIBCLANG_PATH=/usr/lib64 cargo run -p alternator-regulator --bin sdl_viewer \
-  --features sdl --target x86_64-unknown-linux-gnu --config 'unstable.build-std=["std"]'
+# Host check:
+LIBCLANG_PATH=/usr/lib64 cargo +nightly check --target x86_64-unknown-linux-gnu
+
+# Host tests:
+LIBCLANG_PATH=/usr/lib64 cargo +nightly test --target x86_64-unknown-linux-gnu
+
+# Embedded check (requires Xtensa toolchain):
+cargo +esp -Zbuild-std=alloc,core check --features esp-hal,log-04
 ```
+
+`build.rs` compiles LVGL from source via cmake. Expects `DEP_LV_CONFIG_PATH` pointing to `lv_conf.h`. Adding a new LVGL widget requires enabling it in `conf/lv_conf.h` first (`LV_USE_<WIDGET> 1`).
