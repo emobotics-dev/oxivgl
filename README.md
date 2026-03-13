@@ -1,4 +1,5 @@
 [![CI](https://github.com/emobotics-dev/oxivgl/actions/workflows/ci.yml/badge.svg)](https://github.com/emobotics-dev/oxivgl/actions/workflows/ci.yml)
+[![Coverage](https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/hsteinhaus/f92c7e4991559affa2788d3a66364bcc/raw/oxivgl-coverage.json)](https://github.com/emobotics-dev/oxivgl/actions/workflows/ci.yml)
 [![License: MIT OR Apache-2.0](https://img.shields.io/badge/license-MIT%2FApache--2.0-blue)](LICENSE)
 ![LVGL v9.3](https://img.shields.io/badge/LVGL-v9.3-brightgreen)
 ![Rust nightly](https://img.shields.io/badge/Rust-nightly-orange)
