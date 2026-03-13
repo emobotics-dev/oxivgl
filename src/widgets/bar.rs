@@ -78,6 +78,29 @@ impl<'p> Bar<'p> {
         self
     }
 
+    /// Set raw LVGL range (bypasses f32 normalization).
+    pub fn set_range_raw(&self, min: i32, max: i32) -> &Self {
+        assert_ne!(self.obj.handle(), null_mut(), "Bar handle cannot be null");
+        // SAFETY: handle non-null (asserted above).
+        unsafe { lv_bar_set_range(self.obj.handle(), min, max) };
+        self
+    }
+
+    /// Set raw LVGL value with optional animation (bypasses f32 normalization).
+    pub fn set_value_raw(&self, value: i32, anim: bool) -> &Self {
+        assert_ne!(self.obj.handle(), null_mut(), "Bar handle cannot be null");
+        // SAFETY: handle non-null (asserted above).
+        unsafe { lv_bar_set_value(self.obj.handle(), value, anim) };
+        self
+    }
+
+    /// Get raw LVGL value (bypasses f32 normalization).
+    pub fn get_value_raw(&self) -> i32 {
+        assert_ne!(self.obj.handle(), null_mut(), "Bar handle cannot be null");
+        // SAFETY: handle non-null (asserted above).
+        unsafe { lv_bar_get_value(self.obj.handle()) }
+    }
+
     /// Get current value in physical units.
     pub fn get_value(&self) -> f32 {
         assert_ne!(self.obj.handle(), null_mut(), "Bar handle cannot be null");

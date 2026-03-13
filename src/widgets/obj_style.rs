@@ -172,6 +172,24 @@ impl<'p> Obj<'p> {
         self
     }
 
+    /// Set opacity for the given style selector.
+    pub fn style_opa(&self, opa: u8, selector: impl Into<super::Selector>) -> &Self {
+        let selector = selector.into().raw();
+        assert_ne!(self.handle(), null_mut(), "Obj handle cannot be null");
+        // SAFETY: handle non-null (asserted above).
+        unsafe { lv_obj_set_style_opa(self.handle(), opa as lv_opa_t, selector) };
+        self
+    }
+
+    /// Set padding on all sides for the given style selector.
+    pub fn style_pad_all(&self, p: i32, selector: impl Into<super::Selector>) -> &Self {
+        let selector = selector.into().raw();
+        assert_ne!(self.handle(), null_mut(), "Obj handle cannot be null");
+        // SAFETY: handle non-null (asserted above).
+        unsafe { lv_obj_set_style_pad_all(self.handle(), p, selector) };
+        self
+    }
+
     /// Set the corner radius for the given style selector.
     /// Use [`RADIUS_MAX`](super::RADIUS_MAX) for a pill/capsule shape.
     pub fn radius(&self, r: i32, selector: impl Into<super::Selector>) -> &Self {
