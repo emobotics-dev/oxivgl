@@ -39,4 +39,11 @@ impl<'p> Line<'p> {
         let handle = unsafe { lv_line_create(parent_ptr) };
         if handle.is_null() { Err(WidgetError::LvglNullPointer) } else { Ok(Line { obj: Obj::from_raw(handle) }) }
     }
+
+    /// Set the line points. The `points` slice must outlive this widget
+    /// (LVGL keeps a pointer to it).
+    pub fn set_points(&self, points: &[lv_point_precise_t]) -> &Self {
+        unsafe { lv_line_set_points(self.lv_handle(), points.as_ptr(), points.len() as u32) };
+        self
+    }
 }

@@ -4,6 +4,7 @@ linker = "xtensa-esp32-elf-gcc"
 rustflags = [
   "-C", "force-frame-pointers=yes",
   "-C", "link-arg=-nostartfiles",
+  "-C", "link-arg=-Tlinkall.x",
 ]
 
 [target.xtensa-esp32s3-none-elf]
@@ -17,10 +18,7 @@ rustflags = [
 [build]
 target = "xtensa-esp32-none-elf"
 
-[unstable]
-build-std = ["alloc", "core"]
-
 [env]
 DEP_LV_CONFIG_PATH = { value = "conf", relative = true }
 LVGL_FONTS_DIR     = { value = "conf/fonts", relative = true }
-ESP_LOG            = "debug"
+ESP_LOG            = "info"

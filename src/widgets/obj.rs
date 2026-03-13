@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
-use core::{marker::PhantomData, ptr::null_mut};
+use core::{ffi::c_void, marker::PhantomData, ptr::null_mut};
 
 use lvgl_rust_sys::*;
 
@@ -38,6 +38,18 @@ pub enum Align {
     LeftMid = 7,
     RightMid = 8,
     Center = 9,
+    OutTopLeft = 10,
+    OutTopMid = 11,
+    OutTopRight = 12,
+    OutBottomLeft = 13,
+    OutBottomMid = 14,
+    OutBottomRight = 15,
+    OutLeftTop = 16,
+    OutLeftMid = 17,
+    OutLeftBottom = 18,
+    OutRightTop = 19,
+    OutRightMid = 20,
+    OutRightBottom = 21,
 }
 
 /// Type-safe wrapper for `lv_text_align_t`.
@@ -231,6 +243,27 @@ impl<'p> Obj<'p> {
         self
     }
 
+    /// Apply a style to this object for the given selector.
+    /// Pass `0` for default state, `lv_state_t_LV_STATE_PRESSED` (= 128) for pressed.
+    ///
+    /// The `style` must outlive this object (see [`Style`](super::Style) docs).
+    pub fn add_style(&self, style: &super::Style, selector: u32) -> &Self {
+        assert_ne!(self.handle, null_mut(), "Obj handle cannot be null");
+        // SAFETY: handle non-null; style.inner pointer valid for style's lifetime.
+        unsafe {
+            lv_obj_add_style(self.handle, &style.inner as *const lv_style_t, selector)
+        };
+        self
+    }
+
+    /// Remove all styles from this object.
+    pub fn remove_style_all(&self) -> &Self {
+        assert_ne!(self.handle, null_mut(), "Obj handle cannot be null");
+        // SAFETY: handle non-null.
+        unsafe { lv_obj_remove_style_all(self.handle) };
+        self
+    }
+
     pub fn text_color(&self, color: u32) -> &Self {
         assert_ne!(self.handle, null_mut(), "Obj handle cannot be null");
         // SAFETY: handle non-null (asserted above).
@@ -262,6 +295,118 @@ impl<'p> Obj<'p> {
         assert_ne!(self.handle, null_mut(), "Obj handle cannot be null");
         // SAFETY: handle non-null (asserted above).
         unsafe { lv_obj_set_style_opa(self.handle, opa as lv_opa_t, 0) };
+        self
+    }
+
+    pub fn pos(&self, x: i32, y: i32) -> &Self {
+        assert_ne!(self.handle, null_mut(), "Obj handle cannot be null");
+        // SAFETY: handle non-null (asserted above).
+        unsafe { lv_obj_set_pos(self.handle, x, y) };
+        self
+    }
+
+    pub fn center(&self) -> &Self {
+        assert_ne!(self.handle, null_mut(), "Obj handle cannot be null");
+        // SAFETY: handle non-null (asserted above).
+        unsafe { lv_obj_center(self.handle) };
+        self
+    }
+
+    /// Position this object relative to `base` using `lv_obj_align_to`.
+    pub fn align_to(&self, base: &impl AsLvHandle, align: Align, x: i32, y: i32) -> &Self {
+        assert_ne!(self.handle, null_mut(), "Obj handle cannot be null");
+        // SAFETY: handle and base.lv_handle() non-null (asserted / guaranteed by AsLvHandle).
+        unsafe { lv_obj_align_to(self.handle, base.lv_handle(), align as lv_align_t, x, y) };
+        self
+    }
+
+    /// Get child widget by index (0-based). Returns `None` if index out of range.
+    /// The returned `Child` does NOT own the pointer — LVGL frees it when the parent is deleted.
+    pub fn get_child(&self, idx: i32) -> Option<super::Child<Obj<'_>>> {
+        assert_ne!(self.handle, null_mut(), "Obj handle cannot be null");
+        // SAFETY: handle non-null (asserted above); LVGL returns NULL for out-of-range idx.
+        let child_ptr = unsafe { lv_obj_get_child(self.handle, idx) };
+        if child_ptr.is_null() {
+            None
+        } else {
+            Some(super::Child::new(Obj::from_raw(child_ptr)))
+        }
+    }
+
+    /// Add an event callback. `cb` is an `extern "C"` function pointer.
+    /// `filter`: use `lv_event_code_t_LV_EVENT_ALL` to receive all events,
+    /// or a specific code like `lv_event_code_t_LV_EVENT_CLICKED`.
+    /// `user_data`: arbitrary pointer passed to the callback; pass `core::ptr::null_mut()` if unused.
+    pub fn on_event(
+        &self,
+        cb: unsafe extern "C" fn(*mut lv_event_t),
+        filter: lv_event_code_t,
+        user_data: *mut c_void,
+    ) -> &Self {
+        assert_ne!(self.handle, null_mut(), "Obj handle cannot be null");
+        // SAFETY: handle non-null; cb is a valid extern "C" fn pointer.
+        unsafe { lv_obj_add_event_cb(self.handle, Some(cb), filter, user_data) };
+        self
+    }
+
+    /// Set the corner radius for the given style selector (0 = default state).
+    /// Use `0x7fff` for a pill/capsule shape.
+    pub fn radius(&self, r: i32, selector: u32) -> &Self {
+        assert_ne!(self.handle, null_mut(), "Obj handle cannot be null");
+        // SAFETY: handle non-null (asserted above).
+        unsafe { lv_obj_set_style_radius(self.handle, r, selector) };
+        self
+    }
+
+    /// Set local `bg_color` style for the given selector (part | state).
+    pub fn style_bg_color(&self, color: lv_color_t, selector: u32) -> &Self {
+        assert_ne!(self.handle, null_mut(), "Obj handle cannot be null");
+        unsafe { lv_obj_set_style_bg_color(self.handle, color, selector) };
+        self
+    }
+
+    /// Set local `bg_grad_color` for the given selector.
+    pub fn style_bg_grad_color(&self, color: lv_color_t, selector: u32) -> &Self {
+        assert_ne!(self.handle, null_mut(), "Obj handle cannot be null");
+        unsafe { lv_obj_set_style_bg_grad_color(self.handle, color, selector) };
+        self
+    }
+
+    /// Set local `bg_grad_dir` for the given selector.
+    pub fn style_bg_grad_dir(&self, dir: u32, selector: u32) -> &Self {
+        assert_ne!(self.handle, null_mut(), "Obj handle cannot be null");
+        unsafe { lv_obj_set_style_bg_grad_dir(self.handle, dir as lv_grad_dir_t, selector) };
+        self
+    }
+
+    /// Set transform rotation in 0.1 degree units for the given selector.
+    pub fn style_transform_rotation(&self, angle: i32, selector: u32) -> &Self {
+        assert_ne!(self.handle, null_mut(), "Obj handle cannot be null");
+        unsafe { lv_obj_set_style_transform_rotation(self.handle, angle, selector) };
+        self
+    }
+
+    /// Set uniform transform scale (256 = 1.0x) for the given selector.
+    pub fn style_transform_scale(&self, scale: i32, selector: u32) -> &Self {
+        assert_ne!(self.handle, null_mut(), "Obj handle cannot be null");
+        unsafe {
+            lv_obj_set_style_transform_scale_x(self.handle, scale, selector);
+            lv_obj_set_style_transform_scale_y(self.handle, scale, selector);
+        };
+        self
+    }
+
+    /// Set transform pivot X for the given selector.
+    pub fn style_transform_pivot_x(&self, x: i32, selector: u32) -> &Self {
+        assert_ne!(self.handle, null_mut(), "Obj handle cannot be null");
+        unsafe { lv_obj_set_style_transform_pivot_x(self.handle, x, selector) };
+        self
+    }
+
+    /// Set transform pivot Y for the given selector.
+    pub fn style_transform_pivot_y(&self, y: i32, selector: u32) -> &Self {
+        assert_ne!(self.handle, null_mut(), "Obj handle cannot be null");
+        unsafe { lv_obj_set_style_transform_pivot_y(self.handle, y, selector) };
         self
     }
 
@@ -350,6 +495,12 @@ impl Screen {
     pub fn pad_right(&self, p: i32) -> &Self {
         // SAFETY: handle non-null (Screen::active() returns None for null).
         unsafe { lv_obj_set_style_pad_right(self.handle, p, 0) };
+        self
+    }
+
+    pub fn text_color(&self, color: u32) -> &Self {
+        // SAFETY: handle non-null (Screen::active() returns None for null).
+        unsafe { lv_obj_set_style_text_color(self.handle, lv_color_hex(color), 0) };
         self
     }
 }
