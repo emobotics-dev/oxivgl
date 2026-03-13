@@ -9,8 +9,8 @@
 use oxivgl::{
     view::View,
     widgets::{
-        anim_set_pad_column, anim_set_pad_row, Anim, GridAlign, Label, Obj, Screen, WidgetError,
-        ANIM_REPEAT_INFINITE, GRID_TEMPLATE_LAST,
+        anim_set_pad_column, anim_set_pad_row, Anim, GridAlign, GridCell, Label, Obj, Screen,
+        WidgetError, ANIM_REPEAT_INFINITE, GRID_TEMPLATE_LAST,
     },
 };
 
@@ -40,12 +40,8 @@ impl View for Grid5 {
 
             let obj = Obj::new(&cont)?;
             obj.set_grid_cell(
-                GridAlign::Stretch,
-                col,
-                1,
-                GridAlign::Stretch,
-                row,
-                1,
+                GridCell::new(GridAlign::Stretch, col, 1),
+                GridCell::new(GridAlign::Stretch, row, 1),
             );
 
             let label = Label::new(&obj)?;

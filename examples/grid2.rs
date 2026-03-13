@@ -8,7 +8,9 @@
 
 use oxivgl::{
     view::View,
-    widgets::{GridAlign, Label, Obj, Screen, WidgetError, GRID_TEMPLATE_LAST, LV_SIZE_CONTENT},
+    widgets::{
+        GridAlign, GridCell, Label, Obj, Screen, WidgetError, GRID_TEMPLATE_LAST, LV_SIZE_CONTENT,
+    },
 };
 
 static COL_DSC: [i32; 4] = [70, 70, 70, GRID_TEMPLATE_LAST];
@@ -34,7 +36,10 @@ impl View for Grid2 {
         // Cell 0,0 — START/START
         let obj = Obj::new(&cont)?;
         obj.size(LV_SIZE_CONTENT, LV_SIZE_CONTENT);
-        obj.set_grid_cell(GridAlign::Start, 0, 1, GridAlign::Start, 0, 1);
+        obj.set_grid_cell(
+            GridCell::new(GridAlign::Start, 0, 1),
+            GridCell::new(GridAlign::Start, 0, 1),
+        );
         let lbl = Label::new(&obj)?;
         lbl.text("c0, r0");
         let _ = items.push(obj);
@@ -43,7 +48,10 @@ impl View for Grid2 {
         // Cell 1,0 — START/CENTER
         let obj = Obj::new(&cont)?;
         obj.size(LV_SIZE_CONTENT, LV_SIZE_CONTENT);
-        obj.set_grid_cell(GridAlign::Start, 1, 1, GridAlign::Center, 0, 1);
+        obj.set_grid_cell(
+            GridCell::new(GridAlign::Start, 1, 1),
+            GridCell::new(GridAlign::Center, 0, 1),
+        );
         let lbl = Label::new(&obj)?;
         lbl.text("c1, r0");
         let _ = items.push(obj);
@@ -52,7 +60,10 @@ impl View for Grid2 {
         // Cell 2,0 — START/END
         let obj = Obj::new(&cont)?;
         obj.size(LV_SIZE_CONTENT, LV_SIZE_CONTENT);
-        obj.set_grid_cell(GridAlign::Start, 2, 1, GridAlign::End, 0, 1);
+        obj.set_grid_cell(
+            GridCell::new(GridAlign::Start, 2, 1),
+            GridCell::new(GridAlign::End, 0, 1),
+        );
         let lbl = Label::new(&obj)?;
         lbl.text("c2, r0");
         let _ = items.push(obj);
@@ -61,7 +72,10 @@ impl View for Grid2 {
         // Cell 1-2,1 — spans 2 columns
         let obj = Obj::new(&cont)?;
         obj.size(LV_SIZE_CONTENT, LV_SIZE_CONTENT);
-        obj.set_grid_cell(GridAlign::Stretch, 1, 2, GridAlign::Stretch, 1, 1);
+        obj.set_grid_cell(
+            GridCell::new(GridAlign::Stretch, 1, 2),
+            GridCell::new(GridAlign::Stretch, 1, 1),
+        );
         let lbl = Label::new(&obj)?;
         lbl.text("c1-2, r1");
         let _ = items.push(obj);
@@ -70,7 +84,10 @@ impl View for Grid2 {
         // Cell 0,1-2 — spans 2 rows
         let obj = Obj::new(&cont)?;
         obj.size(LV_SIZE_CONTENT, LV_SIZE_CONTENT);
-        obj.set_grid_cell(GridAlign::Stretch, 0, 1, GridAlign::Stretch, 1, 2);
+        obj.set_grid_cell(
+            GridCell::new(GridAlign::Stretch, 0, 1),
+            GridCell::new(GridAlign::Stretch, 1, 2),
+        );
         let lbl = Label::new(&obj)?;
         lbl.text("c0\nr1-2");
         let _ = items.push(obj);

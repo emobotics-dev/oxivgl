@@ -13,8 +13,8 @@
 use oxivgl::{
     view::{register_event_on, View},
     widgets::{
-        Button, Event, EventCode, FlexFlow, Label, Obj, Palette, Screen, WidgetError,
-        palette_main,
+        palette_main, Button, Event, EventCode, FlexFlow, Label, Obj, Palette, Screen, Selector,
+        WidgetError,
     },
 };
 
@@ -31,7 +31,9 @@ impl View for EventBubble {
         // TODO: No touch input on fire27 hardware — click events won't fire
         // until an input device is connected.
         #[cfg(target_arch = "xtensa")]
-        oxivgl_examples_common::warn!("event_bubble: no touch input — click events require input device");
+        oxivgl_examples_common::warn!(
+            "event_bubble: no touch input — click events require input device"
+        );
 
         let cont = Obj::new(&screen)?;
         cont.size(290, 200).center();
@@ -73,7 +75,7 @@ impl View for EventBubble {
         if target == self.cont.handle() {
             return;
         }
-        event.target_style_bg_color(palette_main(Palette::Red), 0);
+        event.target_style_bg_color(palette_main(Palette::Red), Selector::DEFAULT);
     }
 
     fn update(&mut self) -> Result<(), WidgetError> {

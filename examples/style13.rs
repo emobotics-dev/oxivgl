@@ -1,5 +1,8 @@
 #![cfg_attr(target_arch = "xtensa", no_std, no_main)]
-#![cfg_attr(target_arch = "xtensa", feature(impl_trait_in_assoc_type, type_alias_impl_trait))]
+#![cfg_attr(
+    target_arch = "xtensa",
+    feature(impl_trait_in_assoc_type, type_alias_impl_trait)
+)]
 // SPDX-License-Identifier: MIT OR Apache-2.0
 //! Style 13 — Parts and states
 
@@ -9,8 +12,8 @@ use alloc::boxed::Box;
 use oxivgl::{
     view::View,
     widgets::{
-        GradDir, ObjState, Palette, Part, Screen, Slider, Style, WidgetError, palette_lighten,
-        palette_main,
+        palette_lighten, palette_main, GradDir, ObjState, Palette, Part, Screen, Slider, Style,
+        WidgetError,
     },
 };
 
@@ -37,8 +40,8 @@ impl View for Style13 {
             .shadow_spread(3);
 
         let slider = Slider::new(&screen)?;
-        slider.add_style(&style_indic, Part::Indicator as u32);
-        slider.add_style(&style_indic_pr, Part::Indicator as u32 | ObjState::PRESSED.0);
+        slider.add_style(&style_indic, Part::Indicator);
+        slider.add_style(&style_indic_pr, Part::Indicator | ObjState::PRESSED);
         slider.set_value(70);
         slider.center();
 

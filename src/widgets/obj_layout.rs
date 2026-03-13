@@ -53,26 +53,18 @@ impl<'p> Obj<'p> {
         self
     }
 
-    pub fn set_grid_cell(
-        &self,
-        col_align: GridAlign,
-        col: i32,
-        col_span: i32,
-        row_align: GridAlign,
-        row: i32,
-        row_span: i32,
-    ) -> &Self {
+    pub fn set_grid_cell(&self, col: super::grid::GridCell, row: super::grid::GridCell) -> &Self {
         assert_ne!(self.handle(), null_mut());
         // SAFETY: handle non-null (asserted above).
         unsafe {
             lv_obj_set_grid_cell(
                 self.handle(),
-                col_align as lv_grid_align_t,
-                col,
-                col_span,
-                row_align as lv_grid_align_t,
-                row,
-                row_span,
+                col.align as lv_grid_align_t,
+                col.pos,
+                col.span,
+                row.align as lv_grid_align_t,
+                row.pos,
+                row.span,
             )
         };
         self

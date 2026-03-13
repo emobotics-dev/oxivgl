@@ -8,7 +8,7 @@
 
 use oxivgl::{
     view::View,
-    widgets::{GridAlign, Label, Obj, Screen, WidgetError, GRID_TEMPLATE_LAST, grid_fr},
+    widgets::{grid_fr, GridAlign, GridCell, Label, Obj, Screen, WidgetError, GRID_TEMPLATE_LAST},
 };
 
 static COL_DSC: [i32; 4] = [60, grid_fr(1), grid_fr(2), GRID_TEMPLATE_LAST];
@@ -37,12 +37,8 @@ impl View for Grid3 {
 
             let obj = Obj::new(&cont)?;
             obj.set_grid_cell(
-                GridAlign::Stretch,
-                col,
-                1,
-                GridAlign::Stretch,
-                row,
-                1,
+                GridCell::new(GridAlign::Stretch, col, 1),
+                GridCell::new(GridAlign::Stretch, row, 1),
             );
 
             let label = Label::new(&obj)?;

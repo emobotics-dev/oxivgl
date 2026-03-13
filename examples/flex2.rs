@@ -9,7 +9,7 @@
 use oxivgl::{
     view::View,
     widgets::{
-        FlexAlign, FlexFlow, Label, Layout, Obj, ObjFlag, Screen, Style, WidgetError,
+        FlexAlign, FlexFlow, Label, Layout, Obj, ObjFlag, Screen, Selector, Style, WidgetError,
         LV_SIZE_CONTENT,
     },
 };
@@ -33,7 +33,7 @@ impl View for Flex2 {
 
         let cont = Obj::new(&screen)?;
         cont.size(300, 220).center();
-        cont.add_style(&style, 0);
+        cont.add_style(&style, Selector::DEFAULT);
 
         let mut items = heapless::Vec::<Obj<'static>, 8>::new();
         let mut labels = heapless::Vec::<Label<'static>, 8>::new();

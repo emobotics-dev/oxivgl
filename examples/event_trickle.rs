@@ -35,16 +35,20 @@ impl View for EventTrickle {
         // TODO: No touch input on fire27 hardware — press/focus events won't
         // fire until an input device is connected.
         #[cfg(target_arch = "xtensa")]
-        oxivgl_examples_common::warn!("event_trickle: no touch input — press events require input device");
+        oxivgl_examples_common::warn!(
+            "event_trickle: no touch input — press events require input device"
+        );
 
         let mut style_black = Box::new(Style::new());
-        style_black.text_color(color_white()).bg_color(color_black());
+        style_black
+            .text_color(color_white())
+            .bg_color(color_black());
 
         let cont = Obj::new(&screen)?;
         cont.size(290, 200).center();
         cont.set_flex_flow(FlexFlow::RowWrap);
         cont.add_flag(ObjFlag::EVENT_TRICKLE);
-        cont.add_style(&style_black, ObjState::PRESSED.0);
+        cont.add_style(&style_black, ObjState::PRESSED);
 
         let mut subconts = heapless::Vec::<Obj<'static>, 9>::new();
         let mut labels = heapless::Vec::<Label<'static>, 9>::new();
@@ -52,7 +56,7 @@ impl View for EventTrickle {
         for i in 0..9u32 {
             let subcont = Obj::new(&cont)?;
             subcont.size(70, 50);
-            subcont.add_style(&style_black, ObjState::FOCUSED.0);
+            subcont.add_style(&style_black, ObjState::FOCUSED);
 
             let label = Label::new(&subcont)?;
             let mut buf = heapless::String::<4>::new();
