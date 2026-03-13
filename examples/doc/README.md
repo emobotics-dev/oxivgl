@@ -304,6 +304,64 @@ actively scrolling, with animated transitions.
 - **Scroll 7** — Dynamic widget loading (needs `lv_obj_move_to_index`, Checkbox wrapper)
 - **Scroll 8** — Circular list (needs `lv_obj_move_to_index`, content size APIs)
 
+## Widgets — Arc
+
+### Widget Arc 1 — Arc with Value Label
+
+Arc with VALUE_CHANGED event; a label follows the arc's knob angle via `rotate_obj_to_angle`.
+
+![widget_arc1](screenshots/widget_arc1.png)
+
+### Widget Arc 2 — Animated Arc Loader
+
+Full-circle arc animating 0→100 in 1 s (infinite repeat, 500 ms delay). Knob hidden, not clickable.
+
+![widget_arc2](screenshots/widget_arc2.png)
+
+## Widgets — Bar
+
+### Widget Bar 1 — Simple Bar
+
+Simple 200×20 bar at 70%.
+
+![widget_bar1](screenshots/widget_bar1.png)
+
+### Widget Bar 2 — Styled Progress Bar
+
+Blue-themed bar with custom bg/indicator styles, rounded corners, padding, and animated fill.
+
+![widget_bar2](screenshots/widget_bar2.png)
+
+### Widget Bar 3 — Temperature Meter
+
+Vertical bar with red-to-blue gradient indicator, animated between -20 and 40 (3 s each direction).
+
+![widget_bar3](screenshots/widget_bar3.png)
+
+### Widget Bar 5 — LTR vs RTL Bars
+
+Two bars: one left-to-right (default), one right-to-left, with labels.
+
+![widget_bar5](screenshots/widget_bar5.png)
+
+### Skipped
+
+- **Widget Bar 4** — Stripe pattern (needs `lv_draw_mask_line_param_cfg_t`, draw mask APIs)
+
+## Widgets — Button
+
+### Widget Button 1 — Click and Toggle
+
+Standard button logging clicks and a checkable toggle button logging state changes.
+
+![widget_button1](screenshots/widget_button1.png)
+
+### Widget Button 2 — Styled Button from Scratch
+
+Button with gradient, shadow, outline, and a transition that expands outline on press.
+
+![widget_button2](screenshots/widget_button2.png)
+
 ## Running
 
 ```sh

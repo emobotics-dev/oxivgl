@@ -65,6 +65,8 @@ impl ObjFlag {
     pub const SNAPPABLE: Self = Self(lvgl_rust_sys::lv_obj_flag_t_LV_OBJ_FLAG_SNAPPABLE);
     /// Floating position — not affected by scroll or layout.
     pub const FLOATING: Self = Self(lvgl_rust_sys::lv_obj_flag_t_LV_OBJ_FLAG_FLOATING);
+    /// Keep pressed state when leaving the widget.
+    pub const PRESS_LOCK: Self = Self(lvgl_rust_sys::lv_obj_flag_t_LV_OBJ_FLAG_PRESS_LOCK);
 }
 
 impl core::ops::BitOr for ObjFlag {

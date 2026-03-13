@@ -43,8 +43,9 @@ mod value_label;
 
 pub use anim::{
     anim_path_bounce, anim_path_ease_in, anim_path_ease_in_out, anim_path_ease_out,
-    anim_path_linear, anim_path_overshoot, anim_set_height, anim_set_pad_column, anim_set_pad_row,
-    anim_set_size, anim_set_slider_value, anim_set_width, anim_set_x, Anim, ANIM_REPEAT_INFINITE,
+    anim_path_linear, anim_path_overshoot, anim_set_arc_value, anim_set_bar_value,
+    anim_set_height, anim_set_pad_column, anim_set_pad_row, anim_set_size,
+    anim_set_slider_value, anim_set_width, anim_set_x, Anim, ANIM_REPEAT_INFINITE,
 };
 pub use anim_timeline::{AnimTimeline, ANIM_TIMELINE_PROGRESS_MAX};
 pub use arc::Arc;
