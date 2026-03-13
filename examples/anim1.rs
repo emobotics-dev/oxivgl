@@ -6,46 +6,17 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
 //! Anim 1 — Start animation on an event
 
-use core::ffi::c_void;
-use lvgl_rust_sys::*;
 use oxivgl::{
-    view::View,
+    view::{Event, View},
     widgets::{
-        anim_path_ease_in, anim_path_overshoot, Label, Screen, Switch, WidgetError,
-        LV_EVENT_VALUE_CHANGED, LV_STATE_CHECKED,
+        anim_path_ease_in, anim_path_overshoot, anim_set_x, Anim, Label, Screen, Switch,
+        WidgetError, LV_EVENT_VALUE_CHANGED, LV_OBJ_FLAG_EVENT_BUBBLE, LV_STATE_CHECKED,
     },
 };
 
 struct Anim1 {
-    _label: Label<'static>,
-    _sw: Switch<'static>,
-}
-
-unsafe extern "C" fn anim_x_cb(var: *mut c_void, v: i32) {
-    unsafe { lv_obj_set_x(var as *mut lv_obj_t, v) };
-}
-
-unsafe extern "C" fn sw_event_cb(e: *mut lv_event_t) {
-    unsafe {
-        let sw = lv_event_get_target_obj(e);
-        let label = lv_event_get_user_data(e) as *mut lv_obj_t;
-        let checked = lv_obj_has_state(sw, LV_STATE_CHECKED);
-
-        let mut a = core::mem::zeroed::<lv_anim_t>();
-        lv_anim_init(&mut a);
-        lv_anim_set_var(&mut a, label as *mut c_void);
-        lv_anim_set_duration(&mut a, 500);
-        lv_anim_set_exec_cb(&mut a, Some(anim_x_cb));
-
-        if checked {
-            lv_anim_set_values(&mut a, lv_obj_get_x(label), 100);
-            lv_anim_set_path_cb(&mut a, Some(anim_path_overshoot));
-        } else {
-            lv_anim_set_values(&mut a, lv_obj_get_x(label), -lv_obj_get_width(label));
-            lv_anim_set_path_cb(&mut a, Some(anim_path_ease_in));
-        }
-        lv_anim_start(&a);
-    }
+    label: Label<'static>,
+    sw: Switch<'static>,
 }
 
 impl View for Anim1 {
@@ -58,16 +29,29 @@ impl View for Anim1 {
         let sw = Switch::new(&screen)?;
         sw.center();
         sw.add_state(LV_STATE_CHECKED);
-        sw.on_event(
-            sw_event_cb,
-            LV_EVENT_VALUE_CHANGED,
-            label.handle() as *mut c_void,
-        );
+        sw.add_flag(LV_OBJ_FLAG_EVENT_BUBBLE);
 
-        Ok(Self {
-            _label: label,
-            _sw: sw,
-        })
+        Ok(Self { label, sw })
+    }
+
+    fn on_event(&mut self, event: &Event) {
+        if event.code() == LV_EVENT_VALUE_CHANGED && event.target_handle() == self.sw.handle() {
+            let checked = self.sw.has_state(LV_STATE_CHECKED);
+
+            let mut a = Anim::new();
+            a.set_var(&self.label)
+                .set_duration(500)
+                .set_exec_cb(Some(anim_set_x));
+
+            if checked {
+                a.set_values(self.label.get_x(), 100)
+                    .set_path_cb(Some(anim_path_overshoot));
+            } else {
+                a.set_values(self.label.get_x(), -self.label.get_width())
+                    .set_path_cb(Some(anim_path_ease_in));
+            }
+            a.start();
+        }
     }
 
     fn update(&mut self) -> Result<(), WidgetError> {

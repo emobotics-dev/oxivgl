@@ -20,6 +20,7 @@ mod arc;
 mod bar;
 mod button;
 mod child;
+mod grad;
 mod image;
 mod label;
 mod led;
@@ -34,13 +35,15 @@ mod value_label;
 
 pub use anim::{
     anim_path_bounce, anim_path_ease_in, anim_path_ease_in_out, anim_path_ease_out,
-    anim_path_linear, anim_path_overshoot, Anim, ANIM_REPEAT_INFINITE,
+    anim_path_linear, anim_path_overshoot, anim_set_height, anim_set_size, anim_set_slider_value,
+    anim_set_width, anim_set_x, Anim, ANIM_REPEAT_INFINITE,
 };
 pub use anim_timeline::{AnimTimeline, ANIM_TIMELINE_PROGRESS_MAX};
 pub use arc::Arc;
 pub use bar::Bar;
 pub use button::Button;
 pub use child::{detach, Child};
+pub use grad::{GradDsc, GradExtend};
 pub use image::Image;
 pub use label::Label;
 pub use led::Led;
@@ -60,21 +63,36 @@ pub use switch::Switch;
 pub use value_label::ValueLabel;
 
 // Re-export raw event types so example callbacks don't need `lvgl_rust_sys`.
-pub use lvgl_rust_sys::{lv_event_code_t, lv_event_t};
+pub use lvgl_rust_sys::{lv_color_t, lv_event_code_t, lv_event_t, lv_point_precise_t};
 /// `LV_EVENT_VALUE_CHANGED` — fired by sliders, dropdowns, etc.
 pub const LV_EVENT_VALUE_CHANGED: lv_event_code_t =
     lvgl_rust_sys::lv_event_code_t_LV_EVENT_VALUE_CHANGED;
 /// `LV_EVENT_CLICKED`
 pub const LV_EVENT_CLICKED: lv_event_code_t = lvgl_rust_sys::lv_event_code_t_LV_EVENT_CLICKED;
+/// `LV_EVENT_ALL` — receive all event types.
+pub const LV_EVENT_ALL: lv_event_code_t = lvgl_rust_sys::lv_event_code_t_LV_EVENT_ALL;
+/// `LV_EVENT_PRESSED`
+pub const LV_EVENT_PRESSED: lv_event_code_t = lvgl_rust_sys::lv_event_code_t_LV_EVENT_PRESSED;
+/// `LV_EVENT_LONG_PRESSED`
+pub const LV_EVENT_LONG_PRESSED: lv_event_code_t =
+    lvgl_rust_sys::lv_event_code_t_LV_EVENT_LONG_PRESSED;
+/// `LV_EVENT_LONG_PRESSED_REPEAT`
+pub const LV_EVENT_LONG_PRESSED_REPEAT: lv_event_code_t =
+    lvgl_rust_sys::lv_event_code_t_LV_EVENT_LONG_PRESSED_REPEAT;
 
 // Object flags
 pub const LV_OBJ_FLAG_CHECKABLE: lvgl_rust_sys::lv_obj_flag_t =
     lvgl_rust_sys::lv_obj_flag_t_LV_OBJ_FLAG_CHECKABLE;
 pub const LV_OBJ_FLAG_IGNORE_LAYOUT: lvgl_rust_sys::lv_obj_flag_t =
     lvgl_rust_sys::lv_obj_flag_t_LV_OBJ_FLAG_IGNORE_LAYOUT;
+pub const LV_OBJ_FLAG_EVENT_BUBBLE: lvgl_rust_sys::lv_obj_flag_t =
+    lvgl_rust_sys::lv_obj_flag_t_LV_OBJ_FLAG_EVENT_BUBBLE;
+pub const LV_OBJ_FLAG_EVENT_TRICKLE: lvgl_rust_sys::lv_obj_flag_t =
+    lvgl_rust_sys::lv_obj_flag_t_LV_OBJ_FLAG_EVENT_TRICKLE;
 
 // Object states
 pub const LV_STATE_CHECKED: lvgl_rust_sys::lv_state_t = lvgl_rust_sys::lv_state_t_LV_STATE_CHECKED;
+pub const LV_STATE_FOCUSED: lvgl_rust_sys::lv_state_t = lvgl_rust_sys::lv_state_t_LV_STATE_FOCUSED;
 
 // Scrollbar modes
 pub const LV_SCROLLBAR_MODE_OFF: lvgl_rust_sys::lv_scrollbar_mode_t =

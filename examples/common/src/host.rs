@@ -102,7 +102,8 @@ macro_rules! host_main {
 
             $crate::env_logger::init();
             let _driver = LvglDriver::init(W, H);
-            let _view = <$View>::create().expect("view create failed");
+            let mut _view = <$View>::create().expect("view create failed");
+            $crate::oxivgl::view::register_view_events(&mut _view);
 
             // Derive screenshot name from source file path.
             let src = file!();

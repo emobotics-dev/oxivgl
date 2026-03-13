@@ -2,6 +2,7 @@
 //! Shared infrastructure for oxivgl examples.
 
 #![cfg_attr(target_arch = "xtensa", no_std)]
+mod fmt;
 
 #[cfg(not(target_arch = "xtensa"))]
 pub mod host;
@@ -38,7 +39,6 @@ pub use esp_rtos;
 pub use esp_sync;
 #[cfg(target_arch = "xtensa")]
 pub use lcd_async;
-#[cfg(target_arch = "xtensa")]
 pub use log;
 #[cfg(target_arch = "xtensa")]
 pub use static_cell;
