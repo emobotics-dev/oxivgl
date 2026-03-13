@@ -32,6 +32,8 @@ impl EventCode {
     pub const CLICKED: Self = Self(10);
     /// Value changed (sliders, switches, etc.).
     pub const VALUE_CHANGED: Self = Self(35);
+    /// Object is being scrolled.
+    pub const SCROLL: Self = Self(lvgl_rust_sys::lv_event_code_t_LV_EVENT_SCROLL);
 }
 
 /// LVGL object flag. Combine with `|` for multi-flag operations.
@@ -55,6 +57,14 @@ impl ObjFlag {
     pub const EVENT_BUBBLE: Self = Self(lvgl_rust_sys::lv_obj_flag_t_LV_OBJ_FLAG_EVENT_BUBBLE);
     /// Events trickle down to children.
     pub const EVENT_TRICKLE: Self = Self(lvgl_rust_sys::lv_obj_flag_t_LV_OBJ_FLAG_EVENT_TRICKLE);
+    /// Elastic (bounce-back) scrolling.
+    pub const SCROLL_ELASTIC: Self = Self(lvgl_rust_sys::lv_obj_flag_t_LV_OBJ_FLAG_SCROLL_ELASTIC);
+    /// Scroll only one snap-child at a time.
+    pub const SCROLL_ONE: Self = Self(lvgl_rust_sys::lv_obj_flag_t_LV_OBJ_FLAG_SCROLL_ONE);
+    /// Child is a snap target for its parent's scroll snap.
+    pub const SNAPPABLE: Self = Self(lvgl_rust_sys::lv_obj_flag_t_LV_OBJ_FLAG_SNAPPABLE);
+    /// Floating position — not affected by scroll or layout.
+    pub const FLOATING: Self = Self(lvgl_rust_sys::lv_obj_flag_t_LV_OBJ_FLAG_FLOATING);
 }
 
 impl core::ops::BitOr for ObjFlag {
@@ -84,6 +94,10 @@ impl ObjState {
     pub const FOCUSED: Self = Self(lvgl_rust_sys::lv_state_t_LV_STATE_FOCUSED);
     /// Currently pressed.
     pub const PRESSED: Self = Self(lvgl_rust_sys::lv_state_t_LV_STATE_PRESSED);
+    /// Currently being scrolled.
+    pub const SCROLLED: Self = Self(lvgl_rust_sys::lv_state_t_LV_STATE_SCROLLED);
+    /// Wildcard — matches any state.
+    pub const ANY: Self = Self(lvgl_rust_sys::lv_state_t_LV_STATE_ANY);
 }
 
 impl core::ops::BitOr for ObjState {
@@ -134,6 +148,42 @@ pub enum ScrollbarMode {
     Active = lvgl_rust_sys::lv_scrollbar_mode_t_LV_SCROLLBAR_MODE_ACTIVE,
     /// Show when content overflows.
     Auto = lvgl_rust_sys::lv_scrollbar_mode_t_LV_SCROLLBAR_MODE_AUTO,
+}
+
+/// LVGL scroll snap alignment.
+#[repr(u32)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum ScrollSnap {
+    /// No snap alignment.
+    None = lvgl_rust_sys::lv_scroll_snap_t_LV_SCROLL_SNAP_NONE,
+    /// Snap to start (left/top).
+    Start = lvgl_rust_sys::lv_scroll_snap_t_LV_SCROLL_SNAP_START,
+    /// Snap to end (right/bottom).
+    End = lvgl_rust_sys::lv_scroll_snap_t_LV_SCROLL_SNAP_END,
+    /// Snap to center.
+    Center = lvgl_rust_sys::lv_scroll_snap_t_LV_SCROLL_SNAP_CENTER,
+}
+
+/// LVGL scroll direction flags. Combine with `|`.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct ScrollDir(pub u32);
+
+impl ScrollDir {
+    /// No direction.
+    pub const NONE: Self = Self(lvgl_rust_sys::lv_dir_t_LV_DIR_NONE);
+    /// Horizontal (left + right).
+    pub const HOR: Self = Self(lvgl_rust_sys::lv_dir_t_LV_DIR_HOR);
+    /// Vertical (top + bottom).
+    pub const VER: Self = Self(lvgl_rust_sys::lv_dir_t_LV_DIR_VER);
+    /// All directions.
+    pub const ALL: Self = Self(lvgl_rust_sys::lv_dir_t_LV_DIR_ALL);
+}
+
+impl core::ops::BitOr for ScrollDir {
+    type Output = Self;
+    fn bitor(self, rhs: Self) -> Self {
+        Self(self.0 | rhs.0)
+    }
 }
 
 /// LVGL layout engine type.
