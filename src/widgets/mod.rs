@@ -33,9 +33,9 @@ mod obj_style;
 mod palette;
 pub mod prelude;
 mod scale;
+mod screen;
 mod slider;
 mod style;
-mod screen;
 mod switch;
 mod value_label;
 
@@ -49,7 +49,7 @@ pub use arc::Arc;
 pub use bar::Bar;
 pub use button::Button;
 pub use child::{detach, Child};
-pub use enums::{EventCode, Layout, ObjFlag, ObjState, ScrollbarMode};
+pub use enums::{EventCode, Layout, ObjFlag, ObjState, Opa, ScrollbarMode};
 pub use event::Event;
 pub use grad::{GradDsc, GradExtend};
 pub use image::Image;
@@ -57,12 +57,12 @@ pub use label::Label;
 pub use led::Led;
 pub use line::Line;
 pub use obj::{Align, AsLvHandle, BaseDir, FlexAlign, FlexFlow, GridAlign, Obj, Part, TextAlign};
-pub use screen::Screen;
 pub use palette::{
     color_black, color_make, color_white, palette_darken, palette_lighten, palette_main, GradDir,
     Palette,
 };
 pub use scale::{Scale, ScaleMode};
+pub use screen::Screen;
 pub use slider::Slider;
 pub use style::{
     darken_filter_cb, lv_pct, props, BorderSide, ColorFilter, Style, TextDecor, TransitionDsc,

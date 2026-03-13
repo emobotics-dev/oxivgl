@@ -72,27 +72,13 @@ impl GradDsc {
     }
 
     /// Configure as a linear gradient.
-    pub fn linear(
-        &mut self,
-        x1: i32,
-        y1: i32,
-        x2: i32,
-        y2: i32,
-        extend: GradExtend,
-    ) -> &mut Self {
+    pub fn linear(&mut self, x1: i32, y1: i32, x2: i32, y2: i32, extend: GradExtend) -> &mut Self {
         unsafe { lv_grad_linear_init(&mut self.inner, x1, y1, x2, y2, extend as u32) };
         self
     }
 
     /// Configure as a radial gradient.
-    pub fn radial(
-        &mut self,
-        cx: i32,
-        cy: i32,
-        rx: i32,
-        ry: i32,
-        extend: GradExtend,
-    ) -> &mut Self {
+    pub fn radial(&mut self, cx: i32, cy: i32, rx: i32, ry: i32, extend: GradExtend) -> &mut Self {
         unsafe { lv_grad_radial_init(&mut self.inner, cx, cy, rx, ry, extend as u32) };
         self
     }
@@ -107,7 +93,14 @@ impl GradDsc {
         extend: GradExtend,
     ) -> &mut Self {
         unsafe {
-            lv_grad_conical_init(&mut self.inner, cx, cy, start_angle, end_angle, extend as u32)
+            lv_grad_conical_init(
+                &mut self.inner,
+                cx,
+                cy,
+                start_angle,
+                end_angle,
+                extend as u32,
+            )
         };
         self
     }

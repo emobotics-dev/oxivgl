@@ -46,11 +46,7 @@ impl<'p> Obj<'p> {
 
     /// Set grid column/row descriptors and enable grid layout.
     /// The slices must be `'static` — LVGL stores the pointers internally.
-    pub fn set_grid_dsc_array(
-        &self,
-        col_dsc: &'static [i32],
-        row_dsc: &'static [i32],
-    ) -> &Self {
+    pub fn set_grid_dsc_array(&self, col_dsc: &'static [i32], row_dsc: &'static [i32]) -> &Self {
         assert_ne!(self.handle(), null_mut());
         // SAFETY: handle non-null (asserted above); slices are 'static.
         unsafe { lv_obj_set_grid_dsc_array(self.handle(), col_dsc.as_ptr(), row_dsc.as_ptr()) };

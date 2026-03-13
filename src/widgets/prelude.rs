@@ -7,5 +7,5 @@
 
 pub use super::{
     Align, AsLvHandle, Button, Event, EventCode, FlexAlign, FlexFlow, GridAlign, Label, Layout,
-    Obj, ObjFlag, ObjState, Palette, Screen, Slider, Style, Switch, WidgetError,
+    Obj, ObjFlag, ObjState, Opa, Palette, Screen, Slider, Style, Switch, WidgetError,
 };

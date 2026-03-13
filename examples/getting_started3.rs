@@ -1,5 +1,8 @@
 #![cfg_attr(target_arch = "xtensa", no_std, no_main)]
-#![cfg_attr(target_arch = "xtensa", feature(impl_trait_in_assoc_type, type_alias_impl_trait))]
+#![cfg_attr(
+    target_arch = "xtensa",
+    feature(impl_trait_in_assoc_type, type_alias_impl_trait)
+)]
 // SPDX-License-Identifier: MIT OR Apache-2.0
 //! Getting Started 3 — Custom Styles
 
@@ -9,8 +12,8 @@ use alloc::boxed::Box;
 use oxivgl::{
     view::View,
     widgets::{
-        Button, ColorFilter, GradDir, Label, ObjState, Palette, Screen, Style, WidgetError,
-        darken_filter_cb, palette_lighten, palette_main,
+        darken_filter_cb, palette_lighten, palette_main, Button, ColorFilter, GradDir, Label,
+        ObjState, Opa, Palette, Screen, Style, WidgetError,
     },
 };
 
@@ -25,9 +28,6 @@ struct GettingStarted3 {
     _color_filter: Box<ColorFilter>,
 }
 
-const LV_OPA_COVER: u8 = 255;
-const LV_OPA_20: u8 = 51;
-
 impl View for GettingStarted3 {
     fn create() -> Result<Self, WidgetError> {
         let color_filter = Box::new(ColorFilter::new(darken_filter_cb));
@@ -35,17 +35,17 @@ impl View for GettingStarted3 {
         let mut style_btn = Box::new(Style::new());
         style_btn
             .radius(10)
-            .bg_opa(LV_OPA_COVER)
+            .bg_opa(Opa::COVER.0)
             .bg_color(palette_lighten(Palette::Grey, 3))
             .bg_grad_color(palette_main(Palette::Grey))
             .bg_grad_dir(GradDir::Ver)
             .border_color_hex(0x000000)
-            .border_opa(LV_OPA_20)
+            .border_opa(Opa::OPA_20.0)
             .border_width(2)
             .text_color_hex(0x000000);
 
         let mut style_pressed = Box::new(Style::new());
-        style_pressed.color_filter(&color_filter, LV_OPA_20);
+        style_pressed.color_filter(&color_filter, Opa::OPA_20.0);
 
         let mut style_red = Box::new(Style::new());
         style_red
