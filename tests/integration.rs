@@ -20,8 +20,16 @@ static INIT: Once = Once::new();
 static mut DRIVER: Option<LvglDriver> = None;
 
 /// Initialise LVGL once for all tests. Must run single-threaded.
+///
+/// Panics if `SDL_VIDEODRIVER` is not set — without it LVGL's SDL2
+/// backend tries to open a real display and crashes with a double-free.
+/// Run via `./run_tests.sh int` or set `SDL_VIDEODRIVER=dummy` manually.
 fn ensure_init() {
     INIT.call_once(|| {
+        assert!(
+            std::env::var("SDL_VIDEODRIVER").is_ok(),
+            "SDL_VIDEODRIVER not set — run via: ./run_tests.sh int"
+        );
         // SAFETY: single-threaded test runner (--test-threads=1).
         unsafe { DRIVER = Some(LvglDriver::init(320, 240)) };
     });
