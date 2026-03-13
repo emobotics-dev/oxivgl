@@ -23,6 +23,7 @@ mod child;
 mod enums;
 pub(crate) mod event;
 mod grad;
+mod grid;
 mod image;
 mod label;
 mod led;
@@ -34,6 +35,7 @@ mod palette;
 pub mod prelude;
 mod scale;
 mod screen;
+mod selector;
 mod slider;
 mod style;
 mod switch;
@@ -52,6 +54,7 @@ pub use child::{detach, Child};
 pub use enums::{EventCode, Layout, ObjFlag, ObjState, Opa, ScrollbarMode};
 pub use event::Event;
 pub use grad::{GradDsc, GradExtend};
+pub use grid::GridCell;
 pub use image::Image;
 pub use label::Label;
 pub use led::Led;
@@ -61,8 +64,9 @@ pub use palette::{
     color_black, color_make, color_white, palette_darken, palette_lighten, palette_main, GradDir,
     Palette,
 };
-pub use scale::{Scale, ScaleMode};
+pub use scale::{Scale, ScaleBuilder, ScaleMode};
 pub use screen::Screen;
+pub use selector::Selector;
 pub use slider::Slider;
 pub use style::{
     darken_filter_cb, lv_pct, props, BorderSide, ColorFilter, Style, TextDecor, TransitionDsc,
@@ -75,6 +79,10 @@ pub use value_label::ValueLabel;
 pub use lvgl_rust_sys::{lv_color_t, lv_event_t, lv_point_precise_t};
 
 // Grid helpers
+/// Maximum corner radius — creates a pill/capsule shape.
+/// Equivalent to LVGL's `LV_RADIUS_CIRCLE` (0x7FFF).
+pub const RADIUS_MAX: i32 = 0x7FFF;
+
 /// Sentinel value marking the end of a grid template descriptor array.
 pub const GRID_TEMPLATE_LAST: i32 = lvgl_rust_sys::LV_COORD_MAX as i32;
 

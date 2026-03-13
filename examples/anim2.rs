@@ -10,7 +10,7 @@ use oxivgl::{
     view::View,
     widgets::{
         anim_path_ease_in_out, anim_set_size, anim_set_x, palette_main, Align, Anim, Obj, Palette,
-        Screen, WidgetError, ANIM_REPEAT_INFINITE,
+        Screen, Selector, WidgetError, ANIM_REPEAT_INFINITE, RADIUS_MAX,
     },
 };
 
@@ -24,8 +24,8 @@ impl View for Anim2 {
 
         let obj = Obj::new(&screen)?;
         obj.remove_scrollable();
-        obj.style_bg_color(palette_main(Palette::Red), 0);
-        obj.radius(0x7fff, 0);
+        obj.style_bg_color(palette_main(Palette::Red), Selector::DEFAULT);
+        obj.radius(RADIUS_MAX, Selector::DEFAULT);
         obj.align(Align::LeftMid, 10, 0);
 
         let mut a = Anim::new();

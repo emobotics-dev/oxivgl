@@ -1,5 +1,8 @@
 #![cfg_attr(target_arch = "xtensa", no_std, no_main)]
-#![cfg_attr(target_arch = "xtensa", feature(impl_trait_in_assoc_type, type_alias_impl_trait))]
+#![cfg_attr(
+    target_arch = "xtensa",
+    feature(impl_trait_in_assoc_type, type_alias_impl_trait)
+)]
 // SPDX-License-Identifier: MIT OR Apache-2.0
 //! Style 1 — Size, Position and Padding
 
@@ -8,7 +11,7 @@ extern crate alloc;
 use alloc::boxed::Box;
 use oxivgl::{
     view::View,
-    widgets::{LV_SIZE_CONTENT, Label, Obj, Screen, Style, WidgetError, lv_pct},
+    widgets::{lv_pct, Label, Obj, Screen, Selector, Style, WidgetError, LV_SIZE_CONTENT},
 };
 
 struct Style1 {
@@ -32,7 +35,7 @@ impl View for Style1 {
             .y(80);
 
         let obj = Obj::new(&screen)?;
-        obj.add_style(&style, 0);
+        obj.add_style(&style, Selector::DEFAULT);
 
         let label = Label::new(&obj)?;
         label.text("Hello");

@@ -125,3 +125,109 @@ impl<'p> Scale<'p> {
         Ok(scale)
     }
 }
+
+/// Builder for [`Scale::tick_ring`] — avoids 13 positional arguments.
+///
+/// ```ignore
+/// let scale = ScaleBuilder::new(200, ScaleMode::RoundOuter)
+///     .rotation(135)
+///     .sweep(270)
+///     .range_max(100)
+///     .total_ticks(21)
+///     .major_every(5)
+///     .build(&screen)?;
+/// ```
+pub struct ScaleBuilder {
+    size: i32,
+    mode: ScaleMode,
+    rotation: i32,
+    sweep: i32,
+    range_max: i32,
+    total_ticks: u32,
+    major_every: u32,
+    show_labels: bool,
+    major_len: i32,
+    minor_len: i32,
+    major_color: u32,
+    minor_color: u32,
+}
+
+impl ScaleBuilder {
+    /// Start with required fields (size, mode), sensible defaults for the rest.
+    pub fn new(size: i32, mode: ScaleMode) -> Self {
+        Self {
+            size,
+            mode,
+            rotation: 0,
+            sweep: 360,
+            range_max: 100,
+            total_ticks: 11,
+            major_every: 5,
+            show_labels: true,
+            major_len: 10,
+            minor_len: 5,
+            major_color: 0x000000,
+            minor_color: 0x808080,
+        }
+    }
+
+    pub fn rotation(mut self, v: i32) -> Self {
+        self.rotation = v;
+        self
+    }
+    pub fn sweep(mut self, v: i32) -> Self {
+        self.sweep = v;
+        self
+    }
+    pub fn range_max(mut self, v: i32) -> Self {
+        self.range_max = v;
+        self
+    }
+    pub fn total_ticks(mut self, v: u32) -> Self {
+        self.total_ticks = v;
+        self
+    }
+    pub fn major_every(mut self, v: u32) -> Self {
+        self.major_every = v;
+        self
+    }
+    pub fn show_labels(mut self, v: bool) -> Self {
+        self.show_labels = v;
+        self
+    }
+    pub fn major_len(mut self, v: i32) -> Self {
+        self.major_len = v;
+        self
+    }
+    pub fn minor_len(mut self, v: i32) -> Self {
+        self.minor_len = v;
+        self
+    }
+    pub fn major_color(mut self, v: u32) -> Self {
+        self.major_color = v;
+        self
+    }
+    pub fn minor_color(mut self, v: u32) -> Self {
+        self.minor_color = v;
+        self
+    }
+
+    /// Build the scale widget.
+    pub fn build(self, parent: &impl AsLvHandle) -> Result<Scale<'_>, WidgetError> {
+        Scale::tick_ring(
+            parent,
+            self.size,
+            self.mode,
+            self.rotation,
+            self.sweep,
+            self.range_max,
+            self.total_ticks,
+            self.major_every,
+            self.show_labels,
+            self.major_len,
+            self.minor_len,
+            self.major_color,
+            self.minor_color,
+        )
+    }
+}
