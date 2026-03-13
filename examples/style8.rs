@@ -1,5 +1,8 @@
 #![cfg_attr(target_arch = "xtensa", no_std, no_main)]
-#![cfg_attr(target_arch = "xtensa", feature(impl_trait_in_assoc_type, type_alias_impl_trait))]
+#![cfg_attr(
+    target_arch = "xtensa",
+    feature(impl_trait_in_assoc_type, type_alias_impl_trait)
+)]
 // SPDX-License-Identifier: MIT OR Apache-2.0
 //! Style 8 — Text styles
 
@@ -8,7 +11,10 @@ extern crate alloc;
 use alloc::boxed::Box;
 use oxivgl::{
     view::View,
-    widgets::{Label, Palette, Screen, Style, TextDecor, WidgetError, palette_lighten, palette_main},
+    widgets::{
+        palette_lighten, palette_main, Label, Palette, Screen, Selector, Style, TextDecor,
+        WidgetError,
+    },
 };
 
 struct Style8 {
@@ -34,7 +40,7 @@ impl View for Style8 {
             .text_decor(TextDecor::UNDERLINE);
 
         let label = Label::new(&screen)?;
-        label.add_style(&style, 0);
+        label.add_style(&style, Selector::DEFAULT);
         label.text("Text of\na label");
         label.center();
 

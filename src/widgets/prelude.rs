@@ -6,6 +6,7 @@
 //! ```
 
 pub use super::{
-    Align, AsLvHandle, Button, Event, EventCode, FlexAlign, FlexFlow, GridAlign, Label, Layout,
-    Obj, ObjFlag, ObjState, Opa, Palette, Screen, Slider, Style, Switch, WidgetError,
+    Align, AsLvHandle, Button, Event, EventCode, FlexAlign, FlexFlow, GridAlign, GridCell, Label,
+    Layout, Obj, ObjFlag, ObjState, Opa, Palette, Screen, Selector, Slider, Style, Switch,
+    WidgetError, RADIUS_MAX,
 };

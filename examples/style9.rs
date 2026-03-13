@@ -1,5 +1,8 @@
 #![cfg_attr(target_arch = "xtensa", no_std, no_main)]
-#![cfg_attr(target_arch = "xtensa", feature(impl_trait_in_assoc_type, type_alias_impl_trait))]
+#![cfg_attr(
+    target_arch = "xtensa",
+    feature(impl_trait_in_assoc_type, type_alias_impl_trait)
+)]
 // SPDX-License-Identifier: MIT OR Apache-2.0
 //! Style 9 — Line styles
 
@@ -8,7 +11,9 @@ extern crate alloc;
 use alloc::boxed::Box;
 use oxivgl::{
     view::View,
-    widgets::{Line, Palette, Screen, Style, WidgetError, lv_point_precise_t, palette_main},
+    widgets::{
+        lv_point_precise_t, palette_main, Line, Palette, Screen, Selector, Style, WidgetError,
+    },
 };
 
 struct Style9 {
@@ -34,7 +39,7 @@ impl View for Style9 {
         ]);
 
         let line = Line::new(&screen)?;
-        line.add_style(&style, 0);
+        line.add_style(&style, Selector::DEFAULT);
         line.set_points(&*points);
         line.center();
 

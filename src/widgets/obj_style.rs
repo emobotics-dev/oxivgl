@@ -66,10 +66,16 @@ impl<'p> Obj<'p> {
     }
 
     /// Apply a style to this object for the given selector.
-    /// Pass `0` for default state, `ObjState::PRESSED.0` for pressed.
     ///
     /// The `style` must outlive this object (see [`Style`](super::Style) docs).
-    pub fn add_style(&self, style: &super::Style, selector: u32) -> &Self {
+    ///
+    /// ```ignore
+    /// btn.add_style(&style, Selector::DEFAULT);
+    /// btn.add_style(&style, ObjState::PRESSED);
+    /// slider.add_style(&style, Part::Indicator | ObjState::PRESSED);
+    /// ```
+    pub fn add_style(&self, style: &super::Style, selector: impl Into<super::Selector>) -> &Self {
+        let selector = selector.into().raw();
         assert_ne!(self.handle(), null_mut(), "Obj handle cannot be null");
         // SAFETY: handle non-null; style.inner pointer valid for style's lifetime.
         unsafe { lv_obj_add_style(self.handle(), &style.inner as *const lv_style_t, selector) };
@@ -118,9 +124,10 @@ impl<'p> Obj<'p> {
         self
     }
 
-    /// Set the corner radius for the given style selector (0 = default state).
-    /// Use `0x7fff` for a pill/capsule shape.
-    pub fn radius(&self, r: i32, selector: u32) -> &Self {
+    /// Set the corner radius for the given style selector.
+    /// Use [`RADIUS_MAX`](super::RADIUS_MAX) for a pill/capsule shape.
+    pub fn radius(&self, r: i32, selector: impl Into<super::Selector>) -> &Self {
+        let selector = selector.into().raw();
         assert_ne!(self.handle(), null_mut(), "Obj handle cannot be null");
         // SAFETY: handle non-null (asserted above).
         unsafe { lv_obj_set_style_radius(self.handle(), r, selector) };
@@ -128,7 +135,8 @@ impl<'p> Obj<'p> {
     }
 
     /// Set local `bg_color` style for the given selector (part | state).
-    pub fn style_bg_color(&self, color: lv_color_t, selector: u32) -> &Self {
+    pub fn style_bg_color(&self, color: lv_color_t, selector: impl Into<super::Selector>) -> &Self {
+        let selector = selector.into().raw();
         assert_ne!(self.handle(), null_mut(), "Obj handle cannot be null");
         // SAFETY: handle non-null (asserted above).
         unsafe { lv_obj_set_style_bg_color(self.handle(), color, selector) };
@@ -136,7 +144,12 @@ impl<'p> Obj<'p> {
     }
 
     /// Set local `bg_grad_color` for the given selector.
-    pub fn style_bg_grad_color(&self, color: lv_color_t, selector: u32) -> &Self {
+    pub fn style_bg_grad_color(
+        &self,
+        color: lv_color_t,
+        selector: impl Into<super::Selector>,
+    ) -> &Self {
+        let selector = selector.into().raw();
         assert_ne!(self.handle(), null_mut(), "Obj handle cannot be null");
         // SAFETY: handle non-null (asserted above).
         unsafe { lv_obj_set_style_bg_grad_color(self.handle(), color, selector) };
@@ -144,7 +157,12 @@ impl<'p> Obj<'p> {
     }
 
     /// Set local `bg_grad_dir` for the given selector.
-    pub fn style_bg_grad_dir(&self, dir: u32, selector: u32) -> &Self {
+    pub fn style_bg_grad_dir(
+        &self,
+        dir: super::palette::GradDir,
+        selector: impl Into<super::Selector>,
+    ) -> &Self {
+        let selector = selector.into().raw();
         assert_ne!(self.handle(), null_mut(), "Obj handle cannot be null");
         // SAFETY: handle non-null (asserted above).
         unsafe { lv_obj_set_style_bg_grad_dir(self.handle(), dir as lv_grad_dir_t, selector) };
@@ -152,7 +170,12 @@ impl<'p> Obj<'p> {
     }
 
     /// Set transform rotation in 0.1 degree units for the given selector.
-    pub fn style_transform_rotation(&self, angle: i32, selector: u32) -> &Self {
+    pub fn style_transform_rotation(
+        &self,
+        angle: i32,
+        selector: impl Into<super::Selector>,
+    ) -> &Self {
+        let selector = selector.into().raw();
         assert_ne!(self.handle(), null_mut(), "Obj handle cannot be null");
         // SAFETY: handle non-null (asserted above).
         unsafe { lv_obj_set_style_transform_rotation(self.handle(), angle, selector) };
@@ -160,7 +183,8 @@ impl<'p> Obj<'p> {
     }
 
     /// Set uniform transform scale (256 = 1.0x) for the given selector.
-    pub fn style_transform_scale(&self, scale: i32, selector: u32) -> &Self {
+    pub fn style_transform_scale(&self, scale: i32, selector: impl Into<super::Selector>) -> &Self {
+        let selector = selector.into().raw();
         assert_ne!(self.handle(), null_mut(), "Obj handle cannot be null");
         // SAFETY: handle non-null (asserted above).
         unsafe {
@@ -171,7 +195,8 @@ impl<'p> Obj<'p> {
     }
 
     /// Set transform pivot X for the given selector.
-    pub fn style_transform_pivot_x(&self, x: i32, selector: u32) -> &Self {
+    pub fn style_transform_pivot_x(&self, x: i32, selector: impl Into<super::Selector>) -> &Self {
+        let selector = selector.into().raw();
         assert_ne!(self.handle(), null_mut(), "Obj handle cannot be null");
         // SAFETY: handle non-null (asserted above).
         unsafe { lv_obj_set_style_transform_pivot_x(self.handle(), x, selector) };
@@ -179,14 +204,20 @@ impl<'p> Obj<'p> {
     }
 
     /// Set transform pivot Y for the given selector.
-    pub fn style_transform_pivot_y(&self, y: i32, selector: u32) -> &Self {
+    pub fn style_transform_pivot_y(&self, y: i32, selector: impl Into<super::Selector>) -> &Self {
+        let selector = selector.into().raw();
         assert_ne!(self.handle(), null_mut(), "Obj handle cannot be null");
         // SAFETY: handle non-null (asserted above).
         unsafe { lv_obj_set_style_transform_pivot_y(self.handle(), y, selector) };
         self
     }
 
-    pub fn set_style_base_dir(&self, dir: super::obj::BaseDir, selector: u32) -> &Self {
+    pub fn set_style_base_dir(
+        &self,
+        dir: super::obj::BaseDir,
+        selector: impl Into<super::Selector>,
+    ) -> &Self {
+        let selector = selector.into().raw();
         assert_ne!(self.handle(), null_mut());
         // SAFETY: handle non-null (asserted above).
         unsafe { lv_obj_set_style_base_dir(self.handle(), dir as lv_base_dir_t, selector) };

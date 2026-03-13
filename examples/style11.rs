@@ -1,5 +1,8 @@
 #![cfg_attr(target_arch = "xtensa", no_std, no_main)]
-#![cfg_attr(target_arch = "xtensa", feature(impl_trait_in_assoc_type, type_alias_impl_trait))]
+#![cfg_attr(
+    target_arch = "xtensa",
+    feature(impl_trait_in_assoc_type, type_alias_impl_trait)
+)]
 // SPDX-License-Identifier: MIT OR Apache-2.0
 //! Style 11 — Multiple styles
 
@@ -9,8 +12,8 @@ use alloc::boxed::Box;
 use oxivgl::{
     view::View,
     widgets::{
-        Align, LV_SIZE_CONTENT, Label, Obj, Palette, Screen, Style, WidgetError, color_white,
-        palette_darken, palette_main,
+        color_white, palette_darken, palette_main, Align, Label, Obj, Palette, Screen, Selector,
+        Style, WidgetError, LV_SIZE_CONTENT,
     },
 };
 
@@ -47,15 +50,15 @@ impl View for Style11 {
             .text_color(palette_darken(Palette::Yellow, 4));
 
         let obj_base = Obj::new(&screen)?;
-        obj_base.add_style(&style_base, 0);
+        obj_base.add_style(&style_base, Selector::DEFAULT);
         obj_base.align(Align::LeftMid, 20, 0);
 
         let label_base = Label::new(&obj_base)?;
         label_base.text("Base").center();
 
         let obj_warn = Obj::new(&screen)?;
-        obj_warn.add_style(&style_base, 0);
-        obj_warn.add_style(&style_warning, 0);
+        obj_warn.add_style(&style_base, Selector::DEFAULT);
+        obj_warn.add_style(&style_warning, Selector::DEFAULT);
         obj_warn.align(Align::RightMid, -20, 0);
 
         let label_warn = Label::new(&obj_warn)?;
