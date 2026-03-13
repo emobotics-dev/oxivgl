@@ -160,7 +160,7 @@ Three objects animated via timeline, controlled by start/pause buttons and a pro
 
 ### Skipped
 
-- **Anim 3** — Cubic bezier with Chart + Grid (needs `LV_USE_CHART`, `LV_USE_GRID`, Chart wrapper)
+- **Anim 3** — Cubic bezier with Chart (needs `LV_USE_CHART`, Chart wrapper)
 
 ## Events
 
@@ -196,6 +196,82 @@ Button reports pressed, clicked, long-pressed, and long-pressed-repeat events to
 
 - **Event Draw** — needs `lv_timer_create` + draw task APIs
 - **Event Streak** — needs `lv_indev_get_short_click_streak` (requires input device)
+
+## Layouts — Flex
+
+### Flex 1 — Row and Column
+
+Row container (scrollable) and column container with 10 buttons each.
+
+![flex1](screenshots/flex1.png)
+
+### Flex 2 — Row Wrap with Even Spacing
+
+Style-based flex config: row-wrap flow with `SPACE_EVENLY` alignment. Items are checkable.
+
+![flex2](screenshots/flex2.png)
+
+### Flex 3 — Flex Grow
+
+Fixed-size items alongside items with `flex_grow` (1 and 2 portions of free space).
+
+![flex3](screenshots/flex3.png)
+
+### Flex 4 — Column Reverse
+
+Items added 0–5 but displayed bottom-to-top via `ColumnReverse` flow.
+
+![flex4](screenshots/flex4.png)
+
+### Flex 5 — Row and Column Gap
+
+Row-wrap layout with animated `pad_row` (500 ms) and `pad_column` (3000 ms) gap changes.
+
+![flex5](screenshots/flex5.png)
+
+### Flex 6 — RTL Direction
+
+Right-to-left base direction reverses item order in a row-wrap container.
+
+![flex6](screenshots/flex6.png)
+
+## Layouts — Grid
+
+### Grid 1 — Simple Grid
+
+3×3 grid with fixed 70 px columns and 50 px rows, stretched button cells.
+
+![grid1](screenshots/grid1.png)
+
+### Grid 2 — Cell Placement and Span
+
+Different cell alignments (START, CENTER, END) and multi-column/row spanning.
+
+![grid2](screenshots/grid2.png)
+
+### Grid 3 — Free Units (FR)
+
+Column 1 fixed 60 px, column 2 gets 1 FR, column 3 gets 2 FR of remaining space.
+
+![grid3](screenshots/grid3.png)
+
+### Grid 4 — Track Placement
+
+`SPACE_BETWEEN` columns, rows aligned to `END` (bottom).
+
+![grid4](screenshots/grid4.png)
+
+### Grid 5 — Column and Row Gap
+
+3×3 grid with animated row gap (500 ms) and column gap (3000 ms).
+
+![grid5](screenshots/grid5.png)
+
+### Grid 6 — RTL Direction
+
+Same 3×3 grid but with `RTL` base direction — cells fill right-to-left.
+
+![grid6](screenshots/grid6.png)
 
 ## Running
 

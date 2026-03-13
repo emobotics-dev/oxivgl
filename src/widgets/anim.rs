@@ -131,6 +131,16 @@ pub unsafe extern "C" fn anim_set_height(a: *mut lv_anim_t, v: i32) {
     unsafe { lv_obj_set_height((*a).var as *mut lv_obj_t, v) };
 }
 
+/// Exec callback: `lv_obj_set_style_pad_row(var, v, 0)`.
+pub unsafe extern "C" fn anim_set_pad_row(var: *mut c_void, v: i32) {
+    unsafe { lv_obj_set_style_pad_row(var as *mut lv_obj_t, v, 0) };
+}
+
+/// Exec callback: `lv_obj_set_style_pad_column(var, v, 0)`.
+pub unsafe extern "C" fn anim_set_pad_column(var: *mut c_void, v: i32) {
+    unsafe { lv_obj_set_style_pad_column(var as *mut lv_obj_t, v, 0) };
+}
+
 /// Custom exec callback: `lv_slider_set_value(anim.var, v, false)`.
 pub unsafe extern "C" fn anim_set_slider_value(a: *mut lv_anim_t, v: i32) {
     unsafe { lv_slider_set_value((*a).var as *mut lv_obj_t, v, false) };

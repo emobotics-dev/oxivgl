@@ -88,6 +88,28 @@ pub enum FlexAlign {
     SpaceBetween = 5,
 }
 
+/// Type-safe wrapper for `lv_grid_align_t`.
+#[repr(u32)]
+#[derive(Clone, Copy, Debug)]
+pub enum GridAlign {
+    Start = 0,
+    Center = 1,
+    End = 2,
+    Stretch = 3,
+    SpaceEvenly = 4,
+    SpaceAround = 5,
+    SpaceBetween = 6,
+}
+
+/// Type-safe wrapper for `lv_base_dir_t`.
+#[repr(u32)]
+#[derive(Clone, Copy, Debug)]
+pub enum BaseDir {
+    Ltr = 0,
+    Rtl = 1,
+    Auto = 2,
+}
+
 /// Implemented by any type that wraps an LVGL object handle.
 ///
 /// Allows widget constructors to accept any [`Obj`], [`Screen`], or other
@@ -510,6 +532,72 @@ impl<'p> Obj<'p> {
                 main as lv_flex_align_t,
                 cross as lv_flex_align_t,
                 track as lv_flex_align_t,
+            )
+        };
+        self
+    }
+
+    pub fn set_flex_grow(&self, grow: u8) -> &Self {
+        assert_ne!(self.handle, null_mut());
+        unsafe { lv_obj_set_flex_grow(self.handle, grow) };
+        self
+    }
+
+    pub fn set_style_base_dir(&self, dir: BaseDir, selector: u32) -> &Self {
+        assert_ne!(self.handle, null_mut());
+        unsafe { lv_obj_set_style_base_dir(self.handle, dir as lv_base_dir_t, selector) };
+        self
+    }
+
+    pub fn set_layout(&self, layout: u32) -> &Self {
+        assert_ne!(self.handle, null_mut());
+        unsafe { lv_obj_set_layout(self.handle, layout) };
+        self
+    }
+
+    /// Set grid column/row descriptors and enable grid layout.
+    /// The slices must be `'static` — LVGL stores the pointers internally.
+    pub fn set_grid_dsc_array(
+        &self,
+        col_dsc: &'static [i32],
+        row_dsc: &'static [i32],
+    ) -> &Self {
+        assert_ne!(self.handle, null_mut());
+        unsafe { lv_obj_set_grid_dsc_array(self.handle, col_dsc.as_ptr(), row_dsc.as_ptr()) };
+        self
+    }
+
+    pub fn set_grid_cell(
+        &self,
+        col_align: GridAlign,
+        col: i32,
+        col_span: i32,
+        row_align: GridAlign,
+        row: i32,
+        row_span: i32,
+    ) -> &Self {
+        assert_ne!(self.handle, null_mut());
+        unsafe {
+            lv_obj_set_grid_cell(
+                self.handle,
+                col_align as lv_grid_align_t,
+                col,
+                col_span,
+                row_align as lv_grid_align_t,
+                row,
+                row_span,
+            )
+        };
+        self
+    }
+
+    pub fn set_grid_align(&self, col_align: GridAlign, row_align: GridAlign) -> &Self {
+        assert_ne!(self.handle, null_mut());
+        unsafe {
+            lv_obj_set_grid_align(
+                self.handle,
+                col_align as lv_grid_align_t,
+                row_align as lv_grid_align_t,
             )
         };
         self
