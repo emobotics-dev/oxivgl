@@ -4,9 +4,8 @@ use core::{ops::Deref, ptr::null_mut};
 use lvgl_rust_sys::*;
 
 use super::{
-    LVGL_SCALE, WidgetError,
     obj::{Align, AsLvHandle, Obj},
-    to_lvgl,
+    to_lvgl, WidgetError, LVGL_SCALE,
 };
 
 /// LVGL arc widget. Value range is normalized: call
@@ -54,7 +53,10 @@ impl<'p> Arc<'p> {
         if handle.is_null() {
             Err(WidgetError::LvglNullPointer)
         } else {
-            Ok(Arc { obj: Obj::from_raw(handle), max: 0.0 })
+            Ok(Arc {
+                obj: Obj::from_raw(handle),
+                max: 0.0,
+            })
         }
     }
 
@@ -123,10 +125,18 @@ impl<'p> Arc<'p> {
             lv_obj_set_style_arc_color(h, lv_color_hex(track_color), lv_part_t_LV_PART_MAIN as u32);
             // Indicator
             lv_obj_set_style_arc_width(h, arc_width, lv_part_t_LV_PART_INDICATOR as u32);
-            lv_obj_set_style_arc_color(h, lv_color_hex(indicator_color), lv_part_t_LV_PART_INDICATOR as u32);
+            lv_obj_set_style_arc_color(
+                h,
+                lv_color_hex(indicator_color),
+                lv_part_t_LV_PART_INDICATOR as u32,
+            );
             // Hide knob
             lv_obj_set_style_pad_all(h, 0, lv_part_t_LV_PART_KNOB as u32);
-            lv_obj_set_style_opa(h, _lv_opacity_level_t_LV_OPA_TRANSP as lv_opa_t, lv_part_t_LV_PART_KNOB as u32);
+            lv_obj_set_style_opa(
+                h,
+                _lv_opacity_level_t_LV_OPA_TRANSP as lv_opa_t,
+                lv_part_t_LV_PART_KNOB as u32,
+            );
             // Not interactive
             lv_obj_remove_flag(h, lv_obj_flag_t_LV_OBJ_FLAG_CLICKABLE);
         }

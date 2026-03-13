@@ -4,9 +4,8 @@ use core::{ops::Deref, ptr::null_mut};
 use lvgl_rust_sys::*;
 
 use super::{
-    LVGL_SCALE, WidgetError,
     obj::{AsLvHandle, Obj},
-    to_lvgl,
+    to_lvgl, WidgetError, LVGL_SCALE,
 };
 
 /// LVGL bar (progress bar) widget with normalized f32 value API.
@@ -53,7 +52,10 @@ impl<'p> Bar<'p> {
         if handle.is_null() {
             Err(WidgetError::LvglNullPointer)
         } else {
-            Ok(Bar { obj: Obj::from_raw(handle), max: 0.0 })
+            Ok(Bar {
+                obj: Obj::from_raw(handle),
+                max: 0.0,
+            })
         }
     }
 

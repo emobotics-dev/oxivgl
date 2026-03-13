@@ -8,7 +8,10 @@ extern crate alloc;
 use alloc::boxed::Box;
 use oxivgl::{
     view::View,
-    widgets::{Align, Button, GradDir, Label, Screen, Style, WidgetError, color_make, lv_pct},
+    widgets::{
+        Align, Button, GradDsc, GradDir, GradExtend, Label, Screen, Style, WidgetError, color_make,
+        lv_pct,
+    },
 };
 
 struct Style18 {
@@ -22,8 +25,8 @@ struct Style18 {
     _btn1: Button<'static>,
     _style_radial: Box<Style>,
     _style_linear: Box<Style>,
-    _grad_radial: Box<lvgl_rust_sys::lv_grad_dsc_t>,
-    _grad_linear: Box<lvgl_rust_sys::lv_grad_dsc_t>,
+    _grad_radial: Box<GradDsc>,
+    _grad_linear: Box<GradDsc>,
 }
 
 impl View for Style18 {
@@ -32,49 +35,19 @@ impl View for Style18 {
 
         let c0 = color_make(0x26, 0xa0, 0xda);
         let c1 = color_make(0x31, 0x47, 0x55);
-        let colors: [lvgl_rust_sys::lv_color_t; 2] = [c0, c1];
+        let colors = [c0, c1];
 
-        let mut grad_linear =
-            Box::new(unsafe { core::mem::zeroed::<lvgl_rust_sys::lv_grad_dsc_t>() });
-        unsafe {
-            lvgl_rust_sys::lv_grad_init_stops(
-                &mut *grad_linear,
-                colors.as_ptr(),
-                core::ptr::null(),
-                core::ptr::null(),
-                2,
-            );
-            lvgl_rust_sys::lv_grad_linear_init(
-                &mut *grad_linear,
-                lv_pct(0),
-                lv_pct(0),
-                lv_pct(20),
-                lv_pct(100),
-                lvgl_rust_sys::lv_grad_extend_t_LV_GRAD_EXTEND_REFLECT,
-            );
-        }
+        let mut grad_linear = Box::new(GradDsc::new());
+        grad_linear
+            .init_stops(&colors, &[], &[])
+            .linear(lv_pct(0), lv_pct(0), lv_pct(20), lv_pct(100), GradExtend::Reflect);
         let mut style_linear = Box::new(Style::new());
         style_linear.bg_grad(&grad_linear).bg_opa(255);
 
-        let mut grad_radial =
-            Box::new(unsafe { core::mem::zeroed::<lvgl_rust_sys::lv_grad_dsc_t>() });
-        unsafe {
-            lvgl_rust_sys::lv_grad_init_stops(
-                &mut *grad_radial,
-                colors.as_ptr(),
-                core::ptr::null(),
-                core::ptr::null(),
-                2,
-            );
-            lvgl_rust_sys::lv_grad_radial_init(
-                &mut *grad_radial,
-                lv_pct(30),
-                lv_pct(30),
-                lv_pct(100),
-                lv_pct(100),
-                lvgl_rust_sys::lv_grad_extend_t_LV_GRAD_EXTEND_REFLECT,
-            );
-        }
+        let mut grad_radial = Box::new(GradDsc::new());
+        grad_radial
+            .init_stops(&colors, &[], &[])
+            .radial(lv_pct(30), lv_pct(30), lv_pct(100), lv_pct(100), GradExtend::Reflect);
         let mut style_radial = Box::new(Style::new());
         style_radial.bg_grad(&grad_radial).bg_opa(255);
 

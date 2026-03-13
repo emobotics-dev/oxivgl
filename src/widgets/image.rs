@@ -4,8 +4,8 @@ use core::{ops::Deref, ptr::null_mut};
 use lvgl_rust_sys::*;
 
 use super::{
-    WidgetError,
     obj::{AsLvHandle, Obj},
+    WidgetError,
 };
 
 /// LVGL image widget. Wraps [`Obj`](super::obj::Obj) and `Deref`s to it for
@@ -37,6 +37,12 @@ impl<'p> Image<'p> {
         // SAFETY: parent_ptr non-null (asserted above); lv_init() called via
         // LvglDriver.
         let handle = unsafe { lv_image_create(parent_ptr) };
-        if handle.is_null() { Err(WidgetError::LvglNullPointer) } else { Ok(Image { obj: Obj::from_raw(handle) }) }
+        if handle.is_null() {
+            Err(WidgetError::LvglNullPointer)
+        } else {
+            Ok(Image {
+                obj: Obj::from_raw(handle),
+            })
+        }
     }
 }

@@ -4,8 +4,8 @@ use core::{ops::Deref, ptr::null_mut};
 use lvgl_rust_sys::*;
 
 use super::{
-    WidgetError,
     obj::{AsLvHandle, Obj},
+    WidgetError,
 };
 
 /// LVGL line widget. Wraps [`Obj`](super::obj::Obj) and `Deref`s to it for
@@ -37,7 +37,13 @@ impl<'p> Line<'p> {
         // SAFETY: parent_ptr non-null (asserted above); lv_init() called via
         // LvglDriver.
         let handle = unsafe { lv_line_create(parent_ptr) };
-        if handle.is_null() { Err(WidgetError::LvglNullPointer) } else { Ok(Line { obj: Obj::from_raw(handle) }) }
+        if handle.is_null() {
+            Err(WidgetError::LvglNullPointer)
+        } else {
+            Ok(Line {
+                obj: Obj::from_raw(handle),
+            })
+        }
     }
 
     /// Set the line points. The `points` slice must outlive this widget

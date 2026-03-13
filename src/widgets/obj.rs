@@ -62,6 +62,32 @@ pub enum TextAlign {
     Right = 3,
 }
 
+/// Type-safe wrapper for `lv_flex_flow_t`.
+#[repr(u32)]
+#[derive(Clone, Copy, Debug)]
+pub enum FlexFlow {
+    Row = 0,
+    Column = 1,
+    RowWrap = 4,
+    RowReverse = 8,
+    RowWrapReverse = 12,
+    ColumnWrap = 5,
+    ColumnReverse = 9,
+    ColumnWrapReverse = 13,
+}
+
+/// Type-safe wrapper for `lv_flex_align_t`.
+#[repr(u32)]
+#[derive(Clone, Copy, Debug)]
+pub enum FlexAlign {
+    Start = 0,
+    End = 1,
+    Center = 2,
+    SpaceEvenly = 3,
+    SpaceAround = 4,
+    SpaceBetween = 5,
+}
+
 /// Implemented by any type that wraps an LVGL object handle.
 ///
 /// Allows widget constructors to accept any [`Obj`], [`Screen`], or other
@@ -117,12 +143,19 @@ impl<'p> Obj<'p> {
         // SAFETY: parent.lv_handle() is a valid non-null LVGL object; lv_init() was
         // called.
         let handle = unsafe { lv_obj_create(parent.lv_handle()) };
-        if handle.is_null() { Err(WidgetError::LvglNullPointer) } else { Ok(Obj::from_raw(handle)) }
+        if handle.is_null() {
+            Err(WidgetError::LvglNullPointer)
+        } else {
+            Ok(Obj::from_raw(handle))
+        }
     }
 
     /// Wrap a raw LVGL pointer. `ptr` must be non-null and owned by the caller.
     pub fn from_raw(ptr: *mut lv_obj_t) -> Self {
-        Obj { handle: ptr, _parent: PhantomData }
+        Obj {
+            handle: ptr,
+            _parent: PhantomData,
+        }
     }
 
     /// Return the raw `lv_obj_t` pointer.
@@ -250,9 +283,7 @@ impl<'p> Obj<'p> {
     pub fn add_style(&self, style: &super::Style, selector: u32) -> &Self {
         assert_ne!(self.handle, null_mut(), "Obj handle cannot be null");
         // SAFETY: handle non-null; style.inner pointer valid for style's lifetime.
-        unsafe {
-            lv_obj_add_style(self.handle, &style.inner as *const lv_style_t, selector)
-        };
+        unsafe { lv_obj_add_style(self.handle, &style.inner as *const lv_style_t, selector) };
         self
     }
 
@@ -410,6 +441,80 @@ impl<'p> Obj<'p> {
         self
     }
 
+    pub fn get_x(&self) -> i32 {
+        assert_ne!(self.handle, null_mut());
+        unsafe { lv_obj_get_x(self.handle) }
+    }
+
+    pub fn get_y(&self) -> i32 {
+        assert_ne!(self.handle, null_mut());
+        unsafe { lv_obj_get_y(self.handle) }
+    }
+
+    pub fn get_width(&self) -> i32 {
+        assert_ne!(self.handle, null_mut());
+        unsafe { lv_obj_get_width(self.handle) }
+    }
+
+    pub fn get_height(&self) -> i32 {
+        assert_ne!(self.handle, null_mut());
+        unsafe { lv_obj_get_height(self.handle) }
+    }
+
+    pub fn add_state(&self, state: lv_state_t) -> &Self {
+        assert_ne!(self.handle, null_mut());
+        unsafe { lv_obj_add_state(self.handle, state) };
+        self
+    }
+
+    pub fn remove_state(&self, state: lv_state_t) -> &Self {
+        assert_ne!(self.handle, null_mut());
+        unsafe { lv_obj_remove_state(self.handle, state) };
+        self
+    }
+
+    pub fn has_state(&self, state: lv_state_t) -> bool {
+        assert_ne!(self.handle, null_mut());
+        unsafe { lv_obj_has_state(self.handle, state) }
+    }
+
+    pub fn add_flag(&self, flag: lv_obj_flag_t) -> &Self {
+        assert_ne!(self.handle, null_mut());
+        unsafe { lv_obj_add_flag(self.handle, flag) };
+        self
+    }
+
+    pub fn remove_flag(&self, flag: lv_obj_flag_t) -> &Self {
+        assert_ne!(self.handle, null_mut());
+        unsafe { lv_obj_remove_flag(self.handle, flag) };
+        self
+    }
+
+    pub fn set_scrollbar_mode(&self, mode: lv_scrollbar_mode_t) -> &Self {
+        assert_ne!(self.handle, null_mut());
+        unsafe { lv_obj_set_scrollbar_mode(self.handle, mode) };
+        self
+    }
+
+    pub fn set_flex_flow(&self, flow: FlexFlow) -> &Self {
+        assert_ne!(self.handle, null_mut());
+        unsafe { lv_obj_set_flex_flow(self.handle, flow as lv_flex_flow_t) };
+        self
+    }
+
+    pub fn set_flex_align(&self, main: FlexAlign, cross: FlexAlign, track: FlexAlign) -> &Self {
+        assert_ne!(self.handle, null_mut());
+        unsafe {
+            lv_obj_set_flex_align(
+                self.handle,
+                main as lv_flex_align_t,
+                cross as lv_flex_align_t,
+                track as lv_flex_align_t,
+            )
+        };
+        self
+    }
+
     /// Set `lv_obj_set_style_line_width` for the given LVGL style part.
     pub fn line_width(&self, part: Part, width: i32) -> &Self {
         assert_ne!(self.handle, null_mut(), "Obj handle cannot be null");
@@ -448,7 +553,11 @@ impl Screen {
         // SAFETY: lv_screen_active() is safe after lv_init(); NULL result is handled
         // below.
         let handle = unsafe { lv_screen_active() };
-        if handle.is_null() { None } else { Some(Screen { handle }) }
+        if handle.is_null() {
+            None
+        } else {
+            Some(Screen { handle })
+        }
     }
 
     /// Return the raw `lv_obj_t` pointer for this screen.
@@ -501,6 +610,23 @@ impl Screen {
     pub fn text_color(&self, color: u32) -> &Self {
         // SAFETY: handle non-null (Screen::active() returns None for null).
         unsafe { lv_obj_set_style_text_color(self.handle, lv_color_hex(color), 0) };
+        self
+    }
+
+    pub fn set_flex_flow(&self, flow: FlexFlow) -> &Self {
+        unsafe { lv_obj_set_flex_flow(self.handle, flow as lv_flex_flow_t) };
+        self
+    }
+
+    pub fn set_flex_align(&self, main: FlexAlign, cross: FlexAlign, track: FlexAlign) -> &Self {
+        unsafe {
+            lv_obj_set_flex_align(
+                self.handle,
+                main as lv_flex_align_t,
+                cross as lv_flex_align_t,
+                track as lv_flex_align_t,
+            )
+        };
         self
     }
 }

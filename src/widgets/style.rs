@@ -56,11 +56,6 @@ impl TransitionDsc {
     }
 }
 
-/// Linear animation path — wraps `lv_anim_path_linear`.
-pub unsafe extern "C" fn anim_path_linear(a: *const lv_anim_t) -> i32 {
-    unsafe { lv_anim_path_linear(a) }
-}
-
 /// Commonly used style property constants (cast to `lv_style_prop_t`).
 pub mod props {
     pub use lvgl_rust_sys::lv_style_prop_t;
@@ -237,9 +232,9 @@ impl Style {
     ///
     /// For simple two-color gradients, prefer [`bg_grad_color`](Self::bg_grad_color)
     /// + [`bg_grad_dir`](Self::bg_grad_dir).
-    pub fn bg_grad(&mut self, grad: &lv_grad_dsc_t) -> &mut Self {
+    pub fn bg_grad(&mut self, grad: &super::grad::GradDsc) -> &mut Self {
         // SAFETY: inner was initialized; grad is a valid descriptor reference.
-        unsafe { lv_style_set_bg_grad(&mut self.inner, grad) };
+        unsafe { lv_style_set_bg_grad(&mut self.inner, &grad.inner) };
         self
     }
 
@@ -360,11 +355,7 @@ pub struct ColorFilter {
 impl ColorFilter {
     /// `lv_color_filter_dsc_init` is not available in bindings; set field directly.
     pub fn new(
-        cb: unsafe extern "C" fn(
-            *const lv_color_filter_dsc_t,
-            lv_color_t,
-            lv_opa_t,
-        ) -> lv_color_t,
+        cb: unsafe extern "C" fn(*const lv_color_filter_dsc_t, lv_color_t, lv_opa_t) -> lv_color_t,
     ) -> Self {
         let mut inner = unsafe { core::mem::zeroed::<lv_color_filter_dsc_t>() };
         inner.filter_cb = Some(cb);
