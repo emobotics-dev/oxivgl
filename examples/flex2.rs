@@ -1,0 +1,68 @@
+#![cfg_attr(target_arch = "xtensa", no_std, no_main)]
+#![cfg_attr(
+    target_arch = "xtensa",
+    feature(impl_trait_in_assoc_type, type_alias_impl_trait)
+)]
+// SPDX-License-Identifier: MIT OR Apache-2.0
+//! Flex 2 — Arrange items in rows with wrap and even spacing (via style)
+
+use oxivgl::{
+    view::View,
+    widgets::{
+        FlexAlign, FlexFlow, Label, Obj, Screen, Style, WidgetError, LV_LAYOUT_FLEX,
+        LV_OBJ_FLAG_CHECKABLE, LV_SIZE_CONTENT,
+    },
+};
+
+struct Flex2 {
+    _style: Style,
+    _cont: Obj<'static>,
+    _items: heapless::Vec<Obj<'static>, 8>,
+    _labels: heapless::Vec<Label<'static>, 8>,
+}
+
+impl View for Flex2 {
+    fn create() -> Result<Self, WidgetError> {
+        let screen = Screen::active().ok_or(WidgetError::LvglNullPointer)?;
+
+        let mut style = Style::new();
+        style
+            .flex_flow(FlexFlow::RowWrap)
+            .flex_main_place(FlexAlign::SpaceEvenly)
+            .layout(LV_LAYOUT_FLEX);
+
+        let cont = Obj::new(&screen)?;
+        cont.size(300, 220).center();
+        cont.add_style(&style, 0);
+
+        let mut items = heapless::Vec::<Obj<'static>, 8>::new();
+        let mut labels = heapless::Vec::<Label<'static>, 8>::new();
+
+        for i in 0..8u32 {
+            let obj = Obj::new(&cont)?;
+            obj.size(70, LV_SIZE_CONTENT);
+            obj.add_flag(LV_OBJ_FLAG_CHECKABLE);
+
+            let label = Label::new(&obj)?;
+            let mut buf = heapless::String::<4>::new();
+            let _ = core::fmt::Write::write_fmt(&mut buf, format_args!("{}\0", i));
+            label.text(&buf)?.center();
+
+            let _ = items.push(obj);
+            let _ = labels.push(label);
+        }
+
+        Ok(Self {
+            _style: style,
+            _cont: cont,
+            _items: items,
+            _labels: labels,
+        })
+    }
+
+    fn update(&mut self) -> Result<(), WidgetError> {
+        Ok(())
+    }
+}
+
+oxivgl_examples_common::example_main!(Flex2);

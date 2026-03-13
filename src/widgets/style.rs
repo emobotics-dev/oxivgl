@@ -338,6 +338,21 @@ impl Style {
         unsafe { lv_style_set_shadow_spread(&mut self.inner, s) };
         self
     }
+
+    pub fn flex_flow(&mut self, flow: super::obj::FlexFlow) -> &mut Self {
+        unsafe { lv_style_set_flex_flow(&mut self.inner, flow as lv_flex_flow_t) };
+        self
+    }
+
+    pub fn flex_main_place(&mut self, align: super::obj::FlexAlign) -> &mut Self {
+        unsafe { lv_style_set_flex_main_place(&mut self.inner, align as lv_flex_align_t) };
+        self
+    }
+
+    pub fn layout(&mut self, layout: u32) -> &mut Self {
+        unsafe { lv_style_set_layout(&mut self.inner, layout as u16) };
+        self
+    }
 }
 
 impl Drop for Style {
