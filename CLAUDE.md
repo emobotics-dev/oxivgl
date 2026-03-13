@@ -13,11 +13,16 @@ LIBCLANG_PATH=/usr/lib64 cargo +nightly check --target x86_64-unknown-linux-gnu
 # Check embedded (requires Xtensa toolchain):
 cargo +esp -Zbuild-std=alloc,core check --features esp-hal,log-04
 
-# Run host unit tests (widgets::tests only; no display hardware needed):
-LIBCLANG_PATH=/usr/lib64 cargo +nightly test --target x86_64-unknown-linux-gnu
+# Run tests (preferred — handles SDL_VIDEODRIVER, test separation):
+./run_tests.sh unit        # unit + doc tests
+./run_tests.sh int         # integration tests (needs SDL_VIDEODRIVER=dummy)
+./run_tests.sh all         # both
 
-# Run single test:
+# Run single unit test directly:
 LIBCLANG_PATH=/usr/lib64 cargo +nightly test --target x86_64-unknown-linux-gnu to_lvgl_half
+
+# Audit doc coverage (should report 0 missing):
+LIBCLANG_PATH=/usr/lib64 RUSTDOCFLAGS="-W missing-docs" cargo +nightly doc --target x86_64-unknown-linux-gnu --no-deps 2>&1 | grep "warning:"
 
 # Run host example:
 ./run_host.sh getting_started1
@@ -37,9 +42,12 @@ Run via Cargo's built-in example convention: `cargo run --example <name>`.
 - `examples/common/` — shared infra: `host_main!`, `fire27_main!`, `example_main!` (cfg-gates between host/ESP32)
 - `examples/getting_started{1-4}.rs` — LVGL Getting Started examples
 - `examples/style{1-18}.rs` — LVGL Style examples
+- `examples/scroll{1,2,4}.rs` — LVGL Scroll examples
 - `examples/doc/screenshots/` — auto-captured PNGs
+- `tests/integration.rs` — integration tests (require `SDL_VIDEODRIVER=dummy`, `--test-threads=1`)
 
 Adding a new example: create an `examples/<name>.rs` with a View struct + `oxivgl_examples_common::example_main!(MyView);`.
+After adding examples: add the name to `run_screenshots.sh`, run it to generate PNGs, and update `examples/doc/README.md` with entries + screenshot links. Visually compare generated screenshots against the LVGL docs to verify correctness.
 
 ## Architecture
 
@@ -79,3 +87,6 @@ Adding a new example: create an `examples/<name>.rs` with a View struct + `oxivg
 - **`unsafe extern "C" fn` (Rust 2024)**: unsafe calls inside must use explicit `unsafe {}` blocks.
 - **`lv_anim_enable_t`** is `bool` in bindings — use `false`/`true` (no named constant).
 - **`Align` enum** covers all `lv_align_t` values 0–21 including `Out*` variants; prefer it over raw constants.
+- **Testing**: Integration tests need `SDL_VIDEODRIVER=dummy` or LVGL's SDL2 backend crashes (double-free). Use `./run_tests.sh` which handles this. All LVGL tests must run with `--test-threads=1` (single-threaded requirement).
+- **Doc comments**: All public API items must have `///` docs. CI checks via `RUSTDOCFLAGS="-W missing-docs"`.
+- **CI**: `.github/workflows/ci.yml` runs two parallel jobs: `host` (unit/doc/integration tests + coverage) and `firmware` (ESP32 build). Coverage badge via `cargo-llvm-cov` + shields.io endpoint gist.
