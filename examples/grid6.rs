@@ -8,7 +8,9 @@
 
 use oxivgl::{
     view::View,
-    widgets::{BaseDir, GridAlign, Label, Obj, Screen, WidgetError, GRID_TEMPLATE_LAST},
+    widgets::{
+        BaseDir, GridAlign, GridCell, Label, Obj, Screen, Selector, WidgetError, GRID_TEMPLATE_LAST,
+    },
 };
 
 static COL_DSC: [i32; 4] = [60, 60, 60, GRID_TEMPLATE_LAST];
@@ -26,7 +28,7 @@ impl View for Grid6 {
 
         let cont = Obj::new(&screen)?;
         cont.size(300, 220).center();
-        cont.set_style_base_dir(BaseDir::Rtl, 0);
+        cont.set_style_base_dir(BaseDir::Rtl, Selector::DEFAULT);
         cont.set_grid_dsc_array(&COL_DSC, &ROW_DSC);
 
         let mut items = heapless::Vec::<Obj<'static>, 9>::new();
@@ -38,12 +40,8 @@ impl View for Grid6 {
 
             let obj = Obj::new(&cont)?;
             obj.set_grid_cell(
-                GridAlign::Stretch,
-                col,
-                1,
-                GridAlign::Stretch,
-                row,
-                1,
+                GridCell::new(GridAlign::Stretch, col, 1),
+                GridCell::new(GridAlign::Stretch, row, 1),
             );
 
             let label = Label::new(&obj)?;

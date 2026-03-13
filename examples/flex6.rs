@@ -8,7 +8,7 @@
 
 use oxivgl::{
     view::View,
-    widgets::{BaseDir, FlexFlow, Label, Obj, Screen, WidgetError, LV_SIZE_CONTENT},
+    widgets::{BaseDir, FlexFlow, Label, Obj, Screen, Selector, WidgetError, LV_SIZE_CONTENT},
 };
 
 struct Flex6 {
@@ -22,7 +22,7 @@ impl View for Flex6 {
         let screen = Screen::active().ok_or(WidgetError::LvglNullPointer)?;
 
         let cont = Obj::new(&screen)?;
-        cont.set_style_base_dir(BaseDir::Rtl, 0);
+        cont.set_style_base_dir(BaseDir::Rtl, Selector::DEFAULT);
         cont.size(300, 220).center();
         cont.set_flex_flow(FlexFlow::RowWrap);
 

@@ -1,5 +1,8 @@
 #![cfg_attr(target_arch = "xtensa", no_std, no_main)]
-#![cfg_attr(target_arch = "xtensa", feature(impl_trait_in_assoc_type, type_alias_impl_trait))]
+#![cfg_attr(
+    target_arch = "xtensa",
+    feature(impl_trait_in_assoc_type, type_alias_impl_trait)
+)]
 // SPDX-License-Identifier: MIT OR Apache-2.0
 //! Style 10 — Transition
 
@@ -9,8 +12,8 @@ use alloc::boxed::Box;
 use oxivgl::{
     view::View,
     widgets::{
-        Obj, ObjState, Palette, Screen, Style, TransitionDsc, WidgetError, anim_path_linear,
-        palette_darken, palette_main, props,
+        anim_path_linear, palette_darken, palette_main, props, Obj, ObjState, Palette, Screen,
+        Selector, Style, TransitionDsc, WidgetError,
     },
 };
 
@@ -22,12 +25,8 @@ struct Style10 {
     _trans_pr: Box<TransitionDsc>,
 }
 
-static TRANS_PROPS: [props::lv_style_prop_t; 4] = [
-    props::BG_COLOR,
-    props::BORDER_COLOR,
-    props::BORDER_WIDTH,
-    0,
-];
+static TRANS_PROPS: [props::lv_style_prop_t; 4] =
+    [props::BG_COLOR, props::BORDER_COLOR, props::BORDER_WIDTH, 0];
 
 impl View for Style10 {
     fn create() -> Result<Self, WidgetError> {
@@ -58,8 +57,8 @@ impl View for Style10 {
             .transition(&trans_pr);
 
         let obj = Obj::new(&screen)?;
-        obj.add_style(&style_def, 0);
-        obj.add_style(&style_pr, ObjState::PRESSED.0);
+        obj.add_style(&style_def, Selector::DEFAULT);
+        obj.add_style(&style_pr, ObjState::PRESSED);
         obj.center();
 
         Ok(Self {

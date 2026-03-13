@@ -13,7 +13,7 @@ use oxivgl::{
     view::View,
     widgets::{
         darken_filter_cb, palette_lighten, palette_main, Button, ColorFilter, GradDir, Label,
-        ObjState, Opa, Palette, Screen, Style, WidgetError,
+        ObjState, Opa, Palette, Screen, Selector, Style, WidgetError, RADIUS_MAX,
     },
 };
 
@@ -56,18 +56,18 @@ impl View for GettingStarted3 {
 
         let btn1 = Button::new(&screen)?;
         btn1.remove_style_all().pos(10, 10).size(120, 50);
-        btn1.add_style(&style_btn, 0);
-        btn1.add_style(&style_pressed, ObjState::PRESSED.0);
+        btn1.add_style(&style_btn, Selector::DEFAULT);
+        btn1.add_style(&style_pressed, ObjState::PRESSED);
 
         let lbl1 = Label::new(&btn1)?;
         lbl1.text("Button").center();
 
         let btn2 = Button::new(&screen)?;
         btn2.remove_style_all().pos(10, 80).size(120, 50);
-        btn2.add_style(&style_btn, 0);
-        btn2.add_style(&style_red, 0);
-        btn2.add_style(&style_pressed, ObjState::PRESSED.0);
-        btn2.radius(0x7fff, 0);
+        btn2.add_style(&style_btn, Selector::DEFAULT);
+        btn2.add_style(&style_red, Selector::DEFAULT);
+        btn2.add_style(&style_pressed, ObjState::PRESSED);
+        btn2.radius(RADIUS_MAX, Selector::DEFAULT);
 
         let lbl2 = Label::new(&btn2)?;
         lbl2.text("Button 2").center();

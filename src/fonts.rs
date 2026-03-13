@@ -24,7 +24,8 @@ impl Font {
     /// importing `lvgl_rust_sys` directly:
     ///
     /// ```no_run
-    /// extern "C" { static my_font: u8; }
+    /// use oxivgl::fonts::Font;
+    /// unsafe extern "C" { static my_font: u8; }
     /// static MY_FONT: Font = unsafe {
     ///     Font::from_extern(core::ptr::addr_of!(my_font) as *const ())
     /// };

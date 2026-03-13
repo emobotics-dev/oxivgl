@@ -1,5 +1,8 @@
 #![cfg_attr(target_arch = "xtensa", no_std, no_main)]
-#![cfg_attr(target_arch = "xtensa", feature(impl_trait_in_assoc_type, type_alias_impl_trait))]
+#![cfg_attr(
+    target_arch = "xtensa",
+    feature(impl_trait_in_assoc_type, type_alias_impl_trait)
+)]
 // SPDX-License-Identifier: MIT OR Apache-2.0
 //! Style 16 — Conical gradient (metallic knob)
 
@@ -8,7 +11,10 @@ extern crate alloc;
 use alloc::boxed::Box;
 use oxivgl::{
     view::View,
-    widgets::{GradDsc, GradExtend, Obj, Screen, Style, WidgetError, color_black, color_make, lv_pct},
+    widgets::{
+        color_black, color_make, lv_pct, GradDsc, GradExtend, Obj, Screen, Selector, Style,
+        WidgetError,
+    },
 };
 
 struct Style16 {
@@ -33,8 +39,13 @@ impl View for Style16 {
         ];
 
         let mut grad = Box::new(GradDsc::new());
-        grad.init_stops(&colors, &[], &[])
-            .conical(lv_pct(50), lv_pct(50), 0, 120, GradExtend::Reflect);
+        grad.init_stops(&colors, &[], &[]).conical(
+            lv_pct(50),
+            lv_pct(50),
+            0,
+            120,
+            GradExtend::Reflect,
+        );
 
         let mut style = Box::new(Style::new());
         style
@@ -48,7 +59,7 @@ impl View for Style16 {
             .bg_grad(&grad);
 
         let obj = Obj::new(&screen)?;
-        obj.add_style(&style, 0);
+        obj.add_style(&style, Selector::DEFAULT);
         obj.size(200, 200);
         obj.center();
 
