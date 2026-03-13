@@ -68,9 +68,6 @@ pub mod props {
         lvgl_rust_sys::_lv_style_id_t_LV_STYLE_BORDER_WIDTH as lv_style_prop_t;
 }
 
-/// `LV_STATE_PRESSED` selector — combine with part via `|`.
-pub const LV_STATE_PRESSED: u32 = 0x0020;
-
 /// Bitflags for border side selection. Combine with `|` operator.
 ///
 /// ```ignore
@@ -122,6 +119,12 @@ impl Style {
         let mut inner = unsafe { core::mem::zeroed::<lv_style_t>() };
         unsafe { lv_style_init(&mut inner) };
         Self { inner }
+    }
+
+    /// Create a heap-allocated style. Convenience for views that store
+    /// styles as `Box<Style>` to satisfy LVGL's lifetime requirements.
+    pub fn boxed() -> alloc::boxed::Box<Self> {
+        alloc::boxed::Box::new(Self::new())
     }
 
     pub fn radius(&mut self, r: i16) -> &mut Self {
@@ -349,7 +352,8 @@ impl Style {
         self
     }
 
-    pub fn layout(&mut self, layout: u32) -> &mut Self {
+    pub fn layout(&mut self, layout: super::Layout) -> &mut Self {
+        // SAFETY: inner was initialized by lv_style_init.
         unsafe { lv_style_set_layout(&mut self.inner, layout as u16) };
         self
     }

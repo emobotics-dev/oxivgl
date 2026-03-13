@@ -7,10 +7,10 @@
 //! Anim 1 — Start animation on an event
 
 use oxivgl::{
-    view::{Event, View},
+    view::View,
     widgets::{
-        anim_path_ease_in, anim_path_overshoot, anim_set_x, Anim, Label, Screen, Switch,
-        WidgetError, LV_EVENT_VALUE_CHANGED, LV_OBJ_FLAG_EVENT_BUBBLE, LV_STATE_CHECKED,
+        anim_path_ease_in, anim_path_overshoot, anim_set_x, Anim, Event, EventCode, Label,
+        ObjState, Screen, Switch, WidgetError,
     },
 };
 
@@ -24,19 +24,19 @@ impl View for Anim1 {
         let screen = Screen::active().ok_or(WidgetError::LvglNullPointer)?;
 
         let label = Label::new(&screen)?;
-        label.text("Hello animations!\0")?.pos(100, 10);
+        label.text("Hello animations!").pos(100, 10);
 
         let sw = Switch::new(&screen)?;
         sw.center();
-        sw.add_state(LV_STATE_CHECKED);
-        sw.add_flag(LV_OBJ_FLAG_EVENT_BUBBLE);
+        sw.add_state(ObjState::CHECKED);
+        sw.bubble_events();
 
         Ok(Self { label, sw })
     }
 
     fn on_event(&mut self, event: &Event) {
-        if event.code() == LV_EVENT_VALUE_CHANGED && event.target_handle() == self.sw.handle() {
-            let checked = self.sw.has_state(LV_STATE_CHECKED);
+        if event.matches(&self.sw, EventCode::VALUE_CHANGED) {
+            let checked = self.sw.has_state(ObjState::CHECKED);
 
             let mut a = Anim::new();
             a.set_var(&self.label)

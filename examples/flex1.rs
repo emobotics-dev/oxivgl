@@ -38,13 +38,13 @@ impl View for Flex1 {
 
         for i in 0..10u32 {
             let mut buf = heapless::String::<16>::new();
-            let _ = core::fmt::Write::write_fmt(&mut buf, format_args!("Item: {}\0", i));
+            let _ = core::fmt::Write::write_fmt(&mut buf, format_args!("Item: {}", i));
 
             // Row item
             let btn = Button::new(&cont_row)?;
             btn.size(100, lv_pct(100));
             let lbl = Label::new(&btn)?;
-            lbl.text(&buf)?.center();
+            lbl.text(&buf).center();
             let _ = buttons.push(btn);
             let _ = labels.push(lbl);
 
@@ -52,7 +52,7 @@ impl View for Flex1 {
             let btn = Button::new(&cont_col)?;
             btn.size(lv_pct(100), LV_SIZE_CONTENT);
             let lbl = Label::new(&btn)?;
-            lbl.text(&buf)?.center();
+            lbl.text(&buf).center();
             let _ = buttons.push(btn);
             let _ = labels.push(lbl);
         }

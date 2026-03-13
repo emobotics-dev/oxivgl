@@ -47,7 +47,7 @@ impl<'p> ValueLabel<'p> {
 
     pub fn set_value(&mut self, value: f32) -> Result<(), WidgetError> {
         let s: String<10> = format!("{:.1}{}", value, self.unit)?;
-        self.label.text(s.as_str())?;
+        self.label.text(s.as_str());
         Ok(())
     }
 }

@@ -9,8 +9,8 @@ use alloc::boxed::Box;
 use oxivgl::{
     view::View,
     widgets::{
-        LV_STATE_PRESSED, Obj, Palette, Screen, Style, TransitionDsc, WidgetError,
-        anim_path_linear, palette_darken, palette_main, props,
+        Obj, ObjState, Palette, Screen, Style, TransitionDsc, WidgetError, anim_path_linear,
+        palette_darken, palette_main, props,
     },
 };
 
@@ -59,7 +59,7 @@ impl View for Style10 {
 
         let obj = Obj::new(&screen)?;
         obj.add_style(&style_def, 0);
-        obj.add_style(&style_pr, LV_STATE_PRESSED);
+        obj.add_style(&style_pr, ObjState::PRESSED.0);
         obj.center();
 
         Ok(Self {

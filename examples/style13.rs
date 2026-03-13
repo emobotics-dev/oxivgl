@@ -9,8 +9,8 @@ use alloc::boxed::Box;
 use oxivgl::{
     view::View,
     widgets::{
-        GradDir, LV_STATE_PRESSED, Palette, Part, Screen, Slider, Style, WidgetError,
-        palette_lighten, palette_main,
+        GradDir, ObjState, Palette, Part, Screen, Slider, Style, WidgetError, palette_lighten,
+        palette_main,
     },
 };
 
@@ -38,7 +38,7 @@ impl View for Style13 {
 
         let slider = Slider::new(&screen)?;
         slider.add_style(&style_indic, Part::Indicator as u32);
-        slider.add_style(&style_indic_pr, Part::Indicator as u32 | LV_STATE_PRESSED);
+        slider.add_style(&style_indic_pr, Part::Indicator as u32 | ObjState::PRESSED.0);
         slider.set_value(70);
         slider.center();
 

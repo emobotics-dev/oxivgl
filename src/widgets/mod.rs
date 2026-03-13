@@ -20,14 +20,20 @@ mod arc;
 mod bar;
 mod button;
 mod child;
+mod enums;
+pub(crate) mod event;
 mod grad;
 mod image;
 mod label;
 mod led;
 mod line;
 mod obj;
+mod obj_layout;
+mod obj_style;
 mod palette;
+pub mod prelude;
 mod scale;
+mod screen;
 mod slider;
 mod style;
 mod switch;
@@ -43,66 +49,30 @@ pub use arc::Arc;
 pub use bar::Bar;
 pub use button::Button;
 pub use child::{detach, Child};
+pub use enums::{EventCode, Layout, ObjFlag, ObjState, Opa, ScrollbarMode};
+pub use event::Event;
 pub use grad::{GradDsc, GradExtend};
 pub use image::Image;
 pub use label::Label;
 pub use led::Led;
 pub use line::Line;
-pub use obj::{
-    Align, AsLvHandle, BaseDir, FlexAlign, FlexFlow, GridAlign, Obj, Part, Screen, TextAlign,
-};
+pub use obj::{Align, AsLvHandle, BaseDir, FlexAlign, FlexFlow, GridAlign, Obj, Part, TextAlign};
 pub use palette::{
     color_black, color_make, color_white, palette_darken, palette_lighten, palette_main, GradDir,
     Palette,
 };
 pub use scale::{Scale, ScaleMode};
+pub use screen::Screen;
 pub use slider::Slider;
 pub use style::{
     darken_filter_cb, lv_pct, props, BorderSide, ColorFilter, Style, TextDecor, TransitionDsc,
-    LV_SIZE_CONTENT, LV_STATE_PRESSED,
+    LV_SIZE_CONTENT,
 };
 pub use switch::Switch;
 pub use value_label::ValueLabel;
 
-// Re-export raw event types so example callbacks don't need `lvgl_rust_sys`.
-pub use lvgl_rust_sys::{lv_color_t, lv_event_code_t, lv_event_t, lv_point_precise_t};
-/// `LV_EVENT_VALUE_CHANGED` — fired by sliders, dropdowns, etc.
-pub const LV_EVENT_VALUE_CHANGED: lv_event_code_t =
-    lvgl_rust_sys::lv_event_code_t_LV_EVENT_VALUE_CHANGED;
-/// `LV_EVENT_CLICKED`
-pub const LV_EVENT_CLICKED: lv_event_code_t = lvgl_rust_sys::lv_event_code_t_LV_EVENT_CLICKED;
-/// `LV_EVENT_ALL` — receive all event types.
-pub const LV_EVENT_ALL: lv_event_code_t = lvgl_rust_sys::lv_event_code_t_LV_EVENT_ALL;
-/// `LV_EVENT_PRESSED`
-pub const LV_EVENT_PRESSED: lv_event_code_t = lvgl_rust_sys::lv_event_code_t_LV_EVENT_PRESSED;
-/// `LV_EVENT_LONG_PRESSED`
-pub const LV_EVENT_LONG_PRESSED: lv_event_code_t =
-    lvgl_rust_sys::lv_event_code_t_LV_EVENT_LONG_PRESSED;
-/// `LV_EVENT_LONG_PRESSED_REPEAT`
-pub const LV_EVENT_LONG_PRESSED_REPEAT: lv_event_code_t =
-    lvgl_rust_sys::lv_event_code_t_LV_EVENT_LONG_PRESSED_REPEAT;
-
-// Object flags
-pub const LV_OBJ_FLAG_CHECKABLE: lvgl_rust_sys::lv_obj_flag_t =
-    lvgl_rust_sys::lv_obj_flag_t_LV_OBJ_FLAG_CHECKABLE;
-pub const LV_OBJ_FLAG_IGNORE_LAYOUT: lvgl_rust_sys::lv_obj_flag_t =
-    lvgl_rust_sys::lv_obj_flag_t_LV_OBJ_FLAG_IGNORE_LAYOUT;
-pub const LV_OBJ_FLAG_EVENT_BUBBLE: lvgl_rust_sys::lv_obj_flag_t =
-    lvgl_rust_sys::lv_obj_flag_t_LV_OBJ_FLAG_EVENT_BUBBLE;
-pub const LV_OBJ_FLAG_EVENT_TRICKLE: lvgl_rust_sys::lv_obj_flag_t =
-    lvgl_rust_sys::lv_obj_flag_t_LV_OBJ_FLAG_EVENT_TRICKLE;
-
-// Object states
-pub const LV_STATE_CHECKED: lvgl_rust_sys::lv_state_t = lvgl_rust_sys::lv_state_t_LV_STATE_CHECKED;
-pub const LV_STATE_FOCUSED: lvgl_rust_sys::lv_state_t = lvgl_rust_sys::lv_state_t_LV_STATE_FOCUSED;
-
-// Scrollbar modes
-pub const LV_SCROLLBAR_MODE_OFF: lvgl_rust_sys::lv_scrollbar_mode_t =
-    lvgl_rust_sys::lv_scrollbar_mode_t_LV_SCROLLBAR_MODE_OFF;
-
-// Layout types
-pub const LV_LAYOUT_FLEX: u32 = lvgl_rust_sys::lv_layout_t_LV_LAYOUT_FLEX;
-pub const LV_LAYOUT_GRID: u32 = lvgl_rust_sys::lv_layout_t_LV_LAYOUT_GRID;
+// Re-export raw types so callbacks don't need `lvgl_rust_sys`.
+pub use lvgl_rust_sys::{lv_color_t, lv_event_t, lv_point_precise_t};
 
 // Grid helpers
 /// Sentinel value marking the end of a grid template descriptor array.
