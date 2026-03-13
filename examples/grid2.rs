@@ -1,0 +1,91 @@
+#![cfg_attr(target_arch = "xtensa", no_std, no_main)]
+#![cfg_attr(
+    target_arch = "xtensa",
+    feature(impl_trait_in_assoc_type, type_alias_impl_trait)
+)]
+// SPDX-License-Identifier: MIT OR Apache-2.0
+//! Grid 2 — Demonstrate cell placement and span
+
+use oxivgl::{
+    view::View,
+    widgets::{GridAlign, Label, Obj, Screen, WidgetError, GRID_TEMPLATE_LAST, LV_SIZE_CONTENT},
+};
+
+static COL_DSC: [i32; 4] = [70, 70, 70, GRID_TEMPLATE_LAST];
+static ROW_DSC: [i32; 4] = [50, 50, 50, GRID_TEMPLATE_LAST];
+
+struct Grid2 {
+    _cont: Obj<'static>,
+    _items: heapless::Vec<Obj<'static>, 5>,
+    _labels: heapless::Vec<Label<'static>, 5>,
+}
+
+impl View for Grid2 {
+    fn create() -> Result<Self, WidgetError> {
+        let screen = Screen::active().ok_or(WidgetError::LvglNullPointer)?;
+
+        let cont = Obj::new(&screen)?;
+        cont.set_grid_dsc_array(&COL_DSC, &ROW_DSC);
+        cont.size(300, 220).center();
+
+        let mut items = heapless::Vec::<Obj<'static>, 5>::new();
+        let mut labels = heapless::Vec::<Label<'static>, 5>::new();
+
+        // Cell 0,0 — START/START
+        let obj = Obj::new(&cont)?;
+        obj.size(LV_SIZE_CONTENT, LV_SIZE_CONTENT);
+        obj.set_grid_cell(GridAlign::Start, 0, 1, GridAlign::Start, 0, 1);
+        let lbl = Label::new(&obj)?;
+        lbl.set_text("c0, r0");
+        let _ = items.push(obj);
+        let _ = labels.push(lbl);
+
+        // Cell 1,0 — START/CENTER
+        let obj = Obj::new(&cont)?;
+        obj.size(LV_SIZE_CONTENT, LV_SIZE_CONTENT);
+        obj.set_grid_cell(GridAlign::Start, 1, 1, GridAlign::Center, 0, 1);
+        let lbl = Label::new(&obj)?;
+        lbl.set_text("c1, r0");
+        let _ = items.push(obj);
+        let _ = labels.push(lbl);
+
+        // Cell 2,0 — START/END
+        let obj = Obj::new(&cont)?;
+        obj.size(LV_SIZE_CONTENT, LV_SIZE_CONTENT);
+        obj.set_grid_cell(GridAlign::Start, 2, 1, GridAlign::End, 0, 1);
+        let lbl = Label::new(&obj)?;
+        lbl.set_text("c2, r0");
+        let _ = items.push(obj);
+        let _ = labels.push(lbl);
+
+        // Cell 1-2,1 — spans 2 columns
+        let obj = Obj::new(&cont)?;
+        obj.size(LV_SIZE_CONTENT, LV_SIZE_CONTENT);
+        obj.set_grid_cell(GridAlign::Stretch, 1, 2, GridAlign::Stretch, 1, 1);
+        let lbl = Label::new(&obj)?;
+        lbl.set_text("c1-2, r1");
+        let _ = items.push(obj);
+        let _ = labels.push(lbl);
+
+        // Cell 0,1-2 — spans 2 rows
+        let obj = Obj::new(&cont)?;
+        obj.size(LV_SIZE_CONTENT, LV_SIZE_CONTENT);
+        obj.set_grid_cell(GridAlign::Stretch, 0, 1, GridAlign::Stretch, 1, 2);
+        let lbl = Label::new(&obj)?;
+        lbl.set_text("c0\nr1-2");
+        let _ = items.push(obj);
+        let _ = labels.push(lbl);
+
+        Ok(Self {
+            _cont: cont,
+            _items: items,
+            _labels: labels,
+        })
+    }
+
+    fn update(&mut self) -> Result<(), WidgetError> {
+        Ok(())
+    }
+}
+
+oxivgl_examples_common::example_main!(Grid2);
