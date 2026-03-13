@@ -237,9 +237,9 @@ impl Style {
     ///
     /// For simple two-color gradients, prefer [`bg_grad_color`](Self::bg_grad_color)
     /// + [`bg_grad_dir`](Self::bg_grad_dir).
-    pub fn bg_grad(&mut self, grad: &lv_grad_dsc_t) -> &mut Self {
+    pub fn bg_grad(&mut self, grad: &super::grad::GradDsc) -> &mut Self {
         // SAFETY: inner was initialized; grad is a valid descriptor reference.
-        unsafe { lv_style_set_bg_grad(&mut self.inner, grad) };
+        unsafe { lv_style_set_bg_grad(&mut self.inner, &grad.inner) };
         self
     }
 

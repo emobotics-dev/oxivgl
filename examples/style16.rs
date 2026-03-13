@@ -8,20 +8,20 @@ extern crate alloc;
 use alloc::boxed::Box;
 use oxivgl::{
     view::View,
-    widgets::{Obj, Screen, Style, WidgetError, color_black, color_make, lv_pct},
+    widgets::{GradDsc, GradExtend, Obj, Screen, Style, WidgetError, color_black, color_make, lv_pct},
 };
 
 struct Style16 {
     _obj: Obj<'static>,
     _style: Box<Style>,
-    _grad: Box<lvgl_rust_sys::lv_grad_dsc_t>,
+    _grad: Box<GradDsc>,
 }
 
 impl View for Style16 {
     fn create() -> Result<Self, WidgetError> {
         let screen = Screen::active().ok_or(WidgetError::LvglNullPointer)?;
 
-        let colors: [lvgl_rust_sys::lv_color_t; 8] = [
+        let colors = [
             color_make(0xe8, 0xe8, 0xe8),
             color_make(0xff, 0xff, 0xff),
             color_make(0xfa, 0xfa, 0xfa),
@@ -32,24 +32,9 @@ impl View for Style16 {
             color_make(0xe8, 0xe8, 0xe8),
         ];
 
-        let mut grad = Box::new(unsafe { core::mem::zeroed::<lvgl_rust_sys::lv_grad_dsc_t>() });
-        unsafe {
-            lvgl_rust_sys::lv_grad_init_stops(
-                &mut *grad,
-                colors.as_ptr(),
-                core::ptr::null(),
-                core::ptr::null(),
-                8,
-            );
-            lvgl_rust_sys::lv_grad_conical_init(
-                &mut *grad,
-                lv_pct(50),
-                lv_pct(50),
-                0,
-                120,
-                lvgl_rust_sys::lv_grad_extend_t_LV_GRAD_EXTEND_REFLECT,
-            );
-        }
+        let mut grad = Box::new(GradDsc::new());
+        grad.init_stops(&colors, &[], &[])
+            .conical(lv_pct(50), lv_pct(50), 0, 120, GradExtend::Reflect);
 
         let mut style = Box::new(Style::new());
         style
