@@ -1,0 +1,84 @@
+#![cfg_attr(target_arch = "xtensa", no_std, no_main)]
+#![cfg_attr(
+    target_arch = "xtensa",
+    feature(impl_trait_in_assoc_type, type_alias_impl_trait)
+)]
+// SPDX-License-Identifier: MIT OR Apache-2.0
+//! Event Bubble — Demonstrate event bubbling
+//!
+//! TODO: Hardware target (fire27) has no touch screen yet — click events
+//! require an input device to trigger. The GUI is fully wired; only the
+//! physical input is missing.
+
+use oxivgl::{
+    view::{register_event_on, Event, View},
+    widgets::{
+        Button, FlexFlow, LV_EVENT_CLICKED, LV_OBJ_FLAG_EVENT_BUBBLE, Label, Obj, Palette,
+        Screen, WidgetError, palette_main,
+    },
+};
+
+struct EventBubble {
+    cont: Obj<'static>,
+    _buttons: heapless::Vec<Button<'static>, 30>,
+    _labels: heapless::Vec<Label<'static>, 30>,
+}
+
+impl View for EventBubble {
+    fn create() -> Result<Self, WidgetError> {
+        let screen = Screen::active().ok_or(WidgetError::LvglNullPointer)?;
+
+        // TODO: No touch input on fire27 hardware — click events won't fire
+        // until an input device is connected.
+        #[cfg(target_arch = "xtensa")]
+        oxivgl_examples_common::warn!("event_bubble: no touch input — click events require input device");
+
+        let cont = Obj::new(&screen)?;
+        cont.size(290, 200).center();
+        cont.set_flex_flow(FlexFlow::RowWrap);
+
+        let mut buttons = heapless::Vec::<Button<'static>, 30>::new();
+        let mut labels = heapless::Vec::<Label<'static>, 30>::new();
+
+        for i in 0..30u32 {
+            let btn = Button::new(&cont)?;
+            btn.size(70, 50);
+            btn.add_flag(LV_OBJ_FLAG_EVENT_BUBBLE);
+
+            let label = Label::new(&btn)?;
+            let mut buf = heapless::String::<4>::new();
+            let _ = core::fmt::Write::write_fmt(&mut buf, format_args!("{}", i));
+            label.set_text(&buf).center();
+
+            let _ = buttons.push(btn);
+            let _ = labels.push(label);
+        }
+
+        Ok(Self {
+            cont,
+            _buttons: buttons,
+            _labels: labels,
+        })
+    }
+
+    fn register_events(&mut self) {
+        register_event_on(self, self.cont.handle());
+    }
+
+    fn on_event(&mut self, event: &Event) {
+        if event.code() != LV_EVENT_CLICKED {
+            return;
+        }
+        let target = event.target_handle();
+        if target == self.cont.handle() {
+            return;
+        }
+        event.target_style_bg_color(palette_main(Palette::Red), 0);
+    }
+
+    fn update(&mut self) -> Result<(), WidgetError> {
+        Ok(())
+    }
+}
+
+oxivgl_examples_common::example_main!(EventBubble);

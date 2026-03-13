@@ -266,7 +266,7 @@
 #define LV_USE_SPAN       0
 #define LV_USE_SPINBOX    0
 #define LV_USE_SPINNER    0
-#define LV_USE_SWITCH     0
+#define LV_USE_SWITCH     1
 #define LV_USE_TEXTAREA   0
 #define LV_USE_TABLE      0
 #define LV_USE_TABVIEW    0
@@ -291,7 +291,7 @@
  * LAYOUTS
  *==================*/
 
-#define LV_USE_FLEX 0
+#define LV_USE_FLEX 1
 #define LV_USE_GRID 0
 
 /*====================

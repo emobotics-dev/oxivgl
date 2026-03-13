@@ -138,6 +138,65 @@ Four buttons: simple horizontal, simple vertical, complex linear, complex radial
 - **Style 14** — Extend theme (needs `LV_USE_PRIVATE_API`)
 - **Style 19** — Modal overlay (meta-example, benchmarking)
 
+## Animations
+
+### Anim 1 — Start Animation on Event
+
+Switch toggles label X-position animation (overshoot/ease-in paths).
+
+![anim1](screenshots/anim1.png)
+
+### Anim 2 — Playback Animation
+
+Red circle with repeat/reverse size + X animations (ease-in-out).
+
+![anim2](screenshots/anim2.png)
+
+### Anim Timeline 1 — Animation Timeline
+
+Three objects animated via timeline, controlled by start/pause buttons and a progress slider.
+
+![anim_timeline1](screenshots/anim_timeline1.png)
+
+### Skipped
+
+- **Anim 3** — Cubic bezier with Chart + Grid (needs `LV_USE_CHART`, `LV_USE_GRID`, Chart wrapper)
+
+## Events
+
+All event examples use the safe `View::on_event` dispatch — no `unsafe` or raw callbacks in user code.
+
+> **Note:** Hardware target (fire27) has no touch screen yet — input events require a physical input device. The GUI is fully wired; only the physical input is missing.
+
+### Event Click — Button Click Counter
+
+Button increments a counter label on each click.
+
+![event_click](screenshots/event_click.png)
+
+### Event Button — Multiple Event Types
+
+Button reports pressed, clicked, long-pressed, and long-pressed-repeat events to an info label.
+
+![event_button](screenshots/event_button.png)
+
+### Event Bubble — Event Bubbling
+
+30-button grid in a flex container; clicking any button turns it red via bubbled events.
+
+![event_bubble](screenshots/event_bubble.png)
+
+### Event Trickle — Event Trickle-Down
+
+9-cell grid with trickle-down: pressing the container applies a black style to all children.
+
+![event_trickle](screenshots/event_trickle.png)
+
+### Skipped
+
+- **Event Draw** — needs `lv_timer_create` + draw task APIs
+- **Event Streak** — needs `lv_indev_get_short_click_streak` (requires input device)
+
 ## Running
 
 ```sh

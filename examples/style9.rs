@@ -8,13 +8,13 @@ extern crate alloc;
 use alloc::boxed::Box;
 use oxivgl::{
     view::View,
-    widgets::{Line, Palette, Screen, Style, WidgetError, palette_main},
+    widgets::{Line, Palette, Screen, Style, WidgetError, lv_point_precise_t, palette_main},
 };
 
 struct Style9 {
     _line: Line<'static>,
     _style: Box<Style>,
-    _points: Box<[lvgl_rust_sys::lv_point_precise_t; 3]>,
+    _points: Box<[lv_point_precise_t; 3]>,
 }
 
 impl View for Style9 {
@@ -28,9 +28,9 @@ impl View for Style9 {
             .line_rounded(true);
 
         let points = Box::new([
-            lvgl_rust_sys::lv_point_precise_t { x: 10, y: 30 },
-            lvgl_rust_sys::lv_point_precise_t { x: 30, y: 50 },
-            lvgl_rust_sys::lv_point_precise_t { x: 100, y: 0 },
+            lv_point_precise_t { x: 10, y: 30 },
+            lv_point_precise_t { x: 30, y: 50 },
+            lv_point_precise_t { x: 100, y: 0 },
         ]);
 
         let line = Line::new(&screen)?;

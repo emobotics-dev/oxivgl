@@ -4,8 +4,8 @@ use core::{ops::Deref, ptr::null_mut};
 use lvgl_rust_sys::*;
 
 use super::{
-    WidgetError,
     obj::{Align, AsLvHandle, Obj},
+    WidgetError,
 };
 
 /// Type-safe wrapper for `lv_scale_mode_t`.
@@ -47,7 +47,13 @@ impl<'p> Scale<'p> {
         // SAFETY: parent_ptr non-null (asserted above); lv_init() called via
         // LvglDriver.
         let handle = unsafe { lv_scale_create(parent_ptr) };
-        if handle.is_null() { Err(WidgetError::LvglNullPointer) } else { Ok(Scale { obj: Obj::from_raw(handle) }) }
+        if handle.is_null() {
+            Err(WidgetError::LvglNullPointer)
+        } else {
+            Ok(Scale {
+                obj: Obj::from_raw(handle),
+            })
+        }
     }
 
     /// Create a tick-mark ring scale (no arc drawn, transparent background).
@@ -101,11 +107,19 @@ impl<'p> Scale<'p> {
             lv_obj_set_style_pad_all(h, 0, 0);
             // Minor ticks
             lv_obj_set_style_length(h, minor_len, lv_part_t_LV_PART_ITEMS as u32);
-            lv_obj_set_style_line_color(h, lv_color_hex(minor_color), lv_part_t_LV_PART_ITEMS as u32);
+            lv_obj_set_style_line_color(
+                h,
+                lv_color_hex(minor_color),
+                lv_part_t_LV_PART_ITEMS as u32,
+            );
             lv_obj_set_style_line_width(h, 1, lv_part_t_LV_PART_ITEMS as u32);
             // Major ticks
             lv_obj_set_style_length(h, major_len, lv_part_t_LV_PART_INDICATOR as u32);
-            lv_obj_set_style_line_color(h, lv_color_hex(major_color), lv_part_t_LV_PART_INDICATOR as u32);
+            lv_obj_set_style_line_color(
+                h,
+                lv_color_hex(major_color),
+                lv_part_t_LV_PART_INDICATOR as u32,
+            );
             lv_obj_set_style_line_width(h, 2, lv_part_t_LV_PART_INDICATOR as u32);
         }
         Ok(scale)
