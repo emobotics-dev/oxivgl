@@ -4,8 +4,8 @@ use core::{ops::Deref, ptr::null_mut};
 use lvgl_rust_sys::*;
 
 use super::{
-    WidgetError,
     obj::{AsLvHandle, Obj},
+    WidgetError,
 };
 
 /// LVGL slider widget (native range 0–100 by default).
@@ -39,20 +39,41 @@ impl<'p> Slider<'p> {
         if handle.is_null() {
             Err(WidgetError::LvglNullPointer)
         } else {
-            Ok(Slider { obj: Obj::from_raw(handle) })
+            Ok(Slider {
+                obj: Obj::from_raw(handle),
+            })
         }
     }
 
     /// Returns the current slider value (native LVGL integer range).
     pub fn get_value(&self) -> i32 {
-        assert_ne!(self.obj.handle(), null_mut(), "Slider handle cannot be null");
+        assert_ne!(
+            self.obj.handle(),
+            null_mut(),
+            "Slider handle cannot be null"
+        );
         // SAFETY: handle non-null (asserted above).
         unsafe { lv_slider_get_value(self.obj.handle()) }
     }
 
+    /// Sets the slider range (min and max values).
+    pub fn set_range(&self, min: i32, max: i32) -> &Self {
+        assert_ne!(
+            self.obj.handle(),
+            null_mut(),
+            "Slider handle cannot be null"
+        );
+        unsafe { lv_slider_set_range(self.obj.handle(), min, max) };
+        self
+    }
+
     /// Sets the slider value (native LVGL integer range).
     pub fn set_value(&self, val: i32) -> &Self {
-        assert_ne!(self.obj.handle(), null_mut(), "Slider handle cannot be null");
+        assert_ne!(
+            self.obj.handle(),
+            null_mut(),
+            "Slider handle cannot be null"
+        );
         // SAFETY: handle non-null (asserted above).
         unsafe { lv_slider_set_value(self.obj.handle(), val, false) };
         self
