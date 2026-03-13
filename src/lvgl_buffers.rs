@@ -20,6 +20,7 @@ use lvgl_rust_sys::{
 /// Error type for display output operations.
 #[derive(Debug)]
 pub enum UiError {
+    /// Display output failed.
     Display,
 }
 
@@ -27,6 +28,7 @@ pub enum UiError {
 /// Defined in ui; implemented by the board layer.
 #[allow(async_fn_in_trait)]
 pub trait DisplayOutput {
+    /// Write raw pixel data to the display.
     async fn show_raw_data(&mut self, x: u16, y: u16, w: u16, h: u16, data: &[u8]) -> Result<(), UiError>;
 }
 
@@ -40,6 +42,7 @@ pub const COLOR_BUF_LINES: usize = 40;
 pub struct LvglBuf<const BYTES: usize>(pub [u8; BYTES]);
 
 impl<const BYTES: usize> LvglBuf<BYTES> {
+    /// Create a zeroed render buffer.
     pub const fn new() -> Self { Self([0; BYTES]) }
 }
 
@@ -47,11 +50,14 @@ impl<const BYTES: usize> LvglBuf<BYTES> {
 /// controls allocation using the actual screen width:
 /// `LvglBuffers::<{SCREEN_W as usize * COLOR_BUF_LINES * 2}>`
 pub struct LvglBuffers<const BYTES: usize> {
+    /// First render buffer.
     pub buf1: LvglBuf<BYTES>,
+    /// Second render buffer (double-buffering).
     pub buf2: LvglBuf<BYTES>,
 }
 
 impl<const BYTES: usize> LvglBuffers<BYTES> {
+    /// Create zeroed double-buffered render buffers.
     pub const fn new() -> Self { Self { buf1: LvglBuf::new(), buf2: LvglBuf::new() } }
 }
 

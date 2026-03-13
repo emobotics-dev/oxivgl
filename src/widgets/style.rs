@@ -8,8 +8,11 @@ use super::palette::GradDir;
 pub struct TextDecor(u32);
 
 impl TextDecor {
+    /// No decoration.
     pub const NONE: Self = Self(0x00);
+    /// Underline text.
     pub const UNDERLINE: Self = Self(0x01);
+    /// Strikethrough text.
     pub const STRIKETHROUGH: Self = Self(0x02);
 }
 
@@ -31,8 +34,8 @@ pub struct TransitionDsc {
 impl TransitionDsc {
     /// Create a transition descriptor.
     ///
-    /// `props`: null-terminated array of `lv_style_prop_t` (use [`StyleProp`] constants).
-    /// `path_cb`: animation path function (e.g. [`anim_path_linear`]).
+    /// `props`: null-terminated array of `lv_style_prop_t` (use [`props`] constants).
+    /// `path_cb`: animation path function (e.g. [`super::anim_path_linear`]).
     /// `time`: transition duration in ms.
     /// `delay`: delay before transition starts in ms.
     pub fn new(
@@ -60,10 +63,13 @@ impl TransitionDsc {
 pub mod props {
     pub use lvgl_rust_sys::lv_style_prop_t;
 
+    /// Background color property.
     pub const BG_COLOR: lv_style_prop_t =
         lvgl_rust_sys::_lv_style_id_t_LV_STYLE_BG_COLOR as lv_style_prop_t;
+    /// Border color property.
     pub const BORDER_COLOR: lv_style_prop_t =
         lvgl_rust_sys::_lv_style_id_t_LV_STYLE_BORDER_COLOR as lv_style_prop_t;
+    /// Border width property.
     pub const BORDER_WIDTH: lv_style_prop_t =
         lvgl_rust_sys::_lv_style_id_t_LV_STYLE_BORDER_WIDTH as lv_style_prop_t;
 }
@@ -77,11 +83,17 @@ pub mod props {
 pub struct BorderSide(u32);
 
 impl BorderSide {
+    /// No border.
     pub const NONE: Self = Self(0x00);
+    /// Bottom border.
     pub const BOTTOM: Self = Self(0x01);
+    /// Top border.
     pub const TOP: Self = Self(0x02);
+    /// Left border.
     pub const LEFT: Self = Self(0x04);
+    /// Right border.
     pub const RIGHT: Self = Self(0x08);
+    /// All four sides.
     pub const FULL: Self = Self(0x0F);
 }
 
@@ -106,7 +118,7 @@ pub const LV_SIZE_CONTENT: i32 =
 /// Owned LVGL style. Wraps `lv_style_t`.
 ///
 /// # Lifetime contract
-/// Once passed to [`Obj::add_style`], this struct MUST NOT be moved or dropped
+/// Once passed to [`super::Obj::add_style`], this struct MUST NOT be moved or dropped
 /// while any widget holds a reference to it. Store styles as fields in a `View`
 /// struct that lives for the entire LVGL lifetime.
 pub struct Style {
@@ -114,6 +126,7 @@ pub struct Style {
 }
 
 impl Style {
+    /// Create a new empty style.
     pub fn new() -> Self {
         // SAFETY: lv_style_t can be zero-initialized; lv_style_init sets it up.
         let mut inner = unsafe { core::mem::zeroed::<lv_style_t>() };
@@ -127,66 +140,79 @@ impl Style {
         alloc::boxed::Box::new(Self::new())
     }
 
+    /// Set corner radius.
     pub fn radius(&mut self, r: i16) -> &mut Self {
         unsafe { lv_style_set_radius(&mut self.inner, r as lv_coord_t) };
         self
     }
 
+    /// Set background opacity (0-255).
     pub fn bg_opa(&mut self, opa: u8) -> &mut Self {
         unsafe { lv_style_set_bg_opa(&mut self.inner, opa as lv_opa_t) };
         self
     }
 
+    /// Set background color.
     pub fn bg_color(&mut self, color: lv_color_t) -> &mut Self {
         unsafe { lv_style_set_bg_color(&mut self.inner, color) };
         self
     }
 
+    /// Set background color from RGB hex.
     pub fn bg_color_hex(&mut self, hex: u32) -> &mut Self {
         let color = unsafe { lv_color_hex(hex) };
         self.bg_color(color)
     }
 
+    /// Set background gradient end color.
     pub fn bg_grad_color(&mut self, color: lv_color_t) -> &mut Self {
         unsafe { lv_style_set_bg_grad_color(&mut self.inner, color) };
         self
     }
 
+    /// Set background gradient direction.
     pub fn bg_grad_dir(&mut self, dir: GradDir) -> &mut Self {
         unsafe { lv_style_set_bg_grad_dir(&mut self.inner, dir as lv_grad_dir_t) };
         self
     }
 
+    /// Set border color.
     pub fn border_color(&mut self, color: lv_color_t) -> &mut Self {
         unsafe { lv_style_set_border_color(&mut self.inner, color) };
         self
     }
 
+    /// Set border color from RGB hex.
     pub fn border_color_hex(&mut self, hex: u32) -> &mut Self {
         let color = unsafe { lv_color_hex(hex) };
         self.border_color(color)
     }
 
+    /// Set border opacity (0-255).
     pub fn border_opa(&mut self, opa: u8) -> &mut Self {
         unsafe { lv_style_set_border_opa(&mut self.inner, opa as lv_opa_t) };
         self
     }
 
+    /// Set border width in pixels.
     pub fn border_width(&mut self, w: i16) -> &mut Self {
         unsafe { lv_style_set_border_width(&mut self.inner, w as lv_coord_t) };
         self
     }
 
+    /// Set text color.
     pub fn text_color(&mut self, color: lv_color_t) -> &mut Self {
         unsafe { lv_style_set_text_color(&mut self.inner, color) };
         self
     }
 
+    /// Set text color from RGB hex.
     pub fn text_color_hex(&mut self, hex: u32) -> &mut Self {
         let color = unsafe { lv_color_hex(hex) };
         self.text_color(color)
     }
 
+    /// Apply a color filter with given opacity.
     pub fn color_filter(&mut self, filter: &ColorFilter, opa: u8) -> &mut Self {
         unsafe {
             lv_style_set_color_filter_dsc(&mut self.inner, &filter.inner);
@@ -195,36 +221,42 @@ impl Style {
         self
     }
 
+    /// Set style width.
     pub fn width(&mut self, w: i32) -> &mut Self {
         // SAFETY: inner was initialized by lv_style_init.
         unsafe { lv_style_set_width(&mut self.inner, w) };
         self
     }
 
+    /// Set style height.
     pub fn height(&mut self, h: i32) -> &mut Self {
         // SAFETY: inner was initialized by lv_style_init.
         unsafe { lv_style_set_height(&mut self.inner, h) };
         self
     }
 
+    /// Set style X offset.
     pub fn x(&mut self, x: i32) -> &mut Self {
         // SAFETY: inner was initialized by lv_style_init.
         unsafe { lv_style_set_x(&mut self.inner, x) };
         self
     }
 
+    /// Set style Y offset.
     pub fn y(&mut self, y: i32) -> &mut Self {
         // SAFETY: inner was initialized by lv_style_init.
         unsafe { lv_style_set_y(&mut self.inner, y) };
         self
     }
 
+    /// Set vertical padding (top + bottom).
     pub fn pad_ver(&mut self, p: i32) -> &mut Self {
         // SAFETY: inner was initialized by lv_style_init.
         unsafe { lv_style_set_pad_ver(&mut self.inner, p) };
         self
     }
 
+    /// Set left padding.
     pub fn pad_left(&mut self, p: i32) -> &mut Self {
         // SAFETY: inner was initialized by lv_style_init.
         unsafe { lv_style_set_pad_left(&mut self.inner, p) };
@@ -241,117 +273,140 @@ impl Style {
         self
     }
 
+    /// Set which border sides to draw.
     pub fn border_side(&mut self, side: BorderSide) -> &mut Self {
         // SAFETY: inner was initialized by lv_style_init.
         unsafe { lv_style_set_border_side(&mut self.inner, side.0 as lv_border_side_t) };
         self
     }
 
+    /// Set outline width.
     pub fn outline_width(&mut self, w: i32) -> &mut Self {
         unsafe { lv_style_set_outline_width(&mut self.inner, w) };
         self
     }
 
+    /// Set outline color.
     pub fn outline_color(&mut self, color: lv_color_t) -> &mut Self {
         unsafe { lv_style_set_outline_color(&mut self.inner, color) };
         self
     }
 
+    /// Set outline padding (gap from border).
     pub fn outline_pad(&mut self, pad: i32) -> &mut Self {
         unsafe { lv_style_set_outline_pad(&mut self.inner, pad) };
         self
     }
 
+    /// Set shadow width.
     pub fn shadow_width(&mut self, w: i32) -> &mut Self {
         unsafe { lv_style_set_shadow_width(&mut self.inner, w) };
         self
     }
 
+    /// Set shadow color.
     pub fn shadow_color(&mut self, color: lv_color_t) -> &mut Self {
         unsafe { lv_style_set_shadow_color(&mut self.inner, color) };
         self
     }
 
+    /// Set arc line color.
     pub fn arc_color(&mut self, color: lv_color_t) -> &mut Self {
         unsafe { lv_style_set_arc_color(&mut self.inner, color) };
         self
     }
 
+    /// Set arc line width.
     pub fn arc_width(&mut self, w: i32) -> &mut Self {
         unsafe { lv_style_set_arc_width(&mut self.inner, w) };
         self
     }
 
+    /// Set padding on all sides.
     pub fn pad_all(&mut self, p: i32) -> &mut Self {
         unsafe { lv_style_set_pad_all(&mut self.inner, p) };
         self
     }
 
+    /// Set letter spacing.
     pub fn text_letter_space(&mut self, s: i32) -> &mut Self {
         unsafe { lv_style_set_text_letter_space(&mut self.inner, s) };
         self
     }
 
+    /// Set line spacing.
     pub fn text_line_space(&mut self, s: i32) -> &mut Self {
         unsafe { lv_style_set_text_line_space(&mut self.inner, s) };
         self
     }
 
+    /// Set text decoration (underline, strikethrough).
     pub fn text_decor(&mut self, decor: TextDecor) -> &mut Self {
         unsafe { lv_style_set_text_decor(&mut self.inner, decor.0 as lv_text_decor_t) };
         self
     }
 
+    /// Set line color.
     pub fn line_color(&mut self, color: lv_color_t) -> &mut Self {
         unsafe { lv_style_set_line_color(&mut self.inner, color) };
         self
     }
 
+    /// Set line width.
     pub fn line_width(&mut self, w: i32) -> &mut Self {
         unsafe { lv_style_set_line_width(&mut self.inner, w) };
         self
     }
 
+    /// Enable/disable rounded line endings.
     pub fn line_rounded(&mut self, rounded: bool) -> &mut Self {
         unsafe { lv_style_set_line_rounded(&mut self.inner, rounded) };
         self
     }
 
+    /// Set transition descriptor for animated property changes.
     pub fn transition(&mut self, tr: &TransitionDsc) -> &mut Self {
         unsafe { lv_style_set_transition(&mut self.inner, &tr.inner) };
         self
     }
 
+    /// Set shadow X offset.
     pub fn shadow_offset_x(&mut self, x: i32) -> &mut Self {
         unsafe { lv_style_set_shadow_offset_x(&mut self.inner, x) };
         self
     }
 
+    /// Set shadow Y offset.
     pub fn shadow_offset_y(&mut self, y: i32) -> &mut Self {
         unsafe { lv_style_set_shadow_offset_y(&mut self.inner, y) };
         self
     }
 
+    /// Set shadow opacity (0-255).
     pub fn shadow_opa(&mut self, opa: u8) -> &mut Self {
         unsafe { lv_style_set_shadow_opa(&mut self.inner, opa as lv_opa_t) };
         self
     }
 
+    /// Set shadow spread (extra size).
     pub fn shadow_spread(&mut self, s: i32) -> &mut Self {
         unsafe { lv_style_set_shadow_spread(&mut self.inner, s) };
         self
     }
 
+    /// Set flex layout flow direction.
     pub fn flex_flow(&mut self, flow: super::obj::FlexFlow) -> &mut Self {
         unsafe { lv_style_set_flex_flow(&mut self.inner, flow as lv_flex_flow_t) };
         self
     }
 
+    /// Set flex main-axis alignment.
     pub fn flex_main_place(&mut self, align: super::obj::FlexAlign) -> &mut Self {
         unsafe { lv_style_set_flex_main_place(&mut self.inner, align as lv_flex_align_t) };
         self
     }
 
+    /// Set layout engine (flex or grid).
     pub fn layout(&mut self, layout: super::Layout) -> &mut Self {
         // SAFETY: inner was initialized by lv_style_init.
         unsafe { lv_style_set_layout(&mut self.inner, layout as u16) };

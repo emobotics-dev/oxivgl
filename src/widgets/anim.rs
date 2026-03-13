@@ -11,6 +11,7 @@ pub struct Anim {
 }
 
 impl Anim {
+    /// Create a new animation descriptor.
     pub fn new() -> Self {
         let mut inner = unsafe { core::mem::zeroed::<lv_anim_t>() };
         unsafe { lv_anim_init(&mut inner) };
@@ -23,51 +24,61 @@ impl Anim {
         self
     }
 
+    /// Set start and end values.
     pub fn set_values(&mut self, start: i32, end: i32) -> &mut Self {
         unsafe { lv_anim_set_values(&mut self.inner, start, end) };
         self
     }
 
+    /// Set animation duration in milliseconds.
     pub fn set_duration(&mut self, ms: u32) -> &mut Self {
         unsafe { lv_anim_set_duration(&mut self.inner, ms) };
         self
     }
 
+    /// Set delay before animation starts in milliseconds.
     pub fn set_delay(&mut self, ms: u32) -> &mut Self {
         unsafe { lv_anim_set_delay(&mut self.inner, ms) };
         self
     }
 
+    /// Set the value-setter callback.
     pub fn set_exec_cb(&mut self, cb: lv_anim_exec_xcb_t) -> &mut Self {
         unsafe { lv_anim_set_exec_cb(&mut self.inner, cb) };
         self
     }
 
+    /// Set a custom exec callback (receives the full `lv_anim_t`).
     pub fn set_custom_exec_cb(&mut self, cb: lv_anim_custom_exec_cb_t) -> &mut Self {
         unsafe { lv_anim_set_custom_exec_cb(&mut self.inner, cb) };
         self
     }
 
+    /// Set the animation easing/path function.
     pub fn set_path_cb(&mut self, cb: lv_anim_path_cb_t) -> &mut Self {
         unsafe { lv_anim_set_path_cb(&mut self.inner, cb) };
         self
     }
 
+    /// Set reverse playback duration in milliseconds.
     pub fn set_reverse_duration(&mut self, ms: u32) -> &mut Self {
         unsafe { lv_anim_set_reverse_duration(&mut self.inner, ms) };
         self
     }
 
+    /// Set delay before reverse playback.
     pub fn set_reverse_delay(&mut self, ms: u32) -> &mut Self {
         unsafe { lv_anim_set_reverse_delay(&mut self.inner, ms) };
         self
     }
 
+    /// Set repeat count (use [`ANIM_REPEAT_INFINITE`] for looping).
     pub fn set_repeat_count(&mut self, cnt: u32) -> &mut Self {
         unsafe { lv_anim_set_repeat_count(&mut self.inner, cnt) };
         self
     }
 
+    /// Set delay between repetitions in milliseconds.
     pub fn set_repeat_delay(&mut self, ms: u32) -> &mut Self {
         unsafe { lv_anim_set_repeat_delay(&mut self.inner, ms) };
         self
@@ -84,22 +95,27 @@ pub unsafe extern "C" fn anim_path_linear(a: *const lv_anim_t) -> i32 {
     unsafe { lv_anim_path_linear(a) }
 }
 
+/// Overshoot animation path.
 pub unsafe extern "C" fn anim_path_overshoot(a: *const lv_anim_t) -> i32 {
     unsafe { lv_anim_path_overshoot(a) }
 }
 
+/// Ease-in animation path.
 pub unsafe extern "C" fn anim_path_ease_in(a: *const lv_anim_t) -> i32 {
     unsafe { lv_anim_path_ease_in(a) }
 }
 
+/// Ease-out animation path.
 pub unsafe extern "C" fn anim_path_ease_out(a: *const lv_anim_t) -> i32 {
     unsafe { lv_anim_path_ease_out(a) }
 }
 
+/// Ease-in-out animation path.
 pub unsafe extern "C" fn anim_path_ease_in_out(a: *const lv_anim_t) -> i32 {
     unsafe { lv_anim_path_ease_in_out(a) }
 }
 
+/// Bounce animation path.
 pub unsafe extern "C" fn anim_path_bounce(a: *const lv_anim_t) -> i32 {
     unsafe { lv_anim_path_bounce(a) }
 }

@@ -28,27 +28,49 @@ pub enum Part {
 #[repr(u32)]
 #[derive(Clone, Copy, Debug)]
 pub enum Align {
+    /// LVGL default alignment.
     Default = 0,
+    /// Top-left corner.
     TopLeft = 1,
+    /// Top center.
     TopMid = 2,
+    /// Top-right corner.
     TopRight = 3,
+    /// Bottom-left corner.
     BottomLeft = 4,
+    /// Bottom center.
     BottomMid = 5,
+    /// Bottom-right corner.
     BottomRight = 6,
+    /// Left center.
     LeftMid = 7,
+    /// Right center.
     RightMid = 8,
+    /// Centered in parent.
     Center = 9,
+    /// Outside top-left.
     OutTopLeft = 10,
+    /// Outside top center.
     OutTopMid = 11,
+    /// Outside top-right.
     OutTopRight = 12,
+    /// Outside bottom-left.
     OutBottomLeft = 13,
+    /// Outside bottom center.
     OutBottomMid = 14,
+    /// Outside bottom-right.
     OutBottomRight = 15,
+    /// Outside left-top.
     OutLeftTop = 16,
+    /// Outside left center.
     OutLeftMid = 17,
+    /// Outside left-bottom.
     OutLeftBottom = 18,
+    /// Outside right-top.
     OutRightTop = 19,
+    /// Outside right center.
     OutRightMid = 20,
+    /// Outside right-bottom.
     OutRightBottom = 21,
 }
 
@@ -56,9 +78,13 @@ pub enum Align {
 #[repr(u32)]
 #[derive(Clone, Copy, Debug)]
 pub enum TextAlign {
+    /// Auto (based on text direction).
     Auto = 0,
+    /// Left-aligned.
     Left = 1,
+    /// Center-aligned.
     Center = 2,
+    /// Right-aligned.
     Right = 3,
 }
 
@@ -66,13 +92,21 @@ pub enum TextAlign {
 #[repr(u32)]
 #[derive(Clone, Copy, Debug)]
 pub enum FlexFlow {
+    /// Horizontal left to right.
     Row = 0,
+    /// Vertical top to bottom.
     Column = 1,
+    /// Row with wrapping.
     RowWrap = 4,
+    /// Row, right to left.
     RowReverse = 8,
+    /// Row with wrapping, reversed.
     RowWrapReverse = 12,
+    /// Column with wrapping.
     ColumnWrap = 5,
+    /// Column, bottom to top.
     ColumnReverse = 9,
+    /// Column with wrapping, reversed.
     ColumnWrapReverse = 13,
 }
 
@@ -80,11 +114,17 @@ pub enum FlexFlow {
 #[repr(u32)]
 #[derive(Clone, Copy, Debug)]
 pub enum FlexAlign {
+    /// Align to start.
     Start = 0,
+    /// Align to end.
     End = 1,
+    /// Center alignment.
     Center = 2,
+    /// Equal space around all items.
     SpaceEvenly = 3,
+    /// Equal space around each item.
     SpaceAround = 4,
+    /// Equal space between items.
     SpaceBetween = 5,
 }
 
@@ -92,12 +132,19 @@ pub enum FlexAlign {
 #[repr(u32)]
 #[derive(Clone, Copy, Debug)]
 pub enum GridAlign {
+    /// Align to start.
     Start = 0,
+    /// Center alignment.
     Center = 1,
+    /// Align to end.
     End = 2,
+    /// Stretch to fill cell.
     Stretch = 3,
+    /// Equal space around all items.
     SpaceEvenly = 4,
+    /// Equal space around each item.
     SpaceAround = 5,
+    /// Equal space between items.
     SpaceBetween = 6,
 }
 
@@ -105,8 +152,11 @@ pub enum GridAlign {
 #[repr(u32)]
 #[derive(Clone, Copy, Debug)]
 pub enum BaseDir {
+    /// Left to right.
     Ltr = 0,
+    /// Right to left.
     Rtl = 1,
+    /// Auto-detect from content.
     Auto = 2,
 }
 
@@ -161,6 +211,7 @@ impl<'p> AsLvHandle for Obj<'p> {
 }
 
 impl<'p> Obj<'p> {
+    /// Create a new base object as a child of `parent`.
     pub fn new(parent: &impl AsLvHandle) -> Result<Self, WidgetError> {
         // SAFETY: parent.lv_handle() is a valid non-null LVGL object; lv_init() was
         // called.
@@ -187,6 +238,7 @@ impl<'p> Obj<'p> {
 
     // ── Position / size ──────────────────────────────────────────────────
 
+    /// Set alignment relative to parent with X/Y offset.
     pub fn align(&self, alignment: Align, x_offset: i32, y_offset: i32) -> &Self {
         assert_ne!(self.handle, null_mut(), "Obj handle cannot be null");
         // SAFETY: handle non-null (asserted above).
@@ -194,6 +246,7 @@ impl<'p> Obj<'p> {
         self
     }
 
+    /// Set X position.
     pub fn x(&self, x: i32) -> &Self {
         assert_ne!(self.handle, null_mut(), "Obj handle cannot be null");
         // SAFETY: handle non-null (asserted above).
@@ -201,6 +254,7 @@ impl<'p> Obj<'p> {
         self
     }
 
+    /// Set Y position.
     pub fn y(&self, y: i32) -> &Self {
         assert_ne!(self.handle, null_mut(), "Obj handle cannot be null");
         // SAFETY: handle non-null (asserted above).
@@ -208,6 +262,7 @@ impl<'p> Obj<'p> {
         self
     }
 
+    /// Set width and height.
     pub fn size(&self, w: i32, h: i32) -> &Self {
         assert_ne!(self.handle, null_mut(), "Obj handle cannot be null");
         // SAFETY: handle non-null (asserted above).
@@ -215,6 +270,7 @@ impl<'p> Obj<'p> {
         self
     }
 
+    /// Set width.
     pub fn width(&self, w: i32) -> &Self {
         assert_ne!(self.handle, null_mut(), "Obj handle cannot be null");
         // SAFETY: handle non-null (asserted above).
@@ -222,6 +278,7 @@ impl<'p> Obj<'p> {
         self
     }
 
+    /// Set height.
     pub fn height(&self, h: i32) -> &Self {
         assert_ne!(self.handle, null_mut(), "Obj handle cannot be null");
         // SAFETY: handle non-null (asserted above).
@@ -229,6 +286,7 @@ impl<'p> Obj<'p> {
         self
     }
 
+    /// Set X and Y position.
     pub fn pos(&self, x: i32, y: i32) -> &Self {
         assert_ne!(self.handle, null_mut(), "Obj handle cannot be null");
         // SAFETY: handle non-null (asserted above).
@@ -236,6 +294,7 @@ impl<'p> Obj<'p> {
         self
     }
 
+    /// Center in parent.
     pub fn center(&self) -> &Self {
         assert_ne!(self.handle, null_mut(), "Obj handle cannot be null");
         // SAFETY: handle non-null (asserted above).
@@ -253,24 +312,28 @@ impl<'p> Obj<'p> {
 
     // ── Getters ──────────────────────────────────────────────────────────
 
+    /// Get current X position after layout.
     pub fn get_x(&self) -> i32 {
         assert_ne!(self.handle, null_mut());
         // SAFETY: handle non-null (asserted above).
         unsafe { lv_obj_get_x(self.handle) }
     }
 
+    /// Get current Y position after layout.
     pub fn get_y(&self) -> i32 {
         assert_ne!(self.handle, null_mut());
         // SAFETY: handle non-null (asserted above).
         unsafe { lv_obj_get_y(self.handle) }
     }
 
+    /// Get current width after layout.
     pub fn get_width(&self) -> i32 {
         assert_ne!(self.handle, null_mut());
         // SAFETY: handle non-null (asserted above).
         unsafe { lv_obj_get_width(self.handle) }
     }
 
+    /// Get current height after layout.
     pub fn get_height(&self) -> i32 {
         assert_ne!(self.handle, null_mut());
         // SAFETY: handle non-null (asserted above).
@@ -279,6 +342,7 @@ impl<'p> Obj<'p> {
 
     // ── State / flags ────────────────────────────────────────────────────
 
+    /// Add an object state (e.g. checked, pressed).
     pub fn add_state(&self, state: super::ObjState) -> &Self {
         assert_ne!(self.handle, null_mut());
         // SAFETY: handle non-null (asserted above).
@@ -286,6 +350,7 @@ impl<'p> Obj<'p> {
         self
     }
 
+    /// Remove an object state.
     pub fn remove_state(&self, state: super::ObjState) -> &Self {
         assert_ne!(self.handle, null_mut());
         // SAFETY: handle non-null (asserted above).
@@ -293,12 +358,14 @@ impl<'p> Obj<'p> {
         self
     }
 
+    /// Check if the object has the given state.
     pub fn has_state(&self, state: super::ObjState) -> bool {
         assert_ne!(self.handle, null_mut());
         // SAFETY: handle non-null (asserted above).
         unsafe { lv_obj_has_state(self.handle, state.0) }
     }
 
+    /// Add an object flag (e.g. clickable, scrollable).
     pub fn add_flag(&self, flag: super::ObjFlag) -> &Self {
         assert_ne!(self.handle, null_mut());
         // SAFETY: handle non-null (asserted above).
@@ -306,6 +373,7 @@ impl<'p> Obj<'p> {
         self
     }
 
+    /// Remove an object flag.
     pub fn remove_flag(&self, flag: super::ObjFlag) -> &Self {
         assert_ne!(self.handle, null_mut());
         // SAFETY: handle non-null (asserted above).
@@ -313,14 +381,17 @@ impl<'p> Obj<'p> {
         self
     }
 
+    /// Remove the SCROLLABLE flag (convenience).
     pub fn remove_scrollable(&self) -> &Self {
         self.remove_flag(super::ObjFlag::SCROLLABLE)
     }
 
+    /// Remove the CLICKABLE flag (convenience).
     pub fn remove_clickable(&self) -> &Self {
         self.remove_flag(super::ObjFlag::CLICKABLE)
     }
 
+    /// Set the scrollbar display mode.
     pub fn set_scrollbar_mode(&self, mode: super::ScrollbarMode) -> &Self {
         assert_ne!(self.handle, null_mut());
         // SAFETY: handle non-null (asserted above).

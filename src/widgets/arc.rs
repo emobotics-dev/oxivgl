@@ -44,6 +44,7 @@ impl<'p> Deref for Arc<'p> {
 }
 
 impl<'p> Arc<'p> {
+    /// Create a new arc widget.
     pub fn new(parent: &impl AsLvHandle) -> Result<Self, WidgetError> {
         let parent_ptr = parent.lv_handle();
         assert_ne!(parent_ptr, null_mut(), "Parent widget cannot be null");
@@ -87,12 +88,14 @@ impl<'p> Arc<'p> {
         (raw as f32 / LVGL_SCALE as f32) * max
     }
 
+    /// Set the arc start angle rotation in degrees.
     pub fn set_rotation(&self, rotation: i32) -> &Self {
         // SAFETY: handle non-null (from Arc::new/gauge_ring).
         unsafe { lv_arc_set_rotation(self.obj.handle(), rotation) };
         self
     }
 
+    /// Set background arc start and end angles.
     pub fn set_bg_angles(&self, start: i32, end: i32) -> &Self {
         // SAFETY: handle non-null (from Arc::new/gauge_ring).
         unsafe { lv_arc_set_bg_angles(self.obj.handle(), start, end) };
