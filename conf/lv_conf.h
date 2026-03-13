@@ -33,7 +33,7 @@
 /*Default display refresh period.*/
 #define LV_DEF_REFR_PERIOD  32      /*[ms]*/
 
-#define LV_DPI_DEF 200     /*[px/inch]*/
+#define LV_DPI_DEF 130     /*[px/inch]*/
 
 /*=================
  * OPERATING SYSTEM
@@ -211,7 +211,7 @@
 
 #define LV_FONT_CUSTOM_DECLARE LV_FONT_DECLARE(lv_font_altreg_rpm)
 
-#define LV_FONT_DEFAULT &lv_font_montserrat_18
+#define LV_FONT_DEFAULT &lv_font_montserrat_14
 #define LV_FONT_FMT_TXT_LARGE 0
 #define LV_USE_FONT_COMPRESSED 0
 #define LV_USE_FONT_PLACEHOLDER 1
@@ -292,7 +292,7 @@
  *==================*/
 
 #define LV_USE_FLEX 1
-#define LV_USE_GRID 0
+#define LV_USE_GRID 1
 
 /*====================
  * 3RD PARTS LIBRARIES

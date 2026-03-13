@@ -35,8 +35,8 @@ mod value_label;
 
 pub use anim::{
     anim_path_bounce, anim_path_ease_in, anim_path_ease_in_out, anim_path_ease_out,
-    anim_path_linear, anim_path_overshoot, anim_set_height, anim_set_size, anim_set_slider_value,
-    anim_set_width, anim_set_x, Anim, ANIM_REPEAT_INFINITE,
+    anim_path_linear, anim_path_overshoot, anim_set_height, anim_set_pad_column, anim_set_pad_row,
+    anim_set_size, anim_set_slider_value, anim_set_width, anim_set_x, Anim, ANIM_REPEAT_INFINITE,
 };
 pub use anim_timeline::{AnimTimeline, ANIM_TIMELINE_PROGRESS_MAX};
 pub use arc::Arc;
@@ -48,7 +48,9 @@ pub use image::Image;
 pub use label::Label;
 pub use led::Led;
 pub use line::Line;
-pub use obj::{Align, AsLvHandle, FlexAlign, FlexFlow, Obj, Part, Screen, TextAlign};
+pub use obj::{
+    Align, AsLvHandle, BaseDir, FlexAlign, FlexFlow, GridAlign, Obj, Part, Screen, TextAlign,
+};
 pub use palette::{
     color_black, color_make, color_white, palette_darken, palette_lighten, palette_main, GradDir,
     Palette,
@@ -97,6 +99,19 @@ pub const LV_STATE_FOCUSED: lvgl_rust_sys::lv_state_t = lvgl_rust_sys::lv_state_
 // Scrollbar modes
 pub const LV_SCROLLBAR_MODE_OFF: lvgl_rust_sys::lv_scrollbar_mode_t =
     lvgl_rust_sys::lv_scrollbar_mode_t_LV_SCROLLBAR_MODE_OFF;
+
+// Layout types
+pub const LV_LAYOUT_FLEX: u32 = lvgl_rust_sys::lv_layout_t_LV_LAYOUT_FLEX;
+pub const LV_LAYOUT_GRID: u32 = lvgl_rust_sys::lv_layout_t_LV_LAYOUT_GRID;
+
+// Grid helpers
+/// Sentinel value marking the end of a grid template descriptor array.
+pub const GRID_TEMPLATE_LAST: i32 = lvgl_rust_sys::LV_COORD_MAX as i32;
+
+/// Return a fractional grid unit. Equivalent to `LV_GRID_FR(x)`.
+pub const fn grid_fr(x: i32) -> i32 {
+    lvgl_rust_sys::LV_COORD_MAX as i32 - 100 + x
+}
 
 /// Errors returned by widget constructors and setters.
 #[derive(Error, Debug)]
