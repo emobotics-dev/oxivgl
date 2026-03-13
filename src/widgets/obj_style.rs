@@ -9,6 +9,7 @@ use lvgl_rust_sys::*;
 use super::obj::Obj;
 
 impl<'p> Obj<'p> {
+    /// Set background color from RGB hex (selector 0).
     pub fn bg_color(&self, color: u32) -> &Self {
         assert_ne!(self.handle(), null_mut(), "Obj handle cannot be null");
         // SAFETY: handle non-null (asserted above).
@@ -16,6 +17,7 @@ impl<'p> Obj<'p> {
         self
     }
 
+    /// Set background opacity (selector 0).
     pub fn bg_opa(&self, opa: u8) -> &Self {
         assert_ne!(self.handle(), null_mut(), "Obj handle cannot be null");
         // SAFETY: handle non-null (asserted above).
@@ -23,6 +25,7 @@ impl<'p> Obj<'p> {
         self
     }
 
+    /// Set border width (selector 0).
     pub fn border_width(&self, w: i32) -> &Self {
         assert_ne!(self.handle(), null_mut(), "Obj handle cannot be null");
         // SAFETY: handle non-null (asserted above).
@@ -30,6 +33,7 @@ impl<'p> Obj<'p> {
         self
     }
 
+    /// Set padding on all sides (selector 0).
     pub fn pad(&self, p: i32) -> &Self {
         assert_ne!(self.handle(), null_mut(), "Obj handle cannot be null");
         // SAFETY: handle non-null (asserted above).
@@ -37,6 +41,7 @@ impl<'p> Obj<'p> {
         self
     }
 
+    /// Set top padding (selector 0).
     pub fn pad_top(&self, p: i32) -> &Self {
         assert_ne!(self.handle(), null_mut(), "Obj handle cannot be null");
         // SAFETY: handle non-null (asserted above).
@@ -44,6 +49,7 @@ impl<'p> Obj<'p> {
         self
     }
 
+    /// Set bottom padding (selector 0).
     pub fn pad_bottom(&self, p: i32) -> &Self {
         assert_ne!(self.handle(), null_mut(), "Obj handle cannot be null");
         // SAFETY: handle non-null (asserted above).
@@ -51,6 +57,7 @@ impl<'p> Obj<'p> {
         self
     }
 
+    /// Set left padding (selector 0).
     pub fn pad_left(&self, p: i32) -> &Self {
         assert_ne!(self.handle(), null_mut(), "Obj handle cannot be null");
         // SAFETY: handle non-null (asserted above).
@@ -58,6 +65,7 @@ impl<'p> Obj<'p> {
         self
     }
 
+    /// Set right padding (selector 0).
     pub fn pad_right(&self, p: i32) -> &Self {
         assert_ne!(self.handle(), null_mut(), "Obj handle cannot be null");
         // SAFETY: handle non-null (asserted above).
@@ -90,6 +98,7 @@ impl<'p> Obj<'p> {
         self
     }
 
+    /// Set text color from RGB hex (selector 0).
     pub fn text_color(&self, color: u32) -> &Self {
         assert_ne!(self.handle(), null_mut(), "Obj handle cannot be null");
         // SAFETY: handle non-null (asserted above).
@@ -97,6 +106,7 @@ impl<'p> Obj<'p> {
         self
     }
 
+    /// Set text font (selector 0).
     pub fn text_font(&self, font: crate::fonts::Font) -> &Self {
         assert_ne!(self.handle(), null_mut(), "Obj handle cannot be null");
         assert_ne!(font.as_ptr(), null_mut(), "Font pointer cannot be null");
@@ -110,6 +120,7 @@ impl<'p> Obj<'p> {
         self.text_font(font)
     }
 
+    /// Set text alignment (selector 0).
     pub fn text_align(&self, align: super::obj::TextAlign) -> &Self {
         assert_ne!(self.handle(), null_mut(), "Obj handle cannot be null");
         // SAFETY: handle non-null (asserted above).
@@ -117,6 +128,7 @@ impl<'p> Obj<'p> {
         self
     }
 
+    /// Set overall opacity (selector 0).
     pub fn opa(&self, opa: u8) -> &Self {
         assert_ne!(self.handle(), null_mut(), "Obj handle cannot be null");
         // SAFETY: handle non-null (asserted above).
@@ -212,6 +224,7 @@ impl<'p> Obj<'p> {
         self
     }
 
+    /// Set base text direction for the given selector.
     pub fn set_style_base_dir(
         &self,
         dir: super::obj::BaseDir,

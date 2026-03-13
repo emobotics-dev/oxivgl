@@ -12,11 +12,17 @@ use super::{
 #[repr(u32)]
 #[derive(Clone, Copy, Debug)]
 pub enum ScaleMode {
+    /// Horizontal, labels on top.
     HorizontalTop = 0,
+    /// Horizontal, labels on bottom.
     HorizontalBottom = 1,
+    /// Vertical, labels on left.
     VerticalLeft = 2,
+    /// Vertical, labels on right.
     VerticalRight = 4,
+    /// Round scale, ticks point inward.
     RoundInner = 8,
+    /// Round scale, ticks point outward.
     RoundOuter = 16,
 }
 
@@ -41,6 +47,7 @@ impl<'p> Deref for Scale<'p> {
 }
 
 impl<'p> Scale<'p> {
+    /// Create a new scale widget.
     pub fn new(parent: &impl AsLvHandle) -> Result<Self, WidgetError> {
         let parent_ptr = parent.lv_handle();
         assert_ne!(parent_ptr, null_mut(), "Parent widget cannot be null");
@@ -171,42 +178,52 @@ impl ScaleBuilder {
         }
     }
 
+    /// Set start angle in degrees.
     pub fn rotation(mut self, v: i32) -> Self {
         self.rotation = v;
         self
     }
+    /// Set angular extent in degrees.
     pub fn sweep(mut self, v: i32) -> Self {
         self.sweep = v;
         self
     }
+    /// Set maximum range value.
     pub fn range_max(mut self, v: i32) -> Self {
         self.range_max = v;
         self
     }
+    /// Set total number of tick marks.
     pub fn total_ticks(mut self, v: u32) -> Self {
         self.total_ticks = v;
         self
     }
+    /// Set major tick interval.
     pub fn major_every(mut self, v: u32) -> Self {
         self.major_every = v;
         self
     }
+    /// Show/hide numeric labels on major ticks.
     pub fn show_labels(mut self, v: bool) -> Self {
         self.show_labels = v;
         self
     }
+    /// Set major tick length in pixels.
     pub fn major_len(mut self, v: i32) -> Self {
         self.major_len = v;
         self
     }
+    /// Set minor tick length in pixels.
     pub fn minor_len(mut self, v: i32) -> Self {
         self.minor_len = v;
         self
     }
+    /// Set major tick color (RGB hex).
     pub fn major_color(mut self, v: u32) -> Self {
         self.major_color = v;
         self
     }
+    /// Set minor tick color (RGB hex).
     pub fn minor_color(mut self, v: u32) -> Self {
         self.minor_color = v;
         self

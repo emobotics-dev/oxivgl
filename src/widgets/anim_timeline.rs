@@ -9,33 +9,40 @@ pub struct AnimTimeline {
 }
 
 impl AnimTimeline {
+    /// Create a new empty animation timeline.
     pub fn new() -> Self {
         let handle = unsafe { lv_anim_timeline_create() };
         assert!(!handle.is_null(), "lv_anim_timeline_create returned NULL");
         Self { handle }
     }
 
+    /// Add an animation at the given start time (ms).
     pub fn add(&mut self, start_time: u32, anim: &Anim) -> &mut Self {
         unsafe { lv_anim_timeline_add(self.handle, start_time, &anim.inner) };
         self
     }
 
+    /// Start timeline playback. Returns total duration in ms.
     pub fn start(&self) -> u32 {
         unsafe { lv_anim_timeline_start(self.handle) }
     }
 
+    /// Pause timeline playback.
     pub fn pause(&self) {
         unsafe { lv_anim_timeline_pause(self.handle) }
     }
 
+    /// Enable/disable reverse playback.
     pub fn set_reverse(&self, reverse: bool) {
         unsafe { lv_anim_timeline_set_reverse(self.handle, reverse) }
     }
 
+    /// Set timeline progress (0 to ANIM_TIMELINE_PROGRESS_MAX).
     pub fn set_progress(&self, progress: u16) {
         unsafe { lv_anim_timeline_set_progress(self.handle, progress) }
     }
 
+    /// Return the raw timeline pointer.
     pub fn handle(&self) -> *mut lv_anim_timeline_t {
         self.handle
     }

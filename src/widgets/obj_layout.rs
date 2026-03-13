@@ -9,6 +9,7 @@ use lvgl_rust_sys::*;
 use super::obj::{FlexAlign, FlexFlow, GridAlign, Obj};
 
 impl<'p> Obj<'p> {
+    /// Set flex layout flow direction.
     pub fn set_flex_flow(&self, flow: FlexFlow) -> &Self {
         assert_ne!(self.handle(), null_mut());
         // SAFETY: handle non-null (asserted above).
@@ -16,6 +17,7 @@ impl<'p> Obj<'p> {
         self
     }
 
+    /// Set flex alignment (main, cross, track).
     pub fn set_flex_align(&self, main: FlexAlign, cross: FlexAlign, track: FlexAlign) -> &Self {
         assert_ne!(self.handle(), null_mut());
         // SAFETY: handle non-null (asserted above).
@@ -30,6 +32,7 @@ impl<'p> Obj<'p> {
         self
     }
 
+    /// Set flex grow factor for this child.
     pub fn set_flex_grow(&self, grow: u8) -> &Self {
         assert_ne!(self.handle(), null_mut());
         // SAFETY: handle non-null (asserted above).
@@ -37,6 +40,7 @@ impl<'p> Obj<'p> {
         self
     }
 
+    /// Set the layout engine (flex or grid).
     pub fn set_layout(&self, layout: super::Layout) -> &Self {
         assert_ne!(self.handle(), null_mut());
         // SAFETY: handle non-null (asserted above).
@@ -53,6 +57,7 @@ impl<'p> Obj<'p> {
         self
     }
 
+    /// Place this child in a grid cell (column + row placement).
     pub fn set_grid_cell(&self, col: super::grid::GridCell, row: super::grid::GridCell) -> &Self {
         assert_ne!(self.handle(), null_mut());
         // SAFETY: handle non-null (asserted above).
@@ -70,6 +75,7 @@ impl<'p> Obj<'p> {
         self
     }
 
+    /// Set grid content alignment (column and row axes).
     pub fn set_grid_align(&self, col_align: GridAlign, row_align: GridAlign) -> &Self {
         assert_ne!(self.handle(), null_mut());
         // SAFETY: handle non-null (asserted above).

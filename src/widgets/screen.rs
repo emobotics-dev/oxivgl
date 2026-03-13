@@ -46,60 +46,70 @@ impl Screen {
         self.handle
     }
 
+    /// Remove the scrollable flag from the screen.
     pub fn remove_scrollable(&self) -> &Self {
         // SAFETY: handle non-null (Screen::active() returns None for null).
         unsafe { lv_obj_remove_flag(self.handle, super::ObjFlag::SCROLLABLE.0) };
         self
     }
 
+    /// Set background color from RGB hex.
     pub fn bg_color(&self, color: u32) -> &Self {
         // SAFETY: handle non-null (Screen::active() returns None for null).
         unsafe { lv_obj_set_style_bg_color(self.handle, lv_color_hex(color), 0) };
         self
     }
 
+    /// Set background opacity (0–255).
     pub fn bg_opa(&self, opa: u8) -> &Self {
         // SAFETY: handle non-null (Screen::active() returns None for null).
         unsafe { lv_obj_set_style_bg_opa(self.handle, opa as lv_opa_t, 0) };
         self
     }
 
+    /// Set top padding.
     pub fn pad_top(&self, p: i32) -> &Self {
         // SAFETY: handle non-null (Screen::active() returns None for null).
         unsafe { lv_obj_set_style_pad_top(self.handle, p, 0) };
         self
     }
 
+    /// Set bottom padding.
     pub fn pad_bottom(&self, p: i32) -> &Self {
         // SAFETY: handle non-null (Screen::active() returns None for null).
         unsafe { lv_obj_set_style_pad_bottom(self.handle, p, 0) };
         self
     }
 
+    /// Set left padding.
     pub fn pad_left(&self, p: i32) -> &Self {
         // SAFETY: handle non-null (Screen::active() returns None for null).
         unsafe { lv_obj_set_style_pad_left(self.handle, p, 0) };
         self
     }
 
+    /// Set right padding.
     pub fn pad_right(&self, p: i32) -> &Self {
         // SAFETY: handle non-null (Screen::active() returns None for null).
         unsafe { lv_obj_set_style_pad_right(self.handle, p, 0) };
         self
     }
 
+    /// Set default text color from RGB hex.
     pub fn text_color(&self, color: u32) -> &Self {
         // SAFETY: handle non-null (Screen::active() returns None for null).
         unsafe { lv_obj_set_style_text_color(self.handle, lv_color_hex(color), 0) };
         self
     }
 
+    /// Set flex layout flow direction.
     pub fn set_flex_flow(&self, flow: FlexFlow) -> &Self {
         // SAFETY: handle non-null (Screen::active() returns None for null).
         unsafe { lv_obj_set_flex_flow(self.handle, flow as lv_flex_flow_t) };
         self
     }
 
+    /// Set flex alignment (main, cross, track).
     pub fn set_flex_align(&self, main: FlexAlign, cross: FlexAlign, track: FlexAlign) -> &Self {
         // SAFETY: handle non-null (Screen::active() returns None for null).
         unsafe {
