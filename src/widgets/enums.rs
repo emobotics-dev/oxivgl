@@ -145,3 +145,189 @@ pub enum Layout {
     /// Grid layout.
     Grid = lvgl_rust_sys::lv_layout_t_LV_LAYOUT_GRID,
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // -- EventCode ---------------------------------------------------------
+
+    #[test]
+    fn event_code_known_values() {
+        assert_eq!(EventCode::ALL.0, 0);
+        assert_eq!(EventCode::PRESSED.0, 1);
+        assert_eq!(EventCode::LONG_PRESSED.0, 8);
+        assert_eq!(EventCode::LONG_PRESSED_REPEAT.0, 9);
+        assert_eq!(EventCode::CLICKED.0, 10);
+        assert_eq!(EventCode::VALUE_CHANGED.0, 35);
+    }
+
+    #[test]
+    fn event_code_equality() {
+        assert_eq!(EventCode::CLICKED, EventCode::CLICKED);
+        assert_ne!(EventCode::CLICKED, EventCode::PRESSED);
+    }
+
+    #[test]
+    fn event_code_unknown_value_roundtrips() {
+        let custom = EventCode(999);
+        assert_eq!(custom.0, 999);
+        assert_ne!(custom, EventCode::ALL);
+    }
+
+    // -- ObjFlag -----------------------------------------------------------
+
+    #[test]
+    fn obj_flag_values_match_bindings() {
+        assert_eq!(
+            ObjFlag::CLICKABLE.0,
+            lvgl_rust_sys::lv_obj_flag_t_LV_OBJ_FLAG_CLICKABLE
+        );
+        assert_eq!(
+            ObjFlag::CHECKABLE.0,
+            lvgl_rust_sys::lv_obj_flag_t_LV_OBJ_FLAG_CHECKABLE
+        );
+        assert_eq!(
+            ObjFlag::SCROLLABLE.0,
+            lvgl_rust_sys::lv_obj_flag_t_LV_OBJ_FLAG_SCROLLABLE
+        );
+        assert_eq!(
+            ObjFlag::IGNORE_LAYOUT.0,
+            lvgl_rust_sys::lv_obj_flag_t_LV_OBJ_FLAG_IGNORE_LAYOUT
+        );
+        assert_eq!(
+            ObjFlag::EVENT_BUBBLE.0,
+            lvgl_rust_sys::lv_obj_flag_t_LV_OBJ_FLAG_EVENT_BUBBLE
+        );
+    }
+
+    #[test]
+    fn obj_flag_bitor_combines_bits() {
+        let combined = ObjFlag::CLICKABLE | ObjFlag::CHECKABLE;
+        assert_eq!(combined.0, ObjFlag::CLICKABLE.0 | ObjFlag::CHECKABLE.0);
+    }
+
+    #[test]
+    fn obj_flag_bitor_idempotent() {
+        let flag = ObjFlag::SCROLLABLE | ObjFlag::SCROLLABLE;
+        assert_eq!(flag, ObjFlag::SCROLLABLE);
+    }
+
+    // -- ObjState ----------------------------------------------------------
+
+    #[test]
+    fn obj_state_values_match_bindings() {
+        assert_eq!(
+            ObjState::DEFAULT.0,
+            lvgl_rust_sys::lv_state_t_LV_STATE_DEFAULT
+        );
+        assert_eq!(
+            ObjState::CHECKED.0,
+            lvgl_rust_sys::lv_state_t_LV_STATE_CHECKED
+        );
+        assert_eq!(
+            ObjState::FOCUSED.0,
+            lvgl_rust_sys::lv_state_t_LV_STATE_FOCUSED
+        );
+        assert_eq!(
+            ObjState::PRESSED.0,
+            lvgl_rust_sys::lv_state_t_LV_STATE_PRESSED
+        );
+    }
+
+    #[test]
+    fn obj_state_pressed_is_not_0x20() {
+        // Regression: was hardcoded as 0x20 (32), correct value is 0x80 (128).
+        assert_ne!(ObjState::PRESSED.0, 0x20);
+        assert_eq!(
+            ObjState::PRESSED.0,
+            lvgl_rust_sys::lv_state_t_LV_STATE_PRESSED
+        );
+    }
+
+    #[test]
+    fn obj_state_bitor_combines() {
+        let combined = ObjState::CHECKED | ObjState::PRESSED;
+        assert_eq!(combined.0, ObjState::CHECKED.0 | ObjState::PRESSED.0);
+    }
+
+    #[test]
+    fn obj_state_default_is_zero() {
+        assert_eq!(ObjState::DEFAULT.0, 0);
+    }
+
+    // -- ScrollbarMode -----------------------------------------------------
+
+    #[test]
+    fn scrollbar_mode_discriminants() {
+        assert_eq!(
+            ScrollbarMode::Off as u32,
+            lvgl_rust_sys::lv_scrollbar_mode_t_LV_SCROLLBAR_MODE_OFF
+        );
+        assert_eq!(
+            ScrollbarMode::On as u32,
+            lvgl_rust_sys::lv_scrollbar_mode_t_LV_SCROLLBAR_MODE_ON
+        );
+        assert_eq!(
+            ScrollbarMode::Active as u32,
+            lvgl_rust_sys::lv_scrollbar_mode_t_LV_SCROLLBAR_MODE_ACTIVE
+        );
+        assert_eq!(
+            ScrollbarMode::Auto as u32,
+            lvgl_rust_sys::lv_scrollbar_mode_t_LV_SCROLLBAR_MODE_AUTO
+        );
+    }
+
+    // -- Layout ------------------------------------------------------------
+
+    #[test]
+    fn layout_discriminants() {
+        assert_eq!(
+            Layout::Flex as u32,
+            lvgl_rust_sys::lv_layout_t_LV_LAYOUT_FLEX
+        );
+        assert_eq!(
+            Layout::Grid as u32,
+            lvgl_rust_sys::lv_layout_t_LV_LAYOUT_GRID
+        );
+    }
+
+    // -- Opa ---------------------------------------------------------------
+
+    #[test]
+    fn opa_values_match_bindings() {
+        assert_eq!(
+            Opa::TRANSP.0,
+            lvgl_rust_sys::_lv_opacity_level_t_LV_OPA_TRANSP as u8
+        );
+        assert_eq!(
+            Opa::OPA_20.0,
+            lvgl_rust_sys::_lv_opacity_level_t_LV_OPA_20 as u8
+        );
+        assert_eq!(
+            Opa::OPA_50.0,
+            lvgl_rust_sys::_lv_opacity_level_t_LV_OPA_50 as u8
+        );
+        assert_eq!(
+            Opa::COVER.0,
+            lvgl_rust_sys::_lv_opacity_level_t_LV_OPA_COVER as u8
+        );
+    }
+
+    #[test]
+    fn opa_transp_is_zero() {
+        assert_eq!(Opa::TRANSP.0, 0);
+    }
+
+    #[test]
+    fn opa_cover_is_255() {
+        assert_eq!(Opa::COVER.0, 255);
+    }
+
+    #[test]
+    fn opa_monotonic() {
+        assert!(Opa::OPA_10.0 < Opa::OPA_20.0);
+        assert!(Opa::OPA_50.0 < Opa::OPA_90.0);
+        assert!(Opa::OPA_90.0 < Opa::COVER.0);
+    }
+}

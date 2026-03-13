@@ -391,3 +391,71 @@ pub unsafe extern "C" fn darken_filter_cb(
     // SAFETY: lv_color_darken is a pure color computation.
     unsafe { lv_color_darken(color, opa) }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // -- TextDecor ---------------------------------------------------------
+
+    #[test]
+    fn text_decor_values() {
+        assert_eq!(TextDecor::NONE.0, 0);
+        assert_eq!(TextDecor::UNDERLINE.0, 1);
+        assert_eq!(TextDecor::STRIKETHROUGH.0, 2);
+    }
+
+    #[test]
+    fn text_decor_bitor() {
+        let combined = TextDecor::UNDERLINE | TextDecor::STRIKETHROUGH;
+        assert_eq!(combined.0, 0x03);
+    }
+
+    // -- BorderSide --------------------------------------------------------
+
+    #[test]
+    fn border_side_values() {
+        assert_eq!(BorderSide::NONE.0, 0x00);
+        assert_eq!(BorderSide::BOTTOM.0, 0x01);
+        assert_eq!(BorderSide::TOP.0, 0x02);
+        assert_eq!(BorderSide::LEFT.0, 0x04);
+        assert_eq!(BorderSide::RIGHT.0, 0x08);
+        assert_eq!(BorderSide::FULL.0, 0x0F);
+    }
+
+    #[test]
+    fn border_side_bitor() {
+        let combined = BorderSide::TOP | BorderSide::BOTTOM;
+        assert_eq!(combined.0, 0x03);
+    }
+
+    #[test]
+    fn border_side_full_is_all_sides() {
+        let all = BorderSide::BOTTOM | BorderSide::TOP | BorderSide::LEFT | BorderSide::RIGHT;
+        assert_eq!(all, BorderSide::FULL);
+    }
+
+    // -- lv_pct ------------------------------------------------------------
+
+    #[test]
+    fn lv_pct_monotonic() {
+        assert!(lv_pct(50) > lv_pct(0));
+        assert!(lv_pct(100) > lv_pct(50));
+    }
+
+    #[test]
+    fn lv_pct_difference_matches_input() {
+        // lv_pct(x) = LV_PCT_BASE + x, so difference should equal input difference.
+        assert_eq!(lv_pct(100) - lv_pct(0), 100);
+        assert_eq!(lv_pct(50) - lv_pct(0), 50);
+    }
+
+    // -- LV_SIZE_CONTENT ---------------------------------------------------
+
+    #[test]
+    fn size_content_uses_spec_type() {
+        // LV_SIZE_CONTENT = LV_COORD_MAX | LV_COORD_TYPE_SPEC
+        let expected = (lvgl_rust_sys::LV_COORD_MAX | lvgl_rust_sys::LV_COORD_TYPE_SPEC) as i32;
+        assert_eq!(LV_SIZE_CONTENT, expected);
+    }
+}
