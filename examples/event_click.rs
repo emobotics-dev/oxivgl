@@ -11,10 +11,8 @@
 //! physical input is missing.
 
 use oxivgl::{
-    view::{Event, View},
-    widgets::{
-        Button, LV_EVENT_CLICKED, LV_OBJ_FLAG_EVENT_BUBBLE, Label, Screen, WidgetError,
-    },
+    view::View,
+    widgets::{Button, Event, EventCode, Label, Screen, WidgetError},
 };
 
 struct EventClick {
@@ -34,20 +32,20 @@ impl View for EventClick {
 
         let btn = Button::new(&screen)?;
         btn.size(100, 50).center();
-        btn.add_flag(LV_OBJ_FLAG_EVENT_BUBBLE);
+        btn.bubble_events();
 
         let label = Label::new(&btn)?;
-        label.text("Click me!\0")?.center();
+        label.text("Click me!").center();
 
         Ok(Self { btn, label, cnt: 0 })
     }
 
     fn on_event(&mut self, event: &Event) {
-        if event.code() == LV_EVENT_CLICKED && event.target_handle() == self.btn.handle() {
+        if event.matches(&self.btn, EventCode::CLICKED) {
             self.cnt += 1;
             let mut buf = heapless::String::<12>::new();
             let _ = core::fmt::Write::write_fmt(&mut buf, format_args!("{}", self.cnt));
-            self.label.set_text(&buf);
+            self.label.text(&buf);
         }
     }
 

@@ -1,0 +1,115 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
+//! [`Screen`] — non-owning reference to the active LVGL screen.
+
+use lvgl_rust_sys::*;
+
+use super::obj::{AsLvHandle, FlexAlign, FlexFlow};
+
+/// Non-owning reference to the active LVGL screen. Does **not** delete it on
+/// drop.
+///
+/// Obtain via [`Screen::active()`]. Use as a parent for top-level widgets.
+///
+/// # Examples
+///
+/// ```no_run
+/// use oxivgl::widgets::Screen;
+///
+/// let screen = Screen::active().expect("LVGL not initialized");
+/// screen.bg_color(0x06080f).bg_opa(255).pad_top(6).pad_bottom(6);
+/// ```
+pub struct Screen {
+    handle: *mut lv_obj_t,
+}
+
+impl AsLvHandle for Screen {
+    fn lv_handle(&self) -> *mut lv_obj_t {
+        self.handle
+    }
+}
+
+impl Screen {
+    /// Returns `None` if LVGL has no active screen yet.
+    pub fn active() -> Option<Self> {
+        // SAFETY: lv_screen_active() is safe after lv_init(); NULL result is handled
+        // below.
+        let handle = unsafe { lv_screen_active() };
+        if handle.is_null() {
+            None
+        } else {
+            Some(Screen { handle })
+        }
+    }
+
+    /// Return the raw `lv_obj_t` pointer for this screen.
+    pub fn handle(&self) -> *mut lv_obj_t {
+        self.handle
+    }
+
+    pub fn remove_scrollable(&self) -> &Self {
+        // SAFETY: handle non-null (Screen::active() returns None for null).
+        unsafe { lv_obj_remove_flag(self.handle, super::ObjFlag::SCROLLABLE.0) };
+        self
+    }
+
+    pub fn bg_color(&self, color: u32) -> &Self {
+        // SAFETY: handle non-null (Screen::active() returns None for null).
+        unsafe { lv_obj_set_style_bg_color(self.handle, lv_color_hex(color), 0) };
+        self
+    }
+
+    pub fn bg_opa(&self, opa: u8) -> &Self {
+        // SAFETY: handle non-null (Screen::active() returns None for null).
+        unsafe { lv_obj_set_style_bg_opa(self.handle, opa as lv_opa_t, 0) };
+        self
+    }
+
+    pub fn pad_top(&self, p: i32) -> &Self {
+        // SAFETY: handle non-null (Screen::active() returns None for null).
+        unsafe { lv_obj_set_style_pad_top(self.handle, p, 0) };
+        self
+    }
+
+    pub fn pad_bottom(&self, p: i32) -> &Self {
+        // SAFETY: handle non-null (Screen::active() returns None for null).
+        unsafe { lv_obj_set_style_pad_bottom(self.handle, p, 0) };
+        self
+    }
+
+    pub fn pad_left(&self, p: i32) -> &Self {
+        // SAFETY: handle non-null (Screen::active() returns None for null).
+        unsafe { lv_obj_set_style_pad_left(self.handle, p, 0) };
+        self
+    }
+
+    pub fn pad_right(&self, p: i32) -> &Self {
+        // SAFETY: handle non-null (Screen::active() returns None for null).
+        unsafe { lv_obj_set_style_pad_right(self.handle, p, 0) };
+        self
+    }
+
+    pub fn text_color(&self, color: u32) -> &Self {
+        // SAFETY: handle non-null (Screen::active() returns None for null).
+        unsafe { lv_obj_set_style_text_color(self.handle, lv_color_hex(color), 0) };
+        self
+    }
+
+    pub fn set_flex_flow(&self, flow: FlexFlow) -> &Self {
+        // SAFETY: handle non-null (Screen::active() returns None for null).
+        unsafe { lv_obj_set_flex_flow(self.handle, flow as lv_flex_flow_t) };
+        self
+    }
+
+    pub fn set_flex_align(&self, main: FlexAlign, cross: FlexAlign, track: FlexAlign) -> &Self {
+        // SAFETY: handle non-null (Screen::active() returns None for null).
+        unsafe {
+            lv_obj_set_flex_align(
+                self.handle,
+                main as lv_flex_align_t,
+                cross as lv_flex_align_t,
+                track as lv_flex_align_t,
+            )
+        };
+        self
+    }
+}

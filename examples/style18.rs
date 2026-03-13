@@ -57,7 +57,7 @@ impl View for Style18 {
         btn1.style_bg_grad_color(c1, 0);
         btn1.style_bg_grad_dir(GradDir::Hor as u32, 0);
         let label1 = Label::new(&btn1)?;
-        label1.text("Horizontal\0")?.center();
+        label1.text("Horizontal").center();
 
         let btn2 = Button::new(&screen)?;
         btn2.size(150, 50).align(Align::Center, 0, -40);
@@ -65,19 +65,19 @@ impl View for Style18 {
         btn2.style_bg_grad_color(c1, 0);
         btn2.style_bg_grad_dir(GradDir::Ver as u32, 0);
         let label2 = Label::new(&btn2)?;
-        label2.text("Vertical\0")?.center();
+        label2.text("Vertical").center();
 
         let btn3 = Button::new(&screen)?;
         btn3.size(150, 50).align(Align::Center, 0, 20);
         btn3.add_style(&style_linear, 0);
         let label3 = Label::new(&btn3)?;
-        label3.text("Linear\0")?.center();
+        label3.text("Linear").center();
 
         let btn4 = Button::new(&screen)?;
         btn4.size(150, 50).align(Align::Center, 0, 80);
         btn4.add_style(&style_radial, 0);
         let label4 = Label::new(&btn4)?;
-        label4.text("Radial\0")?.center();
+        label4.text("Radial").center();
 
         Ok(Self {
             _label4: label4,

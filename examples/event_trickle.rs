@@ -16,8 +16,8 @@ use alloc::boxed::Box;
 use oxivgl::{
     view::View,
     widgets::{
-        color_black, color_white, FlexFlow, LV_OBJ_FLAG_EVENT_TRICKLE, LV_STATE_FOCUSED,
-        LV_STATE_PRESSED, Label, Obj, Screen, Style, WidgetError,
+        color_black, color_white, FlexFlow, Label, Obj, ObjFlag, ObjState, Screen, Style,
+        WidgetError,
     },
 };
 
@@ -43,8 +43,8 @@ impl View for EventTrickle {
         let cont = Obj::new(&screen)?;
         cont.size(290, 200).center();
         cont.set_flex_flow(FlexFlow::RowWrap);
-        cont.add_flag(LV_OBJ_FLAG_EVENT_TRICKLE);
-        cont.add_style(&style_black, LV_STATE_PRESSED);
+        cont.add_flag(ObjFlag::EVENT_TRICKLE);
+        cont.add_style(&style_black, ObjState::PRESSED.0);
 
         let mut subconts = heapless::Vec::<Obj<'static>, 9>::new();
         let mut labels = heapless::Vec::<Label<'static>, 9>::new();
@@ -52,12 +52,12 @@ impl View for EventTrickle {
         for i in 0..9u32 {
             let subcont = Obj::new(&cont)?;
             subcont.size(70, 50);
-            subcont.add_style(&style_black, LV_STATE_FOCUSED);
+            subcont.add_style(&style_black, ObjState::FOCUSED.0);
 
             let label = Label::new(&subcont)?;
             let mut buf = heapless::String::<4>::new();
             let _ = core::fmt::Write::write_fmt(&mut buf, format_args!("{}", i));
-            label.set_text(&buf);
+            label.text(&buf);
 
             let _ = subconts.push(subcont);
             let _ = labels.push(label);

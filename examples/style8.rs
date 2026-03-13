@@ -35,7 +35,7 @@ impl View for Style8 {
 
         let label = Label::new(&screen)?;
         label.add_style(&style, 0);
-        label.text("Text of\na label\0")?;
+        label.text("Text of\na label");
         label.center();
 
         Ok(Self {

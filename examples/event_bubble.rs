@@ -11,10 +11,10 @@
 //! physical input is missing.
 
 use oxivgl::{
-    view::{register_event_on, Event, View},
+    view::{register_event_on, View},
     widgets::{
-        Button, FlexFlow, LV_EVENT_CLICKED, LV_OBJ_FLAG_EVENT_BUBBLE, Label, Obj, Palette,
-        Screen, WidgetError, palette_main,
+        Button, Event, EventCode, FlexFlow, Label, Obj, Palette, Screen, WidgetError,
+        palette_main,
     },
 };
 
@@ -43,12 +43,12 @@ impl View for EventBubble {
         for i in 0..30u32 {
             let btn = Button::new(&cont)?;
             btn.size(70, 50);
-            btn.add_flag(LV_OBJ_FLAG_EVENT_BUBBLE);
+            btn.bubble_events();
 
             let label = Label::new(&btn)?;
             let mut buf = heapless::String::<4>::new();
             let _ = core::fmt::Write::write_fmt(&mut buf, format_args!("{}", i));
-            label.set_text(&buf).center();
+            label.text(&buf).center();
 
             let _ = buttons.push(btn);
             let _ = labels.push(label);
@@ -66,7 +66,7 @@ impl View for EventBubble {
     }
 
     fn on_event(&mut self, event: &Event) {
-        if event.code() != LV_EVENT_CLICKED {
+        if event.code() != EventCode::CLICKED {
             return;
         }
         let target = event.target_handle();

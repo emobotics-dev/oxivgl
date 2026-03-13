@@ -37,8 +37,8 @@ impl View for Flex5 {
 
             let label = Label::new(&obj)?;
             let mut buf = heapless::String::<4>::new();
-            let _ = core::fmt::Write::write_fmt(&mut buf, format_args!("{}\0", i));
-            label.text(&buf)?.center();
+            let _ = core::fmt::Write::write_fmt(&mut buf, format_args!("{}", i));
+            label.text(&buf).center();
 
             let _ = items.push(obj);
             let _ = labels.push(label);

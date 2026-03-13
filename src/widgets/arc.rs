@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
-use core::{ops::Deref, ptr::null_mut};
+use core::{cell::Cell, ops::Deref, ptr::null_mut};
 
 use lvgl_rust_sys::*;
 
@@ -20,14 +20,14 @@ use super::{
 /// use oxivgl::widgets::{Arc, Screen};
 ///
 /// let screen = Screen::active().unwrap();
-/// let mut arc = Arc::new(&screen).unwrap();
+/// let arc = Arc::new(&screen).unwrap();
 /// arc.set_range(150.0); // 0–150 A
 /// arc.set_value(75.0);  // 50 %
 /// ```
 #[derive(Debug)]
 pub struct Arc<'p> {
     obj: Obj<'p>,
-    max: f32,
+    max: Cell<f32>,
 }
 
 impl<'p> AsLvHandle for Arc<'p> {
@@ -55,14 +55,14 @@ impl<'p> Arc<'p> {
         } else {
             Ok(Arc {
                 obj: Obj::from_raw(handle),
-                max: 0.0,
+                max: Cell::new(0.0),
             })
         }
     }
 
     /// Set range maximum. Min is always 0. Must be called before `set_value`.
-    pub fn set_range(&mut self, max: f32) -> &mut Self {
-        self.max = max;
+    pub fn set_range(&self, max: f32) -> &Self {
+        self.max.set(max);
         // SAFETY: handle non-null (from Arc::new/gauge_ring, both null-check).
         unsafe { lv_arc_set_range(self.obj.handle(), 0, LVGL_SCALE) };
         self
@@ -70,10 +70,21 @@ impl<'p> Arc<'p> {
 
     /// Set current value in physical units (mapped via `max` set by
     /// [`set_range`](Arc::set_range)).
-    pub fn set_value(&mut self, v: f32) -> &mut Self {
+    pub fn set_value(&self, v: f32) -> &Self {
         // SAFETY: handle non-null (from Arc::new/gauge_ring).
-        unsafe { lv_arc_set_value(self.obj.handle(), to_lvgl(v, self.max)) };
+        unsafe { lv_arc_set_value(self.obj.handle(), to_lvgl(v, self.max.get())) };
         self
+    }
+
+    /// Get current value in physical units.
+    pub fn get_value(&self) -> f32 {
+        let max = self.max.get();
+        if max == 0.0 {
+            return 0.0;
+        }
+        // SAFETY: handle non-null (from Arc::new/gauge_ring).
+        let raw = unsafe { lv_arc_get_value(self.obj.handle()) };
+        (raw as f32 / LVGL_SCALE as f32) * max
     }
 
     pub fn set_rotation(&self, rotation: i32) -> &Self {
@@ -108,8 +119,8 @@ impl<'p> Arc<'p> {
         rotation: i32,
         sweep: i32,
     ) -> Result<Self, WidgetError> {
-        let mut arc = Arc::new(parent)?;
-        arc.max = range_max;
+        let arc = Arc::new(parent)?;
+        arc.max.set(range_max);
         let h = arc.obj.handle();
         // SAFETY: h non-null (Arc::new null-checks); all LVGL style/arc fns safe with
         // valid ptr.
@@ -134,11 +145,11 @@ impl<'p> Arc<'p> {
             lv_obj_set_style_pad_all(h, 0, lv_part_t_LV_PART_KNOB as u32);
             lv_obj_set_style_opa(
                 h,
-                _lv_opacity_level_t_LV_OPA_TRANSP as lv_opa_t,
+                super::Opa::TRANSP.0 as lv_opa_t,
                 lv_part_t_LV_PART_KNOB as u32,
             );
             // Not interactive
-            lv_obj_remove_flag(h, lv_obj_flag_t_LV_OBJ_FLAG_CLICKABLE);
+            lv_obj_remove_flag(h, super::ObjFlag::CLICKABLE.0);
         }
         Ok(arc)
     }
