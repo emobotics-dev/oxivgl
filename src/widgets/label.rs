@@ -5,8 +5,8 @@ use heapless::CString;
 use lvgl_rust_sys::*;
 
 use super::{
-    WidgetError,
     obj::{AsLvHandle, Obj},
+    WidgetError,
 };
 
 /// LVGL text label widget.
@@ -48,7 +48,13 @@ impl<'p> Label<'p> {
         // SAFETY: parent_ptr non-null (asserted above); lv_init() called via
         // LvglDriver.
         let handle = unsafe { lv_label_create(parent_ptr) };
-        if handle.is_null() { Err(WidgetError::LvglNullPointer) } else { Ok(Label { obj: Obj::from_raw(handle) }) }
+        if handle.is_null() {
+            Err(WidgetError::LvglNullPointer)
+        } else {
+            Ok(Label {
+                obj: Obj::from_raw(handle),
+            })
+        }
     }
 
     /// Set label text. `text` must include a NUL terminator and be ≤ 20 bytes

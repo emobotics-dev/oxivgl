@@ -14,6 +14,8 @@ pub(crate) fn to_lvgl(v: f32, max: f32) -> i32 {
     (((v / max) * LVGL_SCALE as f32) as i32).clamp(0, LVGL_SCALE)
 }
 
+mod anim;
+mod anim_timeline;
 mod arc;
 mod bar;
 mod button;
@@ -24,11 +26,17 @@ mod led;
 mod line;
 mod obj;
 mod palette;
-mod style;
 mod scale;
 mod slider;
+mod style;
+mod switch;
 mod value_label;
 
+pub use anim::{
+    anim_path_bounce, anim_path_ease_in, anim_path_ease_in_out, anim_path_ease_out,
+    anim_path_linear, anim_path_overshoot, Anim, ANIM_REPEAT_INFINITE,
+};
+pub use anim_timeline::{AnimTimeline, ANIM_TIMELINE_PROGRESS_MAX};
 pub use arc::Arc;
 pub use bar::Bar;
 pub use button::Button;
@@ -37,24 +45,40 @@ pub use image::Image;
 pub use label::Label;
 pub use led::Led;
 pub use line::Line;
-pub use obj::{Align, AsLvHandle, Obj, Part, Screen, TextAlign};
+pub use obj::{Align, AsLvHandle, FlexAlign, FlexFlow, Obj, Part, Screen, TextAlign};
 pub use palette::{
     color_black, color_make, color_white, palette_darken, palette_lighten, palette_main, GradDir,
     Palette,
 };
-pub use style::{
-    LV_STATE_PRESSED, LV_SIZE_CONTENT, BorderSide, ColorFilter, Style, TextDecor, TransitionDsc,
-    anim_path_linear, darken_filter_cb, lv_pct, props,
-};
 pub use scale::{Scale, ScaleMode};
 pub use slider::Slider;
+pub use style::{
+    darken_filter_cb, lv_pct, props, BorderSide, ColorFilter, Style, TextDecor, TransitionDsc,
+    LV_SIZE_CONTENT, LV_STATE_PRESSED,
+};
+pub use switch::Switch;
 pub use value_label::ValueLabel;
 
 // Re-export raw event types so example callbacks don't need `lvgl_rust_sys`.
-pub use lvgl_rust_sys::{lv_event_t, lv_event_code_t};
+pub use lvgl_rust_sys::{lv_event_code_t, lv_event_t};
 /// `LV_EVENT_VALUE_CHANGED` — fired by sliders, dropdowns, etc.
 pub const LV_EVENT_VALUE_CHANGED: lv_event_code_t =
     lvgl_rust_sys::lv_event_code_t_LV_EVENT_VALUE_CHANGED;
+/// `LV_EVENT_CLICKED`
+pub const LV_EVENT_CLICKED: lv_event_code_t = lvgl_rust_sys::lv_event_code_t_LV_EVENT_CLICKED;
+
+// Object flags
+pub const LV_OBJ_FLAG_CHECKABLE: lvgl_rust_sys::lv_obj_flag_t =
+    lvgl_rust_sys::lv_obj_flag_t_LV_OBJ_FLAG_CHECKABLE;
+pub const LV_OBJ_FLAG_IGNORE_LAYOUT: lvgl_rust_sys::lv_obj_flag_t =
+    lvgl_rust_sys::lv_obj_flag_t_LV_OBJ_FLAG_IGNORE_LAYOUT;
+
+// Object states
+pub const LV_STATE_CHECKED: lvgl_rust_sys::lv_state_t = lvgl_rust_sys::lv_state_t_LV_STATE_CHECKED;
+
+// Scrollbar modes
+pub const LV_SCROLLBAR_MODE_OFF: lvgl_rust_sys::lv_scrollbar_mode_t =
+    lvgl_rust_sys::lv_scrollbar_mode_t_LV_SCROLLBAR_MODE_OFF;
 
 /// Errors returned by widget constructors and setters.
 #[derive(Error, Debug)]
@@ -74,7 +98,7 @@ pub enum WidgetError {
 
 #[cfg(test)]
 mod tests {
-    use super::{LVGL_SCALE, to_lvgl};
+    use super::{to_lvgl, LVGL_SCALE};
 
     #[test]
     fn to_lvgl_zero_value() {
@@ -116,7 +140,11 @@ impl defmt::Format for WidgetError {
             }
             WidgetError::LvglNullPointer => defmt::write!(f, "Got NULL pointer from LVGL"),
             WidgetError::ExtendError(ee) => {
-                defmt::write!(f, "Could not extend C string: {:?}", crate::fmt::Debug2Format(&ee))
+                defmt::write!(
+                    f,
+                    "Could not extend C string: {:?}",
+                    crate::fmt::Debug2Format(&ee)
+                )
             }
         }
     }
