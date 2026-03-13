@@ -140,6 +140,27 @@ mod tests {
     fn to_lvgl_negative_clamped() {
         assert_eq!(to_lvgl(-10.0, 100.0), 0);
     }
+
+    // -- Grid helpers ------------------------------------------------------
+
+    #[test]
+    fn grid_template_last_is_coord_max() {
+        assert_eq!(
+            super::GRID_TEMPLATE_LAST,
+            lvgl_rust_sys::LV_COORD_MAX as i32
+        );
+    }
+
+    #[test]
+    fn grid_fr_1() {
+        assert_eq!(super::grid_fr(1), lvgl_rust_sys::LV_COORD_MAX as i32 - 99);
+    }
+
+    #[test]
+    fn grid_fr_monotonic() {
+        assert!(super::grid_fr(2) > super::grid_fr(1));
+        assert!(super::grid_fr(3) > super::grid_fr(2));
+    }
 }
 
 #[cfg(feature = "defmt")]
