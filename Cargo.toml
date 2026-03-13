@@ -30,7 +30,18 @@ cmake = "0.1"
 cc = "1.2.38"
 
 [workspace]
-members = ["examples/fire27"]
+exclude = ["examples/common"]
+
+[dev-dependencies]
+oxivgl-examples-common = { path = "examples/common" }
+lvgl_rust_sys = { git = "https://github.com/emobotics-dev/lvgl_rust_sys.git", rev = "5cb45972e2ea0f5bcc009e64652f0734f8fd57a1", default-features = false }
+
+# Proc-macro crates needed by fire27_main! attribute/macro expansion on xtensa
+[target.'cfg(target_arch = "xtensa")'.dev-dependencies]
+embassy-executor       = { version = "0.9.1", features = ["nightly"] }
+esp-bootloader-esp-idf = { git = "https://github.com/emobotics-dev/esp-hal.git", branch = "local", features = ["esp32"] }
+esp-hal                = { git = "https://github.com/emobotics-dev/esp-hal.git", branch = "local", features = ["esp32", "unstable"] }
+esp-rtos               = { git = "https://github.com/emobotics-dev/esp-hal.git", branch = "local", features = ["esp32", "embassy"] }
 
 [profile.dev]
 opt-level = "s"

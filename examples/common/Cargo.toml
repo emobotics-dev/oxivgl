@@ -1,21 +1,23 @@
 # SPDX-License-Identifier: MIT OR Apache-2.0
 [package]
-name = "oxivgl-demo-fire27"
-version = "0.1.0"
+name = "oxivgl-examples-common"
 edition = "2024"
-rust-version = "1.86"
 publish = false
 
-[[bin]]
-name = "oxivgl-demo-fire27"
-path = "src/main.rs"
-test = false
-bench = false
+# --- Host (non-xtensa) dependencies ---
+[target.'cfg(not(target_arch = "xtensa"))'.dependencies]
+oxivgl = { path = "../..", features = ["log-04"] }
+lvgl_rust_sys = { git = "https://github.com/emobotics-dev/lvgl_rust_sys.git", rev = "5cb45972e2ea0f5bcc009e64652f0734f8fd57a1", default-features = false }
+png = "0.17"
+log = "0.4"
+env_logger = "0.11"
+critical-section = { version = "1", features = ["std"] }
+heapless = { version = "0.8" }
 
-[dependencies]
-oxivgl          = { path = "../..", features = ["esp-hal", "log-04"] }
-
-# esp-hal family
+# --- ESP32 (xtensa) dependencies ---
+[target.'cfg(target_arch = "xtensa")'.dependencies]
+oxivgl = { path = "../..", features = ["esp-hal", "log-04"] }
+lvgl_rust_sys = { git = "https://github.com/emobotics-dev/lvgl_rust_sys.git", rev = "5cb45972e2ea0f5bcc009e64652f0734f8fd57a1", default-features = false }
 esp-alloc            = { git = "https://github.com/emobotics-dev/esp-hal.git", branch = "local", features = ["internal-heap-stats"] }
 esp-backtrace        = { git = "https://github.com/emobotics-dev/esp-hal.git", branch = "local", features = ["esp32", "panic-handler", "custom-halt", "colors", "println"] }
 esp-bootloader-esp-idf = { git = "https://github.com/emobotics-dev/esp-hal.git", branch = "local", features = ["esp32"] }
@@ -23,16 +25,10 @@ esp-hal              = { git = "https://github.com/emobotics-dev/esp-hal.git", b
 esp-println          = { git = "https://github.com/emobotics-dev/esp-hal.git", branch = "local", features = ["esp32", "log-04", "colors", "uart"], default-features = false }
 esp-rtos             = { git = "https://github.com/emobotics-dev/esp-hal.git", branch = "local", features = ["esp32", "embassy"] }
 esp-sync             = { git = "https://github.com/emobotics-dev/esp-hal.git", branch = "local", features = ["esp32"] }
-
-# Embassy
 embassy-embedded-hal = { version = "0.5.0", features = ["time"] }
 embassy-executor     = { version = "0.9.1", features = ["nightly"] }
 embassy-sync         = "0.7.2"
 embassy-time         = "0.5.0"
-
-# Display
 lcd-async            = "0.1.1"
-
-# misc
 log                  = "0.4"
 static_cell          = { version = "2.1.1", features = ["nightly"] }
