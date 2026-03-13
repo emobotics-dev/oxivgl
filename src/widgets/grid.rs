@@ -14,8 +14,11 @@
 /// ```
 #[derive(Clone, Copy, Debug)]
 pub struct GridCell {
+    /// Cell alignment within the grid track.
     pub align: super::obj::GridAlign,
+    /// Column or row index (0-based).
     pub pos: i32,
+    /// Number of columns or rows to span.
     pub span: i32,
 }
 

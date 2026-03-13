@@ -38,6 +38,7 @@ impl<'p> Deref for Label<'p> {
 }
 
 impl<'p> Label<'p> {
+    /// Create a new label widget.
     pub fn new(parent: &impl AsLvHandle) -> Result<Self, WidgetError> {
         let parent_ptr = parent.lv_handle();
         assert_ne!(parent_ptr, null_mut(), "Parent widget cannot be null");
