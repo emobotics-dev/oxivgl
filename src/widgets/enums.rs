@@ -93,6 +93,35 @@ impl core::ops::BitOr for ObjState {
     }
 }
 
+/// LVGL opacity level (0–255).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct Opa(pub u8);
+
+impl Opa {
+    /// Fully transparent.
+    pub const TRANSP: Self = Self(lvgl_rust_sys::_lv_opacity_level_t_LV_OPA_TRANSP as u8);
+    /// 10% opaque.
+    pub const OPA_10: Self = Self(lvgl_rust_sys::_lv_opacity_level_t_LV_OPA_10 as u8);
+    /// 20% opaque.
+    pub const OPA_20: Self = Self(lvgl_rust_sys::_lv_opacity_level_t_LV_OPA_20 as u8);
+    /// 30% opaque.
+    pub const OPA_30: Self = Self(lvgl_rust_sys::_lv_opacity_level_t_LV_OPA_30 as u8);
+    /// 40% opaque.
+    pub const OPA_40: Self = Self(lvgl_rust_sys::_lv_opacity_level_t_LV_OPA_40 as u8);
+    /// 50% opaque.
+    pub const OPA_50: Self = Self(lvgl_rust_sys::_lv_opacity_level_t_LV_OPA_50 as u8);
+    /// 60% opaque.
+    pub const OPA_60: Self = Self(lvgl_rust_sys::_lv_opacity_level_t_LV_OPA_60 as u8);
+    /// 70% opaque.
+    pub const OPA_70: Self = Self(lvgl_rust_sys::_lv_opacity_level_t_LV_OPA_70 as u8);
+    /// 80% opaque.
+    pub const OPA_80: Self = Self(lvgl_rust_sys::_lv_opacity_level_t_LV_OPA_80 as u8);
+    /// 90% opaque.
+    pub const OPA_90: Self = Self(lvgl_rust_sys::_lv_opacity_level_t_LV_OPA_90 as u8);
+    /// Fully opaque.
+    pub const COVER: Self = Self(lvgl_rust_sys::_lv_opacity_level_t_LV_OPA_COVER as u8);
+}
+
 /// LVGL scrollbar display mode.
 #[repr(u32)]
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
