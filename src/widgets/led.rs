@@ -45,4 +45,32 @@ impl<'p> Led<'p> {
             })
         }
     }
+
+    /// Turn the LED on (full brightness).
+    pub fn on(&self) -> &Self {
+        // SAFETY: handle non-null (constructor guarantees).
+        unsafe { lv_led_on(self.obj.handle()) };
+        self
+    }
+
+    /// Turn the LED off (lowest brightness).
+    pub fn off(&self) -> &Self {
+        // SAFETY: handle non-null (constructor guarantees).
+        unsafe { lv_led_off(self.obj.handle()) };
+        self
+    }
+
+    /// Set LED brightness (0–255).
+    pub fn set_brightness(&self, bright: u8) -> &Self {
+        // SAFETY: handle non-null (constructor guarantees).
+        unsafe { lv_led_set_brightness(self.obj.handle(), bright) };
+        self
+    }
+
+    /// Set the LED color.
+    pub fn set_color(&self, color: lv_color_t) -> &Self {
+        // SAFETY: handle non-null (constructor guarantees).
+        unsafe { lv_led_set_color(self.obj.handle(), color) };
+        self
+    }
 }

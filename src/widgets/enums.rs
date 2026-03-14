@@ -96,6 +96,8 @@ impl ObjState {
     pub const FOCUSED: Self = Self(lvgl_rust_sys::lv_state_t_LV_STATE_FOCUSED);
     /// Currently pressed.
     pub const PRESSED: Self = Self(lvgl_rust_sys::lv_state_t_LV_STATE_PRESSED);
+    /// Disabled (greyed out, not interactable).
+    pub const DISABLED: Self = Self(lvgl_rust_sys::lv_state_t_LV_STATE_DISABLED);
     /// Currently being scrolled.
     pub const SCROLLED: Self = Self(lvgl_rust_sys::lv_state_t_LV_STATE_SCROLLED);
     /// Wildcard — matches any state.
