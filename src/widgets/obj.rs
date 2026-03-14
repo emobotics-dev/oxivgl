@@ -358,6 +358,15 @@ impl<'p> Obj<'p> {
     /// Apply a 3×3 matrix transform (scale, rotate, skew).
     ///
     /// Requires `LV_DRAW_TRANSFORM_USE_MATRIX = 1` in `lv_conf.h`.
+    ///
+    /// # Panics
+    ///
+    /// The LVGL SW renderer does not clip the transformed bounding box to
+    /// display bounds. If the transformed object extends outside the screen
+    /// (e.g. scaled up while positioned near an edge), the renderer may
+    /// write out of bounds. **Always [`center()`](Self::center) or
+    /// position the object so that its transformed extents stay within the
+    /// display.**
     pub fn set_transform(&self, matrix: &Matrix) -> &Self {
         assert_ne!(self.handle, null_mut(), "Obj handle cannot be null");
         // SAFETY: handle non-null, matrix pointer valid.
