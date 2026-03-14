@@ -304,6 +304,25 @@ actively scrolling, with animated transitions.
 - **Scroll 7** — Dynamic widget loading (needs `lv_obj_move_to_index`, Checkbox wrapper)
 - **Scroll 8** — Circular list (needs `lv_obj_move_to_index`, content size APIs)
 
+## Widgets — Base Object
+
+### Widget Obj 1 — Base Objects with Custom Styles
+
+Two base objects: a plain one and one with a blue shadow style.
+
+![widget_obj1](screenshots/widget_obj1.png)
+
+### Skipped
+
+- **Widget Obj 2** — Draggable object (needs `lv_indev_active`, `lv_indev_get_vect` APIs)
+- **Widget Obj 3** — 3D matrix transform (needs `lv_obj_set_style_transform_*` matrix APIs)
+
+## Widgets — Animation Image
+
+### Skipped
+
+- **Widget AnimImg 1** — Animated image frames (needs C image assets `animimg001`/`002`/`003`)
+
 ## Widgets — Arc
 
 ### Widget Arc 1 — Arc with Value Label
