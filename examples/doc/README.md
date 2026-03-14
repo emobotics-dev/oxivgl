@@ -90,9 +90,7 @@ Centered object with a large blue drop shadow.
 
 ### Style 6 — Image Style Properties
 
-Cogwheel image with blue recolor tint on grey background with blue border.
-Rotation omitted — LVGL's SW renderer does not support `transform_rotation`
-([lvgl#7706](https://github.com/lvgl/lvgl/issues/7706)).
+Cogwheel image rotated 30°, blue recolor tint on grey background with blue border.
 
 ![style6](screenshots/style6.png)
 
