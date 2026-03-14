@@ -37,7 +37,7 @@ impl View for WidgetArc1 {
         let mut buf = heapless::String::<8>::new();
         let _ = core::fmt::Write::write_fmt(&mut buf, format_args!("{}%", v));
         label.text(&buf);
-        arc.align_obj_to_angle(&label, 25);
+        arc.rotate_obj_to_angle(&label, 25);
 
         Ok(Self { arc, label })
     }
