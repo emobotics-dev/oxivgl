@@ -33,7 +33,7 @@ pub mod widgets;
 #[macro_export]
 macro_rules! image_declare {
     ($name:ident) => {
-        extern "C" {
+        unsafe extern "C" {
             #[allow(non_upper_case_globals)]
             static $name: $crate::widgets::lv_image_dsc_t;
         }

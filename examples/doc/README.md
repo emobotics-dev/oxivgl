@@ -5,6 +5,29 @@ LVGL example screens ported from the [LVGL docs](https://docs.lvgl.io/9.3/exampl
 Each example is a self-contained file with a `View` impl and a cfg-gated
 runner (`example_main!` macro selects host SDL2 or ESP32 fire27 backend).
 
+## Contents
+
+- [Getting Started](#getting-started)
+- [Styles](#styles)
+- [Animations](#animations)
+- [Events](#events)
+- [Layouts — Flex](#layouts--flex)
+- [Layouts — Grid](#layouts--grid)
+- [Scrolling](#scrolling)
+- [Widgets — Base Object](#widgets--base-object)
+- [Widgets — Animation Image](#widgets--animation-image)
+- [Widgets — Arc](#widgets--arc)
+- [Widgets — Image](#widgets--image)
+- [Widgets — Bar](#widgets--bar)
+- [Widgets — Button](#widgets--button)
+- [Widgets — Checkbox](#widgets--checkbox)
+- [Widgets — Dropdown](#widgets--dropdown)
+- [Widgets — Label](#widgets--label)
+- [Widgets — LED](#widgets--led)
+- [Widgets — Roller](#widgets--roller)
+- [Widgets — Slider](#widgets--slider)
+- [Running](#running)
+
 ## Getting Started
 
 ### Example 1 — Hello World
@@ -338,6 +361,14 @@ Uses `align` instead of `rotate` because LVGL's SW renderer does not support
 Full-circle arc animating 0→100 in 1 s (infinite repeat, 500 ms delay). Knob hidden, not clickable.
 
 ![widget_arc2](screenshots/widget_arc2.png)
+
+## Widgets — Image
+
+### Widget Image 1 — Basic Image Display
+
+Centered cogwheel image from compiled PNG asset.
+
+![image1](screenshots/image1.png)
 
 ## Widgets — Bar
 
