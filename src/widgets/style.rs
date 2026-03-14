@@ -465,6 +465,30 @@ impl Style {
         self
     }
 
+    /// Set image recolor tint.
+    pub fn image_recolor(&mut self, color: lv_color_t) -> &mut Self {
+        unsafe { lv_style_set_image_recolor(&mut self.inner, color) };
+        self
+    }
+
+    /// Set image recolor opacity (0 = no tint, 255 = full tint).
+    pub fn image_recolor_opa(&mut self, opa: u8) -> &mut Self {
+        unsafe { lv_style_set_image_recolor_opa(&mut self.inner, opa) };
+        self
+    }
+
+    /// Set transform rotation in 0.1 degree units (e.g. 300 = 30°).
+    ///
+    /// **SW renderer limitation:** rotation transforms require VG-Lite or
+    /// `LV_DRAW_TRANSFORM_USE_MATRIX`; the sub-layer fallback silently
+    /// produces no output ([lvgl#7706]).
+    ///
+    /// [lvgl#7706]: https://github.com/lvgl/lvgl/issues/7706
+    pub fn transform_rotation(&mut self, angle: i32) -> &mut Self {
+        unsafe { lv_style_set_transform_rotation(&mut self.inner, angle) };
+        self
+    }
+
     /// Set layout engine (flex or grid).
     pub fn layout(&mut self, layout: super::Layout) -> &mut Self {
         // SAFETY: inner was initialized by lv_style_init.
