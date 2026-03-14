@@ -88,6 +88,14 @@ Centered object with a large blue drop shadow.
 
 ![style5](screenshots/style5.png)
 
+### Style 6 — Image Style Properties
+
+Cogwheel image with blue recolor tint on grey background with blue border.
+Rotation omitted — LVGL's SW renderer does not support `transform_rotation`
+([lvgl#7706](https://github.com/lvgl/lvgl/issues/7706)).
+
+![style6](screenshots/style6.png)
+
 ### Style 7 — Arc
 
 Arc widget with red color and 4px width.
@@ -157,7 +165,6 @@ Four buttons: simple horizontal, simple vertical, complex linear, complex radial
 
 ### Skipped
 
-- **Style 6** — Image recolor/rotation (needs `Image` rotation/recolor wrapper methods)
 - **Style 14** — Extend theme (needs `LV_USE_PRIVATE_API`)
 - **Style 19** — Modal overlay (meta-example, benchmarking)
 
