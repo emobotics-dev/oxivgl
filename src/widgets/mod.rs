@@ -83,7 +83,7 @@ pub use switch::Switch;
 pub use value_label::ValueLabel;
 
 // Re-export raw types so callbacks don't need `lvgl_rust_sys`.
-pub use lvgl_rust_sys::{lv_color_t, lv_event_t, lv_point_precise_t};
+pub use lvgl_rust_sys::{lv_color_t, lv_event_t, lv_image_dsc_t, lv_point_precise_t};
 
 // Grid helpers
 /// Maximum corner radius — creates a pill/capsule shape.
