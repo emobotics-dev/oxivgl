@@ -47,7 +47,7 @@
 #define LV_DRAW_BUF_STRIDE_ALIGN                1
 #define LV_DRAW_BUF_ALIGN                       4
 
-#define LV_DRAW_TRANSFORM_USE_MATRIX            0
+#define LV_DRAW_TRANSFORM_USE_MATRIX            1
 
 #define LV_DRAW_LAYER_MAX_MEMORY         0             /*[bytes] 0=no limit*/
 #define LV_DRAW_LAYER_SIMPLE_BUF_SIZE    (24 * 1024)   /*[bytes]*/

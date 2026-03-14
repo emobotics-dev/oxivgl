@@ -65,7 +65,9 @@ pub use image::Image;
 pub use label::{Label, LabelLongMode};
 pub use led::Led;
 pub use line::Line;
-pub use obj::{Align, AsLvHandle, BaseDir, FlexAlign, FlexFlow, GridAlign, Obj, Part, TextAlign};
+pub use obj::{
+    Align, AsLvHandle, BaseDir, FlexAlign, FlexFlow, GridAlign, Matrix, Obj, Part, TextAlign,
+};
 pub use palette::{
     color_black, color_make, color_white, palette_darken, palette_lighten, palette_main, GradDir,
     Palette,
