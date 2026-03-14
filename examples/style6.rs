@@ -6,11 +6,8 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
 //! Style 6 — Image style properties
 //!
-//! Cogwheel image with blue recolor tint (50% opacity) on a grey background
-//! with blue border.
-//!
-//! Rotation omitted — LVGL's SW renderer does not support
-//! `transform_rotation` ([lvgl#7706](https://github.com/lvgl/lvgl/issues/7706)).
+//! Cogwheel image rotated 30°, blue recolor tint (50% opacity), grey
+//! background with blue border.
 
 extern crate alloc;
 
@@ -39,7 +36,8 @@ impl View for Style6 {
             .border_width(2)
             .border_color(palette_main(Palette::Blue))
             .image_recolor(palette_main(Palette::Blue))
-            .image_recolor_opa(128);
+            .image_recolor_opa(128)
+            .transform_rotation(300);
 
         let img = Image::new(&screen)?;
         img.add_style(&style, Selector::DEFAULT);
