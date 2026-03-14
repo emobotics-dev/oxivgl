@@ -362,6 +362,66 @@ Button with gradient, shadow, outline, and a transition that expands outline on 
 
 ![widget_button2](screenshots/widget_button2.png)
 
+## Widgets — Checkbox
+
+### Widget Checkbox 1 — Simple Checkboxes
+
+Four checkboxes: unchecked, checked, disabled, and checked+disabled.
+
+![widget_checkbox1](screenshots/widget_checkbox1.png)
+
+## Widgets — Dropdown
+
+### Widget Dropdown 1 — Simple Drop-Down
+
+Dropdown with ten fruit options at top center.
+
+![widget_dropdown1](screenshots/widget_dropdown1.png)
+
+### Widget Dropdown 2 — Four Directions
+
+Four dropdowns opening in each cardinal direction (down, up, right, left).
+
+![widget_dropdown2](screenshots/widget_dropdown2.png)
+
+## Widgets — Label
+
+### Widget Label 1 — Wrap and Scroll
+
+Wrapped centered text and a circularly scrolling label.
+
+![widget_label1](screenshots/widget_label1.png)
+
+### Widget Label 2 — Text Shadow
+
+Fake shadow via duplicate label offset by 2 px with reduced opacity.
+
+![widget_label2](screenshots/widget_label2.png)
+
+## Widgets — LED
+
+### Widget LED 1 — Brightness and Color
+
+Three LEDs: off (dark), dim red (brightness 150), and full on (blue).
+
+![widget_led1](screenshots/widget_led1.png)
+
+## Widgets — Roller
+
+### Widget Roller 1 — Month Roller
+
+Infinite roller with month names, 4 visible rows.
+
+![widget_roller1](screenshots/widget_roller1.png)
+
+## Widgets — Slider
+
+### Widget Slider 2 — Styled Slider
+
+Cyan slider with pill-shaped track, padded knob with border, bg-color transition on press.
+
+![widget_slider2](screenshots/widget_slider2.png)
+
 ## Running
 
 ```sh

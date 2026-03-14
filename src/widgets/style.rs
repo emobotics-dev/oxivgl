@@ -214,6 +214,12 @@ impl Style {
         self
     }
 
+    /// Set text opacity (0–255).
+    pub fn text_opa(&mut self, opa: u8) -> &mut Self {
+        unsafe { lv_style_set_text_opa(&mut self.inner, opa as lv_opa_t) };
+        self
+    }
+
     /// Set text color.
     pub fn text_color(&mut self, color: lv_color_t) -> &mut Self {
         unsafe { lv_style_set_text_color(&mut self.inner, color) };
