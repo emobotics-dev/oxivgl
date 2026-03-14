@@ -315,7 +315,7 @@ Two base objects: a plain one and one with a blue shadow style.
 ### Skipped
 
 - **Widget Obj 2** — Draggable object (needs `lv_indev_active`, `lv_indev_get_vect` APIs)
-- **Widget Obj 3** — 3D matrix transform (needs `lv_obj_set_style_transform_*` matrix APIs)
+- **Widget Obj 3** — 3D matrix transform (needs `LV_DRAW_TRANSFORM_USE_MATRIX`, `lv_matrix_*`, `lv_timer_create`)
 
 ## Widgets — Animation Image
 
