@@ -7,6 +7,10 @@ fn main() {
         cmake_lvgl();
     }
     // On host targets, lvgl_rust_sys's own build.rs compiles LVGL.
+
+    // Image assets (all targets)
+    let cfg = oxivgl_build::ImageConfig::from_env();
+    cfg.image_asset("img_cogwheel_argb", "examples/assets/img_cogwheel_argb.png");
 }
 
 fn cmake_lvgl() {
