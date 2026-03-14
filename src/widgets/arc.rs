@@ -134,15 +134,11 @@ impl<'p> Arc<'p> {
 
     /// Rotate a child object to follow the arc's current angle.
     ///
-    /// Positions `obj` on the arc's edge and applies a rotation transform so
+    /// Positions `obj` on the arc's edge and applies `transform_rotation` so
     /// the object visually follows the arc curvature.
     ///
-    /// **Not usable with the SW renderer.** `LV_DRAW_TRANSFORM_USE_MATRIX`
-    /// only supports VG-Lite ([lvgl#7706]), and the sub-layer fallback
-    /// silently produces no output. Use [`align_obj_to_angle`](Arc::align_obj_to_angle)
-    /// instead.
-    ///
-    /// [lvgl#7706]: https://github.com/lvgl/lvgl/issues/7706
+    /// Requires `LV_DRAW_SW_SUPPORT_ARGB8888` and `LV_DRAW_SW_SUPPORT_RGB565A8`
+    /// enabled in `lv_conf.h`.
     pub fn rotate_obj_to_angle(&self, obj: &impl AsLvHandle, r_offset: i32) -> &Self {
         // SAFETY: both handles non-null.
         unsafe { lv_arc_rotate_obj_to_angle(self.obj.handle(), obj.lv_handle(), r_offset) };
