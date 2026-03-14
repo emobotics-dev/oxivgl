@@ -5,6 +5,49 @@ use lvgl_rust_sys::*;
 
 use super::WidgetError;
 
+/// 3×3 affine transform matrix.
+///
+/// Chain operations via builder-style methods. Requires
+/// `LV_DRAW_TRANSFORM_USE_MATRIX = 1` and `LV_USE_FLOAT = 1` in `lv_conf.h`.
+///
+/// ```ignore
+/// let mut m = Matrix::identity();
+/// m.scale(0.5, 0.5).rotate(45.0);
+/// obj.set_transform(&m);
+/// ```
+pub struct Matrix {
+    inner: lv_matrix_t,
+}
+
+impl Matrix {
+    /// Create an identity matrix (no transform).
+    pub fn identity() -> Self {
+        let mut inner = unsafe { core::mem::zeroed::<lv_matrix_t>() };
+        // SAFETY: inner is a valid zeroed lv_matrix_t.
+        unsafe { lv_matrix_identity(&mut inner) };
+        Self { inner }
+    }
+
+    /// Apply uniform or non-uniform scale.
+    pub fn scale(&mut self, sx: f32, sy: f32) -> &mut Self {
+        // SAFETY: inner was initialized by lv_matrix_identity.
+        unsafe { lv_matrix_scale(&mut self.inner, sx, sy) };
+        self
+    }
+
+    /// Apply rotation in degrees.
+    pub fn rotate(&mut self, degrees: f32) -> &mut Self {
+        // SAFETY: inner was initialized by lv_matrix_identity.
+        unsafe { lv_matrix_rotate(&mut self.inner, degrees) };
+        self
+    }
+
+    /// Raw pointer for passing to LVGL.
+    pub(crate) fn as_ptr(&self) -> *const lv_matrix_t {
+        &self.inner
+    }
+}
+
 /// Type-safe selector for an LVGL style part (maps to `lv_part_t`).
 ///
 /// Used with style-setter methods such as [`Obj::line_width`] to target a
@@ -309,6 +352,24 @@ impl<'p> Obj<'p> {
         assert_ne!(self.handle, null_mut(), "Obj handle cannot be null");
         // SAFETY: handle and base.lv_handle() non-null (asserted / guaranteed by AsLvHandle).
         unsafe { lv_obj_align_to(self.handle, base.lv_handle(), align as lv_align_t, x, y) };
+        self
+    }
+
+    /// Apply a 3×3 matrix transform (scale, rotate, skew).
+    ///
+    /// Requires `LV_DRAW_TRANSFORM_USE_MATRIX = 1` in `lv_conf.h`.
+    pub fn set_transform(&self, matrix: &Matrix) -> &Self {
+        assert_ne!(self.handle, null_mut(), "Obj handle cannot be null");
+        // SAFETY: handle non-null, matrix pointer valid.
+        unsafe { lv_obj_set_transform(self.handle, matrix.as_ptr()) };
+        self
+    }
+
+    /// Remove any matrix transform from this object.
+    pub fn reset_transform(&self) -> &Self {
+        assert_ne!(self.handle, null_mut(), "Obj handle cannot be null");
+        // SAFETY: handle non-null.
+        unsafe { lv_obj_reset_transform(self.handle) };
         self
     }
 

@@ -340,10 +340,15 @@ Two base objects: a plain one and one with a blue shadow style.
 
 ![widget_obj1](screenshots/widget_obj1.png)
 
+### Widget Obj 3 — Matrix Transform Animation
+
+Centered object with animated scale + rotation via 3×3 matrix transform.
+
+![widget_obj3](screenshots/widget_obj3.png)
+
 ### Skipped
 
 - **Widget Obj 2** — Draggable object (needs `lv_indev_active`, `lv_indev_get_vect` APIs)
-- **Widget Obj 3** — 3D matrix transform (needs `LV_DRAW_TRANSFORM_USE_MATRIX`, `lv_matrix_*`, `lv_timer_create`)
 
 ## Widgets — Animation Image
 
