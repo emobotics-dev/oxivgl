@@ -157,7 +157,7 @@ Four buttons: simple horizontal, simple vertical, complex linear, complex radial
 
 ### Skipped
 
-- **Style 6** — Image recolor/rotation (needs C image asset `img_cogwheel_argb`)
+- **Style 6** — Image recolor/rotation (needs `Image` rotation/recolor wrapper methods)
 - **Style 14** — Extend theme (needs `LV_USE_PRIVATE_API`)
 - **Style 19** — Modal overlay (meta-example, benchmarking)
 
@@ -344,7 +344,7 @@ Two base objects: a plain one and one with a blue shadow style.
 
 ### Skipped
 
-- **Widget AnimImg 1** — Animated image frames (needs C image assets `animimg001`/`002`/`003`)
+- **Widget AnimImg 1** — Animated image frames (needs `AnimImg` wrapper)
 
 ## Widgets — Arc
 
@@ -398,7 +398,7 @@ Two bars: one left-to-right (default), one right-to-left, with labels.
 
 ### Skipped
 
-- **Widget Bar 4** — Stripe pattern (needs `lv_draw_mask_line_param_cfg_t`, draw mask APIs)
+- **Widget Bar 4** — Stripe pattern (needs `lv_style_set_bg_image_src` wrapper)
 
 ## Widgets — Button
 
