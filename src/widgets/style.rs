@@ -479,11 +479,8 @@ impl Style {
 
     /// Set transform rotation in 0.1 degree units (e.g. 300 = 30°).
     ///
-    /// **SW renderer limitation:** rotation transforms require VG-Lite or
-    /// `LV_DRAW_TRANSFORM_USE_MATRIX`; the sub-layer fallback silently
-    /// produces no output ([lvgl#7706]).
-    ///
-    /// [lvgl#7706]: https://github.com/lvgl/lvgl/issues/7706
+    /// Requires `LV_DRAW_SW_SUPPORT_ARGB8888` (sub-layer format) and
+    /// `LV_DRAW_SW_SUPPORT_RGB565A8` (blending) enabled in `lv_conf.h`.
     pub fn transform_rotation(&mut self, angle: i32) -> &mut Self {
         unsafe { lv_style_set_transform_rotation(&mut self.inner, angle) };
         self
