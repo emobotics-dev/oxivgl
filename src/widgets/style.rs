@@ -78,6 +78,12 @@ pub mod props {
     /// Width property.
     pub const WIDTH: lv_style_prop_t =
         lvgl_rust_sys::_lv_style_id_t_LV_STYLE_WIDTH as lv_style_prop_t;
+    /// Outline width property.
+    pub const OUTLINE_WIDTH: lv_style_prop_t =
+        lvgl_rust_sys::_lv_style_id_t_LV_STYLE_OUTLINE_WIDTH as lv_style_prop_t;
+    /// Outline opacity property.
+    pub const OUTLINE_OPA: lv_style_prop_t =
+        lvgl_rust_sys::_lv_style_id_t_LV_STYLE_OUTLINE_OPA as lv_style_prop_t;
     /// Sentinel: end of property list.
     pub const LAST: lv_style_prop_t = 0;
 }
@@ -205,6 +211,12 @@ impl Style {
     /// Set border width in pixels.
     pub fn border_width(&mut self, w: i16) -> &mut Self {
         unsafe { lv_style_set_border_width(&mut self.inner, w as lv_coord_t) };
+        self
+    }
+
+    /// Set text opacity (0–255).
+    pub fn text_opa(&mut self, opa: u8) -> &mut Self {
+        unsafe { lv_style_set_text_opa(&mut self.inner, opa as lv_opa_t) };
         self
     }
 
@@ -420,6 +432,24 @@ impl Style {
     /// Set shadow spread (extra size).
     pub fn shadow_spread(&mut self, s: i32) -> &mut Self {
         unsafe { lv_style_set_shadow_spread(&mut self.inner, s) };
+        self
+    }
+
+    /// Set outline opacity (0-255).
+    pub fn outline_opa(&mut self, opa: u8) -> &mut Self {
+        unsafe { lv_style_set_outline_opa(&mut self.inner, opa as lv_opa_t) };
+        self
+    }
+
+    /// Set animation duration in ms (used for animated value changes).
+    pub fn anim_duration(&mut self, ms: u32) -> &mut Self {
+        unsafe { lv_style_set_anim_duration(&mut self.inner, ms) };
+        self
+    }
+
+    /// Set vertical translation offset.
+    pub fn translate_y(&mut self, y: i32) -> &mut Self {
+        unsafe { lv_style_set_translate_y(&mut self.inner, y) };
         self
     }
 

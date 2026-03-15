@@ -102,6 +102,36 @@ impl<'p> Arc<'p> {
         self
     }
 
+    /// Set raw LVGL range (bypasses f32 normalization).
+    pub fn set_range_raw(&self, min: i32, max: i32) -> &Self {
+        // SAFETY: handle non-null (from Arc::new/gauge_ring).
+        unsafe { lv_arc_set_range(self.obj.handle(), min, max) };
+        self
+    }
+
+    /// Set raw LVGL value (bypasses f32 normalization).
+    pub fn set_value_raw(&self, v: i32) -> &Self {
+        // SAFETY: handle non-null (from Arc::new/gauge_ring).
+        unsafe { lv_arc_set_value(self.obj.handle(), v) };
+        self
+    }
+
+    /// Get raw LVGL value (bypasses f32 normalization).
+    pub fn get_value_raw(&self) -> i32 {
+        // SAFETY: handle non-null (from Arc::new/gauge_ring).
+        unsafe { lv_arc_get_value(self.obj.handle()) }
+    }
+
+    /// Rotate a child object to follow the arc's current angle.
+    ///
+    /// `obj` is positioned on the arc's edge at `offset` degrees from the
+    /// current end angle.
+    pub fn rotate_obj_to_angle(&self, obj: &impl AsLvHandle, offset: i32) -> &Self {
+        // SAFETY: both handles non-null.
+        unsafe { lv_arc_rotate_obj_to_angle(self.obj.handle(), obj.lv_handle(), offset) };
+        self
+    }
+
     /// Create an arc pre-configured as a display-only gauge ring (no knob, not
     /// clickable).
     ///

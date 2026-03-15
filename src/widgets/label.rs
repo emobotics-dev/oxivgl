@@ -82,4 +82,26 @@ impl<'p> Label<'p> {
         unsafe { lv_label_set_text(self.obj.handle(), buf.as_ptr() as *const c_char) };
         self
     }
+
+    /// Set the label long mode (wrap, scroll, clip, etc.).
+    pub fn set_long_mode(&self, mode: LabelLongMode) -> &Self {
+        assert_ne!(self.obj.handle(), null_mut(), "Label handle cannot be null");
+        // SAFETY: handle non-null (asserted above).
+        unsafe { lv_label_set_long_mode(self.obj.handle(), mode as u32) };
+        self
+    }
+}
+
+/// Label long-mode behaviour.
+#[repr(u32)]
+#[derive(Debug, Clone, Copy)]
+pub enum LabelLongMode {
+    /// Wrap text if wider than the object.
+    Wrap = lv_label_long_mode_t_LV_LABEL_LONG_MODE_WRAP,
+    /// Expand the object to fit the text.
+    Expand = lv_label_long_mode_t_LV_LABEL_LONG_MODE_SCROLL,
+    /// Clip the text if too long.
+    Clip = lv_label_long_mode_t_LV_LABEL_LONG_MODE_CLIP,
+    /// Keep scrolling text circularly.
+    ScrollCircular = lv_label_long_mode_t_LV_LABEL_LONG_MODE_SCROLL_CIRCULAR,
 }
