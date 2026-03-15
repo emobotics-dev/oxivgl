@@ -57,7 +57,9 @@ pub use button::Button;
 pub use checkbox::Checkbox;
 pub use child::{detach, Child};
 pub use dropdown::{DdDir, Dropdown};
-pub use enums::{EventCode, Layout, ObjFlag, ObjState, Opa, ScrollDir, ScrollSnap, ScrollbarMode};
+pub use enums::{
+    BarMode, EventCode, Layout, ObjFlag, ObjState, Opa, ScrollDir, ScrollSnap, ScrollbarMode,
+};
 pub use event::Event;
 pub use grad::{GradDsc, GradExtend};
 pub use grid::GridCell;
