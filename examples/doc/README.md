@@ -327,7 +327,8 @@ Two base objects: a plain one and one with a blue shadow style.
 
 ### Widget Arc 1 — Arc with Value Label
 
-Arc with VALUE_CHANGED event; a label follows the arc's knob angle via `rotate_obj_to_angle`.
+Arc with VALUE_CHANGED event; a label follows the arc's knob angle via
+`rotate_obj_to_angle` (positions and rotates the label along the arc edge).
 
 ![widget_arc1](screenshots/widget_arc1.png)
 

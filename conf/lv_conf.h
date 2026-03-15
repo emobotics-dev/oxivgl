@@ -171,8 +171,8 @@
 #define LV_EXPORT_CONST_INT(int_value) struct _silence_gcc_warning
 #define LV_ATTRIBUTE_EXTERN_DATA
 
-#define LV_USE_FLOAT            0
-#define LV_USE_MATRIX           0
+#define LV_USE_FLOAT            1
+#define LV_USE_MATRIX           1
 #define LV_USE_PRIVATE_API      0
 
 /*==================
