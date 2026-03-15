@@ -145,7 +145,7 @@ the second button is styled green with a dark border automatically by the theme 
 
 ### Style 15 — Opacity and Transformations
 
-Three buttons: normal (100%), 50% opacity, 50% opacity with 15° rotation and 1.25× scale.
+Three buttons: normal (100%), 50% opacity, and 50% opacity with 15° rotation and 1.25× scale.
 Host screenshot shows opacity only; transforms render correctly on hardware.
 
 ![style15](screenshots/style15.png)
