@@ -327,7 +327,9 @@ Two base objects: a plain one and one with a blue shadow style.
 
 ### Widget Arc 1 — Arc with Value Label
 
-Arc with VALUE_CHANGED event; a label follows the arc's knob angle via `rotate_obj_to_angle`.
+Arc with VALUE_CHANGED event; a label follows the arc's knob angle via `align_obj_to_angle`.
+Uses `align` instead of `rotate` because LVGL's SW renderer does not support
+`rotate_obj_to_angle` ([lvgl#7706](https://github.com/lvgl/lvgl/issues/7706)).
 
 ![widget_arc1](screenshots/widget_arc1.png)
 

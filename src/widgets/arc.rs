@@ -95,10 +95,10 @@ impl<'p> Arc<'p> {
         self
     }
 
-    /// Set background arc start and end angles.
+    /// Set background arc start and end angles (degrees).
     pub fn set_bg_angles(&self, start: i32, end: i32) -> &Self {
         // SAFETY: handle non-null (from Arc::new/gauge_ring).
-        unsafe { lv_arc_set_bg_angles(self.obj.handle(), start, end) };
+        unsafe { lv_arc_set_bg_angles(self.obj.handle(), start as f32, end as f32) };
         self
     }
 
@@ -122,13 +122,30 @@ impl<'p> Arc<'p> {
         unsafe { lv_arc_get_value(self.obj.handle()) }
     }
 
+    /// Align a child object to the arc's current indicator end angle.
+    ///
+    /// Positions `obj` on the arc's edge at `r_offset` pixels from the
+    /// indicator midline. No rotation transform — works with partial rendering.
+    pub fn align_obj_to_angle(&self, obj: &impl AsLvHandle, r_offset: i32) -> &Self {
+        // SAFETY: both handles non-null.
+        unsafe { lv_arc_align_obj_to_angle(self.obj.handle(), obj.lv_handle(), r_offset) };
+        self
+    }
+
     /// Rotate a child object to follow the arc's current angle.
     ///
-    /// `obj` is positioned on the arc's edge at `offset` degrees from the
-    /// current end angle.
-    pub fn rotate_obj_to_angle(&self, obj: &impl AsLvHandle, offset: i32) -> &Self {
+    /// Positions `obj` on the arc's edge and applies a rotation transform so
+    /// the object visually follows the arc curvature.
+    ///
+    /// **Not usable with the SW renderer.** `LV_DRAW_TRANSFORM_USE_MATRIX`
+    /// only supports VG-Lite ([lvgl#7706]), and the sub-layer fallback
+    /// silently produces no output. Use [`align_obj_to_angle`](Arc::align_obj_to_angle)
+    /// instead.
+    ///
+    /// [lvgl#7706]: https://github.com/lvgl/lvgl/issues/7706
+    pub fn rotate_obj_to_angle(&self, obj: &impl AsLvHandle, r_offset: i32) -> &Self {
         // SAFETY: both handles non-null.
-        unsafe { lv_arc_rotate_obj_to_angle(self.obj.handle(), obj.lv_handle(), offset) };
+        unsafe { lv_arc_rotate_obj_to_angle(self.obj.handle(), obj.lv_handle(), r_offset) };
         self
     }
 
@@ -161,7 +178,7 @@ impl<'p> Arc<'p> {
             lv_obj_set_size(h, size, size);
             lv_obj_align(h, Align::Center as lv_align_t, 0, 0);
             lv_arc_set_rotation(h, rotation);
-            lv_arc_set_bg_angles(h, 0, sweep);
+            lv_arc_set_bg_angles(h, 0.0, sweep as f32);
             lv_arc_set_range(h, 0, LVGL_SCALE);
             lv_arc_set_value(h, 0);
             // Background track
