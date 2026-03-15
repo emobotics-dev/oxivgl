@@ -19,8 +19,10 @@ mod anim_timeline;
 mod arc;
 mod bar;
 mod button;
+mod checkbox;
 mod child;
 mod enums;
+mod dropdown;
 pub(crate) mod event;
 mod grad;
 mod grid;
@@ -33,6 +35,7 @@ mod obj_layout;
 mod obj_style;
 mod palette;
 pub mod prelude;
+mod roller;
 mod scale;
 mod screen;
 mod selector;
@@ -43,20 +46,23 @@ mod value_label;
 
 pub use anim::{
     anim_path_bounce, anim_path_ease_in, anim_path_ease_in_out, anim_path_ease_out,
-    anim_path_linear, anim_path_overshoot, anim_set_height, anim_set_pad_column, anim_set_pad_row,
-    anim_set_size, anim_set_slider_value, anim_set_width, anim_set_x, Anim, ANIM_REPEAT_INFINITE,
+    anim_path_linear, anim_path_overshoot, anim_set_arc_value, anim_set_bar_value,
+    anim_set_height, anim_set_pad_column, anim_set_pad_row, anim_set_size,
+    anim_set_slider_value, anim_set_width, anim_set_x, Anim, ANIM_REPEAT_INFINITE,
 };
 pub use anim_timeline::{AnimTimeline, ANIM_TIMELINE_PROGRESS_MAX};
 pub use arc::Arc;
 pub use bar::Bar;
 pub use button::Button;
+pub use checkbox::Checkbox;
 pub use child::{detach, Child};
+pub use dropdown::{DdDir, Dropdown};
 pub use enums::{EventCode, Layout, ObjFlag, ObjState, Opa, ScrollDir, ScrollSnap, ScrollbarMode};
 pub use event::Event;
 pub use grad::{GradDsc, GradExtend};
 pub use grid::GridCell;
 pub use image::Image;
-pub use label::Label;
+pub use label::{Label, LabelLongMode};
 pub use led::Led;
 pub use line::Line;
 pub use obj::{Align, AsLvHandle, BaseDir, FlexAlign, FlexFlow, GridAlign, Obj, Part, TextAlign};
@@ -65,6 +71,7 @@ pub use palette::{
     Palette,
 };
 pub use scale::{Scale, ScaleBuilder, ScaleMode};
+pub use roller::{Roller, RollerMode};
 pub use screen::Screen;
 pub use selector::Selector;
 pub use slider::Slider;
