@@ -610,9 +610,9 @@ fn line_create_and_set_points() {
     let screen = fresh_screen();
     let line = Line::new(&screen).unwrap();
     static POINTS: [oxivgl::widgets::lv_point_precise_t; 3] = [
-        oxivgl::widgets::lv_point_precise_t { x: 0, y: 0 },
-        oxivgl::widgets::lv_point_precise_t { x: 50, y: 30 },
-        oxivgl::widgets::lv_point_precise_t { x: 100, y: 0 },
+        oxivgl::widgets::lv_point_precise_t { x: 0.0, y: 0.0 },
+        oxivgl::widgets::lv_point_precise_t { x: 50.0, y: 30.0 },
+        oxivgl::widgets::lv_point_precise_t { x: 100.0, y: 0.0 },
     ];
     line.set_points(&POINTS);
     pump();

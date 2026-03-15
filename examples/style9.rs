@@ -33,9 +33,9 @@ impl View for Style9 {
             .line_rounded(true);
 
         let points = Box::new([
-            lv_point_precise_t { x: 10, y: 30 },
-            lv_point_precise_t { x: 30, y: 50 },
-            lv_point_precise_t { x: 100, y: 0 },
+            lv_point_precise_t { x: 10.0, y: 30.0 },
+            lv_point_precise_t { x: 30.0, y: 50.0 },
+            lv_point_precise_t { x: 100.0, y: 0.0 },
         ]);
 
         let line = Line::new(&screen)?;
