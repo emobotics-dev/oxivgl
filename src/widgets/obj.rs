@@ -22,6 +22,8 @@ pub enum Part {
     Knob = 0x030000,
     /// Repeated sub-elements such as tick marks (`LV_PART_ITEMS = 0x050000`).
     Items = 0x050000,
+    /// Scrollbar part (`LV_PART_SCROLLBAR = 0x010000`).
+    Scrollbar = lvgl_rust_sys::lv_part_t_LV_PART_SCROLLBAR,
 }
 
 /// Type-safe wrapper for `lv_align_t`.
@@ -396,6 +398,91 @@ impl<'p> Obj<'p> {
         assert_ne!(self.handle, null_mut());
         // SAFETY: handle non-null (asserted above).
         unsafe { lv_obj_set_scrollbar_mode(self.handle, mode as lv_scrollbar_mode_t) };
+        self
+    }
+
+    /// Set horizontal scroll snap alignment.
+    pub fn set_scroll_snap_x(&self, snap: super::ScrollSnap) -> &Self {
+        assert_ne!(self.handle, null_mut());
+        // SAFETY: handle non-null (asserted above).
+        unsafe { lv_obj_set_scroll_snap_x(self.handle, snap as lv_scroll_snap_t) };
+        self
+    }
+
+    /// Set vertical scroll snap alignment.
+    pub fn set_scroll_snap_y(&self, snap: super::ScrollSnap) -> &Self {
+        assert_ne!(self.handle, null_mut());
+        // SAFETY: handle non-null (asserted above).
+        unsafe { lv_obj_set_scroll_snap_y(self.handle, snap as lv_scroll_snap_t) };
+        self
+    }
+
+    /// Set allowed scroll direction(s).
+    pub fn set_scroll_dir(&self, dir: super::ScrollDir) -> &Self {
+        assert_ne!(self.handle, null_mut());
+        // SAFETY: handle non-null (asserted above).
+        unsafe { lv_obj_set_scroll_dir(self.handle, dir.0 as lv_dir_t) };
+        self
+    }
+
+    /// Scroll to an absolute position with optional animation.
+    pub fn scroll_to(&self, x: i32, y: i32, anim: bool) -> &Self {
+        assert_ne!(self.handle, null_mut());
+        // SAFETY: handle non-null (asserted above).
+        unsafe { lv_obj_scroll_to(self.handle, x, y, anim) };
+        self
+    }
+
+    /// Scroll this child into view within its parent.
+    pub fn scroll_to_view(&self, anim: bool) -> &Self {
+        assert_ne!(self.handle, null_mut());
+        // SAFETY: handle non-null (asserted above).
+        unsafe { lv_obj_scroll_to_view(self.handle, anim) };
+        self
+    }
+
+    /// Update snap alignment after children are added.
+    pub fn update_snap(&self, anim: bool) -> &Self {
+        assert_ne!(self.handle, null_mut());
+        // SAFETY: handle non-null (asserted above).
+        unsafe { lv_obj_update_snap(self.handle, anim) };
+        self
+    }
+
+    /// Get the current horizontal scroll position.
+    pub fn get_scroll_x(&self) -> i32 {
+        assert_ne!(self.handle, null_mut());
+        // SAFETY: handle non-null (asserted above).
+        unsafe { lv_obj_get_scroll_x(self.handle) }
+    }
+
+    /// Get the current vertical scroll position.
+    pub fn get_scroll_y(&self) -> i32 {
+        assert_ne!(self.handle, null_mut());
+        // SAFETY: handle non-null (asserted above).
+        unsafe { lv_obj_get_scroll_y(self.handle) }
+    }
+
+    /// Get the number of children.
+    pub fn get_child_count(&self) -> u32 {
+        assert_ne!(self.handle, null_mut());
+        // SAFETY: handle non-null (asserted above).
+        unsafe { lv_obj_get_child_count(self.handle) }
+    }
+
+    /// Move this object to the foreground (on top of siblings).
+    pub fn move_foreground(&self) -> &Self {
+        assert_ne!(self.handle, null_mut());
+        // SAFETY: handle non-null (asserted above).
+        unsafe { lv_obj_move_foreground(self.handle) };
+        self
+    }
+
+    /// Send an event to this object programmatically.
+    pub fn send_event(&self, code: super::EventCode) -> &Self {
+        assert_ne!(self.handle, null_mut());
+        // SAFETY: handle non-null (asserted above).
+        unsafe { lv_obj_send_event(self.handle, code.0, core::ptr::null_mut()) };
         self
     }
 

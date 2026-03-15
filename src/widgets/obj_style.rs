@@ -98,6 +98,42 @@ impl<'p> Obj<'p> {
         self
     }
 
+    /// Remove styles matching the given selector. Pass `None` for style to
+    /// remove all styles for that selector.
+    pub fn remove_style(
+        &self,
+        style: Option<&super::Style>,
+        selector: impl Into<super::Selector>,
+    ) -> &Self {
+        let selector = selector.into().raw();
+        assert_ne!(self.handle(), null_mut(), "Obj handle cannot be null");
+        let style_ptr = match style {
+            Some(s) => &s.inner as *const lv_style_t as *mut lv_style_t,
+            None => null_mut() as *mut lv_style_t,
+        };
+        // SAFETY: handle non-null (asserted above).
+        unsafe { lv_obj_remove_style(self.handle(), style_ptr, selector) };
+        self
+    }
+
+    /// Set `clip_corner` — clip overflowing content at rounded corners.
+    pub fn style_clip_corner(&self, clip: bool, selector: impl Into<super::Selector>) -> &Self {
+        let selector = selector.into().raw();
+        assert_ne!(self.handle(), null_mut(), "Obj handle cannot be null");
+        // SAFETY: handle non-null (asserted above).
+        unsafe { lv_obj_set_style_clip_corner(self.handle(), clip, selector) };
+        self
+    }
+
+    /// Set `translate_x` style property for the given selector.
+    pub fn style_translate_x(&self, x: i32, selector: impl Into<super::Selector>) -> &Self {
+        let selector = selector.into().raw();
+        assert_ne!(self.handle(), null_mut(), "Obj handle cannot be null");
+        // SAFETY: handle non-null (asserted above).
+        unsafe { lv_obj_set_style_translate_x(self.handle(), x, selector) };
+        self
+    }
+
     /// Set text color from RGB hex (selector 0).
     pub fn text_color(&self, color: u32) -> &Self {
         assert_ne!(self.handle(), null_mut(), "Obj handle cannot be null");
