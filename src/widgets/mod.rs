@@ -42,6 +42,7 @@ mod selector;
 mod slider;
 mod style;
 mod switch;
+mod theme;
 mod value_label;
 
 pub use anim::{
@@ -84,6 +85,7 @@ pub use style::{
     LV_SIZE_CONTENT,
 };
 pub use switch::Switch;
+pub use theme::Theme;
 pub use value_label::ValueLabel;
 
 // Re-export raw types so callbacks don't need `lvgl_rust_sys`.
