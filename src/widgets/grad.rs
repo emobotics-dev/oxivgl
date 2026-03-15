@@ -107,4 +107,19 @@ impl GradDsc {
         };
         self
     }
+
+    /// Configure as a simple horizontal gradient (left-to-right).
+    pub fn horizontal(&mut self) -> &mut Self {
+        unsafe { lv_grad_horizontal_init(&mut self.inner) };
+        self
+    }
+
+    /// Set the focal point of a radial gradient.
+    ///
+    /// Call after [`radial`](Self::radial). `fx`/`fy` are the focal center
+    /// coords; `fr` is the focal circle radius.
+    pub fn radial_set_focal(&mut self, fx: i32, fy: i32, fr: i32) -> &mut Self {
+        unsafe { lv_grad_radial_set_focal(&mut self.inner, fx, fy, fr) };
+        self
+    }
 }

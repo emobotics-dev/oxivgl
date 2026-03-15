@@ -1,11 +1,11 @@
 #![cfg_attr(target_arch = "xtensa", no_std, no_main)]
 #![cfg_attr(target_arch = "xtensa", feature(impl_trait_in_assoc_type, type_alias_impl_trait))]
 // SPDX-License-Identifier: MIT OR Apache-2.0
-//! Style 15 — Opacity
+//! Style 15 — Opacity and Transformations
 
 use oxivgl::{
     view::View,
-    widgets::{Align, Button, Label, Screen, WidgetError},
+    widgets::{Align, Button, Label, Screen, Selector, WidgetError},
 };
 
 struct Style15 {
@@ -27,16 +27,20 @@ impl View for Style15 {
         label1.text("Normal").center();
 
         let btn2 = Button::new(&screen)?;
-        btn2.size(100, 40).opa(127).align(Align::Center, 0, 0);
+        btn2.size(100, 40).opa(128).align(Align::Center, 0, 0);
         let label2 = Label::new(&btn2)?;
         label2.text("Opa:50%").center();
 
         let btn3 = Button::new(&screen)?;
         btn3.size(100, 40)
-            .opa(178)
+            .opa(128)
             .align(Align::Center, 0, 70);
+        btn3.style_transform_rotation(150, Selector::DEFAULT)
+            .style_transform_scale(256 + 64, Selector::DEFAULT)
+            .style_transform_pivot_x(50, Selector::DEFAULT)
+            .style_transform_pivot_y(20, Selector::DEFAULT);
         let label3 = Label::new(&btn3)?;
-        label3.text("Opa:70%").center();
+        label3.text("Transf.").center();
 
         Ok(Self {
             _label3: label3,
