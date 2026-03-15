@@ -56,6 +56,30 @@ Centered slider; label above shows current value, updated live on
 
 ![getting_started4](screenshots/getting_started4.png)
 
+### Example 5 — Simple Horizontal Gradient
+
+Container with a horizontal red→green gradient (opacity 100%→0%), stops at 20% and 80%.
+
+![getting_started5](screenshots/getting_started5.png)
+
+### Example 6 — Linear (Skew) Gradient
+
+Container with a skewed linear gradient from (100,100) to (200,150).
+
+![getting_started6](screenshots/getting_started6.png)
+
+### Example 7 — Radial Gradient
+
+Container with a radial gradient centered at (100,100), focal point at (50,50).
+
+![getting_started7](screenshots/getting_started7.png)
+
+### Example 8 — Conical Gradient
+
+Container with a conical gradient sweeping 0°–180° from center.
+
+![getting_started8](screenshots/getting_started8.png)
+
 ## Styles
 
 ### Style 1 — Size, Position and Padding
