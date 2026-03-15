@@ -24,7 +24,7 @@ impl View for GettingStarted5 {
     fn create() -> Result<Self, WidgetError> {
         let colors = [color_make(0xff, 0, 0), color_make(0, 0xff, 0)];
         let opas = [255u8, 0];
-        let fracs = [20u8 * 255 / 100, 80 * 255 / 100];
+        let fracs = [(20u16 * 255 / 100) as u8, (80u16 * 255 / 100) as u8];
 
         let mut grad = Box::new(GradDsc::new());
         grad.init_stops(&colors, &opas, &fracs).horizontal();
