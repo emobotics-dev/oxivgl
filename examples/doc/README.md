@@ -136,10 +136,17 @@ Slider with gradient indicator and red shadow on pressed state.
 
 ![style13](screenshots/style13.png)
 
+### Style 14 — Extending the Current Theme
+
+Two buttons: the first uses the default theme; after installing a theme extension
+the second button is styled green with a dark border automatically by the theme machinery.
+
+![style14](screenshots/style14.png)
+
 ### Style 15 — Opacity
 
 Three buttons at different opacity levels (100%, 50%, 70%).
-Transforms omitted — `lv_snapshot_take` requires `LV_USE_MATRIX` + `LV_USE_FLOAT`.
+Transforms omitted.
 
 ![style15](screenshots/style15.png)
 
@@ -163,7 +170,6 @@ Four buttons: simple horizontal, simple vertical, complex linear, complex radial
 
 ### Skipped
 
-- **Style 14** — Extend theme (needs `LV_USE_PRIVATE_API`)
 - **Style 19** — Modal overlay (meta-example, benchmarking)
 
 ## Animations
