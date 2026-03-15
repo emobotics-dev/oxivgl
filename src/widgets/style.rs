@@ -465,6 +465,34 @@ impl Style {
         self
     }
 
+    /// Set background image source (pointer to an `lv_image_dsc_t`).
+    ///
+    /// Declare the image with [`image_declare!`](crate::image_declare) and pass
+    /// a reference: `style.bg_image_src(unsafe { &my_img })`.
+    pub fn bg_image_src(&mut self, src: &lv_image_dsc_t) -> &mut Self {
+        // SAFETY: inner was initialized by lv_style_init; src points to
+        // a valid compiled image descriptor.
+        unsafe {
+            lv_style_set_bg_image_src(
+                &mut self.inner,
+                src as *const lv_image_dsc_t as *const core::ffi::c_void,
+            )
+        };
+        self
+    }
+
+    /// Set background image opacity (0 = transparent, 255 = opaque).
+    pub fn bg_image_opa(&mut self, opa: u8) -> &mut Self {
+        unsafe { lv_style_set_bg_image_opa(&mut self.inner, opa) };
+        self
+    }
+
+    /// Tile background image instead of stretching.
+    pub fn bg_image_tiled(&mut self, tiled: bool) -> &mut Self {
+        unsafe { lv_style_set_bg_image_tiled(&mut self.inner, tiled) };
+        self
+    }
+
     /// Set image recolor tint.
     pub fn image_recolor(&mut self, color: lv_color_t) -> &mut Self {
         unsafe { lv_style_set_image_recolor(&mut self.inner, color) };

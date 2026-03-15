@@ -190,6 +190,18 @@ impl core::ops::BitOr for ScrollDir {
     }
 }
 
+/// LVGL bar mode.
+#[repr(u32)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum BarMode {
+    /// Standard bar (indicator from min to value).
+    Normal = lvgl_rust_sys::lv_bar_mode_t_LV_BAR_MODE_NORMAL,
+    /// Indicator draws from zero point towards value (needs range with negative min).
+    Symmetrical = lvgl_rust_sys::lv_bar_mode_t_LV_BAR_MODE_SYMMETRICAL,
+    /// Indicator between start value and end value.
+    Range = lvgl_rust_sys::lv_bar_mode_t_LV_BAR_MODE_RANGE,
+}
+
 /// LVGL layout engine type.
 #[repr(u32)]
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
