@@ -29,7 +29,6 @@ impl View for WidgetArc1 {
         arc.size(150, 150);
         arc.set_rotation(135);
         arc.set_bg_angles(0, 270);
-        arc.set_range_raw(0, 100);
         arc.set_value_raw(10);
         arc.center();
 
