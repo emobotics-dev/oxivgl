@@ -399,15 +399,17 @@ Vertical bar with red-to-blue gradient indicator, animated between -20 and 40 (3
 
 ![widget_bar3](screenshots/widget_bar3.png)
 
+### Widget Bar 4 — Stripe Pattern
+
+Range-mode bar with tiled stripe background image on the indicator at 30% opacity.
+
+![widget_bar4](screenshots/widget_bar4.png)
+
 ### Widget Bar 5 — LTR vs RTL Bars
 
 Two bars: one left-to-right (default), one right-to-left, with labels.
 
 ![widget_bar5](screenshots/widget_bar5.png)
-
-### Skipped
-
-- **Widget Bar 4** — Stripe pattern (needs `lv_style_set_bg_image_src` wrapper)
 
 ## Widgets — Button
 
