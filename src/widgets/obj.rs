@@ -359,14 +359,21 @@ impl<'p> Obj<'p> {
     ///
     /// Requires `LV_DRAW_TRANSFORM_USE_MATRIX = 1` in `lv_conf.h`.
     ///
-    /// # Panics
+    /// # Partial rendering caveat
     ///
-    /// The LVGL SW renderer does not clip the transformed bounding box to
-    /// display bounds. If the transformed object extends outside the screen
-    /// (e.g. scaled up while positioned near an edge), the renderer may
-    /// write out of bounds. **Always [`center()`](Self::center) or
-    /// position the object so that its transformed extents stay within the
-    /// display.**
+    /// `refr_obj_matrix` inverse-transforms the render band's clip area and
+    /// draws directly into the band buffer. With partial rendering (small
+    /// band buffers, e.g. 40 lines), the inverse-transformed coordinates
+    /// can exceed the buffer bounds, causing a crash
+    /// (`LoadProhibited` / SIGSEGV). This happens because
+    /// `refr_check_obj_clip_overflow` only checks style-based rotation, not
+    /// matrix transforms set via this method.
+    ///
+    /// **Safe only when the display uses a full-screen buffer** (host) or
+    /// the transformed bounding box fits entirely within a single render
+    /// band (very small objects). For embedded targets with partial
+    /// rendering, prefer [`Style::transform_rotation`] — it allocates an
+    /// intermediate layer but handles band clipping correctly.
     pub fn set_transform(&self, matrix: &Matrix) -> &Self {
         assert_ne!(self.handle, null_mut(), "Obj handle cannot be null");
         // SAFETY: handle non-null, matrix pointer valid.
