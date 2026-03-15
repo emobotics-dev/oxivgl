@@ -160,6 +160,12 @@ impl Style {
         self
     }
 
+    /// Set overall object opacity (0-255).
+    pub fn opa(&mut self, opa: u8) -> &mut Self {
+        unsafe { lv_style_set_opa(&mut self.inner, opa as lv_opa_t) };
+        self
+    }
+
     /// Set background opacity (0-255).
     pub fn bg_opa(&mut self, opa: u8) -> &mut Self {
         unsafe { lv_style_set_bg_opa(&mut self.inner, opa as lv_opa_t) };
@@ -518,6 +524,27 @@ impl Style {
     /// stay within the display.
     pub fn transform_rotation(&mut self, angle: i32) -> &mut Self {
         unsafe { lv_style_set_transform_rotation(&mut self.inner, angle) };
+        self
+    }
+
+    /// Set uniform transform scale (256 = 1.0×, 320 = 1.25×, etc.).
+    pub fn transform_scale(&mut self, scale: i32) -> &mut Self {
+        unsafe {
+            lv_style_set_transform_scale_x(&mut self.inner, scale);
+            lv_style_set_transform_scale_y(&mut self.inner, scale);
+        }
+        self
+    }
+
+    /// Set transform pivot X offset in pixels.
+    pub fn transform_pivot_x(&mut self, x: i32) -> &mut Self {
+        unsafe { lv_style_set_transform_pivot_x(&mut self.inner, x) };
+        self
+    }
+
+    /// Set transform pivot Y offset in pixels.
+    pub fn transform_pivot_y(&mut self, y: i32) -> &mut Self {
+        unsafe { lv_style_set_transform_pivot_y(&mut self.inner, y) };
         self
     }
 
