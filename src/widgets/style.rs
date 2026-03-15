@@ -465,6 +465,62 @@ impl Style {
         self
     }
 
+    /// Set background image source (pointer to an `lv_image_dsc_t`).
+    ///
+    /// Declare the image with [`image_declare!`](crate::image_declare) and pass
+    /// a reference: `style.bg_image_src(unsafe { &my_img })`.
+    pub fn bg_image_src(&mut self, src: &lv_image_dsc_t) -> &mut Self {
+        // SAFETY: inner was initialized by lv_style_init; src points to
+        // a valid compiled image descriptor.
+        unsafe {
+            lv_style_set_bg_image_src(
+                &mut self.inner,
+                src as *const lv_image_dsc_t as *const core::ffi::c_void,
+            )
+        };
+        self
+    }
+
+    /// Set background image opacity (0 = transparent, 255 = opaque).
+    pub fn bg_image_opa(&mut self, opa: u8) -> &mut Self {
+        unsafe { lv_style_set_bg_image_opa(&mut self.inner, opa) };
+        self
+    }
+
+    /// Tile background image instead of stretching.
+    pub fn bg_image_tiled(&mut self, tiled: bool) -> &mut Self {
+        unsafe { lv_style_set_bg_image_tiled(&mut self.inner, tiled) };
+        self
+    }
+
+    /// Set image recolor tint.
+    pub fn image_recolor(&mut self, color: lv_color_t) -> &mut Self {
+        unsafe { lv_style_set_image_recolor(&mut self.inner, color) };
+        self
+    }
+
+    /// Set image recolor opacity (0 = no tint, 255 = full tint).
+    pub fn image_recolor_opa(&mut self, opa: u8) -> &mut Self {
+        unsafe { lv_style_set_image_recolor_opa(&mut self.inner, opa) };
+        self
+    }
+
+    /// Set transform rotation in 0.1 degree units (e.g. 300 = 30°).
+    ///
+    /// Requires `LV_DRAW_SW_SUPPORT_RGB565A8` enabled in `lv_conf.h`.
+    ///
+    /// # Panics
+    ///
+    /// The LVGL SW renderer does not clip the transformed bounding box to
+    /// display bounds. If the rotated object extends outside the screen,
+    /// the renderer may write out of bounds. Position or
+    /// [`center()`](super::Obj::center) the object so its rotated extents
+    /// stay within the display.
+    pub fn transform_rotation(&mut self, angle: i32) -> &mut Self {
+        unsafe { lv_style_set_transform_rotation(&mut self.inner, angle) };
+        self
+    }
+
     /// Set layout engine (flex or grid).
     pub fn layout(&mut self, layout: super::Layout) -> &mut Self {
         // SAFETY: inner was initialized by lv_style_init.

@@ -1,0 +1,12 @@
+# SPDX-License-Identifier: MIT OR Apache-2.0
+[package]
+name = "oxivgl-build"
+edition = "2021"
+version = "0.1.0"
+license = "MIT OR Apache-2.0"
+description = "Build-time helpers for oxivgl (LVGL image asset conversion)"
+
+[dependencies]
+cc = "1"
+
+[workspace]

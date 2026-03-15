@@ -28,9 +28,10 @@ log-04 = { package = "log", version = "0.4", optional = true }
 [build-dependencies]
 cmake = "0.1"
 cc = "1.2.38"
+oxivgl-build = { path = "oxivgl-build" }
 
 [workspace]
-exclude = ["examples/common"]
+exclude = ["examples/common", "oxivgl-build"]
 
 [dev-dependencies]
 oxivgl-examples-common = { path = "examples/common" }

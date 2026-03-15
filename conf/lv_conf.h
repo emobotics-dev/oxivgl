@@ -47,7 +47,7 @@
 #define LV_DRAW_BUF_STRIDE_ALIGN                1
 #define LV_DRAW_BUF_ALIGN                       4
 
-#define LV_DRAW_TRANSFORM_USE_MATRIX            0
+#define LV_DRAW_TRANSFORM_USE_MATRIX            1
 
 #define LV_DRAW_LAYER_MAX_MEMORY         0             /*[bytes] 0=no limit*/
 #define LV_DRAW_LAYER_SIMPLE_BUF_SIZE    (24 * 1024)   /*[bytes]*/
@@ -57,10 +57,10 @@
 #if LV_USE_DRAW_SW == 1
     #define LV_DRAW_SW_SUPPORT_RGB565       1
     #define LV_DRAW_SW_SUPPORT_RGB565_SWAPPED 1
-    #define LV_DRAW_SW_SUPPORT_RGB565A8     0
+    #define LV_DRAW_SW_SUPPORT_RGB565A8     1
     #define LV_DRAW_SW_SUPPORT_RGB888       1
     #define LV_DRAW_SW_SUPPORT_XRGB8888    0
-    #define LV_DRAW_SW_SUPPORT_ARGB8888    0
+    #define LV_DRAW_SW_SUPPORT_ARGB8888    1
     #define LV_DRAW_SW_SUPPORT_ARGB8888_PREMULTIPLIED 0
     #define LV_DRAW_SW_SUPPORT_L8          0
     #define LV_DRAW_SW_SUPPORT_AL88        0

@@ -4,6 +4,7 @@ use core::{cell::Cell, ops::Deref, ptr::null_mut};
 use lvgl_rust_sys::*;
 
 use super::{
+    enums::BarMode,
     obj::{AsLvHandle, Obj},
     to_lvgl, WidgetError, LVGL_SCALE,
 };
@@ -99,6 +100,22 @@ impl<'p> Bar<'p> {
         assert_ne!(self.obj.handle(), null_mut(), "Bar handle cannot be null");
         // SAFETY: handle non-null (asserted above).
         unsafe { lv_bar_get_value(self.obj.handle()) }
+    }
+
+    /// Set bar mode (normal, symmetrical, or range).
+    pub fn set_mode(&self, mode: BarMode) -> &Self {
+        assert_ne!(self.obj.handle(), null_mut(), "Bar handle cannot be null");
+        // SAFETY: handle non-null (asserted above).
+        unsafe { lv_bar_set_mode(self.obj.handle(), mode as lv_bar_mode_t) };
+        self
+    }
+
+    /// Set raw LVGL start value with optional animation (range mode only).
+    pub fn set_start_value_raw(&self, value: i32, anim: bool) -> &Self {
+        assert_ne!(self.obj.handle(), null_mut(), "Bar handle cannot be null");
+        // SAFETY: handle non-null (asserted above).
+        unsafe { lv_bar_set_start_value(self.obj.handle(), value, anim) };
+        self
     }
 
     /// Get current value in physical units.

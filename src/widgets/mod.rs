@@ -57,7 +57,9 @@ pub use button::Button;
 pub use checkbox::Checkbox;
 pub use child::{detach, Child};
 pub use dropdown::{DdDir, Dropdown};
-pub use enums::{EventCode, Layout, ObjFlag, ObjState, Opa, ScrollDir, ScrollSnap, ScrollbarMode};
+pub use enums::{
+    BarMode, EventCode, Layout, ObjFlag, ObjState, Opa, ScrollDir, ScrollSnap, ScrollbarMode,
+};
 pub use event::Event;
 pub use grad::{GradDsc, GradExtend};
 pub use grid::GridCell;
@@ -65,7 +67,9 @@ pub use image::Image;
 pub use label::{Label, LabelLongMode};
 pub use led::Led;
 pub use line::Line;
-pub use obj::{Align, AsLvHandle, BaseDir, FlexAlign, FlexFlow, GridAlign, Obj, Part, TextAlign};
+pub use obj::{
+    Align, AsLvHandle, BaseDir, FlexAlign, FlexFlow, GridAlign, Matrix, Obj, Part, TextAlign,
+};
 pub use palette::{
     color_black, color_make, color_white, palette_darken, palette_lighten, palette_main, GradDir,
     Palette,
@@ -83,7 +87,7 @@ pub use switch::Switch;
 pub use value_label::ValueLabel;
 
 // Re-export raw types so callbacks don't need `lvgl_rust_sys`.
-pub use lvgl_rust_sys::{lv_color_t, lv_event_t, lv_point_precise_t};
+pub use lvgl_rust_sys::{lv_color_t, lv_event_t, lv_image_dsc_t, lv_point_precise_t};
 
 // Grid helpers
 /// Maximum corner radius — creates a pill/capsule shape.
