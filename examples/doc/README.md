@@ -273,6 +273,37 @@ Same 3×3 grid but with `RTL` base direction — cells fill right-to-left.
 
 ![grid6](screenshots/grid6.png)
 
+## Scrolling
+
+### Scroll 1 — Basic Scrolling with Save/Restore
+
+Panel with children placed outside its bounds triggers automatic scrolling.
+Two buttons save and restore the scroll position.
+
+![scroll1](screenshots/scroll1.png)
+
+### Scroll 2 — Scroll Snap
+
+Horizontal row of buttons with center snap alignment. Panel 3 is non-snappable.
+A switch toggles "scroll one" mode.
+
+![scroll2](screenshots/scroll2.png)
+
+### Scroll 4 — Scrollbar Styling
+
+Custom blue rounded scrollbar that widens and becomes fully opaque when
+actively scrolling, with animated transitions.
+
+![scroll4](screenshots/scroll4.png)
+
+### Skipped
+
+- **Scroll 3** — Floating button in list (needs `LV_USE_LIST`, List wrapper)
+- **Scroll 5** — RTL scrolling (needs `LV_FONT_DEJAVU_16_PERSIAN_HEBREW`)
+- **Scroll 6** — Curved scroll (needs `lv_obj_get_coords`, `lv_sqrt`, `lv_map`)
+- **Scroll 7** — Dynamic widget loading (needs `lv_obj_move_to_index`, Checkbox wrapper)
+- **Scroll 8** — Circular list (needs `lv_obj_move_to_index`, content size APIs)
+
 ## Running
 
 ```sh

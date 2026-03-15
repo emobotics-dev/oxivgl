@@ -51,7 +51,7 @@ pub use arc::Arc;
 pub use bar::Bar;
 pub use button::Button;
 pub use child::{detach, Child};
-pub use enums::{EventCode, Layout, ObjFlag, ObjState, Opa, ScrollbarMode};
+pub use enums::{EventCode, Layout, ObjFlag, ObjState, Opa, ScrollDir, ScrollSnap, ScrollbarMode};
 pub use event::Event;
 pub use grad::{GradDsc, GradExtend};
 pub use grid::GridCell;
