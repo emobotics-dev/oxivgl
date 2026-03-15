@@ -56,6 +56,30 @@ Centered slider; label above shows current value, updated live on
 
 ![getting_started4](screenshots/getting_started4.png)
 
+### Example 5 — Simple Horizontal Gradient
+
+Container with a horizontal red→green gradient (opacity 100%→0%), stops at 20% and 80%.
+
+![getting_started5](screenshots/getting_started5.png)
+
+### Example 6 — Linear (Skew) Gradient
+
+Container with a skewed linear gradient from (100,100) to (200,150).
+
+![getting_started6](screenshots/getting_started6.png)
+
+### Example 7 — Radial Gradient
+
+Container with a radial gradient centered at (100,100), focal point at (50,50).
+
+![getting_started7](screenshots/getting_started7.png)
+
+### Example 8 — Conical Gradient
+
+Container with a conical gradient sweeping 0°–180° from center.
+
+![getting_started8](screenshots/getting_started8.png)
+
 ## Styles
 
 ### Style 1 — Size, Position and Padding
@@ -136,10 +160,17 @@ Slider with gradient indicator and red shadow on pressed state.
 
 ![style13](screenshots/style13.png)
 
-### Style 15 — Opacity
+### Style 14 — Extending the Current Theme
 
-Three buttons at different opacity levels (100%, 50%, 70%).
-Transforms omitted — `lv_snapshot_take` requires `LV_USE_MATRIX` + `LV_USE_FLOAT`.
+Two buttons: the first uses the default theme; after installing a theme extension
+the second button is styled green with a dark border automatically by the theme machinery.
+
+![style14](screenshots/style14.png)
+
+### Style 15 — Opacity and Transformations
+
+Three buttons: normal (100%), 50% opacity, and 50% opacity with 15° rotation and 1.25× scale.
+Host screenshot shows opacity only; transforms render correctly on hardware.
 
 ![style15](screenshots/style15.png)
 
@@ -163,7 +194,6 @@ Four buttons: simple horizontal, simple vertical, complex linear, complex radial
 
 ### Skipped
 
-- **Style 14** — Extend theme (needs `LV_USE_PRIVATE_API`)
 - **Style 19** — Modal overlay (meta-example, benchmarking)
 
 ## Animations

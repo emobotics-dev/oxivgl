@@ -173,7 +173,7 @@
 
 #define LV_USE_FLOAT            1
 #define LV_USE_MATRIX           1
-#define LV_USE_PRIVATE_API      0
+#define LV_USE_PRIVATE_API      1
 
 /*==================
  *   FONT USAGE
