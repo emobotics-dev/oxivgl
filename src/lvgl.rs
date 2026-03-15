@@ -32,13 +32,17 @@ use std::time::{SystemTime, UNIX_EPOCH};
 
 #[cfg(not(target_os = "none"))]
 unsafe extern "C" fn flush_cb(drv: *mut lv_display_t, _area: *const lv_area_t, _px_map: *mut u8) {
+    // SAFETY: drv is a valid display pointer provided by LVGL.
     unsafe { lv_display_flush_ready(drv) };
 }
 
 #[cfg(not(target_os = "none"))]
 unsafe fn init_host_display(w: i32, h: i32) {
-    // Heap-allocate the render buffer sized by the actual runtime resolution.
-    let buf_size = w as usize * crate::lvgl_buffers::COLOR_BUF_LINES * 2;
+    // Full-height buffer: rotated/scaled objects need sub-layers that can
+    // span the entire screen height. A small band buffer (e.g. 40 lines)
+    // causes SIGSEGV when the transformed bounding box exceeds the band.
+    // This is heap-allocated so it doesn't affect embedded memory.
+    let buf_size = w as usize * h as usize * 2; // RGB565
     // Intentionally leak: LVGL owns this buffer for the process lifetime.
     let cbuf = Box::into_raw(vec![0u8; buf_size].into_boxed_slice()) as *mut std::ffi::c_void;
     // SAFETY: lv_init() has been called by LvglDriver::init() before this function.

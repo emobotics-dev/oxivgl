@@ -122,7 +122,10 @@ macro_rules! host_main {
             capture(name, &dir);
 
             if std::env::var("SCREENSHOT_ONLY").as_deref() == Ok("1") {
-                return;
+                // Skip Rust destructors — LVGL's internal state (timers,
+                // display refresh) can race with lv_obj_delete during
+                // Drop, causing intermittent SIGSEGV on exit.
+                std::process::exit(0);
             }
 
             run_host_loop();

@@ -45,4 +45,28 @@ impl<'p> Image<'p> {
             })
         }
     }
+
+    /// Set the image source from a compiled image descriptor.
+    ///
+    /// The descriptor is typically produced by `oxivgl-build::image_asset()`
+    /// and declared via [`image_declare!`](crate::image_declare).
+    ///
+    /// # Example
+    ///
+    /// ```ignore
+    /// oxivgl::image_declare!(my_icon);
+    /// let img = Image::new(&screen)?;
+    /// img.set_src(unsafe { &my_icon });
+    /// ```
+    pub fn set_src(&self, dsc: &lv_image_dsc_t) -> &Self {
+        // SAFETY: handle non-null (from Image::new); dsc points to valid
+        // static lv_image_dsc_t produced by LVGLImage.py + cc.
+        unsafe {
+            lv_image_set_src(
+                self.obj.handle(),
+                dsc as *const lv_image_dsc_t as *const core::ffi::c_void,
+            )
+        };
+        self
+    }
 }

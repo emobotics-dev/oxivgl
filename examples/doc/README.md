@@ -5,6 +5,29 @@ LVGL example screens ported from the [LVGL docs](https://docs.lvgl.io/9.3/exampl
 Each example is a self-contained file with a `View` impl and a cfg-gated
 runner (`example_main!` macro selects host SDL2 or ESP32 fire27 backend).
 
+## Contents
+
+- [Getting Started](#getting-started)
+- [Styles](#styles)
+- [Animations](#animations)
+- [Events](#events)
+- [Layouts — Flex](#layouts--flex)
+- [Layouts — Grid](#layouts--grid)
+- [Scrolling](#scrolling)
+- [Widgets — Base Object](#widgets--base-object)
+- [Widgets — Animation Image](#widgets--animation-image)
+- [Widgets — Arc](#widgets--arc)
+- [Widgets — Image](#widgets--image)
+- [Widgets — Bar](#widgets--bar)
+- [Widgets — Button](#widgets--button)
+- [Widgets — Checkbox](#widgets--checkbox)
+- [Widgets — Dropdown](#widgets--dropdown)
+- [Widgets — Label](#widgets--label)
+- [Widgets — LED](#widgets--led)
+- [Widgets — Roller](#widgets--roller)
+- [Widgets — Slider](#widgets--slider)
+- [Running](#running)
+
 ## Getting Started
 
 ### Example 1 — Hello World
@@ -64,6 +87,12 @@ Centered object with blue outline and 8px padding around it.
 Centered object with a large blue drop shadow.
 
 ![style5](screenshots/style5.png)
+
+### Style 6 — Image Style Properties
+
+Cogwheel image rotated 30°, blue recolor tint on grey background with blue border.
+
+![style6](screenshots/style6.png)
 
 ### Style 7 — Arc
 
@@ -134,7 +163,6 @@ Four buttons: simple horizontal, simple vertical, complex linear, complex radial
 
 ### Skipped
 
-- **Style 6** — Image recolor/rotation (needs C image asset `img_cogwheel_argb`)
 - **Style 14** — Extend theme (needs `LV_USE_PRIVATE_API`)
 - **Style 19** — Modal overlay (meta-example, benchmarking)
 
@@ -312,16 +340,21 @@ Two base objects: a plain one and one with a blue shadow style.
 
 ![widget_obj1](screenshots/widget_obj1.png)
 
+### Widget Obj 3 — Matrix Transform Animation
+
+Centered object with animated scale + rotation via 3×3 matrix transform.
+
+![widget_obj3](screenshots/widget_obj3.png)
+
 ### Skipped
 
 - **Widget Obj 2** — Draggable object (needs `lv_indev_active`, `lv_indev_get_vect` APIs)
-- **Widget Obj 3** — 3D matrix transform (needs `lv_obj_set_style_transform_*` matrix APIs)
 
 ## Widgets — Animation Image
 
 ### Skipped
 
-- **Widget AnimImg 1** — Animated image frames (needs C image assets `animimg001`/`002`/`003`)
+- **Widget AnimImg 1** — Animated image frames (needs `AnimImg` wrapper)
 
 ## Widgets — Arc
 
@@ -337,6 +370,14 @@ Arc with VALUE_CHANGED event; a label follows the arc's knob angle via
 Full-circle arc animating 0→100 in 1 s (infinite repeat, 500 ms delay). Knob hidden, not clickable.
 
 ![widget_arc2](screenshots/widget_arc2.png)
+
+## Widgets — Image
+
+### Widget Image 1 — Basic Image Display
+
+Centered cogwheel image from compiled PNG asset.
+
+![image1](screenshots/image1.png)
 
 ## Widgets — Bar
 
@@ -358,15 +399,17 @@ Vertical bar with red-to-blue gradient indicator, animated between -20 and 40 (3
 
 ![widget_bar3](screenshots/widget_bar3.png)
 
+### Widget Bar 4 — Stripe Pattern
+
+Range-mode bar with tiled stripe background image on the indicator at 30% opacity.
+
+![widget_bar4](screenshots/widget_bar4.png)
+
 ### Widget Bar 5 — LTR vs RTL Bars
 
 Two bars: one left-to-right (default), one right-to-left, with labels.
 
 ![widget_bar5](screenshots/widget_bar5.png)
-
-### Skipped
-
-- **Widget Bar 4** — Stripe pattern (needs `lv_draw_mask_line_param_cfg_t`, draw mask APIs)
 
 ## Widgets — Button
 

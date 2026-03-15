@@ -237,7 +237,7 @@ fn obj_style_selectors() {
 fn obj_style_transform() {
     let screen = fresh_screen();
     let obj = Obj::new(&screen).unwrap();
-    obj.size(100, 100);
+    obj.size(100, 100).center();
     obj.style_transform_rotation(450, Selector::DEFAULT); // 45.0 degrees
     obj.style_transform_scale(512, Selector::DEFAULT); // 2.0x
     obj.style_transform_pivot_x(50, Selector::DEFAULT);
