@@ -8,26 +8,25 @@
 
 extern crate alloc;
 
-use alloc::boxed::Box;
 use oxivgl::{
     view::View,
     widgets::{
         palette_lighten, palette_main, BorderSide, Obj, Palette, Screen, Selector, Style,
-        WidgetError,
+        StyleBuilder, WidgetError,
     },
 };
 
 struct Style3 {
     _obj: Obj<'static>,
-    _style: Box<Style>,
+    _style: Style,
 }
 
 impl View for Style3 {
     fn create() -> Result<Self, WidgetError> {
         let screen = Screen::active().ok_or(WidgetError::LvglNullPointer)?;
 
-        let mut style = Box::new(Style::new());
-        style
+        let mut builder = StyleBuilder::new();
+        builder
             .radius(10)
             .bg_opa(255)
             .bg_color(palette_lighten(Palette::Grey, 1))
@@ -35,6 +34,7 @@ impl View for Style3 {
             .border_width(5)
             .border_opa(127)
             .border_side(BorderSide::BOTTOM | BorderSide::RIGHT);
+        let style = builder.build();
 
         let obj = Obj::new(&screen)?;
         obj.add_style(&style, Selector::DEFAULT);

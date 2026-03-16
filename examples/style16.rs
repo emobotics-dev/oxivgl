@@ -6,21 +6,17 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
 //! Style 16 — Conical gradient (metallic knob)
 
-extern crate alloc;
-
-use alloc::boxed::Box;
 use oxivgl::{
     view::View,
     widgets::{
         color_black, color_make, lv_pct, GradDsc, GradExtend, Obj, Screen, Selector, Style,
-        WidgetError,
+        StyleBuilder, WidgetError,
     },
 };
 
 struct Style16 {
     _obj: Obj<'static>,
-    _style: Box<Style>,
-    _grad: Box<GradDsc>,
+    _style: Style,
 }
 
 impl View for Style16 {
@@ -38,7 +34,7 @@ impl View for Style16 {
             color_make(0xe8, 0xe8, 0xe8),
         ];
 
-        let mut grad = Box::new(GradDsc::new());
+        let mut grad = GradDsc::new();
         grad.init_stops(&colors, &[], &[]).conical(
             lv_pct(50),
             lv_pct(50),
@@ -47,7 +43,7 @@ impl View for Style16 {
             GradExtend::Reflect,
         );
 
-        let mut style = Box::new(Style::new());
+        let mut style = StyleBuilder::new();
         style
             .radius(500)
             .bg_opa(255)
@@ -56,7 +52,8 @@ impl View for Style16 {
             .shadow_offset_x(20)
             .shadow_offset_y(20)
             .shadow_opa(127)
-            .bg_grad(&grad);
+            .bg_grad(grad);
+        let style = style.build();
 
         let obj = Obj::new(&screen)?;
         obj.add_style(&style, Selector::DEFAULT);
@@ -66,7 +63,6 @@ impl View for Style16 {
         Ok(Self {
             _obj: obj,
             _style: style,
-            _grad: grad,
         })
     }
 

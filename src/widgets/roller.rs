@@ -68,20 +68,32 @@ impl<'p> Roller<'p> {
 
     /// Set roller options as newline-separated string.
     pub fn set_options(&self, opts: &str, mode: RollerMode) -> &Self {
-        assert_ne!(self.obj.handle(), null_mut(), "Roller handle cannot be null");
+        assert_ne!(
+            self.obj.handle(),
+            null_mut(),
+            "Roller handle cannot be null"
+        );
         let mut buf = Vec::with_capacity(opts.len() + 1);
         buf.extend_from_slice(opts.as_bytes());
         buf.push(0);
         // SAFETY: handle non-null; buf NUL-terminated. LVGL copies internally.
         unsafe {
-            lv_roller_set_options(self.obj.handle(), buf.as_ptr() as *const c_char, mode as u32)
+            lv_roller_set_options(
+                self.obj.handle(),
+                buf.as_ptr() as *const c_char,
+                mode as u32,
+            )
         };
         self
     }
 
     /// Set the number of visible rows.
     pub fn set_visible_row_count(&self, rows: u32) -> &Self {
-        assert_ne!(self.obj.handle(), null_mut(), "Roller handle cannot be null");
+        assert_ne!(
+            self.obj.handle(),
+            null_mut(),
+            "Roller handle cannot be null"
+        );
         // SAFETY: handle non-null (asserted above).
         unsafe { lv_roller_set_visible_row_count(self.obj.handle(), rows) };
         self
@@ -89,7 +101,11 @@ impl<'p> Roller<'p> {
 
     /// Set the selected item (0-based index).
     pub fn set_selected(&self, idx: u32, anim: bool) -> &Self {
-        assert_ne!(self.obj.handle(), null_mut(), "Roller handle cannot be null");
+        assert_ne!(
+            self.obj.handle(),
+            null_mut(),
+            "Roller handle cannot be null"
+        );
         // SAFETY: handle non-null (asserted above).
         unsafe { lv_roller_set_selected(self.obj.handle(), idx, anim) };
         self
@@ -97,7 +113,11 @@ impl<'p> Roller<'p> {
 
     /// Get the currently selected item index.
     pub fn get_selected(&self) -> u32 {
-        assert_ne!(self.obj.handle(), null_mut(), "Roller handle cannot be null");
+        assert_ne!(
+            self.obj.handle(),
+            null_mut(),
+            "Roller handle cannot be null"
+        );
         // SAFETY: handle non-null (asserted above).
         unsafe { lv_roller_get_selected(self.obj.handle()) }
     }

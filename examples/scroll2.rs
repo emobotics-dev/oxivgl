@@ -12,8 +12,8 @@
 use oxivgl::{
     view::View,
     widgets::{
-        Align, Button, Event, EventCode, FlexFlow, Label, Obj, ObjFlag, Screen, ScrollSnap,
-        Switch, WidgetError,
+        Align, Button, Event, EventCode, FlexFlow, Label, Obj, ObjFlag, Screen, ScrollSnap, Switch,
+        WidgetError,
     },
 };
 
@@ -66,7 +66,9 @@ impl View for Scroll2 {
         sw.bubble_events();
 
         let sw_label = Label::new(&screen)?;
-        sw_label.text("One scroll").align_to(&sw, Align::OutBottomMid, 0, 5);
+        sw_label
+            .text("One scroll")
+            .align_to(&sw, Align::OutBottomMid, 0, 5);
         let _ = labels.push(sw_label);
 
         Ok(Self {

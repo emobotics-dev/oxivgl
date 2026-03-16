@@ -9,8 +9,8 @@
 use oxivgl::{
     view::View,
     widgets::{
-        FlexAlign, FlexFlow, Label, Layout, Obj, ObjFlag, Screen, Selector, Style, WidgetError,
-        LV_SIZE_CONTENT,
+        FlexAlign, FlexFlow, Label, Layout, Obj, ObjFlag, Screen, Selector, Style, StyleBuilder,
+        WidgetError, LV_SIZE_CONTENT,
     },
 };
 
@@ -25,11 +25,12 @@ impl View for Flex2 {
     fn create() -> Result<Self, WidgetError> {
         let screen = Screen::active().ok_or(WidgetError::LvglNullPointer)?;
 
-        let mut style = Style::new();
+        let mut style = StyleBuilder::new();
         style
             .flex_flow(FlexFlow::RowWrap)
             .flex_main_place(FlexAlign::SpaceEvenly)
             .layout(Layout::Flex);
+        let style = style.build();
 
         let cont = Obj::new(&screen)?;
         cont.size(300, 220).center();

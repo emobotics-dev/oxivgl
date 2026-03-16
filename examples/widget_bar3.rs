@@ -9,35 +9,30 @@
 //! Vertical bar with red-to-blue gradient indicator, animated between
 //! -20 and 40 (3 s each direction, infinite repeat).
 
-extern crate alloc;
-
-use alloc::boxed::Box;
 use oxivgl::{
     view::View,
     widgets::{
-        anim_set_bar_value, palette_main, Anim, Bar, Palette, Part, Style, Screen,
-        WidgetError, ANIM_REPEAT_INFINITE,
+        anim_set_bar_value, palette_main, Anim, Bar, GradDir, Palette, Part, Screen, Style,
+        StyleBuilder, WidgetError, ANIM_REPEAT_INFINITE,
     },
 };
 
-use oxivgl::widgets::GradDir;
-
 struct WidgetBar3 {
     _bar: Bar<'static>,
-    _style_indic: Box<Style>,
-    _anim: Anim,
+    _style_indic: Style,
 }
 
 impl View for WidgetBar3 {
     fn create() -> Result<Self, WidgetError> {
         let screen = Screen::active().ok_or(WidgetError::LvglNullPointer)?;
 
-        let mut style_indic = Box::new(Style::new());
+        let mut style_indic = StyleBuilder::new();
         style_indic
             .bg_opa(255)
             .bg_color(palette_main(Palette::Red))
             .bg_grad_color(palette_main(Palette::Blue))
             .bg_grad_dir(GradDir::Ver);
+        let style_indic = style_indic.build();
 
         let bar = Bar::new(&screen)?;
         bar.add_style(&style_indic, Part::Indicator);
@@ -56,7 +51,6 @@ impl View for WidgetBar3 {
         Ok(Self {
             _bar: bar,
             _style_indic: style_indic,
-            _anim: anim,
         })
     }
 

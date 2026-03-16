@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
-use core::{ffi::c_void, marker::PhantomData, ptr::null_mut};
+use alloc::vec::Vec;
+use core::{cell::RefCell, ffi::c_void, marker::PhantomData, ptr::null_mut};
 
 use lvgl_rust_sys::*;
 
@@ -230,6 +231,7 @@ pub trait AsLvHandle {
 /// ```
 pub struct Obj<'p> {
     handle: *mut lv_obj_t,
+    pub(super) _styles: RefCell<Vec<super::Style>>,
     _parent: PhantomData<&'p lv_obj_t>,
 }
 
@@ -242,8 +244,12 @@ impl<'p> core::fmt::Debug for Obj<'p> {
 impl<'p> Drop for Obj<'p> {
     fn drop(&mut self) {
         if !self.handle.is_null() {
-            // SAFETY: handle non-null (checked); Obj is non-Clone, so this is the unique
-            // owner.
+            // SAFETY: handle non-null; Obj is non-Clone so this is the unique owner.
+            // lv_obj_delete (LVGL v9.3, lv_obj.c) calls lv_obj_remove_style_all
+            // (lv_obj.c:521) and lv_anim_delete(obj, NULL) (lv_obj.c:525) internally,
+            // so all style and animation back-references are cleared before Rust
+            // drops _styles and any live Anim.
+            // Re-verify these call sites when upgrading LVGL.
             unsafe { lv_obj_delete(self.handle) };
         }
     }
@@ -272,6 +278,7 @@ impl<'p> Obj<'p> {
     pub fn from_raw(ptr: *mut lv_obj_t) -> Self {
         Obj {
             handle: ptr,
+            _styles: RefCell::new(Vec::new()),
             _parent: PhantomData,
         }
     }
@@ -372,7 +379,7 @@ impl<'p> Obj<'p> {
     /// **Safe only when the display uses a full-screen buffer** (host) or
     /// the transformed bounding box fits entirely within a single render
     /// band (very small objects). For embedded targets with partial
-    /// rendering, prefer [`Style::transform_rotation`] — it allocates an
+    /// rendering, prefer [`super::StyleBuilder::transform_rotation`] — it allocates an
     /// intermediate layer but handles band clipping correctly.
     pub fn set_transform(&self, matrix: &Matrix) -> &Self {
         assert_ne!(self.handle, null_mut(), "Obj handle cannot be null");

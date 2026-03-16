@@ -11,9 +11,7 @@
 
 use oxivgl::{
     view::View,
-    widgets::{
-        Align, Button, Event, EventCode, Label, Obj, Screen, WidgetError,
-    },
+    widgets::{Align, Button, Event, EventCode, Label, Obj, Screen, WidgetError},
 };
 
 struct Scroll1 {

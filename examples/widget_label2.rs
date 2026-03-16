@@ -9,29 +9,25 @@
 //! Fake shadow effect: identical text rendered twice, offset by 2 pixels,
 //! with reduced opacity for the shadow layer.
 
-extern crate alloc;
-
-use alloc::boxed::Box;
 use oxivgl::{
     view::View,
-    widgets::{
-        color_black, Align, Label, Screen, Selector, Style, WidgetError,
-    },
+    widgets::{color_black, Align, Label, Screen, Selector, Style, StyleBuilder, WidgetError},
 };
 
 struct WidgetLabel2 {
     _shadow_label: Label<'static>,
     _main_label: Label<'static>,
-    _style_shadow: Box<Style>,
+    _style_shadow: Style,
 }
 
 impl View for WidgetLabel2 {
     fn create() -> Result<Self, WidgetError> {
         let screen = Screen::active().ok_or(WidgetError::LvglNullPointer)?;
 
-        let mut style_shadow = Box::new(Style::new());
+        let mut style_shadow = StyleBuilder::new();
         style_shadow.text_opa(76); // ~LV_OPA_30
         style_shadow.text_color(color_black());
+        let style_shadow = style_shadow.build();
 
         let shadow_label = Label::new(&screen)?;
         shadow_label.add_style(&style_shadow, Selector::DEFAULT);

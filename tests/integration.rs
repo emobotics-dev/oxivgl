@@ -11,8 +11,8 @@ use oxivgl::{
     lvgl::LvglDriver,
     widgets::{
         Align, Arc, AsLvHandle, Bar, Button, FlexAlign, FlexFlow, GridAlign, GridCell, Label,
-        Layout, Led, Line, Obj, ObjFlag, ObjState, Opa, Palette, Screen, Selector, Slider, Style,
-        Switch, ValueLabel, WidgetError, GRID_TEMPLATE_LAST, RADIUS_MAX,
+        Layout, Led, Line, Obj, ObjFlag, ObjState, Opa, Palette, Screen, Selector, Slider,
+        StyleBuilder, Switch, ValueLabel, WidgetError, GRID_TEMPLATE_LAST, RADIUS_MAX,
     },
 };
 
@@ -248,7 +248,7 @@ fn obj_style_transform() {
 #[test]
 fn obj_style_add_remove() {
     let screen = fresh_screen();
-    let style = Style::new();
+    let style = StyleBuilder::new().build();
     let obj = Obj::new(&screen).unwrap();
     obj.add_style(&style, Selector::DEFAULT);
     obj.remove_style_all();
@@ -259,10 +259,7 @@ fn obj_style_add_remove() {
 fn obj_style_grad_dir() {
     let screen = fresh_screen();
     let obj = Obj::new(&screen).unwrap();
-    obj.style_bg_grad_dir(
-        oxivgl::widgets::GradDir::Hor,
-        Selector::DEFAULT,
-    );
+    obj.style_bg_grad_dir(oxivgl::widgets::GradDir::Hor, Selector::DEFAULT);
     obj.style_bg_grad_color(
         oxivgl::widgets::palette_main(Palette::Red),
         Selector::DEFAULT,
@@ -299,13 +296,14 @@ fn obj_style_text_align() {
 #[test]
 fn style_create_and_apply() {
     let screen = fresh_screen();
-    let mut style = Style::new();
-    style.bg_color_hex(0x0000FF);
-    style.bg_opa(Opa::COVER.0);
-    style.radius(5);
-    style.border_width(2);
-    style.border_color_hex(0xFF0000);
-    style.pad_all(10);
+    let mut sb = StyleBuilder::new();
+    sb.bg_color_hex(0x0000FF)
+        .bg_opa(Opa::COVER.0)
+        .radius(5)
+        .border_width(2)
+        .border_color_hex(0xFF0000)
+        .pad_all(10);
+    let style = sb.build();
 
     let obj = Obj::new(&screen).unwrap();
     obj.add_style(&style, Selector::DEFAULT);
