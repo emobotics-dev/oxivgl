@@ -6,7 +6,7 @@
 
 # oxivgl
 
-Safe Rust bindings for [LVGL](https://lvgl.io/) on embedded (`no_std`) and host (`std`/SDL2) targets. Wraps all unsafe LVGL calls behind type-safe APIs — user code never touches `unsafe` or `lvgl_rust_sys` directly.
+Safe Rust bindings for [LVGL](https://github.com/lvgl/lvgl) on embedded (`no_std`) and host (`std`/SDL2) targets. Wraps all unsafe LVGL calls behind type-safe APIs — user code never touches `unsafe` or `lvgl_rust_sys` directly.
 
 Built for AI-generated UIs: Rust's type system and borrow checker catch mistakes at compile time that would silently corrupt memory in C. When an AI agent generates widget code, the compiler enforces correct parent-child relationships, valid enum values, and proper resource lifetimes — turning runtime crashes into compile errors. Our vision is that AI agents become the primary users of this crate, generating embedded GUIs from high-level descriptions.
 
@@ -25,17 +25,30 @@ LVGL's widget tree, layout engine, and style system are pure C — platform-inde
 
 LVGL is compiled from source with a project-specific `lv_conf.h`. Key settings:
 
-| Setting | Value | Why |
-|---------|-------|-----|
-| `LV_COLOR_DEPTH` | 16 (RGB565) | Matches SPI TFT panel and DMA buffer format |
+| Setting | Value | Why                                          |
+|---------|-------|----------------------------------------------|
+| `LV_COLOR_DEPTH` | 16 (RGB565) | Matches SPI TFT panel and DMA buffer format  |
 | `LV_DPI_DEF` | 130 | LVGL default; matches Montserrat font metrics |
 | `LV_DEF_REFR_PERIOD` | 32 ms | ~30 fps, balances smoothness vs CPU on ESP32 |
-| `LV_USE_FONT_MONTSERRAT_14` | 1 | Default font (LVGL default) |
-| `LV_USE_SDL` | 1 (host) / 0 (ESP32) | SDL2 display driver for host development |
-| `LV_USE_SNAPSHOT` | 1 (host) | Screenshot capture for visual regression |
-| `LV_USE_OS` | `LV_OS_NONE` | Single-threaded; no RTOS mutex overhead |
+| `LV_USE_FONT_MONTSERRAT_14` | 1 | Default font (LVGL default)                  |
+| `LV_USE_SDL` | 1 (host) / 0 (ESP32) | SDL2 display driver for host development     |
+| `LV_USE_SNAPSHOT` | 1 (host) | Screenshot capture for visual regression     |
+| `LV_USE_OS` | `LV_OS_NONE` | Single-threaded; no RTOS mutex overhead      |
 
 Only widgets actually used are enabled (`LV_USE_<WIDGET> 1`) to minimize binary size on embedded. Adding a new widget requires enabling it here first.
+
+## Memory Safety Across the FFI Boundary
+
+LVGL is a C library that stores raw pointers to styles, image descriptors, point arrays, and callback data — with no built-in ownership tracking. The [official Rust wrapper](https://github.com/lvgl/lv_binding_rust) (`lv_binding_rust`) has known soundness gaps — wrong lifetimes on widget constructors that allow dangling pointers ([#166](https://github.com/lvgl/lv_binding_rust/issues/166)), SIGSEGV on basic SDL init ([#180](https://github.com/lvgl/lv_binding_rust/issues/180)), and is stuck on LVGL v8 with no active maintenance ([#201](https://github.com/lvgl/lv_binding_rust/issues/201)).
+
+oxivgl solves this with a **compile-time ownership model** documented in [`docs/spec-memory-lifetime.md`](docs/spec-memory-lifetime.md):
+
+- **Two-phase style system** — `StyleBuilder` (mutable, stack-local) → `Style` (immutable, `Rc<StyleInner>`). Sub-descriptors (gradients, transitions, color filters) are moved into the style by value and freed in the correct order via `Drop`.
+- **`'static` enforcement** — APIs where LVGL stores a raw pointer (`Image::set_src`, `Line::set_points`, `Dropdown::set_symbol`, `StyleBuilder::bg_image_src`, `TransitionDsc::new`) require `'static` references. Non-`'static` data is rejected at compile time.
+- **Rc-based style sharing** — `Obj::add_style` clones the `Rc` *before* passing the pointer to LVGL. The `lv_style_t` remains valid as long as any widget or user code holds a clone. `Obj::drop` calls `lv_obj_delete` (which internally removes all styles) before Rust drops the `_styles` Vec.
+- **Lifetime-tied animations** — `Anim<'w>` uses `PhantomData<&'w ()>` to tie the animation descriptor to the target widget's lifetime. After `start()`, LVGL owns a copy; the widget's deletion auto-cancels the animation.
+
+These guarantees are verified by [integration tests](#testing) that exercise style-drop-before-widget, widget-drop-with-styles-applied, shared-style-across-widgets, and explicit remove-then-drop sequences.
 
 ## API Philosophy
 
@@ -47,28 +60,7 @@ Only widgets actually used are enabled (`LV_USE_<WIDGET> 1`) to minimize binary 
 
 ## Architecture
 
-```
-  examples/*.rs / consumer crate
-  (implements View trait)
-          │
-          ▼
-  oxivgl::view::run_lvgl::<V: View>()
-  ├── LvglDriver::init()          — tick source, log bridge
-  ├── lvgl_disp_init()            — display + DMA buffers, flush_cb
-  ├── V::create()                 — build widget tree
-  ├── register_view_events()      — safe event dispatch via on_event()
-  └── loop: V::update() + lv_timer_handler()
-```
-
-## Modules
-
-| Module | Purpose |
-|--------|---------|
-| `view` | `View` trait (`create`/`update`/`on_event`/`register_events`) + `run_lvgl::<V>()` |
-| `widgets` | Type-safe wrappers: `Obj`, `Screen`, `Label`, `Button`, `Slider`, `Switch`, `Arc`, `Bar`, `Scale`, `Led`, `Line`, `Image`, `ValueLabel`, `Style`, `Anim`, `AnimTimeline`, `Event`, `GradDsc`, `ScaleBuilder`, `GridCell`, `Selector` |
-| `lvgl` | `LvglDriver`: init tick source + log forwarding |
-| `lvgl_buffers` | `DisplayOutput` trait; DMA frame buffer; `flush_frame_buffer` task |
-| `fonts` | `Font` type + built-in Montserrat fonts |
+![Architecture](docs/architecture.svg)
 
 ## Key Types
 
@@ -81,44 +73,48 @@ pub trait View: Sized {
 }
 ```
 
-## Examples
+## Example-Driven Development
 
-Self-contained examples in `examples/*.rs` — each implements `View` + uses the `example_main!` macro. Run on host via SDL2 or flash to ESP32.
+Every new LVGL feature is implemented by porting the corresponding [LVGL docs example](https://docs.lvgl.io/9.3/examples.html) first. This ensures the wrapper API is ergonomic for real use cases, not just theoretically correct. Examples serve as both documentation and visual regression tests — screenshots are auto-captured and compared against the LVGL reference.
 
-| Chapter | Examples |
-|---------|----------|
-| Getting Started | `getting_started{1-4}` — label, button, slider event, style intro |
-| Styles | `style{1-18}` — backgrounds, borders, shadows, transforms, transitions, gradients |
-| Animations | `anim1` (switch event), `anim2` (playback), `anim_timeline1` (timeline) |
-| Events | `event_click`, `event_button`, `event_bubble`, `event_trickle` |
-| Layouts | `flex{1-6}` (flexbox), `grid{1-6}` (grid) |
+70+ examples covering getting started, styles, animations, events, layouts, scrolling, and individual widgets. Each is a self-contained `View` impl + `example_main!` macro — runs on host SDL2 or ESP32 with zero code changes.
+
+See the full gallery with screenshots: **[`examples/doc/README.md`](examples/doc/README.md)**
 
 ```sh
-# Run example on host (SDL2 viewer):
+# Interactive SDL2 window:
 ./run_host.sh getting_started1
+
+# Headless screenshot (no window):
+./run_host.sh -s getting_started1
+
+# Screenshot all examples:
+./run_host.sh -s
 
 # Flash to ESP32:
 ./run_fire27.sh event_trickle
-
-# Capture all screenshots:
-./run_screenshots.sh
 ```
 
 ## Testing
 
+175 automated tests across three tiers — all run on host without hardware:
+
+| Tier | Count | What it covers |
+|------|-------|----------------|
+| **Unit** | 41 | Pure logic — enums, value mapping, style bitflags, grid helpers |
+| **Integration** | 99 | Full LVGL instance — widget lifecycle, style add/remove/drop ordering, layout, events, every widget type |
+| **Leak detection** | 25 | Global heap tracking via `mallinfo2()` — catches leaks in both Rust and LVGL's C code across the FFI boundary |
+| **Visual** | 70+ | Screenshot capture + comparison against LVGL reference docs |
+
 ```sh
-# Unit tests (pure logic — enums, value mapping, style bitflags):
-LIBCLANG_PATH=/usr/lib64 cargo +nightly test --target x86_64-unknown-linux-gnu
-
-# Integration tests (headless LVGL — widget creation, state, layout):
-SDL_VIDEODRIVER=dummy LIBCLANG_PATH=/usr/lib64 cargo +nightly test \
-  --test integration --target x86_64-unknown-linux-gnu -- --test-threads=1
-
-# Visual regression (screenshot comparison):
-./run_screenshots.sh
+./run_tests.sh all          # unit + integration + leak (< 5 seconds)
+./run_tests.sh unit         # unit + doctests
+./run_tests.sh int          # integration (headless LVGL)
+./run_tests.sh leak         # memory leak detection
+./run_host.sh -s            # visual — screenshot all examples
 ```
 
-Integration tests run against a real LVGL instance with the SDL2 dummy driver (no display needed). Tests are sequential (`--test-threads=1`) because LVGL is single-threaded.
+Integration and leak tests run against a real LVGL instance with `SDL_VIDEODRIVER=dummy` (no display server needed). Sequential execution (`--test-threads=1`) because LVGL is single-threaded. CI runs both host tests and ESP32 firmware builds on every push.
 
 ## Features
 
