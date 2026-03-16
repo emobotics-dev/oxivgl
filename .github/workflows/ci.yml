@@ -47,7 +47,7 @@ jobs:
             "https://github.com/emobotics-dev/oxivgl/"
 
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           submodules: recursive
 
@@ -64,9 +64,6 @@ jobs:
         run: |
           SDL_VIDEODRIVER=dummy cargo +nightly test --test integration \
             --target x86_64-unknown-linux-gnu -- --test-threads=1
-
-      - name: Install cargo-llvm-cov
-        run: cargo +nightly install cargo-llvm-cov --locked
 
       - name: Measure coverage (unit + integration)
         id: coverage
@@ -119,7 +116,7 @@ jobs:
             "https://github.com/emobotics-dev/oxivgl/"
 
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           submodules: recursive
 
