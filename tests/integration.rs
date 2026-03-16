@@ -10,9 +10,10 @@ use oxivgl::{
     fonts::MONTSERRAT_12,
     lvgl::LvglDriver,
     widgets::{
-        Align, Arc, AsLvHandle, Bar, Button, FlexAlign, FlexFlow, GridAlign, GridCell, Label,
-        Layout, Led, Line, Obj, ObjFlag, ObjState, Opa, Palette, Screen, Selector, Slider,
-        StyleBuilder, Switch, ValueLabel, WidgetError, GRID_TEMPLATE_LAST, RADIUS_MAX,
+        anim_path_linear, props, Align, Arc, AsLvHandle, Bar, Button, Dropdown, FlexAlign,
+        FlexFlow, GridAlign, GridCell, Image, Label, Layout, Led, Line, Obj, ObjFlag, ObjState,
+        Opa, Palette, Screen, Selector, Slider, StyleBuilder, Switch, TransitionDsc,
+        ValueLabel, WidgetError, GRID_TEMPLATE_LAST, RADIUS_MAX,
     },
 };
 
@@ -757,4 +758,141 @@ fn widget_error_format_error() {
     let err = WidgetError::FormatError(core::fmt::Error);
     let msg = format!("{err}");
     assert!(!msg.is_empty());
+}
+
+// ── Image ────────────────────────────────────────────────────────────────────
+
+oxivgl::image_declare!(img_cogwheel_argb);
+
+#[test]
+fn image_set_src_static() {
+    let screen = fresh_screen();
+    let img = Image::new(&screen).unwrap();
+    // SAFETY: img_cogwheel_argb is a static C symbol compiled by build.rs.
+    img.set_src(unsafe { &img_cogwheel_argb });
+    pump();
+    assert!(img.get_width() > 0, "image should have non-zero width");
+}
+
+// ── StyleBuilder::bg_image_src ───────────────────────────────────────────────
+
+oxivgl::image_declare!(img_skew_strip);
+
+#[test]
+fn style_bg_image_src_static() {
+    let screen = fresh_screen();
+    let mut sb = StyleBuilder::new();
+    // SAFETY: img_skew_strip is a static C symbol compiled by build.rs.
+    sb.bg_image_src(unsafe { &img_skew_strip })
+        .bg_image_tiled(true)
+        .bg_image_opa(128);
+    let style = sb.build();
+    let obj = Obj::new(&screen).unwrap();
+    obj.add_style(&style, Selector::DEFAULT);
+    obj.size(200, 50);
+    pump();
+}
+
+// ── Dropdown ─────────────────────────────────────────────────────────────────
+
+#[test]
+fn dropdown_set_symbol_static() {
+    let screen = fresh_screen();
+    let dd = Dropdown::new(&screen).unwrap();
+    dd.set_options("A\nB\nC");
+    dd.set_symbol(c"▼");
+    pump();
+}
+
+// ── Style transition ─────────────────────────────────────────────────────────
+
+static TRANS_PROPS: [props::lv_style_prop_t; 3] = [props::BG_COLOR, props::BG_OPA, props::LAST];
+
+#[test]
+fn style_with_transition() {
+    let screen = fresh_screen();
+    let trans = TransitionDsc::new(&TRANS_PROPS, Some(anim_path_linear), 200, 0);
+    let mut sb = StyleBuilder::new();
+    sb.bg_color_hex(0xFF0000).bg_opa(255).transition(trans);
+    let style = sb.build();
+    let obj = Obj::new(&screen).unwrap();
+    obj.add_style(&style, Selector::DEFAULT);
+    pump();
+}
+
+// ── Style drop ordering (spec §4.7, §5.5) ───────────────────────────────────
+
+#[test]
+fn style_drop_before_widget() {
+    // Style dropped while widget still references it — Rc clone in widget's
+    // _styles keeps StyleInner alive until widget drops.
+    let screen = fresh_screen();
+    let mut sb = StyleBuilder::new();
+    sb.bg_color_hex(0x00FF00).bg_opa(255).radius(5);
+    let style = sb.build();
+    let obj = Obj::new(&screen).unwrap();
+    obj.add_style(&style, Selector::DEFAULT);
+    pump();
+    // Drop the user's Style handle; widget's internal clone keeps it alive.
+    drop(style);
+    pump(); // LVGL renders with style still valid via Rc clone.
+    drop(obj); // Widget drop → lv_obj_delete → lv_obj_remove_style_all; then Rc hits 0.
+    pump();
+}
+
+#[test]
+fn add_style_then_drop_widget() {
+    // Spec §5.5: "An integration test SHALL exercise the add-style-then-drop-widget path."
+    // Widget dropped while styles are still applied. lv_obj_delete internally
+    // calls lv_obj_remove_style_all (lv_obj.c:521), clearing LVGL-side refs
+    // before Rust drops the _styles Vec.
+    let screen = fresh_screen();
+    let mut sb = StyleBuilder::new();
+    sb.bg_color_hex(0x0000FF)
+        .bg_opa(200)
+        .border_width(2)
+        .border_color_hex(0xFF0000);
+    let style = sb.build();
+    let obj = Obj::new(&screen).unwrap();
+    obj.add_style(&style, Selector::DEFAULT);
+    pump();
+    drop(obj); // Widget drop cleans up LVGL refs, then Rust drops _styles.
+    pump();
+    // style still valid here (Rc refcount back to 1), no UAF.
+    let _clone = style.clone();
+}
+
+#[test]
+fn style_shared_across_widgets() {
+    // Same Style (Rc) applied to multiple widgets. Dropping one widget must
+    // not affect the other.
+    let screen = fresh_screen();
+    let mut sb = StyleBuilder::new();
+    sb.bg_color_hex(0x123456).bg_opa(255);
+    let style = sb.build();
+    let obj1 = Obj::new(&screen).unwrap();
+    let obj2 = Obj::new(&screen).unwrap();
+    obj1.add_style(&style, Selector::DEFAULT);
+    obj2.add_style(&style, Selector::DEFAULT);
+    pump();
+    drop(obj1);
+    pump(); // obj2 still renders fine with the shared style.
+    assert!(obj2.get_width() > 0);
+}
+
+#[test]
+fn remove_style_then_drop() {
+    // Explicitly remove style from widget, then drop both. Tests that
+    // remove_style correctly decrements the _styles Vec entry.
+    let screen = fresh_screen();
+    let mut sb = StyleBuilder::new();
+    sb.bg_color_hex(0xABCDEF).bg_opa(128);
+    let style = sb.build();
+    let obj = Obj::new(&screen).unwrap();
+    obj.add_style(&style, Selector::DEFAULT);
+    pump();
+    obj.remove_style(Some(&style), Selector::DEFAULT);
+    pump();
+    drop(obj);
+    drop(style);
 }
