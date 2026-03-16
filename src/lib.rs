@@ -21,8 +21,12 @@ pub mod lvgl_buffers;
 pub mod anim;
 /// Style system: builders, selectors, themes, gradients, and color palettes.
 pub mod style;
+/// Safe wrapper around LVGL events.
+pub mod event;
 /// Universal convenience re-exports (`use oxivgl::prelude::*`).
 pub mod prelude;
+/// LVGL periodic timer with polling-based trigger detection.
+pub mod timer;
 /// View trait and LVGL render loop.
 pub mod view;
 /// Type-safe LVGL widget wrappers.
@@ -30,21 +34,33 @@ pub mod widgets;
 
 /// Declare an LVGL image asset compiled by `oxivgl-build`.
 ///
-/// Equivalent to LVGL's `LV_IMAGE_DECLARE`. Generates an `extern "C"` static
-/// binding to the `lv_image_dsc_t` symbol produced by `LVGLImage.py`.
+/// Equivalent to LVGL's `LV_IMAGE_DECLARE`. Generates a safe
+/// `&'static lv_image_dsc_t` reference from the `extern "C"` symbol
+/// produced by `LVGLImage.py`.
+///
+/// The generated function has the same name as the C symbol and returns
+/// `&'static lv_image_dsc_t`.
 ///
 /// # Example
 ///
 /// ```ignore
 /// oxivgl::image_declare!(img_cogwheel_argb);
-/// // Use: image.set_src(unsafe { &img_cogwheel_argb });
+/// let img = Image::new(&screen)?;
+/// img.set_src(img_cogwheel_argb());
 /// ```
 #[macro_export]
 macro_rules! image_declare {
     ($name:ident) => {
-        unsafe extern "C" {
-            #[allow(non_upper_case_globals)]
-            static $name: $crate::widgets::lv_image_dsc_t;
+        /// Returns `&'static lv_image_dsc_t` for the compiled image asset.
+        #[allow(non_snake_case)]
+        fn $name() -> &'static $crate::widgets::lv_image_dsc_t {
+            unsafe extern "C" {
+                #[allow(non_upper_case_globals)]
+                static $name: $crate::widgets::lv_image_dsc_t;
+            }
+            // SAFETY: the symbol is a valid lv_image_dsc_t compiled into the
+            // binary by oxivgl-build. It is 'static and immutable.
+            unsafe { &$name }
         }
     };
 }

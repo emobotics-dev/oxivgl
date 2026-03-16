@@ -30,6 +30,18 @@ impl<'p> Deref for Slider<'p> {
     }
 }
 
+/// Slider operating mode.
+#[repr(u32)]
+#[derive(Clone, Copy, Debug)]
+pub enum SliderMode {
+    /// Normal slider (single value).
+    Normal = lv_slider_mode_t_LV_SLIDER_MODE_NORMAL,
+    /// Symmetrical from center.
+    Symmetrical = lv_slider_mode_t_LV_SLIDER_MODE_SYMMETRICAL,
+    /// Range slider (two handles, start + end).
+    Range = lv_slider_mode_t_LV_SLIDER_MODE_RANGE,
+}
+
 impl<'p> Slider<'p> {
     /// Create a new slider widget.
     pub fn new(parent: &impl AsLvHandle) -> Result<Self, WidgetError> {
@@ -78,5 +90,40 @@ impl<'p> Slider<'p> {
         // SAFETY: handle non-null (asserted above).
         unsafe { lv_slider_set_value(self.obj.handle(), val, false) };
         self
+    }
+
+    /// Set slider mode (normal, symmetrical, or range).
+    pub fn set_mode(&self, mode: SliderMode) -> &Self {
+        assert_ne!(
+            self.obj.handle(),
+            null_mut(),
+            "Slider handle cannot be null"
+        );
+        // SAFETY: handle non-null (asserted above).
+        unsafe { lv_slider_set_mode(self.obj.handle(), mode as lv_slider_mode_t) };
+        self
+    }
+
+    /// Set the start value (left handle in range mode).
+    pub fn set_start_value(&self, val: i32) -> &Self {
+        assert_ne!(
+            self.obj.handle(),
+            null_mut(),
+            "Slider handle cannot be null"
+        );
+        // SAFETY: handle non-null (asserted above).
+        unsafe { lv_slider_set_start_value(self.obj.handle(), val, false) };
+        self
+    }
+
+    /// Get the left/start value (range mode).
+    pub fn get_left_value(&self) -> i32 {
+        assert_ne!(
+            self.obj.handle(),
+            null_mut(),
+            "Slider handle cannot be null"
+        );
+        // SAFETY: handle non-null (asserted above).
+        unsafe { lv_slider_get_left_value(self.obj.handle()) }
     }
 }

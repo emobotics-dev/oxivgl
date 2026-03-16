@@ -42,8 +42,7 @@ impl View for Style6 {
 
         let img = Image::new(&screen)?;
         img.add_style(&style, Selector::DEFAULT);
-        // SAFETY: img_cogwheel_argb is a static C symbol compiled by oxivgl-build
-        img.set_src(unsafe { &img_cogwheel_argb });
+        img.set_src(img_cogwheel_argb());
         img.center();
 
         Ok(Self {

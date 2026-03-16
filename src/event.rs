@@ -3,10 +3,7 @@
 
 use lvgl_rust_sys::*;
 
-use super::{
-    obj::{AsLvHandle, Obj},
-    EventCode,
-};
+use crate::widgets::{AsLvHandle, Child, EventCode, Obj};
 
 /// Safe wrapper around an LVGL event (`lv_event_t`).
 ///
@@ -35,8 +32,8 @@ impl Event {
 
     /// Non-owning reference to the event target widget.
     /// The returned `Obj` does NOT own the LVGL object — do not store it.
-    pub fn target(&self) -> super::Child<Obj<'_>> {
-        super::Child::new(Obj::from_raw(self.target_handle()))
+    pub fn target(&self) -> Child<Obj<'_>> {
+        Child::new(Obj::from_raw(self.target_handle()))
     }
 
     /// Raw handle of the widget whose event handler is currently running

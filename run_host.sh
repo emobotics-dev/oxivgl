@@ -25,16 +25,20 @@ ALL_EXAMPLES=(
     grid{1,2,3,4,5,6}
     scroll{1,2,4}
     widget_obj{1,3}
-    widget_arc{1,2}
+    widget_arc{1,2,3}
     image1
-    widget_bar{1,2,3,4,5}
-    widget_button{1,2}
-    widget_checkbox1
-    widget_dropdown{1,2}
-    widget_label{1,2}
+    widget_bar{1,2,3,4,5,7}
+    widget_button{1,2,3}
+    widget_checkbox{1,2}
+    widget_dropdown{1,2,3}
+    widget_image{2,3,4,5}
+    widget_label{1,2,5}
     widget_led1
-    widget_roller1
-    widget_slider2
+    widget_line1
+    widget_roller{1,2}
+    widget_scale{1,2,3,4,5,6,8,9,10}
+    widget_slider{1,2,3,4}
+    widget_switch{1,2}
 )
 
 run_example() {

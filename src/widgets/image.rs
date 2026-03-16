@@ -28,6 +28,40 @@ impl<'p> Deref for Image<'p> {
     }
 }
 
+/// Image content alignment within the widget bounds.
+#[repr(u32)]
+#[derive(Clone, Copy, Debug)]
+pub enum ImageAlign {
+    /// Default alignment.
+    Default = 0,
+    /// Top-left corner.
+    TopLeft = 1,
+    /// Top-middle.
+    TopMid = 2,
+    /// Top-right corner.
+    TopRight = 3,
+    /// Bottom-left corner.
+    BottomLeft = 4,
+    /// Bottom-middle.
+    BottomMid = 5,
+    /// Bottom-right corner.
+    BottomRight = 6,
+    /// Left-middle.
+    LeftMid = 7,
+    /// Right-middle.
+    RightMid = 8,
+    /// Center.
+    Center = 9,
+    /// Stretch to fill.
+    Stretch = 11,
+    /// Tile/repeat to fill.
+    Tile = 12,
+    /// Contain (fit inside, keep aspect ratio).
+    Contain = 13,
+    /// Cover (fill area, keep aspect ratio, crop overflow).
+    Cover = 14,
+}
+
 impl<'p> Image<'p> {
     /// Create an image widget as a child of `parent`. Returns
     /// [`WidgetError::LvglNullPointer`] on OOM.
@@ -46,22 +80,53 @@ impl<'p> Image<'p> {
         }
     }
 
+    /// Set image rotation in 0.1 degree units (e.g. 450 = 45 degrees).
+    pub fn set_rotation(&self, angle: i32) -> &Self {
+        unsafe { lv_image_set_rotation(self.lv_handle(), angle) };
+        self
+    }
+
+    /// Set uniform image scale (256 = 1.0x, 512 = 2.0x, 128 = 0.5x).
+    pub fn set_scale(&self, zoom: u32) -> &Self {
+        unsafe { lv_image_set_scale(self.lv_handle(), zoom) };
+        self
+    }
+
+    /// Set the pivot point for rotation and scaling.
+    pub fn set_pivot(&self, x: i32, y: i32) -> &Self {
+        unsafe { lv_image_set_pivot(self.lv_handle(), x, y) };
+        self
+    }
+
+    /// Set vertical image offset (scrolls the image content within the widget).
+    pub fn set_offset_y(&self, y: i32) -> &Self {
+        unsafe { lv_image_set_offset_y(self.lv_handle(), y) };
+        self
+    }
+
+    /// Set how the image is aligned/scaled within the widget area.
+    pub fn set_inner_align(&self, align: ImageAlign) -> &Self {
+        unsafe { lv_image_set_inner_align(self.lv_handle(), align as lv_image_align_t) };
+        self
+    }
+
     /// Set the image source from a compiled image descriptor.
     ///
-    /// The descriptor is typically produced by `oxivgl-build::image_asset()`
-    /// and declared via [`image_declare!`](crate::image_declare).
-    /// LVGL stores the raw pointer — the descriptor must be `'static`.
+    /// LVGL stores the raw pointer (`lv_image_t.src`), so the descriptor
+    /// must be `'static`. Use [`image_declare!`](crate::image_declare) to
+    /// obtain a safe `&'static lv_image_dsc_t` reference (spec §3.1).
     ///
     /// # Example
     ///
     /// ```ignore
     /// oxivgl::image_declare!(my_icon);
     /// let img = Image::new(&screen)?;
-    /// img.set_src(unsafe { &my_icon });
+    /// img.set_src(my_icon());
     /// ```
     pub fn set_src(&self, dsc: &'static lv_image_dsc_t) -> &Self {
-        // SAFETY: handle non-null (from Image::new); dsc is 'static so the
-        // pointer LVGL stores will remain valid for the program's lifetime.
+        // SAFETY: handle non-null (from Image::new); dsc is 'static and
+        // points to a valid lv_image_dsc_t compiled by oxivgl-build.
+        // LVGL stores the pointer (spec §3.1); 'static satisfies this.
         unsafe {
             lv_image_set_src(
                 self.obj.handle(),

@@ -8,6 +8,18 @@ use super::{
     to_lvgl, WidgetError, LVGL_SCALE,
 };
 
+/// Arc operating mode.
+#[repr(u32)]
+#[derive(Clone, Copy, Debug)]
+pub enum ArcMode {
+    /// Normal: indicator fills from start_angle to value.
+    Normal = lv_arc_mode_t_LV_ARC_MODE_NORMAL,
+    /// Symmetrical: indicator expands from mid-point.
+    Symmetrical = lv_arc_mode_t_LV_ARC_MODE_SYMMETRICAL,
+    /// Reverse: indicator fills counter-clockwise.
+    Reverse = lv_arc_mode_t_LV_ARC_MODE_REVERSE,
+}
+
 /// LVGL arc widget. Value range is normalized: call
 /// [`set_range`](Arc::set_range) with a physical maximum, then
 /// [`set_value`](Arc::set_value) with the physical value in the same unit.
@@ -142,6 +154,24 @@ impl<'p> Arc<'p> {
     pub fn rotate_obj_to_angle(&self, obj: &impl AsLvHandle, r_offset: i32) -> &Self {
         // SAFETY: both handles non-null.
         unsafe { lv_arc_rotate_obj_to_angle(self.obj.handle(), obj.lv_handle(), r_offset) };
+        self
+    }
+
+    /// Set the arc mode (normal, symmetrical, or reverse).
+    pub fn set_mode(&self, mode: ArcMode) -> &Self {
+        unsafe { lv_arc_set_mode(self.lv_handle(), mode as lv_arc_mode_t) };
+        self
+    }
+
+    /// Set the background arc start angle in degrees (0° = right, 90° = bottom).
+    pub fn set_bg_start_angle(&self, start: i32) -> &Self {
+        unsafe { lv_arc_set_bg_start_angle(self.lv_handle(), start as f32) };
+        self
+    }
+
+    /// Set the background arc end angle in degrees.
+    pub fn set_bg_end_angle(&self, end: i32) -> &Self {
+        unsafe { lv_arc_set_bg_end_angle(self.lv_handle(), end as f32) };
         self
     }
 

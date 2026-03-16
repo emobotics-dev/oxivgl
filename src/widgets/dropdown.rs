@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
 use core::{
-    ffi::{c_char, CStr},
+    ffi::c_char,
     ops::Deref,
     ptr::null_mut,
 };
@@ -102,16 +102,19 @@ impl<'p> Dropdown<'p> {
     }
 
     /// Set the dropdown symbol (typically an arrow icon string).
+    ///
     /// LVGL stores the raw pointer (`dropdown->symbol = symbol`,
-    /// `lv_dropdown.c:373`) — the string must be `'static`.
-    pub fn set_symbol(&self, symbol: &'static CStr) -> &Self {
+    /// `lv_dropdown.c:373`). The string must be `'static` (spec §3.3).
+    /// Use a `c"..."` literal: `dropdown.set_symbol(c"\u{f078}")`.
+    pub fn set_symbol(&self, symbol: &'static core::ffi::CStr) -> &Self {
         assert_ne!(
             self.obj.handle(),
             null_mut(),
             "Dropdown handle cannot be null"
         );
         // SAFETY: handle non-null; symbol is 'static and NUL-terminated.
-        // LVGL stores the pointer directly, so 'static is load-bearing.
+        // LVGL stores the raw pointer (lv_dropdown.c:373); 'static satisfies
+        // the lifetime requirement (spec §3.3).
         unsafe {
             lv_dropdown_set_symbol(
                 self.obj.handle(),
@@ -130,6 +133,29 @@ impl<'p> Dropdown<'p> {
         );
         // SAFETY: handle non-null (asserted above).
         unsafe { lv_dropdown_set_selected(self.obj.handle(), idx) };
+        self
+    }
+
+    /// Set a fixed text to display on the button (instead of the selected option).
+    /// Useful for menu-style dropdowns.
+    ///
+    /// **Note**: LVGL stores the raw pointer (`dropdown->text = txt`,
+    /// `lv_dropdown.c:174`). The string is leaked to satisfy this requirement.
+    /// Call sparingly — each call leaks the previous string.
+    pub fn set_text(&self, text: &'static core::ffi::CStr) -> &Self {
+        assert_ne!(self.obj.handle(), null_mut(), "Dropdown handle cannot be null");
+        // SAFETY: handle non-null; text is 'static and NUL-terminated.
+        // LVGL stores the raw pointer (lv_dropdown.c:174); 'static satisfies
+        // the lifetime requirement (spec §12.5).
+        unsafe { lv_dropdown_set_text(self.obj.handle(), text.as_ptr() as *const c_char) };
+        self
+    }
+
+    /// Enable/disable highlighting of the selected item in the list.
+    /// Set to `false` for menu-style dropdowns where no item stays selected.
+    pub fn set_selected_highlight(&self, en: bool) -> &Self {
+        assert_ne!(self.obj.handle(), null_mut(), "Dropdown handle cannot be null");
+        unsafe { lv_dropdown_set_selected_highlight(self.obj.handle(), en) };
         self
     }
 
