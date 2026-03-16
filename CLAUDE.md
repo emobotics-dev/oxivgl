@@ -16,7 +16,8 @@ cargo +esp -Zbuild-std=alloc,core check --features esp-hal,log-04
 # Run tests (preferred — handles SDL_VIDEODRIVER, test separation):
 ./run_tests.sh unit        # unit + doc tests
 ./run_tests.sh int         # integration tests (needs SDL_VIDEODRIVER=dummy)
-./run_tests.sh all         # both
+./run_tests.sh leak        # memory leak detection tests
+./run_tests.sh all         # all of the above
 
 # Run single unit test directly:
 LIBCLANG_PATH=/usr/lib64 cargo +nightly test --target x86_64-unknown-linux-gnu to_lvgl_half
@@ -49,7 +50,7 @@ Run via Cargo's built-in example convention: `cargo run --example <name>`.
 - `tests/integration.rs` — integration tests (require `SDL_VIDEODRIVER=dummy`, `--test-threads=1`)
 
 Adding a new example: create an `examples/<name>.rs` with a View struct + `oxivgl_examples_common::example_main!(MyView);`.
-After adding examples: add the name to `run_screenshots.sh`, run it to generate PNGs, and update `examples/doc/README.md` with entries + screenshot links. Visually compare generated screenshots against the LVGL docs to verify correctness.
+After adding examples: add the name to the `ALL_EXAMPLES` array in `run_host.sh`, run `./run_host.sh -s` to generate PNGs, and update `examples/doc/README.md` with entries + screenshot links. Visually compare generated screenshots against the LVGL docs to verify correctness.
 
 ## Architecture
 
