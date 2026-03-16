@@ -24,12 +24,14 @@ LIBCLANG_PATH=/usr/lib64 cargo +nightly test --target x86_64-unknown-linux-gnu t
 # Audit doc coverage (should report 0 missing):
 LIBCLANG_PATH=/usr/lib64 RUSTDOCFLAGS="-W missing-docs" cargo +nightly doc --target x86_64-unknown-linux-gnu --no-deps 2>&1 | grep "warning:"
 
-# Run host example:
+# Run host example (interactive SDL window):
 ./run_host.sh getting_started1
-./run_host.sh style16
+
+# Capture screenshot (headless, no window):
+./run_host.sh -s getting_started1
 
 # Capture all screenshots:
-./run_screenshots.sh
+./run_host.sh -s
 
 # Flash ESP32 example (requires Xtensa toolchain + connected board):
 ./run_fire27.sh getting_started1
