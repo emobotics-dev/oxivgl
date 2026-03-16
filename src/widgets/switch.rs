@@ -27,6 +27,18 @@ impl<'p> Deref for Switch<'p> {
     }
 }
 
+/// Switch orientation.
+#[repr(u32)]
+#[derive(Clone, Copy, Debug)]
+pub enum SwitchOrientation {
+    /// Auto-detect from widget dimensions.
+    Auto = lv_switch_orientation_t_LV_SWITCH_ORIENTATION_AUTO,
+    /// Horizontal switch.
+    Horizontal = lv_switch_orientation_t_LV_SWITCH_ORIENTATION_HORIZONTAL,
+    /// Vertical switch.
+    Vertical = lv_switch_orientation_t_LV_SWITCH_ORIENTATION_VERTICAL,
+}
+
 impl<'p> Switch<'p> {
     /// Create a new switch (toggle) widget.
     pub fn new(parent: &impl AsLvHandle) -> Result<Self, WidgetError> {
@@ -40,5 +52,17 @@ impl<'p> Switch<'p> {
                 obj: Obj::from_raw(handle),
             })
         }
+    }
+
+    /// Set switch orientation.
+    pub fn set_orientation(&self, orientation: SwitchOrientation) -> &Self {
+        // SAFETY: handle non-null (from Switch::new).
+        unsafe {
+            lv_switch_set_orientation(
+                self.lv_handle(),
+                orientation as lv_switch_orientation_t,
+            )
+        };
+        self
     }
 }

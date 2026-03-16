@@ -24,8 +24,12 @@ runner (`example_main!` macro selects host SDL2 or ESP32 fire27 backend).
 - [Widgets — Dropdown](#widgets--dropdown)
 - [Widgets — Label](#widgets--label)
 - [Widgets — LED](#widgets--led)
+- [Widgets — Line](#widgets--line)
 - [Widgets — Roller](#widgets--roller)
+- [Widgets — Scale](#widgets--scale)
 - [Widgets — Slider](#widgets--slider)
+- [Widgets — Switch](#widgets--switch)
+- [Implementation Coverage](#implementation-coverage)
 - [Running](#running)
 
 ## Getting Started
@@ -401,6 +405,12 @@ Full-circle arc animating 0→100 in 1 s (infinite repeat, 500 ms delay). Knob h
 
 ![widget_arc2](screenshots/widget_arc2.png)
 
+### Widget Arc 3 — Donut Chart
+
+Three colored arc segments (red, green, blue) forming a donut chart.
+
+![widget_arc3](screenshots/widget_arc3.png)
+
 ## Widgets — Image
 
 ### Widget Image 1 — Basic Image Display
@@ -408,6 +418,30 @@ Full-circle arc animating 0→100 in 1 s (infinite repeat, 500 ms delay). Knob h
 Centered cogwheel image from compiled PNG asset.
 
 ![image1](screenshots/image1.png)
+
+### Widget Image 3 — Rotating Image
+
+Cogwheel image rotating continuously via `update()`, using `set_rotation` and `set_pivot`.
+
+![widget_image3](screenshots/widget_image3.png)
+
+### Widget Image 2 — Runtime Image Recoloring
+
+Cogwheel image with RGB + intensity sliders controlling recolor tint.
+
+![widget_image2](screenshots/widget_image2.png)
+
+### Widget Image 4 — Image Offset Animation
+
+Stripe image with yellow background, black recolor, and animated vertical offset.
+
+![widget_image4](screenshots/widget_image4.png)
+
+### Widget Image 5 — Image Inner Alignment
+
+Three images showing different inner alignment modes: default, stretch, tile.
+
+![widget_image5](screenshots/widget_image5.png)
 
 ## Widgets — Bar
 
@@ -441,6 +475,12 @@ Two bars: one left-to-right (default), one right-to-left, with labels.
 
 ![widget_bar5](screenshots/widget_bar5.png)
 
+### Widget Bar 7 — Reversed Vertical Bar
+
+Vertical bar filling top-to-bottom via reversed range (100→0), at 70%.
+
+![widget_bar7](screenshots/widget_bar7.png)
+
 ## Widgets — Button
 
 ### Widget Button 1 — Click and Toggle
@@ -455,6 +495,12 @@ Button with gradient, shadow, outline, and a transition that expands outline on 
 
 ![widget_button2](screenshots/widget_button2.png)
 
+### Widget Button 3 — Gum Squeeze Animation
+
+Button with transform width/height transitions on press — overshoot easing on release.
+
+![widget_button3](screenshots/widget_button3.png)
+
 ## Widgets — Checkbox
 
 ### Widget Checkbox 1 — Simple Checkboxes
@@ -462,6 +508,13 @@ Button with gradient, shadow, outline, and a transition that expands outline on 
 Four checkboxes: unchecked, checked, disabled, and checked+disabled.
 
 ![widget_checkbox1](screenshots/widget_checkbox1.png)
+
+### Widget Checkbox 2 — Radio Button Groups
+
+Two independent groups of checkboxes acting as radio buttons via event bubbling.
+Clicking one unchecks the rest in its group.
+
+![widget_checkbox2](screenshots/widget_checkbox2.png)
 
 ## Widgets — Dropdown
 
@@ -477,6 +530,12 @@ Four dropdowns opening in each cardinal direction (down, up, right, left).
 
 ![widget_dropdown2](screenshots/widget_dropdown2.png)
 
+### Widget Dropdown 3 — Menu-Style Dropdown
+
+Dropdown with fixed "Menu" button text and no selected-item highlight.
+
+![widget_dropdown3](screenshots/widget_dropdown3.png)
+
 ## Widgets — Label
 
 ### Widget Label 1 — Wrap and Scroll
@@ -491,6 +550,12 @@ Fake shadow via duplicate label offset by 2 px with reduced opacity.
 
 ![widget_label2](screenshots/widget_label2.png)
 
+### Widget Label 5 — Circular Scroll
+
+Label with scroll-circular long mode — text scrolls in a continuous loop.
+
+![widget_label5](screenshots/widget_label5.png)
+
 ## Widgets — LED
 
 ### Widget LED 1 — Brightness and Color
@@ -498,6 +563,14 @@ Fake shadow via duplicate label offset by 2 px with reduced opacity.
 Three LEDs: off (dark), dim red (brightness 150), and full on (blue).
 
 ![widget_led1](screenshots/widget_led1.png)
+
+## Widgets — Line
+
+### Widget Line 1 — Styled Line
+
+Blue line through 5 points with 8px width and rounded ends.
+
+![widget_line1](screenshots/widget_line1.png)
 
 ## Widgets — Roller
 
@@ -507,13 +580,159 @@ Infinite roller with month names, 4 visible rows.
 
 ![widget_roller1](screenshots/widget_roller1.png)
 
+### Widget Roller 2 — Styled Rollers with Alignments
+
+Three rollers: left-aligned on green gradient, center-aligned, right-aligned. Shared
+selected-row style with Montserrat 20pt font and pink/red highlight.
+
+![widget_roller2](screenshots/widget_roller2.png)
+
+## Widgets — Scale
+
+### Widget Scale 1 — Round Gauge
+
+270° round scale with labeled major ticks (0–100), built via `Scale::tick_ring`.
+
+![widget_scale1](screenshots/widget_scale1.png)
+
+### Widget Scale 2 — Horizontal Scale
+
+Horizontal bottom-aligned scale with labeled major ticks from 10 to 40.
+
+![widget_scale2](screenshots/widget_scale2.png)
+
+### Widget Scale 3 — Round Scale with Needle
+
+Round gauge with animated line needle sweeping 0–100.
+
+![widget_scale3](screenshots/widget_scale3.png)
+
+### Widget Scale 4 — Round Scale with Sections
+
+Round outer scale with custom labels 1–10, red section (8–10), green section (1–3).
+
+![widget_scale4](screenshots/widget_scale4.png)
+
+### Widget Scale 5 — Horizontal Scale with Sections
+
+Horizontal scale 0–100 with colored sections: blue (0–25), red (75–100).
+
+![widget_scale5](screenshots/widget_scale5.png)
+
+### Widget Scale 6 — Clock with Timer-Driven Needles
+
+Round clock face with minute and hour hands updated by a 250 ms Timer.
+
+![widget_scale6](screenshots/widget_scale6.png)
+
+### Widget Scale 8 — Round Scale with Rotated Labels
+
+Round inner scale with labels rotated to match tick angles, pink background, and needle.
+
+![widget_scale8](screenshots/widget_scale8.png)
+
+### Widget Scale 9 — Horizontal Scale with Rotated Labels
+
+Horizontal bottom scale with 45° rotated major tick labels.
+
+![widget_scale9](screenshots/widget_scale9.png)
+
+### Widget Scale 10 — Heart Rate Gauge
+
+Round gauge with timer-driven needle oscillating between 80–180 BPM.
+
+![widget_scale10](screenshots/widget_scale10.png)
+
 ## Widgets — Slider
+
+### Widget Slider 1 — Slider with Value Label
+
+Centered slider with a label below showing the current value (updated in `update()`).
+
+![widget_slider1](screenshots/widget_slider1.png)
 
 ### Widget Slider 2 — Styled Slider
 
 Cyan slider with pill-shaped track, padded knob with border, bg-color transition on press.
 
 ![widget_slider2](screenshots/widget_slider2.png)
+
+### Widget Slider 3 — Range Slider
+
+Range-mode slider with two handles and a label showing min–max values.
+
+![widget_slider3](screenshots/widget_slider3.png)
+
+### Widget Slider 4 — Reversed Slider
+
+Slider with opposite direction (100→0) and percentage label below.
+
+![widget_slider4](screenshots/widget_slider4.png)
+
+## Widgets — Switch
+
+### Widget Switch 1 — Toggle Switches
+
+Four switches in a column: default, checked, disabled, and checked+disabled.
+
+![widget_switch1](screenshots/widget_switch1.png)
+
+### Widget Switch 2 — Horizontal and Vertical
+
+Horizontal switch (default) and vertical switch (pre-checked), using `set_orientation`.
+
+![widget_switch2](screenshots/widget_switch2.png)
+
+## Implementation Coverage
+
+Status of all [LVGL 9.3 examples](https://docs.lvgl.io/9.3/examples.html) in oxivgl.
+
+**Legend:** Done = ported, Skip = intentionally skipped (reason noted), Missing = has wrapper but no example yet, No wrapper = widget not yet wrapped.
+
+### Core Examples
+
+| Category | LVGL | Done | Skip | Notes |
+|---|---|---|---|---|
+| Getting Started | 4 | 4 (+4 extra gradient examples) | 0 | |
+| Styles | 19 | 18 | 1 | style19 (meta/benchmarking) |
+| Animations | 5 | 3 | 1 | anim3 (needs Chart); anim4 missing |
+| Events | 5 | 3 (+1 extra trickle) | 2 | event_draw (timer API), event_streak (indev API) |
+| Flex | 6 | 6 | 0 | |
+| Grid | 6 | 6 | 0 | |
+| Scroll | 8 | 3 | 5 | scroll3 (List), scroll5 (font), scroll6–8 (APIs) |
+
+### Widget Examples (wrapper exists)
+
+| Widget | LVGL | Done | Missing | Notes |
+|---|---|---|---|---|
+| obj | 3 | 2 | 0 | obj2 skipped (needs indev API) |
+| arc | 3 | 3 | 0 | |
+| bar | 7 | 6 | 1 | bar6 (needs custom draw event) |
+| button | 3 | 3 | 0 | |
+| checkbox | 2 | 2 | 0 | |
+| dropdown | 3 | 3 | 0 | |
+| image | 5 | 5 | 0 | |
+| label | 6 | 3 | 3 | label3 (RTL fonts), label4 (canvas mask), label6 (custom font) |
+| led | 1 | 1 | 0 | |
+| line | 1 | 1 | 0 | |
+| roller | 3 | 2 | 1 | roller3 (needs canvas/mask API) |
+| scale | 11 | 9 | 2 | scale7 (draw task), scale11 (draw task) |
+| slider | 4 | 4 | 0 | |
+| switch | 2 | 2 | 0 | |
+
+### Widgets Without Wrappers
+
+animimg, buttonmatrix, calendar, canvas, chart, imagebutton, keyboard, list, lottie, menu, msgbox, span, spinbox, spinner, table, tabview, textarea, tileview, win.
+
+### Totals
+
+| | Count |
+|---|---|
+| LVGL examples total | ~184 |
+| oxivgl done | 94 |
+| Skipped (intentional) | 11 |
+| Missing (wrapper exists) | ~7 |
+| No wrapper | ~68 |
 
 ## Running
 

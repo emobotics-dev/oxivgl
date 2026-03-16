@@ -27,9 +27,8 @@ impl View for WidgetBar4 {
         let screen = Screen::active().ok_or(WidgetError::LvglNullPointer)?;
 
         let mut style = StyleBuilder::new();
-        // SAFETY: img_skew_strip is a static C symbol compiled by oxivgl-build.
         style
-            .bg_image_src(unsafe { &img_skew_strip })
+            .bg_image_src(img_skew_strip())
             .bg_image_tiled(true)
             .bg_image_opa(77); // LV_OPA_30
         let style = style.build();
