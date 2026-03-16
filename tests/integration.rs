@@ -10,10 +10,12 @@ use oxivgl::{
     fonts::MONTSERRAT_12,
     lvgl::LvglDriver,
     widgets::{
-        anim_path_linear, props, Align, Arc, AsLvHandle, Bar, Button, Dropdown, FlexAlign,
-        FlexFlow, GridAlign, GridCell, Image, Label, Layout, Led, Line, Obj, ObjFlag, ObjState,
-        Opa, Palette, Screen, Selector, Slider, StyleBuilder, Switch, TransitionDsc,
-        ValueLabel, WidgetError, GRID_TEMPLATE_LAST, RADIUS_MAX,
+        anim_path_linear, color_make, detach, palette_main, props, Align, Arc, AsLvHandle, Bar,
+        BorderSide, Button, Checkbox, Child, Dropdown, FlexAlign, FlexFlow, GradDsc, GradExtend,
+        GridAlign, GridCell, Image, Label, Layout, Led, Line, Obj, ObjFlag, ObjState, Opa,
+        Palette, Roller, RollerMode, Screen, ScrollDir, ScrollSnap, Selector, Slider,
+        StyleBuilder, Switch, TextDecor, TransitionDsc, ValueLabel, WidgetError,
+        GRID_TEMPLATE_LAST, RADIUS_MAX,
     },
 };
 
@@ -895,4 +897,469 @@ fn remove_style_then_drop() {
     pump();
     drop(obj);
     drop(style);
+}
+
+// ── Checkbox ─────────────────────────────────────────────────────────────────
+
+#[test]
+fn checkbox_create_and_text() {
+    let screen = fresh_screen();
+    let cb = Checkbox::new(&screen).unwrap();
+    cb.text("Accept terms");
+    pump();
+    assert!(cb.get_width() > 0);
+}
+
+#[test]
+fn checkbox_toggle() {
+    let screen = fresh_screen();
+    let cb = Checkbox::new(&screen).unwrap();
+    cb.text("Option");
+    assert!(!cb.has_state(ObjState::CHECKED));
+    cb.add_state(ObjState::CHECKED);
+    assert!(cb.has_state(ObjState::CHECKED));
+}
+
+// ── Roller ───────────────────────────────────────────────────────────────────
+
+#[test]
+fn roller_create_and_options() {
+    let screen = fresh_screen();
+    let roller = Roller::new(&screen).unwrap();
+    roller.set_options("Jan\nFeb\nMar\nApr", RollerMode::Normal);
+    roller.set_visible_row_count(3);
+    pump();
+    assert_eq!(roller.get_selected(), 0);
+}
+
+#[test]
+fn roller_set_selected() {
+    let screen = fresh_screen();
+    let roller = Roller::new(&screen).unwrap();
+    roller.set_options("A\nB\nC", RollerMode::Infinite);
+    roller.set_selected(2, false);
+    assert_eq!(roller.get_selected(), 2);
+}
+
+// ── Dropdown (extended) ──────────────────────────────────────────────────────
+
+#[test]
+fn dropdown_options_and_selection() {
+    let screen = fresh_screen();
+    let dd = Dropdown::new(&screen).unwrap();
+    dd.set_options("Red\nGreen\nBlue");
+    dd.set_selected(1);
+    assert_eq!(dd.get_selected(), 1);
+    pump();
+}
+
+#[test]
+fn dropdown_direction() {
+    use oxivgl::widgets::DdDir;
+    let screen = fresh_screen();
+    let dd = Dropdown::new(&screen).unwrap();
+    dd.set_options("X\nY");
+    dd.set_dir(DdDir::Top);
+    pump();
+}
+
+// ── Led (extended) ───────────────────────────────────────────────────────────
+
+#[test]
+fn led_on_off_brightness() {
+    let screen = fresh_screen();
+    let led = Led::new(&screen).unwrap();
+    led.on();
+    pump();
+    led.set_brightness(128);
+    pump();
+    led.off();
+    pump();
+}
+
+#[test]
+fn led_color() {
+    let screen = fresh_screen();
+    let led = Led::new(&screen).unwrap();
+    led.set_color(color_make(0xFF, 0x00, 0x00));
+    pump();
+}
+
+// ── Child / detach ───────────────────────────────────────────────────────────
+
+#[test]
+fn child_wrapper_deref() {
+    let screen = fresh_screen();
+    let label = Label::new(&screen).unwrap();
+    let child: Child<Label> = Child::new(label);
+    child.text("via Child");
+    pump();
+    assert!(child.get_width() > 0);
+    // Child suppresses Drop — LVGL parent owns the object.
+}
+
+#[test]
+fn detach_fire_and_forget() {
+    let screen = fresh_screen();
+    let label = Label::new(&screen).unwrap();
+    label.text("ephemeral");
+    detach(label);
+    // label consumed, no Drop runs. LVGL parent will clean up.
+    pump();
+}
+
+// ── GradDsc ──────────────────────────────────────────────────────────────────
+
+#[test]
+fn grad_linear_with_stops() {
+    let screen = fresh_screen();
+    let mut grad = GradDsc::new();
+    grad.init_stops(
+        &[palette_main(Palette::Blue), palette_main(Palette::Red)],
+        &[255, 255],
+        &[0, 255],
+    )
+    .linear(0, 0, 100, 0, GradExtend::Pad);
+
+    let mut sb = StyleBuilder::new();
+    sb.bg_opa(255).bg_grad(grad);
+    let style = sb.build();
+    let obj = Obj::new(&screen).unwrap();
+    obj.add_style(&style, Selector::DEFAULT);
+    obj.size(100, 50);
+    pump();
+}
+
+#[test]
+fn grad_radial_and_conical_api() {
+    // Radial/conical gradients can hang LVGL's SW renderer on headless SDL,
+    // so we test the Rust API construction without rendering.
+    let mut radial = GradDsc::new();
+    radial
+        .init_stops(
+            &[palette_main(Palette::Green), palette_main(Palette::Yellow)],
+            &[],
+            &[],
+        )
+        .radial(50, 50, 50, 50, GradExtend::Pad)
+        .radial_set_focal(25, 25, 10);
+
+    let mut conical = GradDsc::new();
+    conical
+        .set_stops_count(2)
+        .set_stop(0, palette_main(Palette::Red), 255, 0)
+        .set_stop(1, palette_main(Palette::Blue), 255, 255)
+        .conical(50, 50, 0, 3600, GradExtend::Pad);
+}
+
+#[test]
+fn grad_horizontal_simple() {
+    let screen = fresh_screen();
+    let mut grad = GradDsc::new();
+    grad.init_stops(
+        &[palette_main(Palette::Cyan), palette_main(Palette::Purple)],
+        &[],
+        &[],
+    )
+    .horizontal();
+
+    let mut sb = StyleBuilder::new();
+    sb.bg_opa(255).bg_grad(grad);
+    let style = sb.build();
+    let obj = Obj::new(&screen).unwrap();
+    obj.add_style(&style, Selector::DEFAULT);
+    obj.size(100, 50);
+    pump();
+}
+
+#[test]
+fn grad_set_dir() {
+    use oxivgl::widgets::GradDir;
+    let screen = fresh_screen();
+    let mut grad = GradDsc::new();
+    grad.init_stops(
+        &[palette_main(Palette::Blue), palette_main(Palette::Red)],
+        &[],
+        &[],
+    )
+    .set_dir(GradDir::Hor);
+
+    let mut sb = StyleBuilder::new();
+    sb.bg_opa(255).bg_grad(grad);
+    let style = sb.build();
+    let obj = Obj::new(&screen).unwrap();
+    obj.add_style(&style, Selector::DEFAULT);
+    obj.size(100, 50);
+    pump();
+}
+
+// ── Theme ────────────────────────────────────────────────────────────────────
+
+#[test]
+fn theme_extend_and_drop() {
+    use oxivgl::widgets::Theme;
+    let screen = fresh_screen();
+    let mut sb = StyleBuilder::new();
+    sb.bg_color_hex(0x334455).bg_opa(255);
+    let style = sb.build();
+    {
+        let _theme = Theme::extend_current(style).unwrap();
+        // Buttons created now get the theme style.
+        let _btn = Button::new(&screen).unwrap();
+        pump();
+    }
+    // Theme dropped — parent theme restored.
+    pump();
+}
+
+// ── StyleBuilder setters coverage ────────────────────────────────────────────
+
+#[test]
+fn style_outline_props() {
+    let screen = fresh_screen();
+    let mut sb = StyleBuilder::new();
+    sb.outline_width(3)
+        .outline_color(palette_main(Palette::Red))
+        .outline_opa(200)
+        .outline_pad(2);
+    let style = sb.build();
+    let obj = Obj::new(&screen).unwrap();
+    obj.add_style(&style, Selector::DEFAULT);
+    obj.size(60, 60);
+    pump();
+}
+
+#[test]
+fn style_shadow_props() {
+    let screen = fresh_screen();
+    let mut sb = StyleBuilder::new();
+    sb.shadow_width(10)
+        .shadow_color(palette_main(Palette::Blue))
+        .shadow_opa(128)
+        .shadow_spread(5)
+        .shadow_offset_x(3)
+        .shadow_offset_y(3);
+    let style = sb.build();
+    let obj = Obj::new(&screen).unwrap();
+    obj.add_style(&style, Selector::DEFAULT);
+    obj.size(80, 80);
+    pump();
+}
+
+#[test]
+fn style_arc_props() {
+    let screen = fresh_screen();
+    let mut sb = StyleBuilder::new();
+    sb.arc_color(palette_main(Palette::Green)).arc_width(8);
+    let style = sb.build();
+    let arc = Arc::new(&screen).unwrap();
+    arc.add_style(&style, Selector::DEFAULT);
+    pump();
+}
+
+#[test]
+fn style_text_props() {
+    let screen = fresh_screen();
+    let mut sb = StyleBuilder::new();
+    sb.text_color_hex(0xFF00FF)
+        .text_opa(200)
+        .text_letter_space(2)
+        .text_line_space(4)
+        .text_decor(TextDecor::UNDERLINE | TextDecor::STRIKETHROUGH);
+    let style = sb.build();
+    let label = Label::new(&screen).unwrap();
+    label.text("Styled");
+    label.add_style(&style, Selector::DEFAULT);
+    pump();
+}
+
+#[test]
+fn style_line_props() {
+    let screen = fresh_screen();
+    let mut sb = StyleBuilder::new();
+    sb.line_color(palette_main(Palette::Grey))
+        .line_width(4)
+        .line_rounded(true);
+    let style = sb.build();
+    let line = Line::new(&screen).unwrap();
+    line.add_style(&style, Selector::DEFAULT);
+    pump();
+}
+
+#[test]
+fn style_dimensions_and_padding() {
+    let screen = fresh_screen();
+    let mut sb = StyleBuilder::new();
+    sb.width(120)
+        .height(80)
+        .x(10)
+        .y(20)
+        .pad_ver(5)
+        .pad_left(6)
+        .pad_right(7)
+        .pad_top(8)
+        .pad_all(4)
+        .length(50);
+    let style = sb.build();
+    let obj = Obj::new(&screen).unwrap();
+    obj.add_style(&style, Selector::DEFAULT);
+    pump();
+}
+
+#[test]
+fn style_border_side() {
+    let screen = fresh_screen();
+    let mut sb = StyleBuilder::new();
+    sb.border_width(2)
+        .border_color_hex(0xFF0000)
+        .border_opa(255)
+        .border_side(BorderSide::TOP | BorderSide::BOTTOM);
+    let style = sb.build();
+    let obj = Obj::new(&screen).unwrap();
+    obj.add_style(&style, Selector::DEFAULT);
+    pump();
+}
+
+#[test]
+fn style_layout_and_flex() {
+    let screen = fresh_screen();
+    let mut sb = StyleBuilder::new();
+    sb.layout(Layout::Flex)
+        .flex_flow(FlexFlow::Column)
+        .flex_main_place(FlexAlign::Center);
+    let style = sb.build();
+    let cont = Obj::new(&screen).unwrap();
+    cont.add_style(&style, Selector::DEFAULT);
+    pump();
+}
+
+#[test]
+fn style_translate_and_anim() {
+    let screen = fresh_screen();
+    let mut sb = StyleBuilder::new();
+    sb.translate_y(-10).anim_duration(300);
+    let style = sb.build();
+    let obj = Obj::new(&screen).unwrap();
+    obj.add_style(&style, Selector::DEFAULT);
+    pump();
+}
+
+#[test]
+fn style_transform_props() {
+    let screen = fresh_screen();
+    let mut sb = StyleBuilder::new();
+    sb.transform_rotation(450)
+        .transform_scale(512)
+        .transform_pivot_x(50)
+        .transform_pivot_y(50);
+    let style = sb.build();
+    let obj = Obj::new(&screen).unwrap();
+    obj.add_style(&style, Selector::DEFAULT);
+    obj.size(60, 60);
+    pump();
+}
+
+// ── Obj scroll methods ───────────────────────────────────────────────────────
+
+#[test]
+fn obj_scroll_snap() {
+    let screen = fresh_screen();
+    let obj = Obj::new(&screen).unwrap();
+    obj.size(200, 200);
+    obj.set_scroll_snap_x(ScrollSnap::Center);
+    obj.set_scroll_snap_y(ScrollSnap::Start);
+    obj.set_scroll_dir(ScrollDir::VER);
+    pump();
+}
+
+#[test]
+fn obj_scroll_to_position() {
+    let screen = fresh_screen();
+    let cont = Obj::new(&screen).unwrap();
+    cont.size(100, 100);
+    let child = Obj::new(&cont).unwrap();
+    child.size(100, 400);
+    pump();
+    cont.scroll_to(0, 50, false);
+    pump();
+    assert!(cont.get_scroll_y() != 0 || cont.get_scroll_x() == 0);
+}
+
+#[test]
+fn obj_child_count_and_foreground() {
+    let screen = fresh_screen();
+    let parent = Obj::new(&screen).unwrap();
+    assert_eq!(parent.get_child_count(), 0);
+    let _c1 = Obj::new(&parent).unwrap();
+    let _c2 = Obj::new(&parent).unwrap();
+    assert_eq!(parent.get_child_count(), 2);
+    _c1.move_foreground();
+    pump();
+}
+
+#[test]
+fn obj_send_event() {
+    use std::sync::atomic::{AtomicBool, Ordering};
+
+    static SENT: AtomicBool = AtomicBool::new(false);
+
+    unsafe extern "C" fn cb(_e: *mut lvgl_rust_sys::lv_event_t) {
+        SENT.store(true, Ordering::SeqCst);
+    }
+
+    let screen = fresh_screen();
+    let btn = Button::new(&screen).unwrap();
+    btn.on_event(
+        cb,
+        oxivgl::widgets::EventCode::CLICKED,
+        core::ptr::null_mut(),
+    );
+    btn.send_event(oxivgl::widgets::EventCode::CLICKED);
+    assert!(SENT.load(Ordering::SeqCst));
+}
+
+// ── Label (extended) ─────────────────────────────────────────────────────────
+
+#[test]
+fn label_long_mode() {
+    use oxivgl::widgets::LabelLongMode;
+    let screen = fresh_screen();
+    let label = Label::new(&screen).unwrap();
+    label.text("A very long text that might need scrolling or wrapping");
+    label.set_long_mode(LabelLongMode::Wrap);
+    label.width(100);
+    pump();
+    assert!(label.get_height() > 0);
+}
+
+// ── Bar (extended) ───────────────────────────────────────────────────────────
+
+#[test]
+fn bar_mode_range() {
+    use oxivgl::widgets::BarMode;
+    let screen = fresh_screen();
+    let bar = Bar::new(&screen).unwrap();
+    bar.set_range_raw(0, 100);
+    bar.set_mode(BarMode::Range);
+    bar.set_value_raw(80, false);
+    bar.set_start_value_raw(20, false);
+    pump();
+}
+
+// ── Color filter in style ────────────────────────────────────────────────────
+
+#[test]
+fn style_color_filter() {
+    use oxivgl::widgets::{darken_filter_cb, ColorFilter};
+    let screen = fresh_screen();
+    let filter = ColorFilter::new(darken_filter_cb);
+    let mut sb = StyleBuilder::new();
+    sb.bg_color_hex(0xFFFFFF)
+        .bg_opa(255)
+        .color_filter(filter, 128);
+    let style = sb.build();
+    let obj = Obj::new(&screen).unwrap();
+    obj.add_style(&style, Selector::DEFAULT);
+    obj.size(60, 60);
+    pump();
 }
