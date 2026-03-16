@@ -9,24 +9,20 @@
 //! Slider with cyan custom styles: pill-shaped track, padded knob with border,
 //! and a bg-color transition on press.
 
-extern crate alloc;
-
-use alloc::boxed::Box;
 use oxivgl::{
     view::View,
     widgets::{
-        anim_path_linear, color_make, palette_darken, palette_main, props, ObjState, Palette,
-        Part, Screen, Selector, Slider, Style, TransitionDsc, WidgetError, RADIUS_MAX,
+        anim_path_linear, color_make, palette_darken, palette_main, props, ObjState, Palette, Part,
+        Screen, Selector, Slider, Style, StyleBuilder, TransitionDsc, WidgetError, RADIUS_MAX,
     },
 };
 
 struct WidgetSlider2 {
     _slider: Slider<'static>,
-    _style_main: Box<Style>,
-    _style_indic: Box<Style>,
-    _style_knob: Box<Style>,
-    _style_pressed: Box<Style>,
-    _trans: Box<TransitionDsc>,
+    _style_main: Style,
+    _style_indic: Style,
+    _style_knob: Style,
+    _style_pressed: Style,
 }
 
 /// Transition property: background color.
@@ -36,31 +32,31 @@ impl View for WidgetSlider2 {
     fn create() -> Result<Self, WidgetError> {
         let screen = Screen::active().ok_or(WidgetError::LvglNullPointer)?;
 
-        let trans = Box::new(TransitionDsc::new(
-            &TRANS_PROPS,
-            Some(anim_path_linear),
-            300,
-            0,
-        ));
-
         // Main track
-        let mut style_main = Box::new(Style::new());
+        let mut style_main = StyleBuilder::new();
         style_main
             .bg_opa(255)
             .bg_color(color_make(0xBB, 0xBB, 0xBB))
             .radius(RADIUS_MAX as i16)
             .pad_ver(-2);
+        let style_main = style_main.build();
 
         // Indicator
-        let mut style_indic = Box::new(Style::new());
+        let mut style_indic = StyleBuilder::new();
         style_indic
             .bg_opa(255)
             .bg_color(palette_main(Palette::Cyan))
             .radius(RADIUS_MAX as i16)
-            .transition(&trans);
+            .transition(TransitionDsc::new(
+                &TRANS_PROPS,
+                Some(anim_path_linear),
+                300,
+                0,
+            ));
+        let style_indic = style_indic.build();
 
         // Knob
-        let mut style_knob = Box::new(Style::new());
+        let mut style_knob = StyleBuilder::new();
         style_knob
             .bg_opa(255)
             .bg_color(palette_main(Palette::Cyan))
@@ -68,11 +64,18 @@ impl View for WidgetSlider2 {
             .border_width(2)
             .radius(RADIUS_MAX as i16)
             .pad_all(6)
-            .transition(&trans);
+            .transition(TransitionDsc::new(
+                &TRANS_PROPS,
+                Some(anim_path_linear),
+                300,
+                0,
+            ));
+        let style_knob = style_knob.build();
 
         // Pressed state color
-        let mut style_pressed = Box::new(Style::new());
+        let mut style_pressed = StyleBuilder::new();
         style_pressed.bg_color(palette_darken(Palette::Cyan, 2));
+        let style_pressed = style_pressed.build();
 
         let slider = Slider::new(&screen)?;
         slider.remove_style_all();
@@ -89,7 +92,6 @@ impl View for WidgetSlider2 {
             _style_indic: style_indic,
             _style_knob: style_knob,
             _style_pressed: style_pressed,
-            _trans: trans,
         })
     }
 

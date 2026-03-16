@@ -10,9 +10,7 @@
 
 use oxivgl::{
     view::View,
-    widgets::{
-        Checkbox, FlexAlign, FlexFlow, ObjState, Screen, WidgetError,
-    },
+    widgets::{Checkbox, FlexAlign, FlexFlow, ObjState, Screen, WidgetError},
 };
 
 struct WidgetCheckbox1 {

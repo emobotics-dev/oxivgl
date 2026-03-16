@@ -6,47 +6,44 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
 //! Style 9 — Line styles
 
-extern crate alloc;
-
-use alloc::boxed::Box;
 use oxivgl::{
     view::View,
     widgets::{
-        lv_point_precise_t, palette_main, Line, Palette, Screen, Selector, Style, WidgetError,
+        lv_point_precise_t, palette_main, Line, Palette, Screen, Selector, Style, StyleBuilder,
+        WidgetError,
     },
 };
 
+static POINTS: [lv_point_precise_t; 3] = [
+    lv_point_precise_t { x: 10.0, y: 30.0 },
+    lv_point_precise_t { x: 30.0, y: 50.0 },
+    lv_point_precise_t { x: 100.0, y: 0.0 },
+];
+
 struct Style9 {
     _line: Line<'static>,
-    _style: Box<Style>,
-    _points: Box<[lv_point_precise_t; 3]>,
+    _style: Style,
 }
 
 impl View for Style9 {
     fn create() -> Result<Self, WidgetError> {
         let screen = Screen::active().ok_or(WidgetError::LvglNullPointer)?;
 
-        let mut style = Box::new(Style::new());
-        style
+        let mut builder = StyleBuilder::new();
+        builder
             .line_color(palette_main(Palette::Grey))
             .line_width(6)
             .line_rounded(true);
-
-        let points = Box::new([
-            lv_point_precise_t { x: 10.0, y: 30.0 },
-            lv_point_precise_t { x: 30.0, y: 50.0 },
-            lv_point_precise_t { x: 100.0, y: 0.0 },
-        ]);
+        let style = builder.build();
 
         let line = Line::new(&screen)?;
         line.add_style(&style, Selector::DEFAULT);
-        line.set_points(&*points);
+        line.set_points(&POINTS);
         line.center();
 
         Ok(Self {
             _line: line,
             _style: style,
-            _points: points,
         })
     }
 

@@ -10,20 +10,17 @@
 //! require an input device to trigger. The GUI is fully wired; only the
 //! physical input is missing.
 
-extern crate alloc;
-
-use alloc::boxed::Box;
 use oxivgl::{
     view::View,
     widgets::{
         color_black, color_white, FlexFlow, Label, Obj, ObjFlag, ObjState, Screen, Style,
-        WidgetError,
+        StyleBuilder, WidgetError,
     },
 };
 
 struct EventTrickle {
     _cont: Obj<'static>,
-    _style_black: Box<Style>,
+    _style_black: Style,
     _subconts: heapless::Vec<Obj<'static>, 9>,
     _labels: heapless::Vec<Label<'static>, 9>,
 }
@@ -39,10 +36,11 @@ impl View for EventTrickle {
             "event_trickle: no touch input — press events require input device"
         );
 
-        let mut style_black = Box::new(Style::new());
+        let mut style_black = StyleBuilder::new();
         style_black
             .text_color(color_white())
             .bg_color(color_black());
+        let style_black = style_black.build();
 
         let cont = Obj::new(&screen)?;
         cont.size(290, 200).center();

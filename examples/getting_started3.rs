@@ -6,14 +6,11 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
 //! Getting Started 3 — Custom Styles
 
-extern crate alloc;
-
-use alloc::boxed::Box;
 use oxivgl::{
     view::View,
     widgets::{
         darken_filter_cb, palette_lighten, palette_main, Button, ColorFilter, GradDir, Label,
-        ObjState, Opa, Palette, Screen, Selector, Style, WidgetError, RADIUS_MAX,
+        ObjState, Opa, Palette, Screen, Selector, Style, StyleBuilder, WidgetError, RADIUS_MAX,
     },
 };
 
@@ -22,17 +19,16 @@ struct GettingStarted3 {
     _btn2: Button<'static>,
     _lbl1: Label<'static>,
     _btn1: Button<'static>,
-    _style_red: Box<Style>,
-    _style_pressed: Box<Style>,
-    _style_btn: Box<Style>,
-    _color_filter: Box<ColorFilter>,
+    _style_red: Style,
+    _style_pressed: Style,
+    _style_btn: Style,
 }
 
 impl View for GettingStarted3 {
     fn create() -> Result<Self, WidgetError> {
-        let color_filter = Box::new(ColorFilter::new(darken_filter_cb));
+        let color_filter = ColorFilter::new(darken_filter_cb);
 
-        let mut style_btn = Box::new(Style::new());
+        let mut style_btn = StyleBuilder::new();
         style_btn
             .radius(10)
             .bg_opa(Opa::COVER.0)
@@ -43,14 +39,17 @@ impl View for GettingStarted3 {
             .border_opa(Opa::OPA_20.0)
             .border_width(2)
             .text_color_hex(0x000000);
+        let style_btn = style_btn.build();
 
-        let mut style_pressed = Box::new(Style::new());
-        style_pressed.color_filter(&color_filter, Opa::OPA_20.0);
+        let mut style_pressed = StyleBuilder::new();
+        style_pressed.color_filter(color_filter, Opa::OPA_20.0);
+        let style_pressed = style_pressed.build();
 
-        let mut style_red = Box::new(Style::new());
+        let mut style_red = StyleBuilder::new();
         style_red
             .bg_color(palette_main(Palette::Red))
             .bg_grad_color(palette_lighten(Palette::Red, 3));
+        let style_red = style_red.build();
 
         let screen = Screen::active().ok_or(WidgetError::LvglNullPointer)?;
 
@@ -80,7 +79,6 @@ impl View for GettingStarted3 {
             _style_red: style_red,
             _style_pressed: style_pressed,
             _style_btn: style_btn,
-            _color_filter: color_filter,
         })
     }
 

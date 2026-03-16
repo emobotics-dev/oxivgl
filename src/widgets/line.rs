@@ -46,9 +46,11 @@ impl<'p> Line<'p> {
         }
     }
 
-    /// Set the line points. The `points` slice must outlive this widget
-    /// (LVGL keeps a pointer to it).
-    pub fn set_points(&self, points: &[lv_point_precise_t]) -> &Self {
+    /// Set the line points. LVGL stores the raw pointer — the slice must
+    /// be `'static` (e.g. a `static` array or `Box::leak`ed allocation).
+    pub fn set_points(&self, points: &'static [lv_point_precise_t]) -> &Self {
+        // SAFETY: handle non-null (from Line::new); points is 'static so
+        // the pointer LVGL stores will remain valid.
         unsafe { lv_line_set_points(self.lv_handle(), points.as_ptr(), points.len() as u32) };
         self
     }

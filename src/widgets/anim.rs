@@ -1,25 +1,36 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
-use core::ffi::c_void;
+use core::{ffi::c_void, marker::PhantomData};
 use lvgl_rust_sys::*;
 
 use super::obj::AsLvHandle;
 
 /// Stack-local animation builder. LVGL copies the descriptor on `start()`,
 /// so this can be dropped after starting.
-pub struct Anim {
+///
+/// The `'w` lifetime ties the animation to the target widget, ensuring the
+/// widget is alive when [`start()`](Self::start) is called. After `start()`,
+/// LVGL owns a copy and cancels it automatically when the widget is deleted
+/// (`lv_obj_delete` calls `lv_anim_delete(obj, NULL)`, `lv_obj.c:525`).
+pub struct Anim<'w> {
     pub(crate) inner: lv_anim_t,
+    _widget: PhantomData<&'w ()>,
 }
 
-impl Anim {
+impl<'w> Anim<'w> {
     /// Create a new animation descriptor.
     pub fn new() -> Self {
         let mut inner = unsafe { core::mem::zeroed::<lv_anim_t>() };
         unsafe { lv_anim_init(&mut inner) };
-        Self { inner }
+        Self {
+            inner,
+            _widget: PhantomData,
+        }
     }
 
     /// Set the animated variable (the raw `lv_obj_t*` pointer).
-    pub fn set_var(&mut self, obj: &impl AsLvHandle) -> &mut Self {
+    ///
+    /// The `'w` lifetime ensures the widget outlives this `Anim` descriptor.
+    pub fn set_var(&mut self, obj: &'w impl AsLvHandle) -> &mut Self {
         unsafe { lv_anim_set_var(&mut self.inner, obj.lv_handle() as *mut c_void) };
         self
     }

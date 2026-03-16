@@ -1,5 +1,9 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
-use core::{ffi::c_char, ops::Deref, ptr::null_mut};
+use core::{
+    ffi::{c_char, CStr},
+    ops::Deref,
+    ptr::null_mut,
+};
 
 use alloc::vec::Vec;
 use lvgl_rust_sys::*;
@@ -72,7 +76,11 @@ impl<'p> Dropdown<'p> {
     /// Set dropdown options as newline-separated string.
     /// LVGL copies the string internally.
     pub fn set_options(&self, opts: &str) -> &Self {
-        assert_ne!(self.obj.handle(), null_mut(), "Dropdown handle cannot be null");
+        assert_ne!(
+            self.obj.handle(),
+            null_mut(),
+            "Dropdown handle cannot be null"
+        );
         let mut buf = Vec::with_capacity(opts.len() + 1);
         buf.extend_from_slice(opts.as_bytes());
         buf.push(0);
@@ -83,25 +91,31 @@ impl<'p> Dropdown<'p> {
 
     /// Set the open direction.
     pub fn set_dir(&self, dir: DdDir) -> &Self {
-        assert_ne!(self.obj.handle(), null_mut(), "Dropdown handle cannot be null");
+        assert_ne!(
+            self.obj.handle(),
+            null_mut(),
+            "Dropdown handle cannot be null"
+        );
         // SAFETY: handle non-null (asserted above).
         unsafe { lv_dropdown_set_dir(self.obj.handle(), dir as lv_dir_t) };
         self
     }
 
     /// Set the dropdown symbol (typically an arrow icon string).
-    pub fn set_symbol(&self, symbol: &str) -> &Self {
-        assert_ne!(self.obj.handle(), null_mut(), "Dropdown handle cannot be null");
-        let bytes = symbol.as_bytes();
-        let len = bytes.len().min(15);
-        let mut buf = [0u8; 16];
-        buf[..len].copy_from_slice(&bytes[..len]);
-        // SAFETY: handle non-null; buf NUL-terminated. LVGL treats symbol as
-        // void* (can be string or image pointer).
+    /// LVGL stores the raw pointer (`dropdown->symbol = symbol`,
+    /// `lv_dropdown.c:373`) — the string must be `'static`.
+    pub fn set_symbol(&self, symbol: &'static CStr) -> &Self {
+        assert_ne!(
+            self.obj.handle(),
+            null_mut(),
+            "Dropdown handle cannot be null"
+        );
+        // SAFETY: handle non-null; symbol is 'static and NUL-terminated.
+        // LVGL stores the pointer directly, so 'static is load-bearing.
         unsafe {
             lv_dropdown_set_symbol(
                 self.obj.handle(),
-                buf.as_ptr() as *const core::ffi::c_void,
+                symbol.as_ptr() as *const core::ffi::c_void,
             )
         };
         self
@@ -109,7 +123,11 @@ impl<'p> Dropdown<'p> {
 
     /// Set the selected item index.
     pub fn set_selected(&self, idx: u32) -> &Self {
-        assert_ne!(self.obj.handle(), null_mut(), "Dropdown handle cannot be null");
+        assert_ne!(
+            self.obj.handle(),
+            null_mut(),
+            "Dropdown handle cannot be null"
+        );
         // SAFETY: handle non-null (asserted above).
         unsafe { lv_dropdown_set_selected(self.obj.handle(), idx) };
         self
@@ -117,7 +135,11 @@ impl<'p> Dropdown<'p> {
 
     /// Get the currently selected item index.
     pub fn get_selected(&self) -> u32 {
-        assert_ne!(self.obj.handle(), null_mut(), "Dropdown handle cannot be null");
+        assert_ne!(
+            self.obj.handle(),
+            null_mut(),
+            "Dropdown handle cannot be null"
+        );
         // SAFETY: handle non-null (asserted above).
         unsafe { lv_dropdown_get_selected(self.obj.handle()) }
     }

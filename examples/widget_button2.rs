@@ -9,14 +9,11 @@
 //! A button with custom default and pressed styles, including gradient,
 //! shadow, outline, and a transition that expands the outline on press.
 
-extern crate alloc;
-
-use alloc::boxed::Box;
 use oxivgl::{
     view::View,
     widgets::{
-        anim_path_linear, color_white, palette_darken, palette_main, props, Button, Label,
-        ObjState, Palette, Screen, Selector, Style, TransitionDsc, WidgetError,
+        anim_path_linear, color_white, palette_darken, palette_main, props, Button, GradDir, Label,
+        ObjState, Palette, Screen, Selector, Style, StyleBuilder, TransitionDsc, WidgetError,
         LV_SIZE_CONTENT,
     },
 };
@@ -24,9 +21,8 @@ use oxivgl::{
 struct WidgetButton2 {
     _btn: Button<'static>,
     _label: Label<'static>,
-    _style: Box<Style>,
-    _style_pr: Box<Style>,
-    _trans: Box<TransitionDsc>,
+    _style: Style,
+    _style_pr: Style,
 }
 
 /// Transition property list: outline width + outline opacity + sentinel.
@@ -38,13 +34,13 @@ impl View for WidgetButton2 {
         let screen = Screen::active().ok_or(WidgetError::LvglNullPointer)?;
 
         // Default state style
-        let mut style = Box::new(Style::new());
+        let mut style = StyleBuilder::new();
         style
             .radius(3)
             .bg_opa(255)
             .bg_color(palette_main(Palette::Blue))
             .bg_grad_color(palette_darken(Palette::Blue, 2))
-            .bg_grad_dir(oxivgl::widgets::GradDir::Ver)
+            .bg_grad_dir(GradDir::Ver)
             .border_opa(102) // LV_OPA_40
             .border_width(2)
             .border_color(palette_main(Palette::Grey))
@@ -55,16 +51,12 @@ impl View for WidgetButton2 {
             .outline_color(palette_main(Palette::Blue))
             .text_color(color_white())
             .pad_all(10);
+        let style = style.build();
 
         // Pressed state style
-        let trans = Box::new(TransitionDsc::new(
-            &TRANS_PROPS,
-            Some(anim_path_linear),
-            300,
-            0,
-        ));
+        let trans = TransitionDsc::new(&TRANS_PROPS, Some(anim_path_linear), 300, 0);
 
-        let mut style_pr = Box::new(Style::new());
+        let mut style_pr = StyleBuilder::new();
         style_pr
             .outline_width(30)
             .outline_opa(0) // LV_OPA_TRANSP
@@ -72,7 +64,8 @@ impl View for WidgetButton2 {
             .shadow_offset_y(3)
             .bg_color(palette_darken(Palette::Blue, 2))
             .bg_grad_color(palette_darken(Palette::Blue, 4))
-            .transition(&trans);
+            .transition(trans);
+        let style_pr = style_pr.build();
 
         let btn = Button::new(&screen)?;
         btn.remove_style_all();
@@ -89,7 +82,6 @@ impl View for WidgetButton2 {
             _label: label,
             _style: style,
             _style_pr: style_pr,
-            _trans: trans,
         })
     }
 

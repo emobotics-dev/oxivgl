@@ -15,8 +15,9 @@ pub enum GradExtend {
 
 /// Safe wrapper around `lv_grad_dsc_t`.
 ///
-/// Must outlive the [`Style`](super::Style) that references it via
-/// [`Style::bg_grad`](super::Style::bg_grad).
+/// Build with setter methods, then move into
+/// [`StyleBuilder::bg_grad`](super::StyleBuilder::bg_grad).
+/// The style takes ownership — no external lifetime management needed.
 pub struct GradDsc {
     pub(crate) inner: lv_grad_dsc_t,
 }
@@ -27,11 +28,6 @@ impl GradDsc {
         Self {
             inner: unsafe { core::mem::zeroed::<lv_grad_dsc_t>() },
         }
-    }
-
-    /// Create a heap-allocated gradient descriptor.
-    pub fn boxed() -> alloc::boxed::Box<Self> {
-        alloc::boxed::Box::new(Self::new())
     }
 
     /// Initialize gradient color stops.

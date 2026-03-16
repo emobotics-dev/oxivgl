@@ -28,7 +28,9 @@ impl View for EventClick {
         // TODO: No touch input on fire27 hardware — click events won't fire
         // until an input device is connected.
         #[cfg(target_arch = "xtensa")]
-        oxivgl_examples_common::warn!("event_click: no touch input — click events require input device");
+        oxivgl_examples_common::warn!(
+            "event_click: no touch input — click events require input device"
+        );
 
         let btn = Button::new(&screen)?;
         btn.size(100, 50).center();
