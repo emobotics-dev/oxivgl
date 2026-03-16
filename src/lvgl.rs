@@ -10,6 +10,8 @@ impl LvglDriver {
     /// Initialise LVGL: calls `lv_init`, registers the log and tick callbacks,
     /// and (host-only) sets up a software display of `w × h` pixels.
     /// Must be called exactly once.
+    /// Initialise LVGL with a headless software display (for tests,
+    /// screenshots, and embedded targets).
     pub fn init(w: i32, h: i32) -> Self {
         // SAFETY: lv_init() is called exactly once (LvglDriver is non-Clone);
         // lvgl_log_print and get_tick_ms have the correct C callback signatures.
@@ -21,6 +23,19 @@ impl LvglDriver {
             init_host_display(w, h);
         }
         let _ = (w, h); // params unused on embedded target
+        Self
+    }
+
+    /// Initialise LVGL with an SDL2 window display (interactive host demos).
+    #[cfg(not(target_os = "none"))]
+    pub fn init_sdl(w: i32, h: i32) -> Self {
+        // SAFETY: same as init(); init_sdl_display creates an SDL2 window.
+        unsafe {
+            lv_init();
+            lv_log_register_print_cb(Some(lvgl_log_print));
+            lv_tick_set_cb(Some(get_tick_ms));
+            init_sdl_display(w, h);
+        }
         Self
     }
 }
@@ -36,6 +51,7 @@ unsafe extern "C" fn flush_cb(drv: *mut lv_display_t, _area: *const lv_area_t, _
     unsafe { lv_display_flush_ready(drv) };
 }
 
+/// Create a headless software display (for tests and screenshots).
 #[cfg(not(target_os = "none"))]
 unsafe fn init_host_display(w: i32, h: i32) {
     // Full-height buffer: rotated/scaled objects need sub-layers that can
@@ -62,6 +78,16 @@ unsafe fn init_host_display(w: i32, h: i32) {
     };
     // SAFETY: flush_cb is a valid extern "C" fn with the correct LVGL flush callback signature.
     unsafe { lv_display_set_flush_cb(disp, Some(flush_cb)) };
+}
+
+/// Create an SDL2 window display (for interactive host demos).
+/// Falls back to headless if `SDL_VIDEODRIVER=dummy`.
+#[cfg(not(target_os = "none"))]
+unsafe fn init_sdl_display(w: i32, h: i32) {
+    // SAFETY: lv_init() has been called; lv_sdl_window_create initialises
+    // SDL2 and creates a visible window with its own render loop.
+    let disp = unsafe { lv_sdl_window_create(w, h) };
+    assert!(!disp.is_null(), "lv_sdl_window_create returned NULL");
 }
 
 // ── Log callback ──────────────────────────────────────────────────────────────

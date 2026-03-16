@@ -101,7 +101,13 @@ macro_rules! host_main {
             use $crate::oxivgl::view::View;
 
             $crate::env_logger::init();
-            let _driver = LvglDriver::init(W, H);
+            let screenshot_only =
+                std::env::var("SCREENSHOT_ONLY").as_deref() == Ok("1");
+            let _driver = if screenshot_only {
+                LvglDriver::init(W, H)
+            } else {
+                LvglDriver::init_sdl(W, H)
+            };
             let mut _view = <$View>::create().expect("view create failed");
             $crate::oxivgl::view::register_view_events(&mut _view);
 
@@ -121,7 +127,7 @@ macro_rules! host_main {
             pump(10);
             capture(name, &dir);
 
-            if std::env::var("SCREENSHOT_ONLY").as_deref() == Ok("1") {
+            if screenshot_only {
                 // Skip Rust destructors — LVGL's internal state (timers,
                 // display refresh) can race with lv_obj_delete during
                 // Drop, causing intermittent SIGSEGV on exit.
