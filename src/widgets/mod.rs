@@ -23,8 +23,6 @@ mod button;
 mod checkbox;
 mod child;
 mod dropdown;
-mod enums;
-mod grid;
 mod image;
 mod label;
 mod led;
@@ -40,22 +38,17 @@ mod switch;
 mod value_label;
 
 pub use arc::{Arc, ArcMode};
-pub use bar::Bar;
+pub use bar::{Bar, BarMode};
 pub use button::Button;
 pub use checkbox::Checkbox;
 pub use child::{detach, Child};
 pub use dropdown::{DdDir, Dropdown};
-pub use enums::{
-    BarMode, EventCode, Layout, ObjFlag, ObjState, Opa, ScrollDir, ScrollSnap, ScrollbarMode,
-};
-pub use crate::event::Event;
-pub use grid::GridCell;
 pub use image::{Image, ImageAlign};
 pub use label::{Label, LabelLongMode};
 pub use led::Led;
 pub use line::Line;
 pub use obj::{
-    Align, AsLvHandle, BaseDir, FlexAlign, FlexFlow, GridAlign, Matrix, Obj, Part, TextAlign,
+    Align, AsLvHandle, BaseDir, Matrix, Obj, Part, TextAlign,
 };
 pub use roller::{Roller, RollerMode};
 pub use scale::{
@@ -65,24 +58,14 @@ pub use scale::{
 pub use screen::Screen;
 pub use slider::{Slider, SliderMode};
 pub use switch::{Switch, SwitchOrientation};
-pub use crate::timer::Timer;
 pub use value_label::ValueLabel;
 
-// Re-export raw types so callbacks don't need `lvgl_rust_sys`.
-pub use lvgl_rust_sys::{lv_color_t, lv_event_t, lv_image_dsc_t, lv_point_precise_t};
+// Re-export raw FFI types used in public widget APIs.
+pub use lvgl_rust_sys::{lv_color_t, lv_image_dsc_t, lv_point_precise_t};
 
-// Grid helpers
 /// Maximum corner radius — creates a pill/capsule shape.
 /// Equivalent to LVGL's `LV_RADIUS_CIRCLE` (0x7FFF).
 pub const RADIUS_MAX: i32 = 0x7FFF;
-
-/// Sentinel value marking the end of a grid template descriptor array.
-pub const GRID_TEMPLATE_LAST: i32 = lvgl_rust_sys::LV_COORD_MAX as i32;
-
-/// Return a fractional grid unit. Equivalent to `LV_GRID_FR(x)`.
-pub const fn grid_fr(x: i32) -> i32 {
-    lvgl_rust_sys::LV_COORD_MAX as i32 - 100 + x
-}
 
 /// Errors returned by widget constructors and setters.
 #[derive(Error, Debug)]
@@ -132,27 +115,6 @@ mod tests {
     #[test]
     fn to_lvgl_negative_clamped() {
         assert_eq!(to_lvgl(-10.0, 100.0), 0);
-    }
-
-    // -- Grid helpers ------------------------------------------------------
-
-    #[test]
-    fn grid_template_last_is_coord_max() {
-        assert_eq!(
-            super::GRID_TEMPLATE_LAST,
-            lvgl_rust_sys::LV_COORD_MAX as i32
-        );
-    }
-
-    #[test]
-    fn grid_fr_1() {
-        assert_eq!(super::grid_fr(1), lvgl_rust_sys::LV_COORD_MAX as i32 - 99);
-    }
-
-    #[test]
-    fn grid_fr_monotonic() {
-        assert!(super::grid_fr(2) > super::grid_fr(1));
-        assert!(super::grid_fr(3) > super::grid_fr(2));
     }
 }
 

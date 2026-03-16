@@ -9,7 +9,8 @@
 use oxivgl::{
     style::{lv_pct, LV_SIZE_CONTENT},
     view::View,
-    widgets::{Align, Button, FlexFlow, Label, Obj, Screen, WidgetError},
+    layout::FlexFlow,
+    widgets::{Align, Button, Label, Obj, Screen, WidgetError},
 };
 
 struct Flex1 {

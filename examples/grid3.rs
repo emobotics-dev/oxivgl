@@ -7,8 +7,9 @@
 //! Grid 3 — Demonstrate grid's "free unit" (FR)
 
 use oxivgl::{
+    layout::{grid_fr, GridAlign, GridCell, GRID_TEMPLATE_LAST},
     view::View,
-    widgets::{grid_fr, GridAlign, GridCell, Label, Obj, Screen, WidgetError, GRID_TEMPLATE_LAST},
+    widgets::{Label, Obj, Screen, WidgetError},
 };
 
 static COL_DSC: [i32; 4] = [60, grid_fr(1), grid_fr(2), GRID_TEMPLATE_LAST];

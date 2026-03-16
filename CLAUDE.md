@@ -61,8 +61,8 @@ After adding examples: add the name to the `ALL_EXAMPLES` array in `run_host.sh`
 **Layering** (top to bottom):
 1. `view` — `View` trait (`create`/`update`) + render loop
 2. `widgets` — type-safe LVGL widget wrappers (`Arc`, `Bar`, `Label`, `Scale`, `Led`, …)
-3. `lvgl_buffers` — `DisplayOutput` trait, DMA `LvglBuffers`, flush pipeline (`DRAW_OPERATION`/`FLUSH_OPERATION` channels)
-4. `lvgl` — `LvglDriver::init()`, tick source, log bridge
+3. `display` — `DisplayOutput` trait, DMA `LvglBuffers`, flush pipeline (`DRAW_OPERATION`/`FLUSH_OPERATION` channels)
+4. `driver` — `LvglDriver::init()`, tick source, log bridge
 5. `lvgl_rust_sys` — raw C bindings (external crate, git dep)
 
 **Flush pipeline** (ESP32 only, `feature = "esp-hal"`):

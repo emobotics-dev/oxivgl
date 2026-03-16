@@ -9,7 +9,9 @@
 use oxivgl::{
     style::{Selector, Style, StyleBuilder, LV_SIZE_CONTENT},
     view::View,
-    widgets::{FlexAlign, FlexFlow, Label, Layout, Obj, ObjFlag, Screen, WidgetError},
+    enums::ObjFlag,
+    layout::{FlexAlign, FlexFlow, Layout},
+    widgets::{Label, Obj, Screen, WidgetError},
 };
 
 struct Flex2 {

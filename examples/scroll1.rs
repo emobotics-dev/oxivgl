@@ -10,8 +10,10 @@
 //! Two buttons save and restore the scroll position.
 
 use oxivgl::{
+    enums::EventCode,
+    event::Event,
     view::View,
-    widgets::{Align, Button, Event, EventCode, Label, Obj, Screen, WidgetError},
+    widgets::{Align, Button, Label, Obj, Screen, WidgetError},
 };
 
 struct Scroll1 {

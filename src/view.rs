@@ -6,10 +6,11 @@ use embassy_time::{Duration, Timer};
 use lvgl_rust_sys::*;
 
 use crate::{
-    lvgl::LvglDriver,
-    lvgl_buffers::{lvgl_disp_init, LvglBuffers, DISPLAY_READY},
+    display::{lvgl_disp_init, LvglBuffers, DISPLAY_READY},
+    driver::LvglDriver,
+    enums::EventCode,
     event::Event,
-    widgets::{EventCode, WidgetError},
+    widgets::WidgetError,
 };
 
 /// UI view trait. Implement this for each screen layout.

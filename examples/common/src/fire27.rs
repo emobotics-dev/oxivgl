@@ -40,7 +40,7 @@ macro_rules! fire27_main {
         };
         use $crate::log::info;
         use $crate::oxivgl::flush_pipeline::{DisplayOutput, UiError, flush_frame_buffer};
-        use $crate::oxivgl::lvgl_buffers::LvglBuffers;
+        use $crate::oxivgl::display::LvglBuffers;
         use $crate::oxivgl::view::run_lvgl;
         use $crate::static_cell::{StaticCell, make_static};
 
@@ -54,7 +54,7 @@ macro_rules! fire27_main {
         const SCREEN_W: u16 = 320;
         const SCREEN_H: u16 = 240;
         const LVGL_BUF_BYTES: usize =
-            SCREEN_W as usize * oxivgl::lvgl_buffers::COLOR_BUF_LINES * 2;
+            SCREEN_W as usize * oxivgl::display::COLOR_BUF_LINES * 2;
 
         type SpiBusType = Spi<'static, Async>;
         type SpiDeviceType =

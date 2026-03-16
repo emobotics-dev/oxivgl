@@ -7,8 +7,9 @@
 //! Flex 4 — Reverse the order of flex items
 
 use oxivgl::{
+    layout::FlexFlow,
     view::View,
-    widgets::{FlexFlow, Label, Obj, Screen, WidgetError},
+    widgets::{Label, Obj, Screen, WidgetError},
 };
 
 struct Flex4 {

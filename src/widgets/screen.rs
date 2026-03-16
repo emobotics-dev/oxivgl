@@ -3,7 +3,8 @@
 
 use lvgl_rust_sys::*;
 
-use super::obj::{AsLvHandle, FlexAlign, FlexFlow};
+use crate::layout::{FlexAlign, FlexFlow};
+use super::obj::AsLvHandle;
 
 /// Non-owning reference to the active LVGL screen. Does **not** delete it on
 /// drop.
@@ -49,7 +50,7 @@ impl Screen {
     /// Remove the scrollable flag from the screen.
     pub fn remove_scrollable(&self) -> &Self {
         // SAFETY: handle non-null (Screen::active() returns None for null).
-        unsafe { lv_obj_remove_flag(self.handle, super::ObjFlag::SCROLLABLE.0) };
+        unsafe { lv_obj_remove_flag(self.handle, crate::enums::ObjFlag::SCROLLABLE.0) };
         self
     }
 

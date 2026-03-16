@@ -14,7 +14,8 @@ use oxivgl::{
         palette_darken, palette_main, props, Palette, Selector, Style, StyleBuilder, TransitionDsc,
     },
     view::View,
-    widgets::{Obj, ObjState, Screen, WidgetError},
+    enums::ObjState,
+    widgets::{Obj, Screen, WidgetError},
 };
 
 struct Style10 {

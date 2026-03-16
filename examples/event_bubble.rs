@@ -13,7 +13,10 @@
 use oxivgl::{
     style::{palette_main, Palette, Selector},
     view::{register_event_on, View},
-    widgets::{Button, Event, EventCode, FlexFlow, Label, Obj, Screen, WidgetError},
+    enums::EventCode,
+    event::Event,
+    layout::FlexFlow,
+    widgets::{Button, Label, Obj, Screen, WidgetError},
 };
 
 struct EventBubble {

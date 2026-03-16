@@ -11,12 +11,12 @@ mod fmt;
 /// Built-in LVGL font handles.
 pub mod fonts;
 /// LVGL driver initialization (tick source, log bridge).
-pub mod lvgl;
+pub mod driver;
+/// Display output: DMA-aligned render buffers and display initialisation.
+pub mod display;
 /// ESP32 flush pipeline: async DMA transfer between LVGL and the display driver.
 #[cfg(feature = "esp-hal")]
 pub mod flush_pipeline;
-/// DMA-aligned render buffers and embedded display initialisation.
-pub mod lvgl_buffers;
 /// Animation descriptors, path functions, and timeline management.
 pub mod anim;
 /// Style system: builders, selectors, themes, gradients, and color palettes.
@@ -29,6 +29,10 @@ pub mod prelude;
 pub mod timer;
 /// View trait and LVGL render loop.
 pub mod view;
+/// General LVGL enum types (event codes, object flags, states, opacity, scroll).
+pub mod enums;
+/// Layout types: flex flow/alignment, grid alignment/cells, layout engine.
+pub mod layout;
 /// Type-safe LVGL widget wrappers.
 pub mod widgets;
 
