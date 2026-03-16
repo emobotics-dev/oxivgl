@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
 //! Safe Rust bindings for LVGL on embedded and host targets.
 #![cfg_attr(target_os = "none", no_std)]
-#![feature(type_alias_impl_trait)]
+#![cfg_attr(target_os = "none", feature(type_alias_impl_trait))]
 #![cfg_attr(target_os = "none", feature(asm_experimental_arch))]
 
 extern crate alloc;
