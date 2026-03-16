@@ -11,7 +11,7 @@ use oxivgl::{
     lvgl::LvglDriver,
     widgets::{
         Align, Arc, AsLvHandle, Bar, Button, FlexAlign, FlexFlow, GridAlign, GridCell, Label,
-        Layout, Led, Line, Obj, ObjFlag, ObjState, Opa, Palette, Screen, Selector, Slider, Style,
+        Layout, Led, Line, Obj, ObjFlag, ObjState, Opa, Palette, Screen, Selector, Slider,
         StyleBuilder, Switch, ValueLabel, WidgetError, GRID_TEMPLATE_LAST, RADIUS_MAX,
     },
 };
