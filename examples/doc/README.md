@@ -518,13 +518,15 @@ Cyan slider with pill-shaped track, padded knob with border, bg-color transition
 ## Running
 
 ```sh
-# On host (SDL2, interactive):
+# Interactive SDL2 window:
 ./run_host.sh getting_started1
-./run_host.sh style1
 
-# On fire27 (ESP32):
+# Headless screenshot (no window):
+./run_host.sh -s getting_started1
+
+# Screenshot all examples:
+./run_host.sh -s
+
+# Flash to ESP32:
 ./run_fire27.sh getting_started1
-
-# Capture all screenshots:
-./run_screenshots.sh
 ```
