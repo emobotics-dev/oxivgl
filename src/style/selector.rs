@@ -1,21 +1,21 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
-//! Type-safe style selector combining [`Part`](super::obj::Part) and
-//! [`ObjState`](super::ObjState) bits.
+//! Type-safe style selector combining [`Part`](crate::widgets::Part) and
+//! [`ObjState`](crate::widgets::ObjState) bits.
 //!
 //! Replaces raw `u32` in all style-related methods.
 //!
 //! ```ignore
-//! use oxivgl::widgets::{ObjState, Selector};
-//! use oxivgl::widgets::obj::Part;
+//! use oxivgl::style::Selector;
+//! use oxivgl::widgets::{ObjState, obj::Part};
 //!
 //! btn.add_style(&style, Selector::DEFAULT);
 //! btn.add_style(&style, ObjState::PRESSED);
 //! slider.add_style(&style, Part::Indicator | ObjState::PRESSED);
 //! ```
 
-/// Style selector = [`Part`](super::obj::Part) + [`ObjState`](super::ObjState)
-/// bits. Pass to methods like [`Obj::add_style`](super::Obj::add_style),
-/// [`Obj::radius`](super::Obj::radius), etc.
+/// Style selector = [`Part`](crate::widgets::Part) + [`ObjState`](crate::widgets::ObjState)
+/// bits. Pass to methods like [`Obj::add_style`](crate::widgets::Obj::add_style),
+/// [`Obj::radius`](crate::widgets::Obj::radius), etc.
 #[derive(Clone, Copy, Debug, Default)]
 pub struct Selector(u32);
 
@@ -29,21 +29,21 @@ impl Selector {
     }
 }
 
-impl From<super::obj::Part> for Selector {
-    fn from(p: super::obj::Part) -> Self {
+impl From<crate::widgets::Part> for Selector {
+    fn from(p: crate::widgets::Part) -> Self {
         Self(p as u32)
     }
 }
 
-impl From<super::ObjState> for Selector {
-    fn from(s: super::ObjState) -> Self {
+impl From<crate::widgets::ObjState> for Selector {
+    fn from(s: crate::widgets::ObjState) -> Self {
         Self(s.0)
     }
 }
 
-impl core::ops::BitOr<super::ObjState> for super::obj::Part {
+impl core::ops::BitOr<crate::widgets::ObjState> for crate::widgets::Part {
     type Output = Selector;
-    fn bitor(self, rhs: super::ObjState) -> Selector {
+    fn bitor(self, rhs: crate::widgets::ObjState) -> Selector {
         Selector(self as u32 | rhs.0)
     }
 }
@@ -51,7 +51,7 @@ impl core::ops::BitOr<super::ObjState> for super::obj::Part {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::widgets::obj::Part;
+    use crate::widgets::Part;
     use crate::widgets::ObjState;
 
     #[test]

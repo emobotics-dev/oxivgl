@@ -7,10 +7,9 @@
 //! Grid 2 — Demonstrate cell placement and span
 
 use oxivgl::{
+    style::LV_SIZE_CONTENT,
     view::View,
-    widgets::{
-        GridAlign, GridCell, Label, Obj, Screen, WidgetError, GRID_TEMPLATE_LAST, LV_SIZE_CONTENT,
-    },
+    widgets::{GridAlign, GridCell, Label, Obj, Screen, WidgetError, GRID_TEMPLATE_LAST},
 };
 
 static COL_DSC: [i32; 4] = [70, 70, 70, GRID_TEMPLATE_LAST];

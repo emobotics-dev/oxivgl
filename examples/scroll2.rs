@@ -40,7 +40,7 @@ impl View for Scroll2 {
 
         for i in 0u32..10 {
             let btn = Button::new(&panel)?;
-            btn.size(150, oxivgl::widgets::lv_pct(100));
+            btn.size(150, oxivgl::style::lv_pct(100));
 
             let label = Label::new(&btn)?;
             if i == 3 {

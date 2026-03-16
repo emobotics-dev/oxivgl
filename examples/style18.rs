@@ -7,11 +7,9 @@
 //! Style 18 — Various gradient buttons
 
 use oxivgl::{
+    style::{color_make, lv_pct, GradDir, GradDsc, GradExtend, Selector, Style, StyleBuilder},
     view::View,
-    widgets::{
-        color_make, lv_pct, Align, Button, GradDir, GradDsc, GradExtend, Label, Screen, Selector,
-        Style, StyleBuilder, WidgetError,
-    },
+    widgets::{Align, Button, Label, Screen, WidgetError},
 };
 
 struct Style18 {

@@ -7,11 +7,10 @@
 //! Flex 5 — Demonstrate the effect of column and row gap style properties
 
 use oxivgl::{
+    anim::{anim_set_pad_column, anim_set_pad_row, Anim, ANIM_REPEAT_INFINITE},
+    style::LV_SIZE_CONTENT,
     view::View,
-    widgets::{
-        anim_set_pad_column, anim_set_pad_row, Anim, FlexFlow, Label, Obj, Screen, WidgetError,
-        ANIM_REPEAT_INFINITE, LV_SIZE_CONTENT,
-    },
+    widgets::{FlexFlow, Label, Obj, Screen, WidgetError},
 };
 
 struct Flex5 {

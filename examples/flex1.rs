@@ -7,8 +7,9 @@
 //! Flex 1 — A simple row and a column layout with flexbox
 
 use oxivgl::{
+    style::{lv_pct, LV_SIZE_CONTENT},
     view::View,
-    widgets::{lv_pct, Align, Button, FlexFlow, Label, Obj, Screen, WidgetError, LV_SIZE_CONTENT},
+    widgets::{Align, Button, FlexFlow, Label, Obj, Screen, WidgetError},
 };
 
 struct Flex1 {

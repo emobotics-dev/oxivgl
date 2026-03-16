@@ -7,11 +7,12 @@
 //! Getting Started 3 — Custom Styles
 
 use oxivgl::{
-    view::View,
-    widgets::{
-        darken_filter_cb, palette_lighten, palette_main, Button, ColorFilter, GradDir, Label,
-        ObjState, Opa, Palette, Screen, Selector, Style, StyleBuilder, WidgetError, RADIUS_MAX,
+    style::{
+        darken_filter_cb, palette_lighten, palette_main, ColorFilter, GradDir, Palette, Selector,
+        Style, StyleBuilder,
     },
+    view::View,
+    widgets::{Button, Label, ObjState, Opa, Screen, WidgetError, RADIUS_MAX},
 };
 
 struct GettingStarted3 {

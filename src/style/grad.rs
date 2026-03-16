@@ -51,7 +51,7 @@ impl GradDsc {
     }
 
     /// Set a simple two-stop vertical/horizontal gradient manually.
-    pub fn set_dir(&mut self, dir: super::palette::GradDir) -> &mut Self {
+    pub fn set_dir(&mut self, dir: super::GradDir) -> &mut Self {
         self.inner.set_dir(dir as u32);
         self
     }

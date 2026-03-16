@@ -7,11 +7,9 @@
 //! Getting Started 8 — Conical Gradient
 
 use oxivgl::{
+    style::{color_make, lv_pct, GradDsc, GradExtend, Selector, Style, StyleBuilder},
     view::View,
-    widgets::{
-        color_make, lv_pct, GradDsc, GradExtend, Obj, Screen, Selector, Style, StyleBuilder,
-        WidgetError,
-    },
+    widgets::{Obj, Screen, WidgetError},
 };
 
 struct GettingStarted8 {

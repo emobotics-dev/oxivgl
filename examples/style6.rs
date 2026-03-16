@@ -12,11 +12,9 @@
 extern crate alloc;
 
 use oxivgl::{
+    style::{palette_lighten, palette_main, Palette, Selector, Style, StyleBuilder},
     view::View,
-    widgets::{
-        palette_lighten, palette_main, Image, Palette, Screen, Selector, Style, StyleBuilder,
-        WidgetError,
-    },
+    widgets::{Image, Screen, WidgetError},
 };
 
 oxivgl::image_declare!(img_cogwheel_argb);

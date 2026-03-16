@@ -7,11 +7,9 @@
 //! Style 14 — Extending the current theme
 
 use oxivgl::{
+    style::{palette_darken, palette_main, Palette, StyleBuilder, Theme},
     view::View,
-    widgets::{
-        palette_darken, palette_main, Align, Button, Label, Palette, Screen, StyleBuilder, Theme,
-        WidgetError,
-    },
+    widgets::{Align, Button, Label, Screen, WidgetError},
 };
 
 struct Style14 {

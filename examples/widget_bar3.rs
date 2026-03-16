@@ -10,11 +10,10 @@
 //! -20 and 40 (3 s each direction, infinite repeat).
 
 use oxivgl::{
+    anim::{anim_set_bar_value, Anim, ANIM_REPEAT_INFINITE},
+    style::{palette_main, GradDir, Palette, Style, StyleBuilder},
     view::View,
-    widgets::{
-        anim_set_bar_value, palette_main, Anim, Bar, GradDir, Palette, Part, Screen, Style,
-        StyleBuilder, WidgetError, ANIM_REPEAT_INFINITE,
-    },
+    widgets::{Bar, Part, Screen, WidgetError},
 };
 
 struct WidgetBar3 {
