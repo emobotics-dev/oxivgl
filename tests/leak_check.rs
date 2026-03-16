@@ -22,11 +22,14 @@
 use std::sync::Once;
 
 use oxivgl::{
+    anim::anim_path_linear,
     lvgl::LvglDriver,
+    style::{
+        palette_main, props, GradDsc, GradExtend, Palette, Selector, StyleBuilder, TransitionDsc,
+    },
     widgets::{
-        anim_path_linear, palette_main, props, Arc, AsLvHandle, Bar, BarMode, Button, Checkbox,
-        Dropdown, GradDsc, GradExtend, Label, Led, Line, Obj, ObjState, Palette, Part, Roller,
-        RollerMode, Screen, Selector, Slider, StyleBuilder, Switch, TransitionDsc, ValueLabel,
+        Arc, Bar, BarMode, Button, Checkbox, Dropdown, Label, Led, Line, Obj,
+        ObjState, Part, Roller, RollerMode, Screen, Slider, Switch, ValueLabel,
     },
 };
 

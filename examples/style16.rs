@@ -7,11 +7,11 @@
 //! Style 16 — Conical gradient (metallic knob)
 
 use oxivgl::{
-    view::View,
-    widgets::{
-        color_black, color_make, lv_pct, GradDsc, GradExtend, Obj, Screen, Selector, Style,
-        StyleBuilder, WidgetError,
+    style::{
+        color_black, color_make, lv_pct, GradDsc, GradExtend, Selector, Style, StyleBuilder,
     },
+    view::View,
+    widgets::{Obj, Screen, WidgetError},
 };
 
 struct Style16 {

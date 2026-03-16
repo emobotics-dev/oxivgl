@@ -9,10 +9,9 @@
 //! Custom blue-themed bar with rounded corners, padding, and animated fill.
 
 use oxivgl::{
+    style::{palette_main, Palette, Selector, Style, StyleBuilder},
     view::View,
-    widgets::{
-        palette_main, Bar, Palette, Part, Screen, Selector, Style, StyleBuilder, WidgetError,
-    },
+    widgets::{Bar, Part, Screen, WidgetError},
 };
 
 struct WidgetBar2 {

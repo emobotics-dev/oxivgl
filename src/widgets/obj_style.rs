@@ -84,7 +84,7 @@ impl<'p> Obj<'p> {
     /// btn.add_style(&style, ObjState::PRESSED);
     /// slider.add_style(&style, Part::Indicator | ObjState::PRESSED);
     /// ```
-    pub fn add_style(&self, style: &super::Style, selector: impl Into<super::Selector>) -> &Self {
+    pub fn add_style(&self, style: &crate::style::Style, selector: impl Into<crate::style::Selector>) -> &Self {
         let selector = selector.into().raw();
         assert_ne!(self.handle(), null_mut(), "Obj handle cannot be null");
         // Push clone first: if this panics (OOM), LVGL is not updated and
@@ -109,8 +109,8 @@ impl<'p> Obj<'p> {
     /// remove all styles for that selector.
     pub fn remove_style(
         &self,
-        style: Option<&super::Style>,
-        selector: impl Into<super::Selector>,
+        style: Option<&crate::style::Style>,
+        selector: impl Into<crate::style::Selector>,
     ) -> &Self {
         let selector = selector.into().raw();
         assert_ne!(self.handle(), null_mut(), "Obj handle cannot be null");
@@ -133,7 +133,7 @@ impl<'p> Obj<'p> {
     }
 
     /// Set `clip_corner` — clip overflowing content at rounded corners.
-    pub fn style_clip_corner(&self, clip: bool, selector: impl Into<super::Selector>) -> &Self {
+    pub fn style_clip_corner(&self, clip: bool, selector: impl Into<crate::style::Selector>) -> &Self {
         let selector = selector.into().raw();
         assert_ne!(self.handle(), null_mut(), "Obj handle cannot be null");
         // SAFETY: handle non-null (asserted above).
@@ -142,7 +142,7 @@ impl<'p> Obj<'p> {
     }
 
     /// Set `translate_x` style property for the given selector.
-    pub fn style_translate_x(&self, x: i32, selector: impl Into<super::Selector>) -> &Self {
+    pub fn style_translate_x(&self, x: i32, selector: impl Into<crate::style::Selector>) -> &Self {
         let selector = selector.into().raw();
         assert_ne!(self.handle(), null_mut(), "Obj handle cannot be null");
         // SAFETY: handle non-null (asserted above).
@@ -189,7 +189,7 @@ impl<'p> Obj<'p> {
     }
 
     /// Set opacity for the given style selector.
-    pub fn style_opa(&self, opa: u8, selector: impl Into<super::Selector>) -> &Self {
+    pub fn style_opa(&self, opa: u8, selector: impl Into<crate::style::Selector>) -> &Self {
         let selector = selector.into().raw();
         assert_ne!(self.handle(), null_mut(), "Obj handle cannot be null");
         // SAFETY: handle non-null (asserted above).
@@ -198,7 +198,7 @@ impl<'p> Obj<'p> {
     }
 
     /// Set padding on all sides for the given style selector.
-    pub fn style_pad_all(&self, p: i32, selector: impl Into<super::Selector>) -> &Self {
+    pub fn style_pad_all(&self, p: i32, selector: impl Into<crate::style::Selector>) -> &Self {
         let selector = selector.into().raw();
         assert_ne!(self.handle(), null_mut(), "Obj handle cannot be null");
         // SAFETY: handle non-null (asserted above).
@@ -208,7 +208,7 @@ impl<'p> Obj<'p> {
 
     /// Set the corner radius for the given style selector.
     /// Use [`RADIUS_MAX`](super::RADIUS_MAX) for a pill/capsule shape.
-    pub fn radius(&self, r: i32, selector: impl Into<super::Selector>) -> &Self {
+    pub fn radius(&self, r: i32, selector: impl Into<crate::style::Selector>) -> &Self {
         let selector = selector.into().raw();
         assert_ne!(self.handle(), null_mut(), "Obj handle cannot be null");
         // SAFETY: handle non-null (asserted above).
@@ -217,7 +217,7 @@ impl<'p> Obj<'p> {
     }
 
     /// Set local `bg_color` style for the given selector (part | state).
-    pub fn style_bg_color(&self, color: lv_color_t, selector: impl Into<super::Selector>) -> &Self {
+    pub fn style_bg_color(&self, color: lv_color_t, selector: impl Into<crate::style::Selector>) -> &Self {
         let selector = selector.into().raw();
         assert_ne!(self.handle(), null_mut(), "Obj handle cannot be null");
         // SAFETY: handle non-null (asserted above).
@@ -229,7 +229,7 @@ impl<'p> Obj<'p> {
     pub fn style_bg_grad_color(
         &self,
         color: lv_color_t,
-        selector: impl Into<super::Selector>,
+        selector: impl Into<crate::style::Selector>,
     ) -> &Self {
         let selector = selector.into().raw();
         assert_ne!(self.handle(), null_mut(), "Obj handle cannot be null");
@@ -241,8 +241,8 @@ impl<'p> Obj<'p> {
     /// Set local `bg_grad_dir` for the given selector.
     pub fn style_bg_grad_dir(
         &self,
-        dir: super::palette::GradDir,
-        selector: impl Into<super::Selector>,
+        dir: crate::style::GradDir,
+        selector: impl Into<crate::style::Selector>,
     ) -> &Self {
         let selector = selector.into().raw();
         assert_ne!(self.handle(), null_mut(), "Obj handle cannot be null");
@@ -255,7 +255,7 @@ impl<'p> Obj<'p> {
     pub fn style_transform_rotation(
         &self,
         angle: i32,
-        selector: impl Into<super::Selector>,
+        selector: impl Into<crate::style::Selector>,
     ) -> &Self {
         let selector = selector.into().raw();
         assert_ne!(self.handle(), null_mut(), "Obj handle cannot be null");
@@ -265,7 +265,7 @@ impl<'p> Obj<'p> {
     }
 
     /// Set uniform transform scale (256 = 1.0x) for the given selector.
-    pub fn style_transform_scale(&self, scale: i32, selector: impl Into<super::Selector>) -> &Self {
+    pub fn style_transform_scale(&self, scale: i32, selector: impl Into<crate::style::Selector>) -> &Self {
         let selector = selector.into().raw();
         assert_ne!(self.handle(), null_mut(), "Obj handle cannot be null");
         // SAFETY: handle non-null (asserted above).
@@ -277,7 +277,7 @@ impl<'p> Obj<'p> {
     }
 
     /// Set transform pivot X for the given selector.
-    pub fn style_transform_pivot_x(&self, x: i32, selector: impl Into<super::Selector>) -> &Self {
+    pub fn style_transform_pivot_x(&self, x: i32, selector: impl Into<crate::style::Selector>) -> &Self {
         let selector = selector.into().raw();
         assert_ne!(self.handle(), null_mut(), "Obj handle cannot be null");
         // SAFETY: handle non-null (asserted above).
@@ -286,7 +286,7 @@ impl<'p> Obj<'p> {
     }
 
     /// Set transform pivot Y for the given selector.
-    pub fn style_transform_pivot_y(&self, y: i32, selector: impl Into<super::Selector>) -> &Self {
+    pub fn style_transform_pivot_y(&self, y: i32, selector: impl Into<crate::style::Selector>) -> &Self {
         let selector = selector.into().raw();
         assert_ne!(self.handle(), null_mut(), "Obj handle cannot be null");
         // SAFETY: handle non-null (asserted above).
@@ -298,7 +298,7 @@ impl<'p> Obj<'p> {
     pub fn set_style_base_dir(
         &self,
         dir: super::obj::BaseDir,
-        selector: impl Into<super::Selector>,
+        selector: impl Into<crate::style::Selector>,
     ) -> &Self {
         let selector = selector.into().raw();
         assert_ne!(self.handle(), null_mut());

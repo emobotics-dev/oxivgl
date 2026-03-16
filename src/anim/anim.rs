@@ -2,7 +2,7 @@
 use core::{ffi::c_void, marker::PhantomData};
 use lvgl_rust_sys::*;
 
-use super::obj::AsLvHandle;
+use crate::widgets::AsLvHandle;
 
 /// Stack-local animation builder. LVGL copies the descriptor on `start()`,
 /// so this can be dropped after starting.

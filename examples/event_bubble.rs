@@ -11,11 +11,9 @@
 //! physical input is missing.
 
 use oxivgl::{
+    style::{palette_main, Palette, Selector},
     view::{register_event_on, View},
-    widgets::{
-        palette_main, Button, Event, EventCode, FlexFlow, Label, Obj, Palette, Screen, Selector,
-        WidgetError,
-    },
+    widgets::{Button, Event, EventCode, FlexFlow, Label, Obj, Screen, WidgetError},
 };
 
 struct EventBubble {

@@ -10,11 +10,13 @@
 //! and a bg-color transition on press.
 
 use oxivgl::{
-    view::View,
-    widgets::{
-        anim_path_linear, color_make, palette_darken, palette_main, props, ObjState, Palette, Part,
-        Screen, Selector, Slider, Style, StyleBuilder, TransitionDsc, WidgetError, RADIUS_MAX,
+    anim::anim_path_linear,
+    style::{
+        color_make, palette_darken, palette_main, props, Palette, Selector, Style, StyleBuilder,
+        TransitionDsc,
     },
+    view::View,
+    widgets::{ObjState, Part, Screen, Slider, WidgetError, RADIUS_MAX},
 };
 
 struct WidgetSlider2 {

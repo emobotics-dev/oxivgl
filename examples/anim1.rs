@@ -7,11 +7,9 @@
 //! Anim 1 — Start animation on an event
 
 use oxivgl::{
+    anim::{anim_path_ease_in, anim_path_overshoot, anim_set_x, Anim},
     view::View,
-    widgets::{
-        anim_path_ease_in, anim_path_overshoot, anim_set_x, Anim, Event, EventCode, Label,
-        ObjState, Screen, Switch, WidgetError,
-    },
+    widgets::{Event, EventCode, Label, ObjState, Screen, Switch, WidgetError},
 };
 
 struct Anim1 {

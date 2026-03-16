@@ -12,11 +12,20 @@ mod fmt;
 pub mod fonts;
 /// LVGL driver initialization (tick source, log bridge).
 pub mod lvgl;
-/// Display output trait, DMA frame buffers, flush pipeline.
+/// ESP32 flush pipeline: async DMA transfer between LVGL and the display driver.
+#[cfg(feature = "esp-hal")]
+pub mod flush_pipeline;
+/// DMA-aligned render buffers and embedded display initialisation.
 pub mod lvgl_buffers;
+/// Animation descriptors, path functions, and timeline management.
+pub mod anim;
+/// Style system: builders, selectors, themes, gradients, and color palettes.
+pub mod style;
+/// Universal convenience re-exports (`use oxivgl::prelude::*`).
+pub mod prelude;
 /// View trait and LVGL render loop.
 pub mod view;
-/// Type-safe LVGL widget wrappers and supporting types.
+/// Type-safe LVGL widget wrappers.
 pub mod widgets;
 
 /// Declare an LVGL image asset compiled by `oxivgl-build`.

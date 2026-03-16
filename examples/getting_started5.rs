@@ -7,10 +7,9 @@
 //! Getting Started 5 — Simple Horizontal Gradient
 
 use oxivgl::{
+    style::{color_make, lv_pct, GradDsc, Selector, Style, StyleBuilder},
     view::View,
-    widgets::{
-        color_make, lv_pct, GradDsc, Obj, Screen, Selector, Style, StyleBuilder, WidgetError,
-    },
+    widgets::{Obj, Screen, WidgetError},
 };
 
 struct GettingStarted5 {
