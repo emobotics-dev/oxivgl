@@ -22,6 +22,10 @@ case "$mode" in
     echo "=== Integration tests ==="
     SDL_VIDEODRIVER=dummy cargo +nightly test --test integration --target "$TARGET" -- --test-threads=1 "$@"
     ;;
+  leak)
+    echo "=== Leak check tests ==="
+    SDL_VIDEODRIVER=dummy cargo +nightly test --test leak_check --target "$TARGET" -- --test-threads=1 "$@"
+    ;;
   all)
     echo "=== Unit tests ==="
     cargo +nightly test --lib --target "$TARGET" "$@"
@@ -31,12 +35,16 @@ case "$mode" in
     echo ""
     echo "=== Integration tests ==="
     SDL_VIDEODRIVER=dummy cargo +nightly test --test integration --target "$TARGET" -- --test-threads=1 "$@"
+    echo ""
+    echo "=== Leak check tests ==="
+    SDL_VIDEODRIVER=dummy cargo +nightly test --test leak_check --target "$TARGET" -- --test-threads=1 "$@"
     ;;
   *)
-    echo "Usage: $0 [unit|int|all] [-- extra cargo args]"
+    echo "Usage: $0 [unit|int|leak|all] [-- extra cargo args]"
     echo "  unit  — unit tests + doctests"
     echo "  int   — integration tests (headless LVGL)"
-    echo "  all   — both (default)"
+    echo "  leak  — memory leak detection tests"
+    echo "  all   — all of the above (default)"
     exit 1
     ;;
 esac
