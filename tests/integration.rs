@@ -7,15 +7,18 @@
 use std::sync::Once;
 
 use oxivgl::{
+    anim::anim_path_linear,
     fonts::MONTSERRAT_12,
     lvgl::LvglDriver,
+    style::{
+        color_make, palette_main, props, BorderSide, GradDsc, GradExtend, Palette, Selector,
+        StyleBuilder, TextDecor, TransitionDsc,
+    },
     widgets::{
-        anim_path_linear, color_make, detach, palette_main, props, Align, Arc, AsLvHandle, Bar,
-        BorderSide, Button, Checkbox, Child, Dropdown, FlexAlign, FlexFlow, GradDsc, GradExtend,
-        GridAlign, GridCell, Image, Label, Layout, Led, Line, Obj, ObjFlag, ObjState, Opa,
-        Palette, Roller, RollerMode, Screen, ScrollDir, ScrollSnap, Selector, Slider,
-        StyleBuilder, Switch, TextDecor, TransitionDsc, ValueLabel, WidgetError,
-        GRID_TEMPLATE_LAST, RADIUS_MAX,
+        detach, Align, Arc, AsLvHandle, Bar, Button, Checkbox, Child, Dropdown, FlexAlign,
+        FlexFlow, GridAlign, GridCell, Image, Label, Layout, Led, Line, Obj, ObjFlag, ObjState,
+        Opa, Roller, RollerMode, Screen, ScrollDir, ScrollSnap, Slider, Switch, ValueLabel,
+        WidgetError, GRID_TEMPLATE_LAST, RADIUS_MAX,
     },
 };
 
@@ -226,11 +229,11 @@ fn obj_style_selectors() {
     let screen = fresh_screen();
     let obj = Obj::new(&screen).unwrap();
     obj.style_bg_color(
-        oxivgl::widgets::palette_main(Palette::Blue),
+        oxivgl::style::palette_main(Palette::Blue),
         Selector::DEFAULT,
     );
     obj.style_bg_color(
-        oxivgl::widgets::palette_darken(Palette::Blue, 2),
+        oxivgl::style::palette_darken(Palette::Blue, 2),
         ObjState::PRESSED,
     );
     pump();
@@ -262,9 +265,9 @@ fn obj_style_add_remove() {
 fn obj_style_grad_dir() {
     let screen = fresh_screen();
     let obj = Obj::new(&screen).unwrap();
-    obj.style_bg_grad_dir(oxivgl::widgets::GradDir::Hor, Selector::DEFAULT);
+    obj.style_bg_grad_dir(oxivgl::style::GradDir::Hor, Selector::DEFAULT);
     obj.style_bg_grad_color(
-        oxivgl::widgets::palette_main(Palette::Red),
+        oxivgl::style::palette_main(Palette::Red),
         Selector::DEFAULT,
     );
     pump();
@@ -738,12 +741,12 @@ fn nested_widget_tree() {
 #[test]
 fn palette_colors() {
     // These return lv_color_t — just verify they don't crash
-    let _ = oxivgl::widgets::palette_main(Palette::Blue);
-    let _ = oxivgl::widgets::palette_lighten(Palette::Red, 2);
-    let _ = oxivgl::widgets::palette_darken(Palette::Green, 3);
-    let _ = oxivgl::widgets::color_black();
-    let _ = oxivgl::widgets::color_white();
-    let _ = oxivgl::widgets::color_make(0x12, 0x34, 0x56);
+    let _ = oxivgl::style::palette_main(Palette::Blue);
+    let _ = oxivgl::style::palette_lighten(Palette::Red, 2);
+    let _ = oxivgl::style::palette_darken(Palette::Green, 3);
+    let _ = oxivgl::style::color_black();
+    let _ = oxivgl::style::color_white();
+    let _ = oxivgl::style::color_make(0x12, 0x34, 0x56);
 }
 
 // ── Error handling ───────────────────────────────────────────────────────────
@@ -1074,7 +1077,7 @@ fn grad_horizontal_simple() {
 
 #[test]
 fn grad_set_dir() {
-    use oxivgl::widgets::GradDir;
+    use oxivgl::style::GradDir;
     let screen = fresh_screen();
     let mut grad = GradDsc::new();
     grad.init_stops(
@@ -1097,7 +1100,7 @@ fn grad_set_dir() {
 
 #[test]
 fn theme_extend_and_drop() {
-    use oxivgl::widgets::Theme;
+    use oxivgl::style::Theme;
     let screen = fresh_screen();
     let mut sb = StyleBuilder::new();
     sb.bg_color_hex(0x334455).bg_opa(255);
@@ -1350,7 +1353,7 @@ fn bar_mode_range() {
 
 #[test]
 fn style_color_filter() {
-    use oxivgl::widgets::{darken_filter_cb, ColorFilter};
+    use oxivgl::style::{darken_filter_cb, ColorFilter};
     let screen = fresh_screen();
     let filter = ColorFilter::new(darken_filter_cb);
     let mut sb = StyleBuilder::new();

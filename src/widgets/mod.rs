@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
+//! Type-safe LVGL widget wrappers and supporting types.
+
 use heapless::c_string::ExtendError;
 use thiserror_no_std::Error;
 
@@ -14,8 +17,6 @@ pub(crate) fn to_lvgl(v: f32, max: f32) -> i32 {
     (((v / max) * LVGL_SCALE as f32) as i32).clamp(0, LVGL_SCALE)
 }
 
-mod anim;
-mod anim_timeline;
 mod arc;
 mod bar;
 mod button;
@@ -24,7 +25,6 @@ mod child;
 mod dropdown;
 mod enums;
 pub(crate) mod event;
-mod grad;
 mod grid;
 mod image;
 mod label;
@@ -33,25 +33,13 @@ mod line;
 mod obj;
 mod obj_layout;
 mod obj_style;
-mod palette;
-pub mod prelude;
 mod roller;
 mod scale;
 mod screen;
-mod selector;
 mod slider;
-mod style;
 mod switch;
-mod theme;
 mod value_label;
 
-pub use anim::{
-    anim_path_bounce, anim_path_ease_in, anim_path_ease_in_out, anim_path_ease_out,
-    anim_path_linear, anim_path_overshoot, anim_set_arc_value, anim_set_bar_value, anim_set_height,
-    anim_set_pad_column, anim_set_pad_row, anim_set_size, anim_set_slider_value, anim_set_width,
-    anim_set_x, Anim, ANIM_REPEAT_INFINITE,
-};
-pub use anim_timeline::{AnimTimeline, ANIM_TIMELINE_PROGRESS_MAX};
 pub use arc::Arc;
 pub use bar::Bar;
 pub use button::Button;
@@ -62,7 +50,6 @@ pub use enums::{
     BarMode, EventCode, Layout, ObjFlag, ObjState, Opa, ScrollDir, ScrollSnap, ScrollbarMode,
 };
 pub use event::Event;
-pub use grad::{GradDsc, GradExtend};
 pub use grid::GridCell;
 pub use image::Image;
 pub use label::{Label, LabelLongMode};
@@ -71,21 +58,11 @@ pub use line::Line;
 pub use obj::{
     Align, AsLvHandle, BaseDir, FlexAlign, FlexFlow, GridAlign, Matrix, Obj, Part, TextAlign,
 };
-pub use palette::{
-    color_black, color_make, color_white, palette_darken, palette_lighten, palette_main, GradDir,
-    Palette,
-};
 pub use roller::{Roller, RollerMode};
 pub use scale::{Scale, ScaleBuilder, ScaleMode};
 pub use screen::Screen;
-pub use selector::Selector;
 pub use slider::Slider;
-pub use style::{
-    darken_filter_cb, lv_pct, props, BorderSide, ColorFilter, Style, StyleBuilder, TextDecor,
-    TransitionDsc, LV_SIZE_CONTENT,
-};
 pub use switch::Switch;
-pub use theme::Theme;
 pub use value_label::ValueLabel;
 
 // Re-export raw types so callbacks don't need `lvgl_rust_sys`.

@@ -61,7 +61,7 @@ impl Event {
 
     /// Set a style property on the event target. Convenience for event handlers
     /// that need to modify the originating widget (e.g. event bubbling).
-    pub fn target_style_bg_color(&self, color: lv_color_t, selector: impl Into<super::Selector>) {
+    pub fn target_style_bg_color(&self, color: lv_color_t, selector: impl Into<crate::style::Selector>) {
         let selector = selector.into().raw();
         // SAFETY: target_handle() returns a valid LVGL object for callback duration.
         unsafe { lv_obj_set_style_bg_color(self.target_handle(), color, selector) };

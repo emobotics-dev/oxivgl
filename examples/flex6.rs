@@ -7,8 +7,9 @@
 //! Flex 6 — RTL base direction changes order of the items
 
 use oxivgl::{
+    style::{Selector, LV_SIZE_CONTENT},
     view::View,
-    widgets::{BaseDir, FlexFlow, Label, Obj, Screen, Selector, WidgetError, LV_SIZE_CONTENT},
+    widgets::{BaseDir, FlexFlow, Label, Obj, Screen, WidgetError},
 };
 
 struct Flex6 {

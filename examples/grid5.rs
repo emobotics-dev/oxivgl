@@ -7,11 +7,9 @@
 //! Grid 5 — Demonstrate column and row gap
 
 use oxivgl::{
+    anim::{anim_set_pad_column, anim_set_pad_row, Anim, ANIM_REPEAT_INFINITE},
     view::View,
-    widgets::{
-        anim_set_pad_column, anim_set_pad_row, Anim, GridAlign, GridCell, Label, Obj, Screen,
-        WidgetError, ANIM_REPEAT_INFINITE, GRID_TEMPLATE_LAST,
-    },
+    widgets::{GridAlign, GridCell, Label, Obj, Screen, WidgetError, GRID_TEMPLATE_LAST},
 };
 
 static COL_DSC: [i32; 4] = [60, 60, 60, GRID_TEMPLATE_LAST];

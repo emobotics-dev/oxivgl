@@ -10,12 +10,13 @@
 //! shadow, outline, and a transition that expands the outline on press.
 
 use oxivgl::{
-    view::View,
-    widgets::{
-        anim_path_linear, color_white, palette_darken, palette_main, props, Button, GradDir, Label,
-        ObjState, Palette, Screen, Selector, Style, StyleBuilder, TransitionDsc, WidgetError,
-        LV_SIZE_CONTENT,
+    anim::anim_path_linear,
+    style::{
+        color_white, palette_darken, palette_main, props, GradDir, Palette, Selector, Style,
+        StyleBuilder, TransitionDsc, LV_SIZE_CONTENT,
     },
+    view::View,
+    widgets::{Button, Label, ObjState, Screen, WidgetError},
 };
 
 struct WidgetButton2 {

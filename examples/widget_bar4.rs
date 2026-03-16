@@ -10,8 +10,9 @@
 //! using range mode (start=20, end=90).
 
 use oxivgl::{
+    style::{Style, StyleBuilder},
     view::View,
-    widgets::{Bar, BarMode, Part, Screen, Style, StyleBuilder, WidgetError},
+    widgets::{Bar, BarMode, Part, Screen, WidgetError},
 };
 
 oxivgl::image_declare!(img_skew_strip);

@@ -9,8 +9,9 @@
 //! Three LEDs: off, dim red (brightness 150), and full on.
 
 use oxivgl::{
+    style::{palette_main, Palette},
     view::View,
-    widgets::{palette_main, Align, Led, Palette, Screen, WidgetError},
+    widgets::{Align, Led, Screen, WidgetError},
 };
 
 struct WidgetLed1 {

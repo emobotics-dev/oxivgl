@@ -9,10 +9,9 @@
 //! Two base objects: a plain one and one with a blue shadow style.
 
 use oxivgl::{
+    style::{palette_main, Palette, Selector, Style, StyleBuilder},
     view::View,
-    widgets::{
-        palette_main, Align, Obj, Palette, Screen, Selector, Style, StyleBuilder, WidgetError,
-    },
+    widgets::{Align, Obj, Screen, WidgetError},
 };
 
 struct WidgetObj1 {
