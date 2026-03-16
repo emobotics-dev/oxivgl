@@ -10,8 +10,9 @@
 //! with reduced opacity for the shadow layer.
 
 use oxivgl::{
+    style::{color_black, Selector, Style, StyleBuilder},
     view::View,
-    widgets::{color_black, Align, Label, Screen, Selector, Style, StyleBuilder, WidgetError},
+    widgets::{Align, Label, Screen, WidgetError},
 };
 
 struct WidgetLabel2 {

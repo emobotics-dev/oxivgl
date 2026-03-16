@@ -9,11 +9,12 @@
 extern crate alloc;
 
 use oxivgl::{
-    view::View,
-    widgets::{
-        color_white, palette_darken, palette_main, Align, Label, Obj, Palette, Screen, Selector,
-        Style, StyleBuilder, WidgetError, LV_SIZE_CONTENT,
+    style::{
+        color_white, palette_darken, palette_main, Palette, Selector, Style, StyleBuilder,
+        LV_SIZE_CONTENT,
     },
+    view::View,
+    widgets::{Align, Label, Obj, Screen, WidgetError},
 };
 
 struct Style11 {

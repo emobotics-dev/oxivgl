@@ -4,7 +4,8 @@ use core::{marker::PhantomData, pin::Pin, ptr::null_mut};
 use alloc::boxed::Box;
 use lvgl_rust_sys::*;
 
-use super::{Style, WidgetError};
+use super::Style;
+use crate::widgets::WidgetError;
 
 unsafe extern "C" {
     /// LVGL button widget class descriptor. Not emitted by bindgen (extern data);
@@ -26,7 +27,7 @@ unsafe extern "C" fn apply_cb_trampoline(th: *mut lv_theme_t, obj: *mut lv_obj_t
 
 /// Owned LVGL theme extension.
 ///
-/// Extends the active display theme so that every [`Button`](super::Button)
+/// Extends the active display theme so that every [`Button`](crate::widgets::Button)
 /// created after [`Theme::extend_current`] is called receives the supplied
 /// [`Style`] automatically.
 ///

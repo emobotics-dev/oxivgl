@@ -10,11 +10,9 @@
 //! (infinite repeat with 500 ms delay). Knob hidden, not clickable.
 
 use oxivgl::{
+    anim::{anim_set_arc_value, Anim, ANIM_REPEAT_INFINITE},
     view::View,
-    widgets::{
-        anim_set_arc_value, Anim, Arc, ObjFlag, Opa, Part, Screen, WidgetError,
-        ANIM_REPEAT_INFINITE,
-    },
+    widgets::{Arc, ObjFlag, Opa, Part, Screen, WidgetError},
 };
 
 struct WidgetArc2 {

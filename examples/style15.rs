@@ -7,8 +7,9 @@
 //! Style 15 — Opacity and Transformations
 
 use oxivgl::{
+    style::Selector,
     view::View,
-    widgets::{Align, Button, Label, Screen, Selector, WidgetError},
+    widgets::{Align, Button, Label, Screen, WidgetError},
 };
 
 struct Style15 {

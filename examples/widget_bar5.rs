@@ -9,8 +9,9 @@
 //! Two bars side by side: one left-to-right (default), one right-to-left.
 
 use oxivgl::{
+    style::Selector,
     view::View,
-    widgets::{Align, Bar, BaseDir, Label, Screen, Selector, WidgetError},
+    widgets::{Align, Bar, BaseDir, Label, Screen, WidgetError},
 };
 
 struct WidgetBar5 {

@@ -231,7 +231,7 @@ pub trait AsLvHandle {
 /// ```
 pub struct Obj<'p> {
     handle: *mut lv_obj_t,
-    pub(super) _styles: RefCell<Vec<super::Style>>,
+    pub(super) _styles: RefCell<Vec<crate::style::Style>>,
     _parent: PhantomData<&'p lv_obj_t>,
 }
 
@@ -379,7 +379,7 @@ impl<'p> Obj<'p> {
     /// **Safe only when the display uses a full-screen buffer** (host) or
     /// the transformed bounding box fits entirely within a single render
     /// band (very small objects). For embedded targets with partial
-    /// rendering, prefer [`super::StyleBuilder::transform_rotation`] — it allocates an
+    /// rendering, prefer [`StyleBuilder::transform_rotation`](crate::style::StyleBuilder::transform_rotation) — it allocates an
     /// intermediate layer but handles band clipping correctly.
     pub fn set_transform(&self, matrix: &Matrix) -> &Self {
         assert_ne!(self.handle, null_mut(), "Obj handle cannot be null");
