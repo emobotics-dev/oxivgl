@@ -4,10 +4,21 @@ use core::{cell::Cell, ops::Deref, ptr::null_mut};
 use lvgl_rust_sys::*;
 
 use super::{
-    enums::BarMode,
     obj::{AsLvHandle, Obj},
     to_lvgl, WidgetError, LVGL_SCALE,
 };
+
+/// LVGL bar mode.
+#[repr(u32)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum BarMode {
+    /// Standard bar (indicator from min to value).
+    Normal = lvgl_rust_sys::lv_bar_mode_t_LV_BAR_MODE_NORMAL,
+    /// Indicator draws from zero point towards value (needs range with negative min).
+    Symmetrical = lvgl_rust_sys::lv_bar_mode_t_LV_BAR_MODE_SYMMETRICAL,
+    /// Indicator between start value and end value.
+    Range = lvgl_rust_sys::lv_bar_mode_t_LV_BAR_MODE_RANGE,
+}
 
 /// LVGL bar (progress bar) widget with normalized f32 value API.
 ///

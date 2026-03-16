@@ -9,7 +9,9 @@
 use oxivgl::{
     anim::{anim_path_ease_in, anim_path_overshoot, anim_set_x, Anim},
     view::View,
-    widgets::{Event, EventCode, Label, ObjState, Screen, Switch, WidgetError},
+    enums::{EventCode, ObjState},
+    event::Event,
+    widgets::{Label, Screen, Switch, WidgetError},
 };
 
 struct Anim1 {

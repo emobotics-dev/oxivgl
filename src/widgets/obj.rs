@@ -136,66 +136,6 @@ pub enum TextAlign {
     Right = 3,
 }
 
-/// Type-safe wrapper for `lv_flex_flow_t`.
-#[repr(u32)]
-#[derive(Clone, Copy, Debug)]
-pub enum FlexFlow {
-    /// Horizontal left to right.
-    Row = 0,
-    /// Vertical top to bottom.
-    Column = 1,
-    /// Row with wrapping.
-    RowWrap = 4,
-    /// Row, right to left.
-    RowReverse = 8,
-    /// Row with wrapping, reversed.
-    RowWrapReverse = 12,
-    /// Column with wrapping.
-    ColumnWrap = 5,
-    /// Column, bottom to top.
-    ColumnReverse = 9,
-    /// Column with wrapping, reversed.
-    ColumnWrapReverse = 13,
-}
-
-/// Type-safe wrapper for `lv_flex_align_t`.
-#[repr(u32)]
-#[derive(Clone, Copy, Debug)]
-pub enum FlexAlign {
-    /// Align to start.
-    Start = 0,
-    /// Align to end.
-    End = 1,
-    /// Center alignment.
-    Center = 2,
-    /// Equal space around all items.
-    SpaceEvenly = 3,
-    /// Equal space around each item.
-    SpaceAround = 4,
-    /// Equal space between items.
-    SpaceBetween = 5,
-}
-
-/// Type-safe wrapper for `lv_grid_align_t`.
-#[repr(u32)]
-#[derive(Clone, Copy, Debug)]
-pub enum GridAlign {
-    /// Align to start.
-    Start = 0,
-    /// Center alignment.
-    Center = 1,
-    /// Align to end.
-    End = 2,
-    /// Stretch to fill cell.
-    Stretch = 3,
-    /// Equal space around all items.
-    SpaceEvenly = 4,
-    /// Equal space around each item.
-    SpaceAround = 5,
-    /// Equal space between items.
-    SpaceBetween = 6,
-}
-
 /// Type-safe wrapper for `lv_base_dir_t`.
 #[repr(u32)]
 #[derive(Clone, Copy, Debug)]
@@ -431,7 +371,7 @@ impl<'p> Obj<'p> {
     // ── State / flags ────────────────────────────────────────────────────
 
     /// Add an object state (e.g. checked, pressed).
-    pub fn add_state(&self, state: super::ObjState) -> &Self {
+    pub fn add_state(&self, state: crate::enums::ObjState) -> &Self {
         assert_ne!(self.handle, null_mut());
         // SAFETY: handle non-null (asserted above).
         unsafe { lv_obj_add_state(self.handle, state.0) };
@@ -439,7 +379,7 @@ impl<'p> Obj<'p> {
     }
 
     /// Remove an object state.
-    pub fn remove_state(&self, state: super::ObjState) -> &Self {
+    pub fn remove_state(&self, state: crate::enums::ObjState) -> &Self {
         assert_ne!(self.handle, null_mut());
         // SAFETY: handle non-null (asserted above).
         unsafe { lv_obj_remove_state(self.handle, state.0) };
@@ -447,14 +387,14 @@ impl<'p> Obj<'p> {
     }
 
     /// Check if the object has the given state.
-    pub fn has_state(&self, state: super::ObjState) -> bool {
+    pub fn has_state(&self, state: crate::enums::ObjState) -> bool {
         assert_ne!(self.handle, null_mut());
         // SAFETY: handle non-null (asserted above).
         unsafe { lv_obj_has_state(self.handle, state.0) }
     }
 
     /// Add an object flag (e.g. clickable, scrollable).
-    pub fn add_flag(&self, flag: super::ObjFlag) -> &Self {
+    pub fn add_flag(&self, flag: crate::enums::ObjFlag) -> &Self {
         assert_ne!(self.handle, null_mut());
         // SAFETY: handle non-null (asserted above).
         unsafe { lv_obj_add_flag(self.handle, flag.0) };
@@ -462,7 +402,7 @@ impl<'p> Obj<'p> {
     }
 
     /// Remove an object flag.
-    pub fn remove_flag(&self, flag: super::ObjFlag) -> &Self {
+    pub fn remove_flag(&self, flag: crate::enums::ObjFlag) -> &Self {
         assert_ne!(self.handle, null_mut());
         // SAFETY: handle non-null (asserted above).
         unsafe { lv_obj_remove_flag(self.handle, flag.0) };
@@ -471,16 +411,16 @@ impl<'p> Obj<'p> {
 
     /// Remove the SCROLLABLE flag (convenience).
     pub fn remove_scrollable(&self) -> &Self {
-        self.remove_flag(super::ObjFlag::SCROLLABLE)
+        self.remove_flag(crate::enums::ObjFlag::SCROLLABLE)
     }
 
     /// Remove the CLICKABLE flag (convenience).
     pub fn remove_clickable(&self) -> &Self {
-        self.remove_flag(super::ObjFlag::CLICKABLE)
+        self.remove_flag(crate::enums::ObjFlag::CLICKABLE)
     }
 
     /// Set the scrollbar display mode.
-    pub fn set_scrollbar_mode(&self, mode: super::ScrollbarMode) -> &Self {
+    pub fn set_scrollbar_mode(&self, mode: crate::enums::ScrollbarMode) -> &Self {
         assert_ne!(self.handle, null_mut());
         // SAFETY: handle non-null (asserted above).
         unsafe { lv_obj_set_scrollbar_mode(self.handle, mode as lv_scrollbar_mode_t) };
@@ -488,7 +428,7 @@ impl<'p> Obj<'p> {
     }
 
     /// Set horizontal scroll snap alignment.
-    pub fn set_scroll_snap_x(&self, snap: super::ScrollSnap) -> &Self {
+    pub fn set_scroll_snap_x(&self, snap: crate::enums::ScrollSnap) -> &Self {
         assert_ne!(self.handle, null_mut());
         // SAFETY: handle non-null (asserted above).
         unsafe { lv_obj_set_scroll_snap_x(self.handle, snap as lv_scroll_snap_t) };
@@ -496,7 +436,7 @@ impl<'p> Obj<'p> {
     }
 
     /// Set vertical scroll snap alignment.
-    pub fn set_scroll_snap_y(&self, snap: super::ScrollSnap) -> &Self {
+    pub fn set_scroll_snap_y(&self, snap: crate::enums::ScrollSnap) -> &Self {
         assert_ne!(self.handle, null_mut());
         // SAFETY: handle non-null (asserted above).
         unsafe { lv_obj_set_scroll_snap_y(self.handle, snap as lv_scroll_snap_t) };
@@ -504,7 +444,7 @@ impl<'p> Obj<'p> {
     }
 
     /// Set allowed scroll direction(s).
-    pub fn set_scroll_dir(&self, dir: super::ScrollDir) -> &Self {
+    pub fn set_scroll_dir(&self, dir: crate::enums::ScrollDir) -> &Self {
         assert_ne!(self.handle, null_mut());
         // SAFETY: handle non-null (asserted above).
         unsafe { lv_obj_set_scroll_dir(self.handle, dir.0 as lv_dir_t) };
@@ -565,7 +505,7 @@ impl<'p> Obj<'p> {
     }
 
     /// Send an event to this object programmatically.
-    pub fn send_event(&self, code: super::EventCode) -> &Self {
+    pub fn send_event(&self, code: crate::enums::EventCode) -> &Self {
         assert_ne!(self.handle, null_mut());
         // SAFETY: handle non-null (asserted above).
         unsafe { lv_obj_send_event(self.handle, code.0, core::ptr::null_mut()) };
@@ -581,7 +521,7 @@ impl<'p> Obj<'p> {
     pub fn on_event(
         &self,
         cb: unsafe extern "C" fn(*mut lv_event_t),
-        filter: super::EventCode,
+        filter: crate::enums::EventCode,
         user_data: *mut c_void,
     ) -> &Self {
         assert_ne!(self.handle, null_mut(), "Obj handle cannot be null");
@@ -600,7 +540,7 @@ impl<'p> Obj<'p> {
     ///
     /// For handlers that need View state, use [`View::on_event`](crate::view::View::on_event)
     /// with event bubbling instead.
-    pub fn on(&self, code: super::EventCode, cb: fn(&crate::event::Event)) -> &Self {
+    pub fn on(&self, code: crate::enums::EventCode, cb: fn(&crate::event::Event)) -> &Self {
         assert_ne!(self.handle, null_mut(), "Obj handle cannot be null");
 
         unsafe extern "C" fn trampoline(e: *mut lv_event_t) {
@@ -630,7 +570,7 @@ impl<'p> Obj<'p> {
     /// Enable event bubbling on this widget.
     /// Shorthand for `self.add_flag(ObjFlag::EVENT_BUBBLE)`.
     pub fn bubble_events(&self) -> &Self {
-        self.add_flag(super::ObjFlag::EVENT_BUBBLE)
+        self.add_flag(crate::enums::ObjFlag::EVENT_BUBBLE)
     }
 
     // ── Children ─────────────────────────────────────────────────────────

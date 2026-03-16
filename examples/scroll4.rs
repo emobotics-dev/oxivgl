@@ -15,7 +15,8 @@ use oxivgl::{
         palette_darken, palette_main, props, Palette, Style, StyleBuilder, TransitionDsc,
     },
     view::View,
-    widgets::{Label, Obj, ObjState, Part, Screen, ScrollbarMode, WidgetError},
+    enums::{ObjState, ScrollbarMode},
+    widgets::{Label, Obj, Part, Screen, WidgetError},
 };
 
 struct Scroll4 {

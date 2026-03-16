@@ -12,7 +12,8 @@
 use oxivgl::{
     anim::{anim_set_arc_value, Anim, ANIM_REPEAT_INFINITE},
     view::View,
-    widgets::{Arc, ObjFlag, Opa, Part, Screen, WidgetError},
+    enums::{ObjFlag, Opa},
+    widgets::{Arc, Part, Screen, WidgetError},
 };
 
 struct WidgetArc2 {

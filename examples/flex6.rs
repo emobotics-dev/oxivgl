@@ -9,7 +9,8 @@
 use oxivgl::{
     style::{Selector, LV_SIZE_CONTENT},
     view::View,
-    widgets::{BaseDir, FlexFlow, Label, Obj, Screen, WidgetError},
+    layout::FlexFlow,
+    widgets::{BaseDir, Label, Obj, Screen, WidgetError},
 };
 
 struct Flex6 {

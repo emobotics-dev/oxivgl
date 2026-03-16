@@ -8,23 +8,37 @@
 // View trait
 pub use crate::view::View;
 
+// Core LVGL enums
+pub use crate::enums::{
+    EventCode, ObjFlag, ObjState, Opa, ScrollDir, ScrollSnap, ScrollbarMode,
+};
+
+// Event system
+pub use crate::event::Event;
+
+// Timer
+pub use crate::timer::Timer;
+
+// Layout
+pub use crate::layout::{
+    FlexAlign, FlexFlow, GridAlign, GridCell, Layout, GRID_TEMPLATE_LAST, grid_fr,
+};
+
 // Widgets
 pub use crate::widgets::{
-    Align, Arc, AsLvHandle, Bar, BaseDir, Button, Checkbox, Child, DdDir, Dropdown, Event,
-    EventCode, FlexAlign, FlexFlow, GridAlign, GridCell, Image, Label, LabelLongMode, Layout, Led,
-    Line, Obj, ObjFlag, ObjState, Opa, Part, Roller, Scale, Screen, ScrollDir, ScrollSnap,
-    ScrollbarMode, Slider, Switch, TextAlign, ValueLabel, WidgetError, GRID_TEMPLATE_LAST,
-    RADIUS_MAX,
+    Align, Arc, ArcMode, AsLvHandle, Bar, BarMode, BaseDir, Button, Checkbox, Child, DdDir,
+    Dropdown, Image, ImageAlign, Label, LabelLongMode, Led, Line, Matrix, Obj, Part, Roller,
+    RollerMode, Scale, ScaleBuilder, ScaleLabels, ScaleMode, ScaleSection, Screen, Slider,
+    SliderMode, Switch, SwitchOrientation, TextAlign, ValueLabel, WidgetError, RADIUS_MAX,
+    SCALE_LABEL_ROTATE_KEEP_UPRIGHT, SCALE_LABEL_ROTATE_MATCH_TICKS,
 };
-pub use crate::widgets::{grid_fr, lv_color_t, lv_image_dsc_t, lv_point_precise_t};
+pub use crate::widgets::{lv_color_t, lv_image_dsc_t, lv_point_precise_t};
 
 // Style system
 pub use crate::style::{
-    darken_filter_cb, lv_pct, props, BorderSide, ColorFilter, GradDir, GradDsc, GradExtend,
+    color_black, color_make, color_white, darken_filter_cb, lv_pct, palette_darken,
+    palette_lighten, palette_main, props, BorderSide, ColorFilter, GradDir, GradDsc, GradExtend,
     Palette, Selector, Style, StyleBuilder, TextDecor, Theme, TransitionDsc, LV_SIZE_CONTENT,
-};
-pub use crate::style::{
-    color_black, color_make, color_white, palette_darken, palette_lighten, palette_main,
 };
 
 // Animation system

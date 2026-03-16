@@ -13,9 +13,9 @@ use core::fmt::Write;
 use oxivgl::{
     style::{color_make, Selector, StyleBuilder},
     view::View,
-    widgets::{
-        Align, Label, Line, Opa, Part, Scale, ScaleMode, Screen, Timer, WidgetError, RADIUS_MAX,
-    },
+    enums::Opa,
+    timer::Timer,
+    widgets::{Align, Label, Line, Part, Scale, ScaleMode, Screen, WidgetError, RADIUS_MAX},
 };
 
 struct WidgetScale10 {

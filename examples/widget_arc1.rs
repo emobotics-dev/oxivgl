@@ -11,7 +11,9 @@
 
 use oxivgl::{
     view::View,
-    widgets::{Arc, Event, EventCode, Label, Screen, WidgetError},
+    enums::EventCode,
+    event::Event,
+    widgets::{Arc, Label, Screen, WidgetError},
 };
 
 struct WidgetArc1 {

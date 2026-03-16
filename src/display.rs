@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
+// Formerly `lvgl_buffers` — renamed for clarity.
 //! DMA-aligned render buffers and embedded display initialisation.
 //!
 //! Buffer types (`LvglBuf`, `LvglBuffers`) are target-independent.

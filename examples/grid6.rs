@@ -9,7 +9,8 @@
 use oxivgl::{
     style::Selector,
     view::View,
-    widgets::{BaseDir, GridAlign, GridCell, Label, Obj, Screen, WidgetError, GRID_TEMPLATE_LAST},
+    layout::{GridAlign, GridCell, GRID_TEMPLATE_LAST},
+    widgets::{BaseDir, Label, Obj, Screen, WidgetError},
 };
 
 static COL_DSC: [i32; 4] = [60, 60, 60, GRID_TEMPLATE_LAST];

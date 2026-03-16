@@ -16,7 +16,8 @@ use oxivgl::{
         StyleBuilder, TransitionDsc, LV_SIZE_CONTENT,
     },
     view::View,
-    widgets::{Button, Label, ObjState, Screen, WidgetError},
+    enums::ObjState,
+    widgets::{Button, Label, Screen, WidgetError},
 };
 
 struct WidgetButton2 {

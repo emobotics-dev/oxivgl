@@ -3,7 +3,8 @@
 
 use lvgl_rust_sys::*;
 
-use crate::widgets::{AsLvHandle, Child, EventCode, Obj};
+use crate::enums::EventCode;
+use crate::widgets::{AsLvHandle, Child, Obj};
 
 /// Safe wrapper around an LVGL event (`lv_event_t`).
 ///

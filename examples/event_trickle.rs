@@ -13,7 +13,9 @@
 use oxivgl::{
     style::{color_black, color_white, Style, StyleBuilder},
     view::View,
-    widgets::{FlexFlow, Label, Obj, ObjFlag, ObjState, Screen, WidgetError},
+    enums::{ObjFlag, ObjState},
+    layout::FlexFlow,
+    widgets::{Label, Obj, Screen, WidgetError},
 };
 
 struct EventTrickle {

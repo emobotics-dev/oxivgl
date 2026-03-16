@@ -11,7 +11,8 @@ extern crate alloc;
 use oxivgl::{
     style::{palette_lighten, palette_main, GradDir, Palette, Style, StyleBuilder},
     view::View,
-    widgets::{ObjState, Part, Screen, Slider, WidgetError},
+    enums::ObjState,
+    widgets::{Part, Screen, Slider, WidgetError},
 };
 
 struct Style13 {

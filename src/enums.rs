@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
 //! Type-safe wrappers for LVGL constants (event codes, object flags, states,
-//! scrollbar modes, layout types).
+//! scrollbar modes, opacity, scroll direction).
 //!
 //! Newtype structs are used for open-ended value sets (events, flags, states)
 //! so that unknown LVGL values pass through safely. Proper enums are used for
-//! small, exhaustive sets (scrollbar mode, layout).
+//! small, exhaustive sets (scrollbar mode).
 
 /// LVGL event code. Newtype around `u32` so that unknown codes propagate
 /// without UB while known codes get ergonomic named constants.
@@ -190,28 +190,6 @@ impl core::ops::BitOr for ScrollDir {
     }
 }
 
-/// LVGL bar mode.
-#[repr(u32)]
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum BarMode {
-    /// Standard bar (indicator from min to value).
-    Normal = lvgl_rust_sys::lv_bar_mode_t_LV_BAR_MODE_NORMAL,
-    /// Indicator draws from zero point towards value (needs range with negative min).
-    Symmetrical = lvgl_rust_sys::lv_bar_mode_t_LV_BAR_MODE_SYMMETRICAL,
-    /// Indicator between start value and end value.
-    Range = lvgl_rust_sys::lv_bar_mode_t_LV_BAR_MODE_RANGE,
-}
-
-/// LVGL layout engine type.
-#[repr(u32)]
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum Layout {
-    /// Flexbox layout.
-    Flex = lvgl_rust_sys::lv_layout_t_LV_LAYOUT_FLEX,
-    /// Grid layout.
-    Grid = lvgl_rust_sys::lv_layout_t_LV_LAYOUT_GRID,
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -341,20 +319,6 @@ mod tests {
         assert_eq!(
             ScrollbarMode::Auto as u32,
             lvgl_rust_sys::lv_scrollbar_mode_t_LV_SCROLLBAR_MODE_AUTO
-        );
-    }
-
-    // -- Layout ------------------------------------------------------------
-
-    #[test]
-    fn layout_discriminants() {
-        assert_eq!(
-            Layout::Flex as u32,
-            lvgl_rust_sys::lv_layout_t_LV_LAYOUT_FLEX
-        );
-        assert_eq!(
-            Layout::Grid as u32,
-            lvgl_rust_sys::lv_layout_t_LV_LAYOUT_GRID
         );
     }
 

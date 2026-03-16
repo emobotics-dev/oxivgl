@@ -13,7 +13,8 @@ use oxivgl::{
     anim::{anim_path_ease_in_out, anim_path_overshoot},
     style::{props, Selector, Style, StyleBuilder, TransitionDsc},
     view::View,
-    widgets::{Align, Button, Label, ObjState, Screen, WidgetError},
+    enums::ObjState,
+    widgets::{Align, Button, Label, Screen, WidgetError},
 };
 
 /// Transition property list: transform width + height + letter spacing + sentinel.
