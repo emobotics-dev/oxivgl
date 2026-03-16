@@ -50,6 +50,7 @@ impl<'p> Image<'p> {
     ///
     /// The descriptor is typically produced by `oxivgl-build::image_asset()`
     /// and declared via [`image_declare!`](crate::image_declare).
+    /// LVGL stores the raw pointer — the descriptor must be `'static`.
     ///
     /// # Example
     ///
@@ -58,9 +59,9 @@ impl<'p> Image<'p> {
     /// let img = Image::new(&screen)?;
     /// img.set_src(unsafe { &my_icon });
     /// ```
-    pub fn set_src(&self, dsc: &lv_image_dsc_t) -> &Self {
-        // SAFETY: handle non-null (from Image::new); dsc points to valid
-        // static lv_image_dsc_t produced by LVGLImage.py + cc.
+    pub fn set_src(&self, dsc: &'static lv_image_dsc_t) -> &Self {
+        // SAFETY: handle non-null (from Image::new); dsc is 'static so the
+        // pointer LVGL stores will remain valid for the program's lifetime.
         unsafe {
             lv_image_set_src(
                 self.obj.handle(),

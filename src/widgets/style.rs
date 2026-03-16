@@ -523,11 +523,13 @@ impl StyleBuilder {
     }
 
     /// Set background image source (pointer to an `lv_image_dsc_t`).
+    /// LVGL stores the raw pointer — the descriptor must be `'static`.
     ///
     /// Declare the image with [`image_declare!`](crate::image_declare) and pass
     /// a reference: `style.bg_image_src(unsafe { &my_img })`.
-    pub fn bg_image_src(&mut self, src: &lv_image_dsc_t) -> &mut Self {
-        // SAFETY: inner was initialized; src points to a valid compiled image descriptor.
+    pub fn bg_image_src(&mut self, src: &'static lv_image_dsc_t) -> &mut Self {
+        // SAFETY: inner was initialized; src is 'static so the pointer LVGL
+        // stores will remain valid.
         unsafe {
             lv_style_set_bg_image_src(
                 &mut self.inner.lv,

@@ -1,5 +1,9 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
-use core::{ffi::c_char, ops::Deref, ptr::null_mut};
+use core::{
+    ffi::{c_char, CStr},
+    ops::Deref,
+    ptr::null_mut,
+};
 
 use alloc::vec::Vec;
 use lvgl_rust_sys::*;
@@ -98,20 +102,21 @@ impl<'p> Dropdown<'p> {
     }
 
     /// Set the dropdown symbol (typically an arrow icon string).
-    pub fn set_symbol(&self, symbol: &str) -> &Self {
+    /// LVGL stores the raw pointer (`dropdown->symbol = symbol`,
+    /// `lv_dropdown.c:373`) — the string must be `'static`.
+    pub fn set_symbol(&self, symbol: &'static CStr) -> &Self {
         assert_ne!(
             self.obj.handle(),
             null_mut(),
             "Dropdown handle cannot be null"
         );
-        let bytes = symbol.as_bytes();
-        let len = bytes.len().min(15);
-        let mut buf = [0u8; 16];
-        buf[..len].copy_from_slice(&bytes[..len]);
-        // SAFETY: handle non-null; buf NUL-terminated. LVGL treats symbol as
-        // void* (can be string or image pointer).
+        // SAFETY: handle non-null; symbol is 'static and NUL-terminated.
+        // LVGL stores the pointer directly, so 'static is load-bearing.
         unsafe {
-            lv_dropdown_set_symbol(self.obj.handle(), buf.as_ptr() as *const core::ffi::c_void)
+            lv_dropdown_set_symbol(
+                self.obj.handle(),
+                symbol.as_ptr() as *const core::ffi::c_void,
+            )
         };
         self
     }
