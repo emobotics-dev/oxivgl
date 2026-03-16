@@ -72,7 +72,11 @@ impl<'p> Dropdown<'p> {
     /// Set dropdown options as newline-separated string.
     /// LVGL copies the string internally.
     pub fn set_options(&self, opts: &str) -> &Self {
-        assert_ne!(self.obj.handle(), null_mut(), "Dropdown handle cannot be null");
+        assert_ne!(
+            self.obj.handle(),
+            null_mut(),
+            "Dropdown handle cannot be null"
+        );
         let mut buf = Vec::with_capacity(opts.len() + 1);
         buf.extend_from_slice(opts.as_bytes());
         buf.push(0);
@@ -83,7 +87,11 @@ impl<'p> Dropdown<'p> {
 
     /// Set the open direction.
     pub fn set_dir(&self, dir: DdDir) -> &Self {
-        assert_ne!(self.obj.handle(), null_mut(), "Dropdown handle cannot be null");
+        assert_ne!(
+            self.obj.handle(),
+            null_mut(),
+            "Dropdown handle cannot be null"
+        );
         // SAFETY: handle non-null (asserted above).
         unsafe { lv_dropdown_set_dir(self.obj.handle(), dir as lv_dir_t) };
         self
@@ -91,7 +99,11 @@ impl<'p> Dropdown<'p> {
 
     /// Set the dropdown symbol (typically an arrow icon string).
     pub fn set_symbol(&self, symbol: &str) -> &Self {
-        assert_ne!(self.obj.handle(), null_mut(), "Dropdown handle cannot be null");
+        assert_ne!(
+            self.obj.handle(),
+            null_mut(),
+            "Dropdown handle cannot be null"
+        );
         let bytes = symbol.as_bytes();
         let len = bytes.len().min(15);
         let mut buf = [0u8; 16];
@@ -99,17 +111,18 @@ impl<'p> Dropdown<'p> {
         // SAFETY: handle non-null; buf NUL-terminated. LVGL treats symbol as
         // void* (can be string or image pointer).
         unsafe {
-            lv_dropdown_set_symbol(
-                self.obj.handle(),
-                buf.as_ptr() as *const core::ffi::c_void,
-            )
+            lv_dropdown_set_symbol(self.obj.handle(), buf.as_ptr() as *const core::ffi::c_void)
         };
         self
     }
 
     /// Set the selected item index.
     pub fn set_selected(&self, idx: u32) -> &Self {
-        assert_ne!(self.obj.handle(), null_mut(), "Dropdown handle cannot be null");
+        assert_ne!(
+            self.obj.handle(),
+            null_mut(),
+            "Dropdown handle cannot be null"
+        );
         // SAFETY: handle non-null (asserted above).
         unsafe { lv_dropdown_set_selected(self.obj.handle(), idx) };
         self
@@ -117,7 +130,11 @@ impl<'p> Dropdown<'p> {
 
     /// Get the currently selected item index.
     pub fn get_selected(&self) -> u32 {
-        assert_ne!(self.obj.handle(), null_mut(), "Dropdown handle cannot be null");
+        assert_ne!(
+            self.obj.handle(),
+            null_mut(),
+            "Dropdown handle cannot be null"
+        );
         // SAFETY: handle non-null (asserted above).
         unsafe { lv_dropdown_get_selected(self.obj.handle()) }
     }

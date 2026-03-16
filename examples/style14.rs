@@ -1,12 +1,15 @@
 #![cfg_attr(target_arch = "xtensa", no_std, no_main)]
-#![cfg_attr(target_arch = "xtensa", feature(impl_trait_in_assoc_type, type_alias_impl_trait))]
+#![cfg_attr(
+    target_arch = "xtensa",
+    feature(impl_trait_in_assoc_type, type_alias_impl_trait)
+)]
 // SPDX-License-Identifier: MIT OR Apache-2.0
 //! Style 14 — Extending the current theme
 
 use oxivgl::{
     view::View,
     widgets::{
-        palette_darken, palette_main, Align, Button, Label, Palette, Screen, Style, Theme,
+        palette_darken, palette_main, Align, Button, Label, Palette, Screen, StyleBuilder, Theme,
         WidgetError,
     },
 };
@@ -30,12 +33,12 @@ impl View for Style14 {
         label1.text("Original theme").center();
 
         // Install the theme extension: all buttons created from here on are green.
-        let mut style = Style::new();
+        let mut style = StyleBuilder::new();
         style
             .bg_color(palette_main(Palette::Green))
             .border_color(palette_darken(Palette::Green, 3))
             .border_width(3);
-        let theme = Theme::extend_current(style)?;
+        let theme = Theme::extend_current(style.build())?;
 
         // Button created after the theme extension — receives the green style.
         let btn2 = Button::new(&screen)?;

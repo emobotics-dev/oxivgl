@@ -2,6 +2,7 @@
 //! Style-setting methods for [`Obj`]. These are `impl` blocks on the same type
 //! defined in `obj.rs` — no new types introduced.
 
+use alloc::rc::Rc;
 use core::ptr::null_mut;
 
 use lvgl_rust_sys::*;
@@ -75,7 +76,8 @@ impl<'p> Obj<'p> {
 
     /// Apply a style to this object for the given selector.
     ///
-    /// The `style` must outlive this object (see [`Style`](super::Style) docs).
+    /// The style's `Rc` refcount is bumped and stored inside this widget,
+    /// keeping the `lv_style_t` alive as long as the widget exists.
     ///
     /// ```ignore
     /// btn.add_style(&style, Selector::DEFAULT);
@@ -85,8 +87,12 @@ impl<'p> Obj<'p> {
     pub fn add_style(&self, style: &super::Style, selector: impl Into<super::Selector>) -> &Self {
         let selector = selector.into().raw();
         assert_ne!(self.handle(), null_mut(), "Obj handle cannot be null");
-        // SAFETY: handle non-null; style.inner pointer valid for style's lifetime.
-        unsafe { lv_obj_add_style(self.handle(), &style.inner as *const lv_style_t, selector) };
+        // Push clone first: if this panics (OOM), LVGL is not updated and
+        // both sides remain consistent.
+        self._styles.borrow_mut().push(style.clone());
+        // SAFETY: handle non-null; style pointer valid for Rc's lifetime.
+        // Pointer obtained via Rc::as_ptr + repr(C) offset-0 guarantee.
+        unsafe { lv_obj_add_style(self.handle(), style.lv_ptr(), selector) };
         self
     }
 
@@ -95,6 +101,7 @@ impl<'p> Obj<'p> {
         assert_ne!(self.handle(), null_mut(), "Obj handle cannot be null");
         // SAFETY: handle non-null.
         unsafe { lv_obj_remove_style_all(self.handle()) };
+        self._styles.borrow_mut().clear();
         self
     }
 
@@ -108,11 +115,20 @@ impl<'p> Obj<'p> {
         let selector = selector.into().raw();
         assert_ne!(self.handle(), null_mut(), "Obj handle cannot be null");
         let style_ptr = match style {
-            Some(s) => &s.inner as *const lv_style_t as *mut lv_style_t,
+            Some(s) => s.lv_ptr() as *mut lv_style_t,
             None => null_mut() as *mut lv_style_t,
         };
         // SAFETY: handle non-null (asserted above).
         unsafe { lv_obj_remove_style(self.handle(), style_ptr, selector) };
+        // Remove exactly one entry by Rc pointer identity (not retain —
+        // the same style can be added multiple times with different selectors).
+        if let Some(s) = style {
+            let target = Rc::as_ptr(&s.inner);
+            let mut styles = self._styles.borrow_mut();
+            if let Some(pos) = styles.iter().position(|e| Rc::as_ptr(&e.inner) == target) {
+                styles.swap_remove(pos);
+            }
+        }
         self
     }
 

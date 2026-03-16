@@ -13,9 +13,9 @@ use oxivgl::{
     view::View,
     widgets::{
         anim_path_ease_out, anim_path_linear, anim_path_overshoot, anim_set_height,
-        anim_set_slider_value, anim_set_width, Align, Anim, AnimTimeline, Button, Event,
-        EventCode, FlexAlign, FlexFlow, Label, Obj, ObjFlag, ObjState, Screen, ScrollbarMode,
-        Slider, WidgetError, ANIM_TIMELINE_PROGRESS_MAX,
+        anim_set_slider_value, anim_set_width, Align, Anim, AnimTimeline, Button, Event, EventCode,
+        FlexAlign, FlexFlow, Label, Obj, ObjFlag, ObjState, Screen, ScrollbarMode, Slider,
+        WidgetError, ANIM_TIMELINE_PROGRESS_MAX,
     },
 };
 

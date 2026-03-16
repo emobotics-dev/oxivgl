@@ -6,20 +6,17 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
 //! Getting Started 6 — Linear (Skew) Gradient
 
-extern crate alloc;
-
-use alloc::boxed::Box;
 use oxivgl::{
     view::View,
     widgets::{
-        color_make, lv_pct, GradDsc, GradExtend, Obj, Screen, Selector, Style, WidgetError,
+        color_make, lv_pct, GradDsc, GradExtend, Obj, Screen, Selector, Style, StyleBuilder,
+        WidgetError,
     },
 };
 
 struct GettingStarted6 {
     _obj: Obj<'static>,
-    _style: Box<Style>,
-    _grad: Box<GradDsc>,
+    _style: Style,
 }
 
 impl View for GettingStarted6 {
@@ -27,17 +24,18 @@ impl View for GettingStarted6 {
         let colors = [color_make(0xff, 0, 0), color_make(0, 0xff, 0)];
         let opas = [255u8, 0];
 
-        let mut grad = Box::new(GradDsc::new());
+        let mut grad = GradDsc::new();
         grad.init_stops(&colors, &opas, &[])
             .linear(100, 100, 200, 150, GradExtend::Pad);
 
-        let mut style = Box::new(Style::new());
+        let mut style = StyleBuilder::new();
         style
             .bg_opa(255)
-            .bg_grad(&grad)
+            .bg_grad(grad)
             .border_width(2)
             .radius(12)
             .pad_all(0);
+        let style = style.build();
 
         let screen = Screen::active().ok_or(WidgetError::LvglNullPointer)?;
         let obj = Obj::new(&screen)?;
@@ -47,7 +45,6 @@ impl View for GettingStarted6 {
         Ok(Self {
             _obj: obj,
             _style: style,
-            _grad: grad,
         })
     }
 
