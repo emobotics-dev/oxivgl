@@ -8,33 +8,32 @@
 
 extern crate alloc;
 
-use alloc::boxed::Box;
 use oxivgl::{
     view::View,
     widgets::{
         palette_lighten, palette_main, GradDir, GradDsc, Obj, Palette, Screen, Selector, Style,
-        WidgetError,
+        StyleBuilder, WidgetError,
     },
 };
 
 struct Style2 {
     _obj: Obj<'static>,
-    _style: Box<Style>,
-    _grad: Box<GradDsc>,
+    _style: Style,
 }
 
 impl View for Style2 {
     fn create() -> Result<Self, WidgetError> {
         let screen = Screen::active().ok_or(WidgetError::LvglNullPointer)?;
 
-        let mut grad = Box::new(GradDsc::new());
+        let mut grad = GradDsc::new();
         grad.set_dir(GradDir::Ver)
             .set_stops_count(2)
             .set_stop(0, palette_lighten(Palette::Grey, 1), 255, 128)
             .set_stop(1, palette_main(Palette::Blue), 255, 192);
 
-        let mut style = Box::new(Style::new());
-        style.radius(5).bg_opa(255).bg_grad(&grad);
+        let mut builder = StyleBuilder::new();
+        builder.radius(5).bg_opa(255).bg_grad(grad);
+        let style = builder.build();
 
         let obj = Obj::new(&screen)?;
         obj.add_style(&style, Selector::DEFAULT);
@@ -43,7 +42,6 @@ impl View for Style2 {
         Ok(Self {
             _obj: obj,
             _style: style,
-            _grad: grad,
         })
     }
 

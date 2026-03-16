@@ -12,14 +12,13 @@
 use oxivgl::{
     view::View,
     widgets::{
-        anim_set_arc_value, Anim, Arc, ObjFlag, Opa, Part, Screen, Selector, WidgetError,
+        anim_set_arc_value, Anim, Arc, ObjFlag, Opa, Part, Screen, WidgetError,
         ANIM_REPEAT_INFINITE,
     },
 };
 
 struct WidgetArc2 {
     _arc: Arc<'static>,
-    _anim: Anim,
 }
 
 impl View for WidgetArc2 {
@@ -47,10 +46,7 @@ impl View for WidgetArc2 {
             .set_repeat_delay(500)
             .start();
 
-        Ok(Self {
-            _arc: arc,
-            _anim: anim,
-        })
+        Ok(Self { _arc: arc })
     }
 
     fn update(&mut self) -> Result<(), WidgetError> {

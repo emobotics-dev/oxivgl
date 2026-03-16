@@ -8,39 +8,38 @@
 //!
 //! Custom blue-themed bar with rounded corners, padding, and animated fill.
 
-extern crate alloc;
-
-use alloc::boxed::Box;
 use oxivgl::{
     view::View,
     widgets::{
-        palette_main, Bar, Palette, Part, Screen, Selector, Style, WidgetError,
+        palette_main, Bar, Palette, Part, Screen, Selector, Style, StyleBuilder, WidgetError,
     },
 };
 
 struct WidgetBar2 {
     _bar: Bar<'static>,
-    _style_bg: Box<Style>,
-    _style_indic: Box<Style>,
+    _style_bg: Style,
+    _style_indic: Style,
 }
 
 impl View for WidgetBar2 {
     fn create() -> Result<Self, WidgetError> {
         let screen = Screen::active().ok_or(WidgetError::LvglNullPointer)?;
 
-        let mut style_bg = Box::new(Style::new());
+        let mut style_bg = StyleBuilder::new();
         style_bg
             .border_color(palette_main(Palette::Blue))
             .border_width(2)
             .pad_all(6)
             .radius(6)
             .anim_duration(1000);
+        let style_bg = style_bg.build();
 
-        let mut style_indic = Box::new(Style::new());
+        let mut style_indic = StyleBuilder::new();
         style_indic
             .bg_opa(255)
             .bg_color(palette_main(Palette::Blue))
             .radius(3);
+        let style_indic = style_indic.build();
 
         let bar = Bar::new(&screen)?;
         bar.remove_style_all();

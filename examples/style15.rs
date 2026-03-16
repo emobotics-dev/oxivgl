@@ -1,5 +1,8 @@
 #![cfg_attr(target_arch = "xtensa", no_std, no_main)]
-#![cfg_attr(target_arch = "xtensa", feature(impl_trait_in_assoc_type, type_alias_impl_trait))]
+#![cfg_attr(
+    target_arch = "xtensa",
+    feature(impl_trait_in_assoc_type, type_alias_impl_trait)
+)]
 // SPDX-License-Identifier: MIT OR Apache-2.0
 //! Style 15 — Opacity and Transformations
 
@@ -32,9 +35,7 @@ impl View for Style15 {
         label2.text("Opa:50%").center();
 
         let btn3 = Button::new(&screen)?;
-        btn3.size(100, 40)
-            .opa(128)
-            .align(Align::Center, 0, 70);
+        btn3.size(100, 40).opa(128).align(Align::Center, 0, 70);
         btn3.style_transform_rotation(150, Selector::DEFAULT)
             .style_transform_scale(256 + 64, Selector::DEFAULT)
             .style_transform_pivot_x(50, Selector::DEFAULT)

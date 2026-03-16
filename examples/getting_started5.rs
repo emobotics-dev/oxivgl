@@ -6,18 +6,16 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
 //! Getting Started 5 — Simple Horizontal Gradient
 
-extern crate alloc;
-
-use alloc::boxed::Box;
 use oxivgl::{
     view::View,
-    widgets::{color_make, lv_pct, GradDsc, Obj, Screen, Selector, Style, WidgetError},
+    widgets::{
+        color_make, lv_pct, GradDsc, Obj, Screen, Selector, Style, StyleBuilder, WidgetError,
+    },
 };
 
 struct GettingStarted5 {
     _obj: Obj<'static>,
-    _style: Box<Style>,
-    _grad: Box<GradDsc>,
+    _style: Style,
 }
 
 impl View for GettingStarted5 {
@@ -26,16 +24,17 @@ impl View for GettingStarted5 {
         let opas = [255u8, 0];
         let fracs = [(20u16 * 255 / 100) as u8, (80u16 * 255 / 100) as u8];
 
-        let mut grad = Box::new(GradDsc::new());
+        let mut grad = GradDsc::new();
         grad.init_stops(&colors, &opas, &fracs).horizontal();
 
-        let mut style = Box::new(Style::new());
+        let mut style = StyleBuilder::new();
         style
             .bg_opa(255)
-            .bg_grad(&grad)
+            .bg_grad(grad)
             .border_width(2)
             .radius(12)
             .pad_all(0);
+        let style = style.build();
 
         let screen = Screen::active().ok_or(WidgetError::LvglNullPointer)?;
         let obj = Obj::new(&screen)?;
@@ -45,7 +44,6 @@ impl View for GettingStarted5 {
         Ok(Self {
             _obj: obj,
             _style: style,
-            _grad: grad,
         })
     }
 

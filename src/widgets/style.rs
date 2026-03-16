@@ -1,4 +1,6 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
+use alloc::boxed::Box;
+use alloc::rc::Rc;
 use lvgl_rust_sys::*;
 
 use super::palette::GradDir;
@@ -25,8 +27,8 @@ impl core::ops::BitOr for TextDecor {
 
 /// Wraps `lv_style_transition_dsc_t`.
 ///
-/// The `props` slice and `path_cb` must outlive this descriptor.
-/// Store as a field alongside the [`Style`] that references it.
+/// The `props` slice must be `'static` — LVGL stores the raw pointer
+/// (`lv_style_transition_dsc_init` stores `tr->props = props`).
 pub struct TransitionDsc {
     pub(crate) inner: lv_style_transition_dsc_t,
 }
@@ -34,7 +36,7 @@ pub struct TransitionDsc {
 impl TransitionDsc {
     /// Create a transition descriptor.
     ///
-    /// `props`: null-terminated array of `lv_style_prop_t` (use [`props`] constants).
+    /// `props`: null-terminated `'static` array of `lv_style_prop_t` (use [`props`] constants).
     /// `path_cb`: animation path function (e.g. [`super::anim_path_linear`]).
     /// `time`: transition duration in ms.
     /// `delay`: delay before transition starts in ms.
@@ -45,6 +47,7 @@ impl TransitionDsc {
         delay: u32,
     ) -> Self {
         let mut inner = unsafe { core::mem::zeroed::<lv_style_transition_dsc_t>() };
+        // SAFETY: inner is zeroed; props pointer is 'static so outlives everything.
         unsafe {
             lv_style_transition_dsc_init(
                 &mut inner,
@@ -129,52 +132,95 @@ pub fn lv_pct(v: i32) -> i32 {
 pub const LV_SIZE_CONTENT: i32 =
     (lvgl_rust_sys::LV_COORD_MAX | lvgl_rust_sys::LV_COORD_TYPE_SPEC) as i32;
 
-/// Owned LVGL style. Wraps `lv_style_t`.
-///
-/// # Lifetime contract
-/// Once passed to [`super::Obj::add_style`], this struct MUST NOT be moved or dropped
-/// while any widget holds a reference to it. Store styles as fields in a `View`
-/// struct that lives for the entire LVGL lifetime.
-pub struct Style {
-    pub(crate) inner: lv_style_t,
+// ── StyleInner ──────────────────────────────────────────────────────────
+
+/// Internal storage for a frozen style. `#[repr(C)]` with `lv` at offset 0
+/// so that `*const StyleInner` can be safely cast to `*const lv_style_t`.
+#[repr(C)]
+pub(crate) struct StyleInner {
+    lv: lv_style_t,
+    _grad: Option<Box<super::grad::GradDsc>>,
+    _transition: Option<Box<TransitionDsc>>,
+    _color_filter: Option<Box<ColorFilter>>,
 }
 
-impl Style {
-    /// Create a new empty style.
+// Compile-time guarantee that the cast `*const StyleInner → *const lv_style_t` is valid.
+const _: () = assert!(core::mem::offset_of!(StyleInner, lv) == 0);
+
+impl Drop for StyleInner {
+    fn drop(&mut self) {
+        // SAFETY: lv was initialized by lv_style_init. lv_style_reset frees
+        // values_and_props (lv_style.c:192-201), then zeroes the struct.
+        // After this, no LVGL data references sub-descriptor addresses.
+        // Rust then drops the Option<Box<…>> fields, freeing sub-descriptors.
+        unsafe { lv_style_reset(&mut self.lv) };
+    }
+}
+
+// ── StyleBuilder ────────────────────────────────────────────────────────
+
+/// Mutable build phase for an LVGL style. Not `Clone`.
+///
+/// Call setter methods to configure properties, then [`build()`](Self::build)
+/// to produce a frozen, cheaply clonable [`Style`] handle.
+///
+/// ```ignore
+/// let style = StyleBuilder::new()
+///     .radius(5)
+///     .bg_color(blue)
+///     .build();
+/// widget.add_style(&style, Selector::DEFAULT);
+/// ```
+pub struct StyleBuilder {
+    inner: Box<StyleInner>,
+}
+
+impl StyleBuilder {
+    /// Create a new empty style builder.
     pub fn new() -> Self {
         // SAFETY: lv_style_t can be zero-initialized; lv_style_init sets it up.
-        let mut inner = unsafe { core::mem::zeroed::<lv_style_t>() };
-        unsafe { lv_style_init(&mut inner) };
-        Self { inner }
+        let mut lv = unsafe { core::mem::zeroed::<lv_style_t>() };
+        unsafe { lv_style_init(&mut lv) };
+        Self {
+            inner: Box::new(StyleInner {
+                lv,
+                _grad: None,
+                _transition: None,
+                _color_filter: None,
+            }),
+        }
     }
 
-    /// Create a heap-allocated style. Convenience for views that store
-    /// styles as `Box<Style>` to satisfy LVGL's lifetime requirements.
-    pub fn boxed() -> alloc::boxed::Box<Self> {
-        alloc::boxed::Box::new(Self::new())
+    /// Consume this builder and produce a frozen [`Style`] handle.
+    pub fn build(self) -> Style {
+        // Box<StyleInner> → Rc<StyleInner>. Sub-descriptor Box<T> addresses
+        // are stable because they are behind their own heap indirection.
+        Style {
+            inner: Rc::from(self.inner),
+        }
     }
 
     /// Set corner radius.
     pub fn radius(&mut self, r: i16) -> &mut Self {
-        unsafe { lv_style_set_radius(&mut self.inner, r as lv_coord_t) };
+        unsafe { lv_style_set_radius(&mut self.inner.lv, r as lv_coord_t) };
         self
     }
 
     /// Set overall object opacity (0-255).
     pub fn opa(&mut self, opa: u8) -> &mut Self {
-        unsafe { lv_style_set_opa(&mut self.inner, opa as lv_opa_t) };
+        unsafe { lv_style_set_opa(&mut self.inner.lv, opa as lv_opa_t) };
         self
     }
 
     /// Set background opacity (0-255).
     pub fn bg_opa(&mut self, opa: u8) -> &mut Self {
-        unsafe { lv_style_set_bg_opa(&mut self.inner, opa as lv_opa_t) };
+        unsafe { lv_style_set_bg_opa(&mut self.inner.lv, opa as lv_opa_t) };
         self
     }
 
     /// Set background color.
     pub fn bg_color(&mut self, color: lv_color_t) -> &mut Self {
-        unsafe { lv_style_set_bg_color(&mut self.inner, color) };
+        unsafe { lv_style_set_bg_color(&mut self.inner.lv, color) };
         self
     }
 
@@ -186,19 +232,19 @@ impl Style {
 
     /// Set background gradient end color.
     pub fn bg_grad_color(&mut self, color: lv_color_t) -> &mut Self {
-        unsafe { lv_style_set_bg_grad_color(&mut self.inner, color) };
+        unsafe { lv_style_set_bg_grad_color(&mut self.inner.lv, color) };
         self
     }
 
     /// Set background gradient direction.
     pub fn bg_grad_dir(&mut self, dir: GradDir) -> &mut Self {
-        unsafe { lv_style_set_bg_grad_dir(&mut self.inner, dir as lv_grad_dir_t) };
+        unsafe { lv_style_set_bg_grad_dir(&mut self.inner.lv, dir as lv_grad_dir_t) };
         self
     }
 
     /// Set border color.
     pub fn border_color(&mut self, color: lv_color_t) -> &mut Self {
-        unsafe { lv_style_set_border_color(&mut self.inner, color) };
+        unsafe { lv_style_set_border_color(&mut self.inner.lv, color) };
         self
     }
 
@@ -210,25 +256,25 @@ impl Style {
 
     /// Set border opacity (0-255).
     pub fn border_opa(&mut self, opa: u8) -> &mut Self {
-        unsafe { lv_style_set_border_opa(&mut self.inner, opa as lv_opa_t) };
+        unsafe { lv_style_set_border_opa(&mut self.inner.lv, opa as lv_opa_t) };
         self
     }
 
     /// Set border width in pixels.
     pub fn border_width(&mut self, w: i16) -> &mut Self {
-        unsafe { lv_style_set_border_width(&mut self.inner, w as lv_coord_t) };
+        unsafe { lv_style_set_border_width(&mut self.inner.lv, w as lv_coord_t) };
         self
     }
 
     /// Set text opacity (0–255).
     pub fn text_opa(&mut self, opa: u8) -> &mut Self {
-        unsafe { lv_style_set_text_opa(&mut self.inner, opa as lv_opa_t) };
+        unsafe { lv_style_set_text_opa(&mut self.inner.lv, opa as lv_opa_t) };
         self
     }
 
     /// Set text color.
     pub fn text_color(&mut self, color: lv_color_t) -> &mut Self {
-        unsafe { lv_style_set_text_color(&mut self.inner, color) };
+        unsafe { lv_style_set_text_color(&mut self.inner.lv, color) };
         self
     }
 
@@ -238,236 +284,241 @@ impl Style {
         self.text_color(color)
     }
 
-    /// Apply a color filter with given opacity.
-    pub fn color_filter(&mut self, filter: &ColorFilter, opa: u8) -> &mut Self {
+    /// Apply a color filter with given opacity. Takes ownership of `filter`.
+    ///
+    /// The filter is stored inside the style; no external lifetime management needed.
+    pub fn color_filter(&mut self, filter: ColorFilter, opa: u8) -> &mut Self {
+        let filter = Box::new(filter);
+        // SAFETY: set new pointer first (LVGL overwrites in-place, lv_style.c:344-346),
+        // then store the Box — old allocation (if any) drops after LVGL no longer references it.
         unsafe {
-            lv_style_set_color_filter_dsc(&mut self.inner, &filter.inner);
-            lv_style_set_color_filter_opa(&mut self.inner, opa as lv_opa_t);
+            lv_style_set_color_filter_dsc(&mut self.inner.lv, &filter.inner);
+            lv_style_set_color_filter_opa(&mut self.inner.lv, opa as lv_opa_t);
         }
+        self.inner._color_filter = Some(filter);
         self
     }
 
     /// Set style width.
     pub fn width(&mut self, w: i32) -> &mut Self {
-        // SAFETY: inner was initialized by lv_style_init.
-        unsafe { lv_style_set_width(&mut self.inner, w) };
+        unsafe { lv_style_set_width(&mut self.inner.lv, w) };
         self
     }
 
     /// Set style height.
     pub fn height(&mut self, h: i32) -> &mut Self {
-        // SAFETY: inner was initialized by lv_style_init.
-        unsafe { lv_style_set_height(&mut self.inner, h) };
+        unsafe { lv_style_set_height(&mut self.inner.lv, h) };
         self
     }
 
     /// Set style X offset.
     pub fn x(&mut self, x: i32) -> &mut Self {
-        // SAFETY: inner was initialized by lv_style_init.
-        unsafe { lv_style_set_x(&mut self.inner, x) };
+        unsafe { lv_style_set_x(&mut self.inner.lv, x) };
         self
     }
 
     /// Set style Y offset.
     pub fn y(&mut self, y: i32) -> &mut Self {
-        // SAFETY: inner was initialized by lv_style_init.
-        unsafe { lv_style_set_y(&mut self.inner, y) };
+        unsafe { lv_style_set_y(&mut self.inner.lv, y) };
         self
     }
 
     /// Set vertical padding (top + bottom).
     pub fn pad_ver(&mut self, p: i32) -> &mut Self {
-        // SAFETY: inner was initialized by lv_style_init.
-        unsafe { lv_style_set_pad_ver(&mut self.inner, p) };
+        unsafe { lv_style_set_pad_ver(&mut self.inner.lv, p) };
         self
     }
 
     /// Set left padding.
     pub fn pad_left(&mut self, p: i32) -> &mut Self {
-        // SAFETY: inner was initialized by lv_style_init.
-        unsafe { lv_style_set_pad_left(&mut self.inner, p) };
+        unsafe { lv_style_set_pad_left(&mut self.inner.lv, p) };
         self
     }
 
     /// Set right padding.
     pub fn pad_right(&mut self, p: i32) -> &mut Self {
-        // SAFETY: inner was initialized by lv_style_init.
-        unsafe { lv_style_set_pad_right(&mut self.inner, p) };
+        unsafe { lv_style_set_pad_right(&mut self.inner.lv, p) };
         self
     }
 
     /// Set top padding.
     pub fn pad_top(&mut self, p: i32) -> &mut Self {
-        // SAFETY: inner was initialized by lv_style_init.
-        unsafe { lv_style_set_pad_top(&mut self.inner, p) };
+        unsafe { lv_style_set_pad_top(&mut self.inner.lv, p) };
         self
     }
 
     /// Set scrollbar / indicator length.
     pub fn length(&mut self, l: i32) -> &mut Self {
-        // SAFETY: inner was initialized by lv_style_init.
-        unsafe { lv_style_set_length(&mut self.inner, l) };
+        unsafe { lv_style_set_length(&mut self.inner.lv, l) };
         self
     }
 
-    /// Set background gradient from a full gradient descriptor.
+    /// Set background gradient from a full gradient descriptor. Takes ownership.
     ///
+    /// The descriptor is stored inside the style; no external lifetime management needed.
     /// For simple two-color gradients, prefer [`bg_grad_color`](Self::bg_grad_color)
     /// + [`bg_grad_dir`](Self::bg_grad_dir).
-    pub fn bg_grad(&mut self, grad: &super::grad::GradDsc) -> &mut Self {
-        // SAFETY: inner was initialized; grad is a valid descriptor reference.
-        unsafe { lv_style_set_bg_grad(&mut self.inner, &grad.inner) };
+    pub fn bg_grad(&mut self, grad: super::grad::GradDsc) -> &mut Self {
+        let grad = Box::new(grad);
+        // SAFETY: set new pointer first, then store Box. Old Box drops after
+        // LVGL no longer references it (lv_style_set_prop overwrites in-place).
+        unsafe { lv_style_set_bg_grad(&mut self.inner.lv, &grad.inner) };
+        self.inner._grad = Some(grad);
         self
     }
 
     /// Set which border sides to draw.
     pub fn border_side(&mut self, side: BorderSide) -> &mut Self {
-        // SAFETY: inner was initialized by lv_style_init.
-        unsafe { lv_style_set_border_side(&mut self.inner, side.0 as lv_border_side_t) };
+        unsafe { lv_style_set_border_side(&mut self.inner.lv, side.0 as lv_border_side_t) };
         self
     }
 
     /// Set outline width.
     pub fn outline_width(&mut self, w: i32) -> &mut Self {
-        unsafe { lv_style_set_outline_width(&mut self.inner, w) };
+        unsafe { lv_style_set_outline_width(&mut self.inner.lv, w) };
         self
     }
 
     /// Set outline color.
     pub fn outline_color(&mut self, color: lv_color_t) -> &mut Self {
-        unsafe { lv_style_set_outline_color(&mut self.inner, color) };
+        unsafe { lv_style_set_outline_color(&mut self.inner.lv, color) };
         self
     }
 
     /// Set outline padding (gap from border).
     pub fn outline_pad(&mut self, pad: i32) -> &mut Self {
-        unsafe { lv_style_set_outline_pad(&mut self.inner, pad) };
+        unsafe { lv_style_set_outline_pad(&mut self.inner.lv, pad) };
         self
     }
 
     /// Set shadow width.
     pub fn shadow_width(&mut self, w: i32) -> &mut Self {
-        unsafe { lv_style_set_shadow_width(&mut self.inner, w) };
+        unsafe { lv_style_set_shadow_width(&mut self.inner.lv, w) };
         self
     }
 
     /// Set shadow color.
     pub fn shadow_color(&mut self, color: lv_color_t) -> &mut Self {
-        unsafe { lv_style_set_shadow_color(&mut self.inner, color) };
+        unsafe { lv_style_set_shadow_color(&mut self.inner.lv, color) };
         self
     }
 
     /// Set arc line color.
     pub fn arc_color(&mut self, color: lv_color_t) -> &mut Self {
-        unsafe { lv_style_set_arc_color(&mut self.inner, color) };
+        unsafe { lv_style_set_arc_color(&mut self.inner.lv, color) };
         self
     }
 
     /// Set arc line width.
     pub fn arc_width(&mut self, w: i32) -> &mut Self {
-        unsafe { lv_style_set_arc_width(&mut self.inner, w) };
+        unsafe { lv_style_set_arc_width(&mut self.inner.lv, w) };
         self
     }
 
     /// Set padding on all sides.
     pub fn pad_all(&mut self, p: i32) -> &mut Self {
-        unsafe { lv_style_set_pad_all(&mut self.inner, p) };
+        unsafe { lv_style_set_pad_all(&mut self.inner.lv, p) };
         self
     }
 
     /// Set letter spacing.
     pub fn text_letter_space(&mut self, s: i32) -> &mut Self {
-        unsafe { lv_style_set_text_letter_space(&mut self.inner, s) };
+        unsafe { lv_style_set_text_letter_space(&mut self.inner.lv, s) };
         self
     }
 
     /// Set line spacing.
     pub fn text_line_space(&mut self, s: i32) -> &mut Self {
-        unsafe { lv_style_set_text_line_space(&mut self.inner, s) };
+        unsafe { lv_style_set_text_line_space(&mut self.inner.lv, s) };
         self
     }
 
     /// Set text decoration (underline, strikethrough).
     pub fn text_decor(&mut self, decor: TextDecor) -> &mut Self {
-        unsafe { lv_style_set_text_decor(&mut self.inner, decor.0 as lv_text_decor_t) };
+        unsafe { lv_style_set_text_decor(&mut self.inner.lv, decor.0 as lv_text_decor_t) };
         self
     }
 
     /// Set line color.
     pub fn line_color(&mut self, color: lv_color_t) -> &mut Self {
-        unsafe { lv_style_set_line_color(&mut self.inner, color) };
+        unsafe { lv_style_set_line_color(&mut self.inner.lv, color) };
         self
     }
 
     /// Set line width.
     pub fn line_width(&mut self, w: i32) -> &mut Self {
-        unsafe { lv_style_set_line_width(&mut self.inner, w) };
+        unsafe { lv_style_set_line_width(&mut self.inner.lv, w) };
         self
     }
 
     /// Enable/disable rounded line endings.
     pub fn line_rounded(&mut self, rounded: bool) -> &mut Self {
-        unsafe { lv_style_set_line_rounded(&mut self.inner, rounded) };
+        unsafe { lv_style_set_line_rounded(&mut self.inner.lv, rounded) };
         self
     }
 
-    /// Set transition descriptor for animated property changes.
-    pub fn transition(&mut self, tr: &TransitionDsc) -> &mut Self {
-        unsafe { lv_style_set_transition(&mut self.inner, &tr.inner) };
+    /// Set transition descriptor. Takes ownership.
+    ///
+    /// The descriptor is stored inside the style; no external lifetime management needed.
+    pub fn transition(&mut self, tr: TransitionDsc) -> &mut Self {
+        let tr = Box::new(tr);
+        // SAFETY: set new pointer first, then store Box.
+        unsafe { lv_style_set_transition(&mut self.inner.lv, &tr.inner) };
+        self.inner._transition = Some(tr);
         self
     }
 
     /// Set shadow X offset.
     pub fn shadow_offset_x(&mut self, x: i32) -> &mut Self {
-        unsafe { lv_style_set_shadow_offset_x(&mut self.inner, x) };
+        unsafe { lv_style_set_shadow_offset_x(&mut self.inner.lv, x) };
         self
     }
 
     /// Set shadow Y offset.
     pub fn shadow_offset_y(&mut self, y: i32) -> &mut Self {
-        unsafe { lv_style_set_shadow_offset_y(&mut self.inner, y) };
+        unsafe { lv_style_set_shadow_offset_y(&mut self.inner.lv, y) };
         self
     }
 
     /// Set shadow opacity (0-255).
     pub fn shadow_opa(&mut self, opa: u8) -> &mut Self {
-        unsafe { lv_style_set_shadow_opa(&mut self.inner, opa as lv_opa_t) };
+        unsafe { lv_style_set_shadow_opa(&mut self.inner.lv, opa as lv_opa_t) };
         self
     }
 
     /// Set shadow spread (extra size).
     pub fn shadow_spread(&mut self, s: i32) -> &mut Self {
-        unsafe { lv_style_set_shadow_spread(&mut self.inner, s) };
+        unsafe { lv_style_set_shadow_spread(&mut self.inner.lv, s) };
         self
     }
 
     /// Set outline opacity (0-255).
     pub fn outline_opa(&mut self, opa: u8) -> &mut Self {
-        unsafe { lv_style_set_outline_opa(&mut self.inner, opa as lv_opa_t) };
+        unsafe { lv_style_set_outline_opa(&mut self.inner.lv, opa as lv_opa_t) };
         self
     }
 
     /// Set animation duration in ms (used for animated value changes).
     pub fn anim_duration(&mut self, ms: u32) -> &mut Self {
-        unsafe { lv_style_set_anim_duration(&mut self.inner, ms) };
+        unsafe { lv_style_set_anim_duration(&mut self.inner.lv, ms) };
         self
     }
 
     /// Set vertical translation offset.
     pub fn translate_y(&mut self, y: i32) -> &mut Self {
-        unsafe { lv_style_set_translate_y(&mut self.inner, y) };
+        unsafe { lv_style_set_translate_y(&mut self.inner.lv, y) };
         self
     }
 
     /// Set flex layout flow direction.
     pub fn flex_flow(&mut self, flow: super::obj::FlexFlow) -> &mut Self {
-        unsafe { lv_style_set_flex_flow(&mut self.inner, flow as lv_flex_flow_t) };
+        unsafe { lv_style_set_flex_flow(&mut self.inner.lv, flow as lv_flex_flow_t) };
         self
     }
 
     /// Set flex main-axis alignment.
     pub fn flex_main_place(&mut self, align: super::obj::FlexAlign) -> &mut Self {
-        unsafe { lv_style_set_flex_main_place(&mut self.inner, align as lv_flex_align_t) };
+        unsafe { lv_style_set_flex_main_place(&mut self.inner.lv, align as lv_flex_align_t) };
         self
     }
 
@@ -476,11 +527,10 @@ impl Style {
     /// Declare the image with [`image_declare!`](crate::image_declare) and pass
     /// a reference: `style.bg_image_src(unsafe { &my_img })`.
     pub fn bg_image_src(&mut self, src: &lv_image_dsc_t) -> &mut Self {
-        // SAFETY: inner was initialized by lv_style_init; src points to
-        // a valid compiled image descriptor.
+        // SAFETY: inner was initialized; src points to a valid compiled image descriptor.
         unsafe {
             lv_style_set_bg_image_src(
-                &mut self.inner,
+                &mut self.inner.lv,
                 src as *const lv_image_dsc_t as *const core::ffi::c_void,
             )
         };
@@ -489,25 +539,25 @@ impl Style {
 
     /// Set background image opacity (0 = transparent, 255 = opaque).
     pub fn bg_image_opa(&mut self, opa: u8) -> &mut Self {
-        unsafe { lv_style_set_bg_image_opa(&mut self.inner, opa) };
+        unsafe { lv_style_set_bg_image_opa(&mut self.inner.lv, opa) };
         self
     }
 
     /// Tile background image instead of stretching.
     pub fn bg_image_tiled(&mut self, tiled: bool) -> &mut Self {
-        unsafe { lv_style_set_bg_image_tiled(&mut self.inner, tiled) };
+        unsafe { lv_style_set_bg_image_tiled(&mut self.inner.lv, tiled) };
         self
     }
 
     /// Set image recolor tint.
     pub fn image_recolor(&mut self, color: lv_color_t) -> &mut Self {
-        unsafe { lv_style_set_image_recolor(&mut self.inner, color) };
+        unsafe { lv_style_set_image_recolor(&mut self.inner.lv, color) };
         self
     }
 
     /// Set image recolor opacity (0 = no tint, 255 = full tint).
     pub fn image_recolor_opa(&mut self, opa: u8) -> &mut Self {
-        unsafe { lv_style_set_image_recolor_opa(&mut self.inner, opa) };
+        unsafe { lv_style_set_image_recolor_opa(&mut self.inner.lv, opa) };
         self
     }
 
@@ -523,43 +573,59 @@ impl Style {
     /// [`center()`](super::Obj::center) the object so its rotated extents
     /// stay within the display.
     pub fn transform_rotation(&mut self, angle: i32) -> &mut Self {
-        unsafe { lv_style_set_transform_rotation(&mut self.inner, angle) };
+        unsafe { lv_style_set_transform_rotation(&mut self.inner.lv, angle) };
         self
     }
 
     /// Set uniform transform scale (256 = 1.0×, 320 = 1.25×, etc.).
     pub fn transform_scale(&mut self, scale: i32) -> &mut Self {
         unsafe {
-            lv_style_set_transform_scale_x(&mut self.inner, scale);
-            lv_style_set_transform_scale_y(&mut self.inner, scale);
+            lv_style_set_transform_scale_x(&mut self.inner.lv, scale);
+            lv_style_set_transform_scale_y(&mut self.inner.lv, scale);
         }
         self
     }
 
     /// Set transform pivot X offset in pixels.
     pub fn transform_pivot_x(&mut self, x: i32) -> &mut Self {
-        unsafe { lv_style_set_transform_pivot_x(&mut self.inner, x) };
+        unsafe { lv_style_set_transform_pivot_x(&mut self.inner.lv, x) };
         self
     }
 
     /// Set transform pivot Y offset in pixels.
     pub fn transform_pivot_y(&mut self, y: i32) -> &mut Self {
-        unsafe { lv_style_set_transform_pivot_y(&mut self.inner, y) };
+        unsafe { lv_style_set_transform_pivot_y(&mut self.inner.lv, y) };
         self
     }
 
     /// Set layout engine (flex or grid).
     pub fn layout(&mut self, layout: super::Layout) -> &mut Self {
-        // SAFETY: inner was initialized by lv_style_init.
-        unsafe { lv_style_set_layout(&mut self.inner, layout as u16) };
+        unsafe { lv_style_set_layout(&mut self.inner.lv, layout as u16) };
         self
     }
 }
 
-impl Drop for Style {
-    fn drop(&mut self) {
-        // SAFETY: inner was initialized by lv_style_init.
-        unsafe { lv_style_reset(&mut self.inner) };
+// ── Style ───────────────────────────────────────────────────────────────
+
+/// Frozen, cheaply clonable LVGL style handle.
+///
+/// Produced by [`StyleBuilder::build`]. Internally reference-counted (`Rc`);
+/// cloning bumps the refcount. When the last clone drops, `lv_style_reset`
+/// frees the LVGL property map, then sub-descriptors are freed.
+///
+/// `Style` has no public constructor — obtain one via [`StyleBuilder`].
+#[derive(Clone)]
+pub struct Style {
+    pub(crate) inner: Rc<StyleInner>,
+}
+
+impl Style {
+    /// Return the raw `lv_style_t` pointer for passing to LVGL.
+    ///
+    /// Valid as long as at least one `Style` clone exists. The pointer is
+    /// derived from `Rc::as_ptr` and the `#[repr(C)]` offset-0 guarantee.
+    pub(crate) fn lv_ptr(&self) -> *const lv_style_t {
+        Rc::as_ptr(&self.inner) as *const lv_style_t
     }
 }
 

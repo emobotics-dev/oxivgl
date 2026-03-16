@@ -9,18 +9,15 @@
 //! Bar with tiled stripe background image on the indicator at 30% opacity,
 //! using range mode (start=20, end=90).
 
-extern crate alloc;
-
-use alloc::boxed::Box;
 use oxivgl::{
     view::View,
-    widgets::{Bar, BarMode, Part, Screen, Style, WidgetError},
+    widgets::{Bar, BarMode, Part, Screen, Style, StyleBuilder, WidgetError},
 };
 
 oxivgl::image_declare!(img_skew_strip);
 
 struct WidgetBar4 {
-    _style: Box<Style>,
+    _style: Style,
     _bar: Bar<'static>,
 }
 
@@ -28,12 +25,13 @@ impl View for WidgetBar4 {
     fn create() -> Result<Self, WidgetError> {
         let screen = Screen::active().ok_or(WidgetError::LvglNullPointer)?;
 
-        let mut style = Box::new(Style::new());
+        let mut style = StyleBuilder::new();
         // SAFETY: img_skew_strip is a static C symbol compiled by oxivgl-build.
         style
             .bg_image_src(unsafe { &img_skew_strip })
             .bg_image_tiled(true)
             .bg_image_opa(77); // LV_OPA_30
+        let style = style.build();
 
         let bar = Bar::new(&screen)?;
         bar.add_style(&style, Part::Indicator);

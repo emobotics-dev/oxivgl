@@ -14,7 +14,8 @@ unsafe extern "C" {
 
 unsafe extern "C" fn apply_cb_trampoline(th: *mut lv_theme_t, obj: *mut lv_obj_t) {
     // SAFETY: `th` is the pinned lv_theme_t we installed; user_data points to
-    // the lv_style_t inside the Box<Style> that Theme keeps alive.
+    // the lv_style_t inside the Rc<StyleInner> that Theme keeps alive via its
+    // Style clone.
     unsafe {
         if lv_obj_check_type(obj, &lv_button_class) {
             let style_ptr = (*th).user_data as *const lv_style_t;
@@ -41,7 +42,7 @@ pub struct Theme {
     /// Heap-pinned so the address passed to `lv_display_set_theme` stays stable.
     inner: Pin<Box<lv_theme_t>>,
     /// Keeps the `lv_style_t` pointed to by `inner.user_data` alive.
-    _style: Box<Style>,
+    _style: Style,
     _not_send: PhantomData<*mut ()>,
 }
 
@@ -52,8 +53,6 @@ impl Theme {
     /// Returns [`WidgetError::LvglNullPointer`] when no display / theme is
     /// active yet.
     pub fn extend_current(style: Style) -> Result<Self, WidgetError> {
-        let style = Box::new(style);
-
         // SAFETY: lv_display_get_theme(NULL) selects the default display.
         let th_act = unsafe { lv_display_get_theme(null_mut()) };
         if th_act.is_null() {
@@ -66,9 +65,10 @@ impl Theme {
         let mut inner = Box::into_pin(Box::new(th_new));
 
         // SAFETY: lv_theme_t is Unpin (plain C struct); get_unchecked_mut is safe here.
+        // style.lv_ptr() is valid for the Rc's lifetime; Theme stores a clone.
         unsafe {
             let p = inner.as_mut().get_unchecked_mut();
-            p.user_data = &style.inner as *const lv_style_t as *mut core::ffi::c_void;
+            p.user_data = style.lv_ptr() as *mut core::ffi::c_void;
             lv_theme_set_parent(p, th_act);
             lv_theme_set_apply_cb(p, Some(apply_cb_trampoline));
             lv_display_set_theme(null_mut(), p);

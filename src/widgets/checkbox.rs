@@ -45,7 +45,11 @@ impl<'p> Checkbox<'p> {
 
     /// Set checkbox label text. Truncates at 127 bytes.
     pub fn text(&self, s: &str) -> &Self {
-        assert_ne!(self.obj.handle(), null_mut(), "Checkbox handle cannot be null");
+        assert_ne!(
+            self.obj.handle(),
+            null_mut(),
+            "Checkbox handle cannot be null"
+        );
         let bytes = s.as_bytes();
         let len = bytes.len().min(127);
         let mut buf = [0u8; 128];

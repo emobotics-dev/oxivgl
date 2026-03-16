@@ -12,13 +12,14 @@ use alloc::boxed::Box;
 use oxivgl::{
     view::View,
     widgets::{
-        lv_point_precise_t, palette_main, Line, Palette, Screen, Selector, Style, WidgetError,
+        lv_point_precise_t, palette_main, Line, Palette, Screen, Selector, Style, StyleBuilder,
+        WidgetError,
     },
 };
 
 struct Style9 {
     _line: Line<'static>,
-    _style: Box<Style>,
+    _style: Style,
     _points: Box<[lv_point_precise_t; 3]>,
 }
 
@@ -26,11 +27,12 @@ impl View for Style9 {
     fn create() -> Result<Self, WidgetError> {
         let screen = Screen::active().ok_or(WidgetError::LvglNullPointer)?;
 
-        let mut style = Box::new(Style::new());
-        style
+        let mut builder = StyleBuilder::new();
+        builder
             .line_color(palette_main(Palette::Grey))
             .line_width(6)
             .line_rounded(true);
+        let style = builder.build();
 
         let points = Box::new([
             lv_point_precise_t { x: 10.0, y: 30.0 },

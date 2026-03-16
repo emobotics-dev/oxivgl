@@ -8,36 +8,37 @@
 
 extern crate alloc;
 
-use alloc::boxed::Box;
 use oxivgl::{
     view::View,
     widgets::{
         palette_lighten, palette_main, GradDir, ObjState, Palette, Part, Screen, Slider, Style,
-        WidgetError,
+        StyleBuilder, WidgetError,
     },
 };
 
 struct Style13 {
     _slider: Slider<'static>,
-    _style_indic: Box<Style>,
-    _style_indic_pr: Box<Style>,
+    _style_indic: Style,
+    _style_indic_pr: Style,
 }
 
 impl View for Style13 {
     fn create() -> Result<Self, WidgetError> {
         let screen = Screen::active().ok_or(WidgetError::LvglNullPointer)?;
 
-        let mut style_indic = Box::new(Style::new());
-        style_indic
+        let mut builder_indic = StyleBuilder::new();
+        builder_indic
             .bg_color(palette_lighten(Palette::Red, 3))
             .bg_grad_color(palette_main(Palette::Red))
             .bg_grad_dir(GradDir::Hor);
+        let style_indic = builder_indic.build();
 
-        let mut style_indic_pr = Box::new(Style::new());
-        style_indic_pr
+        let mut builder_indic_pr = StyleBuilder::new();
+        builder_indic_pr
             .shadow_color(palette_main(Palette::Red))
             .shadow_width(10)
             .shadow_spread(3);
+        let style_indic_pr = builder_indic_pr.build();
 
         let slider = Slider::new(&screen)?;
         slider.add_style(&style_indic, Part::Indicator);

@@ -28,7 +28,9 @@ impl View for EventButton {
         // TODO: No touch input on fire27 hardware — button events won't fire
         // until an input device is connected.
         #[cfg(target_arch = "xtensa")]
-        oxivgl_examples_common::warn!("event_button: no touch input — button events require input device");
+        oxivgl_examples_common::warn!(
+            "event_button: no touch input — button events require input device"
+        );
 
         let btn = Button::new(&screen)?;
         btn.size(100, 50).center();
@@ -55,7 +57,9 @@ impl View for EventButton {
             EventCode::PRESSED => "The last button event:\nLV_EVENT_PRESSED",
             EventCode::CLICKED => "The last button event:\nLV_EVENT_CLICKED",
             EventCode::LONG_PRESSED => "The last button event:\nLV_EVENT_LONG_PRESSED",
-            EventCode::LONG_PRESSED_REPEAT => "The last button event:\nLV_EVENT_LONG_PRESSED_REPEAT",
+            EventCode::LONG_PRESSED_REPEAT => {
+                "The last button event:\nLV_EVENT_LONG_PRESSED_REPEAT"
+            }
             _ => return,
         };
         self.info_label.text(text);

@@ -8,12 +8,11 @@
 
 extern crate alloc;
 
-use alloc::boxed::Box;
 use oxivgl::{
     view::View,
     widgets::{
         color_white, palette_darken, palette_main, Align, Label, Obj, Palette, Screen, Selector,
-        Style, WidgetError, LV_SIZE_CONTENT,
+        Style, StyleBuilder, WidgetError, LV_SIZE_CONTENT,
     },
 };
 
@@ -22,16 +21,16 @@ struct Style11 {
     _obj_warn: Obj<'static>,
     _label_base: Label<'static>,
     _obj_base: Obj<'static>,
-    _style_warning: Box<Style>,
-    _style_base: Box<Style>,
+    _style_warning: Style,
+    _style_base: Style,
 }
 
 impl View for Style11 {
     fn create() -> Result<Self, WidgetError> {
         let screen = Screen::active().ok_or(WidgetError::LvglNullPointer)?;
 
-        let mut style_base = Box::new(Style::new());
-        style_base
+        let mut builder_base = StyleBuilder::new();
+        builder_base
             .bg_color(palette_main(Palette::LightBlue))
             .border_color(palette_darken(Palette::LightBlue, 3))
             .border_width(2)
@@ -42,12 +41,14 @@ impl View for Style11 {
             .text_color(color_white())
             .width(100)
             .height(LV_SIZE_CONTENT);
+        let style_base = builder_base.build();
 
-        let mut style_warning = Box::new(Style::new());
-        style_warning
+        let mut builder_warning = StyleBuilder::new();
+        builder_warning
             .bg_color(palette_main(Palette::Yellow))
             .border_color(palette_darken(Palette::Yellow, 3))
             .text_color(palette_darken(Palette::Yellow, 4));
+        let style_warning = builder_warning.build();
 
         let obj_base = Obj::new(&screen)?;
         obj_base.add_style(&style_base, Selector::DEFAULT);

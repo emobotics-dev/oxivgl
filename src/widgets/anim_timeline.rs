@@ -17,7 +17,7 @@ impl AnimTimeline {
     }
 
     /// Add an animation at the given start time (ms).
-    pub fn add(&mut self, start_time: u32, anim: &Anim) -> &mut Self {
+    pub fn add(&mut self, start_time: u32, anim: &Anim<'_>) -> &mut Self {
         unsafe { lv_anim_timeline_add(self.handle, start_time, &anim.inner) };
         self
     }

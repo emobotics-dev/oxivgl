@@ -11,16 +11,18 @@
 
 extern crate alloc;
 
-use alloc::boxed::Box;
 use oxivgl::{
     view::View,
-    widgets::{palette_lighten, palette_main, Image, Palette, Screen, Selector, Style, WidgetError},
+    widgets::{
+        palette_lighten, palette_main, Image, Palette, Screen, Selector, Style, StyleBuilder,
+        WidgetError,
+    },
 };
 
 oxivgl::image_declare!(img_cogwheel_argb);
 
 struct Style6 {
-    _style: Box<Style>,
+    _style: Style,
     _img: Image<'static>,
 }
 
@@ -28,8 +30,8 @@ impl View for Style6 {
     fn create() -> Result<Self, WidgetError> {
         let screen = Screen::active().ok_or(WidgetError::LvglNullPointer)?;
 
-        let mut style = Box::new(Style::new());
-        style
+        let mut builder = StyleBuilder::new();
+        builder
             .radius(5)
             .bg_opa(255)
             .bg_color(palette_lighten(Palette::Grey, 3))
@@ -38,6 +40,7 @@ impl View for Style6 {
             .image_recolor(palette_main(Palette::Blue))
             .image_recolor_opa(128)
             .transform_rotation(300);
+        let style = builder.build();
 
         let img = Image::new(&screen)?;
         img.add_style(&style, Selector::DEFAULT);

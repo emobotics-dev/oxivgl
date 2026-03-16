@@ -9,23 +9,19 @@
 //! Replaces default scrollbar style with a blue rounded bar that widens and
 //! becomes fully opaque when actively scrolling.
 
-extern crate alloc;
-
-use alloc::boxed::Box;
 use oxivgl::{
     view::View,
     widgets::{
-        anim_path_linear, palette_darken, palette_main, props, Label, Obj, ObjState, Palette,
-        Part, Screen, ScrollbarMode, Style, TransitionDsc, WidgetError,
+        anim_path_linear, palette_darken, palette_main, props, Label, Obj, ObjState, Palette, Part,
+        Screen, ScrollbarMode, Style, StyleBuilder, TransitionDsc, WidgetError,
     },
 };
 
 struct Scroll4 {
     _obj: Obj<'static>,
     _label: Label<'static>,
-    _style: Box<Style>,
-    _style_scrolled: Box<Style>,
-    _transition: Box<TransitionDsc>,
+    _style: Style,
+    _style_scrolled: Style,
 }
 
 /// Transition property list: opacity + width + sentinel.
@@ -62,14 +58,9 @@ impl View for Scroll4 {
         // Force scrollbar always visible (C example relies on interactive scrolling)
         obj.set_scrollbar_mode(ScrollbarMode::On);
 
-        let transition = Box::new(TransitionDsc::new(
-            &TRANS_PROPS,
-            Some(anim_path_linear),
-            200,
-            0,
-        ));
+        let transition = TransitionDsc::new(&TRANS_PROPS, Some(anim_path_linear), 200, 0);
 
-        let mut style = Box::new(Style::new());
+        let mut style = StyleBuilder::new();
         style
             .width(4)
             .length(20)
@@ -83,10 +74,12 @@ impl View for Scroll4 {
             .shadow_width(8)
             .shadow_spread(2)
             .shadow_color(palette_darken(Palette::Blue, 1))
-            .transition(&transition);
+            .transition(transition);
+        let style = style.build();
 
-        let mut style_scrolled = Box::new(Style::new());
+        let mut style_scrolled = StyleBuilder::new();
         style_scrolled.width(8).bg_opa(255); // LV_OPA_COVER
+        let style_scrolled = style_scrolled.build();
 
         obj.add_style(&style, Part::Scrollbar);
         obj.add_style(&style_scrolled, Part::Scrollbar | ObjState::SCROLLED);
@@ -96,7 +89,6 @@ impl View for Scroll4 {
             _label: label,
             _style: style,
             _style_scrolled: style_scrolled,
-            _transition: transition,
         })
     }
 

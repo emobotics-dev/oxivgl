@@ -1,5 +1,8 @@
 #![cfg_attr(target_arch = "xtensa", no_std, no_main)]
-#![cfg_attr(target_arch = "xtensa", feature(impl_trait_in_assoc_type, type_alias_impl_trait))]
+#![cfg_attr(
+    target_arch = "xtensa",
+    feature(impl_trait_in_assoc_type, type_alias_impl_trait)
+)]
 // SPDX-License-Identifier: MIT OR Apache-2.0
 //! Getting Started 4 — Slider
 
