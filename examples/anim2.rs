@@ -7,11 +7,10 @@
 //! Anim 2 — Playback animation
 
 use oxivgl::{
+    anim::{anim_path_ease_in_out, anim_set_size, anim_set_x, Anim, ANIM_REPEAT_INFINITE},
+    style::{palette_main, Palette, Selector},
     view::View,
-    widgets::{
-        anim_path_ease_in_out, anim_set_size, anim_set_x, palette_main, Align, Anim, Obj, Palette,
-        Screen, Selector, WidgetError, ANIM_REPEAT_INFINITE, RADIUS_MAX,
-    },
+    widgets::{Align, Obj, Screen, WidgetError, RADIUS_MAX},
 };
 
 struct Anim2 {

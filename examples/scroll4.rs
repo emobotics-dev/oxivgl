@@ -10,11 +10,12 @@
 //! becomes fully opaque when actively scrolling.
 
 use oxivgl::{
-    view::View,
-    widgets::{
-        anim_path_linear, palette_darken, palette_main, props, Label, Obj, ObjState, Palette, Part,
-        Screen, ScrollbarMode, Style, StyleBuilder, TransitionDsc, WidgetError,
+    anim::anim_path_linear,
+    style::{
+        palette_darken, palette_main, props, Palette, Style, StyleBuilder, TransitionDsc,
     },
+    view::View,
+    widgets::{Label, Obj, ObjState, Part, Screen, ScrollbarMode, WidgetError},
 };
 
 struct Scroll4 {

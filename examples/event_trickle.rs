@@ -11,11 +11,9 @@
 //! physical input is missing.
 
 use oxivgl::{
+    style::{color_black, color_white, Style, StyleBuilder},
     view::View,
-    widgets::{
-        color_black, color_white, FlexFlow, Label, Obj, ObjFlag, ObjState, Screen, Style,
-        StyleBuilder, WidgetError,
-    },
+    widgets::{FlexFlow, Label, Obj, ObjFlag, ObjState, Screen, WidgetError},
 };
 
 struct EventTrickle {

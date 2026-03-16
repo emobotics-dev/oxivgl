@@ -39,7 +39,8 @@ macro_rules! fire27_main {
             options::{ColorInversion, ColorOrder},
         };
         use $crate::log::info;
-        use $crate::oxivgl::lvgl_buffers::{DisplayOutput, LvglBuffers, UiError, flush_frame_buffer};
+        use $crate::oxivgl::flush_pipeline::{DisplayOutput, UiError, flush_frame_buffer};
+        use $crate::oxivgl::lvgl_buffers::LvglBuffers;
         use $crate::oxivgl::view::run_lvgl;
         use $crate::static_cell::{StaticCell, make_static};
 

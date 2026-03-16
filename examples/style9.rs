@@ -7,11 +7,9 @@
 //! Style 9 — Line styles
 
 use oxivgl::{
+    style::{palette_main, Palette, Selector, Style, StyleBuilder},
     view::View,
-    widgets::{
-        lv_point_precise_t, palette_main, Line, Palette, Screen, Selector, Style, StyleBuilder,
-        WidgetError,
-    },
+    widgets::{lv_point_precise_t, Line, Screen, WidgetError},
 };
 
 static POINTS: [lv_point_precise_t; 3] = [

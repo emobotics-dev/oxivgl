@@ -7,10 +7,9 @@
 //! Grid 6 — Demonstrate RTL direction on grid
 
 use oxivgl::{
+    style::Selector,
     view::View,
-    widgets::{
-        BaseDir, GridAlign, GridCell, Label, Obj, Screen, Selector, WidgetError, GRID_TEMPLATE_LAST,
-    },
+    widgets::{BaseDir, GridAlign, GridCell, Label, Obj, Screen, WidgetError, GRID_TEMPLATE_LAST},
 };
 
 static COL_DSC: [i32; 4] = [60, 60, 60, GRID_TEMPLATE_LAST];

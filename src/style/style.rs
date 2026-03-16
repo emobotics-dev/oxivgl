@@ -3,7 +3,7 @@ use alloc::boxed::Box;
 use alloc::rc::Rc;
 use lvgl_rust_sys::*;
 
-use super::palette::GradDir;
+use super::GradDir;
 
 /// Text decoration flags. Combine with `|`.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -37,7 +37,7 @@ impl TransitionDsc {
     /// Create a transition descriptor.
     ///
     /// `props`: null-terminated `'static` array of `lv_style_prop_t` (use [`props`] constants).
-    /// `path_cb`: animation path function (e.g. [`super::anim_path_linear`]).
+    /// `path_cb`: animation path function (e.g. [`crate::anim::anim_path_linear`]).
     /// `time`: transition duration in ms.
     /// `delay`: delay before transition starts in ms.
     pub fn new(
@@ -139,7 +139,7 @@ pub const LV_SIZE_CONTENT: i32 =
 #[repr(C)]
 pub(crate) struct StyleInner {
     lv: lv_style_t,
-    _grad: Option<Box<super::grad::GradDsc>>,
+    _grad: Option<Box<super::GradDsc>>,
     _transition: Option<Box<TransitionDsc>>,
     _color_filter: Option<Box<ColorFilter>>,
 }
@@ -358,7 +358,7 @@ impl StyleBuilder {
     /// The descriptor is stored inside the style; no external lifetime management needed.
     /// For simple two-color gradients, prefer [`bg_grad_color`](Self::bg_grad_color)
     /// + [`bg_grad_dir`](Self::bg_grad_dir).
-    pub fn bg_grad(&mut self, grad: super::grad::GradDsc) -> &mut Self {
+    pub fn bg_grad(&mut self, grad: super::GradDsc) -> &mut Self {
         let grad = Box::new(grad);
         // SAFETY: set new pointer first, then store Box. Old Box drops after
         // LVGL no longer references it (lv_style_set_prop overwrites in-place).
@@ -511,13 +511,13 @@ impl StyleBuilder {
     }
 
     /// Set flex layout flow direction.
-    pub fn flex_flow(&mut self, flow: super::obj::FlexFlow) -> &mut Self {
+    pub fn flex_flow(&mut self, flow: crate::widgets::FlexFlow) -> &mut Self {
         unsafe { lv_style_set_flex_flow(&mut self.inner.lv, flow as lv_flex_flow_t) };
         self
     }
 
     /// Set flex main-axis alignment.
-    pub fn flex_main_place(&mut self, align: super::obj::FlexAlign) -> &mut Self {
+    pub fn flex_main_place(&mut self, align: crate::widgets::FlexAlign) -> &mut Self {
         unsafe { lv_style_set_flex_main_place(&mut self.inner.lv, align as lv_flex_align_t) };
         self
     }
@@ -572,7 +572,7 @@ impl StyleBuilder {
     /// The LVGL SW renderer does not clip the transformed bounding box to
     /// display bounds. If the rotated object extends outside the screen,
     /// the renderer may write out of bounds. Position or
-    /// [`center()`](super::Obj::center) the object so its rotated extents
+    /// [`center()`](crate::widgets::Obj::center) the object so its rotated extents
     /// stay within the display.
     pub fn transform_rotation(&mut self, angle: i32) -> &mut Self {
         unsafe { lv_style_set_transform_rotation(&mut self.inner.lv, angle) };
@@ -601,7 +601,7 @@ impl StyleBuilder {
     }
 
     /// Set layout engine (flex or grid).
-    pub fn layout(&mut self, layout: super::Layout) -> &mut Self {
+    pub fn layout(&mut self, layout: crate::widgets::Layout) -> &mut Self {
         unsafe { lv_style_set_layout(&mut self.inner.lv, layout as u16) };
         self
     }
