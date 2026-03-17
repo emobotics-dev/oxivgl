@@ -9,11 +9,15 @@
 /// LVGL event code. Newtype around `u32` so that unknown codes propagate
 /// without UB while known codes get ergonomic named constants.
 ///
-/// ```ignore
-/// match event.code() {
-///     EventCode::CLICKED => { /* … */ }
-///     EventCode::PRESSED => { /* … */ }
-///     _ => {}
+/// ```
+/// use oxivgl::enums::EventCode;
+///
+/// fn handle(code: EventCode) {
+///     match code {
+///         EventCode::CLICKED => { /* … */ }
+///         EventCode::PRESSED => { /* … */ }
+///         _ => {}
+///     }
 /// }
 /// ```
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -38,8 +42,10 @@ impl EventCode {
 
 /// LVGL object flag. Combine with `|` for multi-flag operations.
 ///
-/// ```ignore
-/// obj.add_flag(ObjFlag::CHECKABLE | ObjFlag::EVENT_BUBBLE);
+/// ```
+/// use oxivgl::enums::ObjFlag;
+///
+/// let _ = ObjFlag::CHECKABLE | ObjFlag::EVENT_BUBBLE;
 /// ```
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct ObjFlag(pub u32);
@@ -79,10 +85,17 @@ impl core::ops::BitOr for ObjFlag {
 /// LVGL object state. Combine with `|` for multi-state operations.
 /// Also usable as style selectors: `obj.add_style(&s, ObjState::PRESSED.0)`.
 ///
-/// ```ignore
+/// ```no_run
+/// use oxivgl::enums::ObjState;
+/// use oxivgl::widgets::{Part, Screen};
+/// use oxivgl::style::{Selector, StyleBuilder};
+///
+/// let screen = Screen::active().unwrap();
+/// let obj = oxivgl::widgets::Obj::new(&screen).unwrap();
+/// let style = StyleBuilder::new().build();
 /// obj.add_state(ObjState::CHECKED);
-/// obj.add_style(&style, ObjState::PRESSED.0);
-/// obj.add_style(&style, Part::Indicator as u32 | ObjState::PRESSED.0);
+/// obj.add_style(&style, ObjState::PRESSED);
+/// obj.add_style(&style, Part::Indicator | ObjState::PRESSED);
 /// ```
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct ObjState(pub u32);

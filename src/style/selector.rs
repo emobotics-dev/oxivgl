@@ -6,7 +6,8 @@
 //!
 //! ```ignore
 //! use oxivgl::style::Selector;
-//! use oxivgl::widgets::{ObjState, obj::Part};
+//! use oxivgl::enums::ObjState;
+//! use oxivgl::widgets::Part;
 //!
 //! btn.add_style(&style, Selector::DEFAULT);
 //! btn.add_style(&style, ObjState::PRESSED);

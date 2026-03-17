@@ -11,10 +11,12 @@ use super::WidgetError;
 /// Chain operations via builder-style methods. Requires
 /// `LV_DRAW_TRANSFORM_USE_MATRIX = 1` and `LV_USE_FLOAT = 1` in `lv_conf.h`.
 ///
-/// ```ignore
+/// ```no_run
+/// use oxivgl::widgets::Matrix;
+///
 /// let mut m = Matrix::identity();
 /// m.scale(0.5, 0.5).rotate(45.0);
-/// obj.set_transform(&m);
+/// // Apply with: obj.set_transform(&m);
 /// ```
 pub struct Matrix {
     inner: lv_matrix_t,
@@ -514,11 +516,18 @@ impl<'p> Obj<'p> {
 
     // ── Events ───────────────────────────────────────────────────────────
 
-    /// Add an event callback. `cb` is an `extern "C"` function pointer.
-    /// `filter`: use `EventCode::ALL` to receive all events,
-    /// or a specific code like `EventCode::CLICKED`.
-    /// `user_data`: arbitrary pointer passed to the callback; pass `core::ptr::null_mut()` if unused.
-    pub fn on_event(
+    /// Add a raw event callback with user data.
+    ///
+    /// Prefer [`on`](Self::on) for stateless callbacks. Use this only when
+    /// you need to pass context via `user_data`.
+    ///
+    /// # Safety
+    ///
+    /// `user_data` must remain valid for the entire lifetime of this widget.
+    /// LVGL stores the pointer in the event handler list
+    /// (`lv_obj_add_event_cb`). Passing a dangling pointer causes UB when
+    /// the event fires.
+    pub unsafe fn on_event(
         &self,
         cb: unsafe extern "C" fn(*mut lv_event_t),
         filter: crate::enums::EventCode,
@@ -526,6 +535,7 @@ impl<'p> Obj<'p> {
     ) -> &Self {
         assert_ne!(self.handle, null_mut(), "Obj handle cannot be null");
         // SAFETY: handle non-null; cb is a valid extern "C" fn pointer.
+        // Caller guarantees user_data validity per the Safety contract above.
         unsafe { lv_obj_add_event_cb(self.handle, Some(cb), filter.0, user_data) };
         self
     }

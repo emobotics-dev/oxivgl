@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
 //! Universal convenience re-exports for widget, style, and animation types.
 //!
-//! ```ignore
+//! ```
 //! use oxivgl::prelude::*;
 //! ```
 

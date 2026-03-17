@@ -670,11 +670,14 @@ fn event_callback_fires() {
 
     let screen = fresh_screen();
     let btn = Button::new(&screen).unwrap();
-    btn.on_event(
-        cb,
-        oxivgl::enums::EventCode::CLICKED,
-        core::ptr::null_mut(),
-    );
+    // SAFETY: user_data is null (unused); btn outlives the event handler.
+    unsafe {
+        btn.on_event(
+            cb,
+            oxivgl::enums::EventCode::CLICKED,
+            core::ptr::null_mut(),
+        );
+    }
 
     // Simulate a click event
     // SAFETY: btn handle valid, LVGL initialised.
@@ -1311,11 +1314,14 @@ fn obj_send_event() {
 
     let screen = fresh_screen();
     let btn = Button::new(&screen).unwrap();
-    btn.on_event(
-        cb,
-        oxivgl::enums::EventCode::CLICKED,
-        core::ptr::null_mut(),
-    );
+    // SAFETY: user_data is null (unused); btn outlives the event handler.
+    unsafe {
+        btn.on_event(
+            cb,
+            oxivgl::enums::EventCode::CLICKED,
+            core::ptr::null_mut(),
+        );
+    }
     btn.send_event(oxivgl::enums::EventCode::CLICKED);
     assert!(SENT.load(Ordering::SeqCst));
 }

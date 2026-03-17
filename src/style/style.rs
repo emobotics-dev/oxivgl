@@ -102,7 +102,9 @@ pub mod props {
 
 /// Bitflags for border side selection. Combine with `|` operator.
 ///
-/// ```ignore
+/// ```
+/// use oxivgl::style::BorderSide;
+///
 /// let sides = BorderSide::BOTTOM | BorderSide::RIGHT;
 /// ```
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -159,8 +161,10 @@ const _: () = assert!(core::mem::offset_of!(StyleInner, lv) == 0);
 impl Drop for StyleInner {
     fn drop(&mut self) {
         // SAFETY: lv was initialized by lv_style_init. lv_style_reset frees
-        // values_and_props (lv_style.c:192-201), then zeroes the struct.
-        // After this, no LVGL data references sub-descriptor addresses.
+        // the values_and_props buffer (lv_style.c:192-201) which contained all
+        // stored property pointers, then zeroes the lv_style_t with lv_memzero.
+        // After the buffer is freed, no LVGL data structure can reference
+        // sub-descriptor addresses via it (spec §8.2).
         // Rust then drops the Option<Box<…>> fields, freeing sub-descriptors.
         unsafe { lv_style_reset(&mut self.lv) };
     }
@@ -173,12 +177,14 @@ impl Drop for StyleInner {
 /// Call setter methods to configure properties, then [`build()`](Self::build)
 /// to produce a frozen, cheaply clonable [`Style`] handle.
 ///
-/// ```ignore
-/// let style = StyleBuilder::new()
-///     .radius(5)
-///     .bg_color(blue)
-///     .build();
-/// widget.add_style(&style, Selector::DEFAULT);
+/// ```no_run
+/// use oxivgl::style::{StyleBuilder, Selector};
+///
+/// let mut style = StyleBuilder::new();
+/// style.radius(5)
+///     .bg_color_hex(0x0000FF);
+/// let style = style.build();
+/// // Apply with: widget.add_style(&style, Selector::DEFAULT);
 /// ```
 pub struct StyleBuilder {
     inner: Box<StyleInner>,
