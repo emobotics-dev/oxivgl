@@ -64,6 +64,8 @@ pub enum Part {
     Indicator = 0x020000,
     /// Grab handle (`LV_PART_KNOB = 0x030000`).
     Knob = 0x030000,
+    /// Selected item highlight, e.g. roller selected row (`LV_PART_SELECTED = 0x040000`).
+    Selected = 0x040000,
     /// Repeated sub-elements such as tick marks (`LV_PART_ITEMS = 0x050000`).
     Items = 0x050000,
     /// Scrollbar part (`LV_PART_SCROLLBAR = 0x010000`).
@@ -598,7 +600,7 @@ impl<'p> Obj<'p> {
     ///
     /// For handlers that need View state, use [`View::on_event`](crate::view::View::on_event)
     /// with event bubbling instead.
-    pub fn on(&self, code: super::EventCode, cb: fn(&super::event::Event)) -> &Self {
+    pub fn on(&self, code: super::EventCode, cb: fn(&crate::event::Event)) -> &Self {
         assert_ne!(self.handle, null_mut(), "Obj handle cannot be null");
 
         unsafe extern "C" fn trampoline(e: *mut lv_event_t) {
@@ -606,8 +608,8 @@ impl<'p> Obj<'p> {
             // back. fn pointers are pointer-sized.
             unsafe {
                 let cb_ptr = lv_event_get_user_data(e) as *const ();
-                let cb: fn(&super::event::Event) = core::mem::transmute(cb_ptr);
-                let event = super::event::Event::from_raw(e);
+                let cb: fn(&crate::event::Event) = core::mem::transmute(cb_ptr);
+                let event = crate::event::Event::from_raw(e);
                 cb(&event);
             }
         }

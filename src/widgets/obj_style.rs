@@ -314,4 +314,52 @@ impl<'p> Obj<'p> {
         unsafe { lv_obj_set_style_line_width(self.handle(), width, part as u32) };
         self
     }
+
+    /// Set image recolor tint.
+    pub fn style_image_recolor(
+        &self,
+        color: lv_color_t,
+        selector: impl Into<crate::style::Selector>,
+    ) -> &Self {
+        let selector = selector.into().raw();
+        assert_ne!(self.handle(), null_mut(), "Obj handle cannot be null");
+        unsafe { lv_obj_set_style_image_recolor(self.handle(), color, selector) };
+        self
+    }
+
+    /// Set radial offset for parts on round scales (in pixels).
+    pub fn style_radial_offset(
+        &self,
+        offset: i32,
+        selector: impl Into<crate::style::Selector>,
+    ) -> &Self {
+        let selector = selector.into().raw();
+        assert_ne!(self.handle(), null_mut(), "Obj handle cannot be null");
+        unsafe { lv_obj_set_style_radial_offset(self.handle(), offset, selector) };
+        self
+    }
+
+    /// Set line opacity for a part (0–255).
+    pub fn style_line_opa(
+        &self,
+        opa: u8,
+        selector: impl Into<crate::style::Selector>,
+    ) -> &Self {
+        let selector = selector.into().raw();
+        assert_ne!(self.handle(), null_mut(), "Obj handle cannot be null");
+        unsafe { lv_obj_set_style_line_opa(self.handle(), opa as lv_opa_t, selector) };
+        self
+    }
+
+    /// Set image recolor opacity (0–255).
+    pub fn style_image_recolor_opa(
+        &self,
+        opa: u8,
+        selector: impl Into<crate::style::Selector>,
+    ) -> &Self {
+        let selector = selector.into().raw();
+        assert_ne!(self.handle(), null_mut(), "Obj handle cannot be null");
+        unsafe { lv_obj_set_style_image_recolor_opa(self.handle(), opa as lv_opa_t, selector) };
+        self
+    }
 }

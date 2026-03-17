@@ -87,6 +87,15 @@ pub mod props {
     /// Outline opacity property.
     pub const OUTLINE_OPA: lv_style_prop_t =
         lvgl_rust_sys::_lv_style_id_t_LV_STYLE_OUTLINE_OPA as lv_style_prop_t;
+    /// Transform width offset property.
+    pub const TRANSFORM_WIDTH: lv_style_prop_t =
+        lvgl_rust_sys::_lv_style_id_t_LV_STYLE_TRANSFORM_WIDTH as lv_style_prop_t;
+    /// Transform height offset property.
+    pub const TRANSFORM_HEIGHT: lv_style_prop_t =
+        lvgl_rust_sys::_lv_style_id_t_LV_STYLE_TRANSFORM_HEIGHT as lv_style_prop_t;
+    /// Text letter spacing property.
+    pub const TEXT_LETTER_SPACE: lv_style_prop_t =
+        lvgl_rust_sys::_lv_style_id_t_LV_STYLE_TEXT_LETTER_SPACE as lv_style_prop_t;
     /// Sentinel: end of property list.
     pub const LAST: lv_style_prop_t = 0;
 }
@@ -236,6 +245,12 @@ impl StyleBuilder {
         self
     }
 
+    /// Set background gradient end color from RGB hex.
+    pub fn bg_grad_color_hex(&mut self, hex: u32) -> &mut Self {
+        let color = unsafe { lv_color_hex(hex) };
+        self.bg_grad_color(color)
+    }
+
     /// Set background gradient direction.
     pub fn bg_grad_dir(&mut self, dir: GradDir) -> &mut Self {
         unsafe { lv_style_set_bg_grad_dir(&mut self.inner.lv, dir as lv_grad_dir_t) };
@@ -269,6 +284,16 @@ impl StyleBuilder {
     /// Set text opacity (0–255).
     pub fn text_opa(&mut self, opa: u8) -> &mut Self {
         unsafe { lv_style_set_text_opa(&mut self.inner.lv, opa as lv_opa_t) };
+        self
+    }
+
+    /// Set text font.
+    pub fn text_font(&mut self, font: crate::fonts::Font) -> &mut Self {
+        // SAFETY: Font is constructable only via unsafe from_raw/from_extern
+        // which require a 'static lv_font_t. The pointer stored in the style
+        // property map is released when lv_style_reset runs in StyleInner::Drop
+        // (spec §4.7). The font itself is 'static so outlives the style (spec §2).
+        unsafe { lv_style_set_text_font(&mut self.inner.lv, font.as_ptr()) };
         self
     }
 
@@ -525,11 +550,12 @@ impl StyleBuilder {
     /// Set background image source (pointer to an `lv_image_dsc_t`).
     /// LVGL stores the raw pointer — the descriptor must be `'static`.
     ///
-    /// Declare the image with [`image_declare!`](crate::image_declare) and pass
-    /// a reference: `style.bg_image_src(unsafe { &my_img })`.
+    /// LVGL stores the raw pointer in the style property map. The descriptor
+    /// must be `'static` (spec §3.1). Use [`image_declare!`](crate::image_declare):
+    /// `style.bg_image_src(my_img())`.
     pub fn bg_image_src(&mut self, src: &'static lv_image_dsc_t) -> &mut Self {
-        // SAFETY: inner was initialized; src is 'static so the pointer LVGL
-        // stores will remain valid.
+        // SAFETY: inner was initialized; src is 'static and points to a valid
+        // compiled image descriptor. LVGL stores the pointer (spec §3.1).
         unsafe {
             lv_style_set_bg_image_src(
                 &mut self.inner.lv,
@@ -574,6 +600,19 @@ impl StyleBuilder {
     /// the renderer may write out of bounds. Position or
     /// [`center()`](crate::widgets::Obj::center) the object so its rotated extents
     /// stay within the display.
+    /// Set transform width offset in pixels (expands/shrinks the widget visually).
+    pub fn transform_width(&mut self, w: i32) -> &mut Self {
+        unsafe { lv_style_set_transform_width(&mut self.inner.lv, w) };
+        self
+    }
+
+    /// Set transform height offset in pixels (expands/shrinks the widget visually).
+    pub fn transform_height(&mut self, h: i32) -> &mut Self {
+        unsafe { lv_style_set_transform_height(&mut self.inner.lv, h) };
+        self
+    }
+
+    /// Set transform rotation in 0.1° units (e.g. 450 = 45°).
     pub fn transform_rotation(&mut self, angle: i32) -> &mut Self {
         unsafe { lv_style_set_transform_rotation(&mut self.inner.lv, angle) };
         self

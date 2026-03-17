@@ -24,7 +24,6 @@ mod checkbox;
 mod child;
 mod dropdown;
 mod enums;
-pub(crate) mod event;
 mod grid;
 mod image;
 mod label;
@@ -40,7 +39,7 @@ mod slider;
 mod switch;
 mod value_label;
 
-pub use arc::Arc;
+pub use arc::{Arc, ArcMode};
 pub use bar::Bar;
 pub use button::Button;
 pub use checkbox::Checkbox;
@@ -49,9 +48,9 @@ pub use dropdown::{DdDir, Dropdown};
 pub use enums::{
     BarMode, EventCode, Layout, ObjFlag, ObjState, Opa, ScrollDir, ScrollSnap, ScrollbarMode,
 };
-pub use event::Event;
+pub use crate::event::Event;
 pub use grid::GridCell;
-pub use image::Image;
+pub use image::{Image, ImageAlign};
 pub use label::{Label, LabelLongMode};
 pub use led::Led;
 pub use line::Line;
@@ -59,10 +58,14 @@ pub use obj::{
     Align, AsLvHandle, BaseDir, FlexAlign, FlexFlow, GridAlign, Matrix, Obj, Part, TextAlign,
 };
 pub use roller::{Roller, RollerMode};
-pub use scale::{Scale, ScaleBuilder, ScaleMode};
+pub use scale::{
+    Scale, ScaleBuilder, ScaleLabels, ScaleMode, ScaleSection,
+    SCALE_LABEL_ROTATE_KEEP_UPRIGHT, SCALE_LABEL_ROTATE_MATCH_TICKS,
+};
 pub use screen::Screen;
-pub use slider::Slider;
-pub use switch::Switch;
+pub use slider::{Slider, SliderMode};
+pub use switch::{Switch, SwitchOrientation};
+pub use crate::timer::Timer;
 pub use value_label::ValueLabel;
 
 // Re-export raw types so callbacks don't need `lvgl_rust_sys`.
