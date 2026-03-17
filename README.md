@@ -37,6 +37,19 @@ Contributors are encouraged to use AI tools. The project's specs,
 CLAUDE.md, and example patterns are structured to give AI agents the
 context they need to contribute effectively.
 
+## Architecture
+
+![Architecture](docs/architecture.svg)
+
+```rust
+pub trait View: Sized {
+    fn create() -> Result<Self, WidgetError>;
+    fn update(&mut self) -> Result<(), WidgetError>;
+    fn on_event(&mut self, _event: &Event) {}       // safe event dispatch
+    fn register_events(&mut self) { /* … */ }       // override for nested containers
+}
+```
+
 ## Memory Safety Across the FFI Boundary
 
 LVGL is a C library that stores raw pointers to styles, image descriptors, point arrays, and callback data — with no built-in ownership tracking. The [official Rust wrapper](https://github.com/lvgl/lv_binding_rust) (`lv_binding_rust`) has known soundness gaps — wrong lifetimes on widget constructors that allow dangling pointers ([#166](https://github.com/lvgl/lv_binding_rust/issues/166)), SIGSEGV on basic SDL init ([#180](https://github.com/lvgl/lv_binding_rust/issues/180)), and is stuck on LVGL v8 with no active maintenance ([#201](https://github.com/lvgl/lv_binding_rust/issues/201)).
@@ -73,19 +86,6 @@ These guarantees are verified by [integration tests](#testing) that exercise sty
 ### Why test on host?
 
 LVGL's widget tree, layout engine, and style system are pure C — platform-independent. Running tests on the host (x86_64) gives sub-second feedback without flashing hardware. The headless SDL2 dummy driver (`SDL_VIDEODRIVER=dummy`) enables CI without a display server. Only the flush pipeline and DMA buffer handling are ESP32-specific.
-
-## Architecture
-
-![Architecture](docs/architecture.svg)
-
-```rust
-pub trait View: Sized {
-    fn create() -> Result<Self, WidgetError>;
-    fn update(&mut self) -> Result<(), WidgetError>;
-    fn on_event(&mut self, _event: &Event) {}       // safe event dispatch
-    fn register_events(&mut self) { /* … */ }       // override for nested containers
-}
-```
 
 ## Testing
 
