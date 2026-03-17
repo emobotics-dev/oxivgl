@@ -8,8 +8,6 @@
 
 Safe Rust bindings for [LVGL](https://github.com/lvgl/lvgl) on embedded (`no_std`) and host (`std`/SDL2) targets. Wraps all unsafe LVGL calls behind type-safe APIs — user code never touches `unsafe` or `lvgl_rust_sys` directly.
 
-Built for AI-generated UIs: Rust's type system and borrow checker catch mistakes at compile time that would silently corrupt memory in C. When an AI agent generates widget code, the compiler enforces correct parent-child relationships, valid enum values, and proper resource lifetimes — turning runtime crashes into compile errors. Our vision is that AI agents become the primary users of this crate, generating embedded GUIs from high-level descriptions.
-
 ## Examples
 
 94 ported LVGL examples covering getting started, styles, animations, events, layouts, scrolling, and individual widgets. Each is a self-contained `View` impl — runs on host SDL2 or ESP32 with zero code changes.
@@ -127,6 +125,25 @@ cargo +esp -Zbuild-std=alloc,core check --features esp-hal,log-04
 ```
 
 `build.rs` compiles LVGL from source via cmake. Expects `DEP_LV_CONFIG_PATH` pointing to `lv_conf.h`.
+
+## Built with AI
+
+This library has been developed primarily using AI coding agents (Claude
+Code). Architecture decisions, wrapper implementations, memory safety
+reviews, example porting, and documentation were all produced through
+human–AI collaboration.
+
+The API is designed to be AI-friendly: discoverable, well-documented,
+and free of footguns. Rust's type system and borrow checker catch
+mistakes at compile time that would silently corrupt memory in C — when
+an AI agent generates widget code, the compiler enforces correct
+lifetimes, valid enum values, and proper ownership. We envision AI
+agents as primary users of this crate, generating embedded GUIs from
+high-level descriptions.
+
+Contributors are encouraged to use AI tools. The project's specs,
+CLAUDE.md, and example patterns are structured to give AI agents the
+context they need to contribute effectively.
 
 ## License
 
