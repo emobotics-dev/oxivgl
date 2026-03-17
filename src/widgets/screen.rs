@@ -4,6 +4,7 @@
 use lvgl_rust_sys::*;
 
 use crate::layout::{FlexAlign, FlexFlow};
+use crate::style::{Selector, Style};
 use super::obj::AsLvHandle;
 
 /// Non-owning reference to the active LVGL screen. Does **not** delete it on
@@ -113,6 +114,18 @@ impl Screen {
     pub fn set_flex_flow(&self, flow: FlexFlow) -> &Self {
         // SAFETY: handle non-null (Screen::active() returns None for null).
         unsafe { lv_obj_set_flex_flow(self.handle, flow as lv_flex_flow_t) };
+        self
+    }
+
+    /// Apply a style for the given selector.
+    ///
+    /// Unlike [`Obj::add_style`], Screen does not store an `Rc` clone — the
+    /// caller must keep the [`Style`] alive for the screen's lifetime (which
+    /// is typically `'static` in practice).
+    pub fn add_style(&self, style: &Style, selector: impl Into<Selector>) -> &Self {
+        let selector = selector.into().raw();
+        // SAFETY: handle non-null (Screen::active() returns None for null).
+        unsafe { lv_obj_add_style(self.handle, style.lv_ptr(), selector) };
         self
     }
 
