@@ -67,7 +67,10 @@ LIBCLANG_PATH=/usr/lib64 RUSTDOCFLAGS="-W missing-docs" cargo +nightly doc --tar
 
 ## Specifications
 
+- **API vision**: `docs/spec-api-vision.md` — design principles.
 - **Memory & lifetime safety**: `docs/spec-memory-lifetime.md` — governs all core library changes.
+- **Widget wrappers**: `docs/spec-widget-wrapper.md` — how to wrap a new LVGL widget.
+- **Testing**: `docs/spec-testing.md` — test tiers, when to write what, portability.
 - **Example porting**: `docs/spec-example-porting.md` — how to translate LVGL C examples.
 - **Git workflow**: `docs/spec-git-workflow.md` — branching, commits, PRs, CI.
 
