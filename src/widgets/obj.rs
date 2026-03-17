@@ -11,10 +11,12 @@ use super::WidgetError;
 /// Chain operations via builder-style methods. Requires
 /// `LV_DRAW_TRANSFORM_USE_MATRIX = 1` and `LV_USE_FLOAT = 1` in `lv_conf.h`.
 ///
-/// ```ignore
+/// ```no_run
+/// use oxivgl::widgets::Matrix;
+///
 /// let mut m = Matrix::identity();
 /// m.scale(0.5, 0.5).rotate(45.0);
-/// obj.set_transform(&m);
+/// // Apply with: obj.set_transform(&m);
 /// ```
 pub struct Matrix {
     inner: lv_matrix_t,
