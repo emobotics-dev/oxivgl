@@ -8,7 +8,8 @@
 
 use oxivgl::{
     view::View,
-    widgets::{Button, GridAlign, GridCell, Label, Screen, WidgetError, GRID_TEMPLATE_LAST},
+    layout::{GridAlign, GridCell, GRID_TEMPLATE_LAST},
+    widgets::{Button, Label, Screen, WidgetError},
 };
 
 static COL_DSC: [i32; 4] = [70, 70, 70, GRID_TEMPLATE_LAST];

@@ -10,7 +10,8 @@ use oxivgl::{
     anim::{anim_set_pad_column, anim_set_pad_row, Anim, ANIM_REPEAT_INFINITE},
     style::LV_SIZE_CONTENT,
     view::View,
-    widgets::{FlexFlow, Label, Obj, Screen, WidgetError},
+    layout::FlexFlow,
+    widgets::{Label, Obj, Screen, WidgetError},
 };
 
 struct Flex5 {

@@ -10,7 +10,9 @@
 
 use oxivgl::{
     view::View,
-    widgets::{FlexAlign, FlexFlow, ObjState, Screen, Switch, WidgetError},
+    enums::ObjState,
+    layout::{FlexAlign, FlexFlow},
+    widgets::{Screen, Switch, WidgetError},
 };
 
 struct WidgetSwitch1 {

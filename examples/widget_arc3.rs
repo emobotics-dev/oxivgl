@@ -14,7 +14,8 @@ extern crate alloc;
 use oxivgl::{
     style::{color_make, Style, StyleBuilder},
     view::View,
-    widgets::{Arc, ArcMode, ObjFlag, Opa, Part, Screen, WidgetError},
+    enums::{ObjFlag, Opa},
+    widgets::{Arc, ArcMode, Part, Screen, WidgetError},
 };
 
 struct WidgetArc3 {

@@ -15,10 +15,10 @@ use oxivgl::{
         anim_set_slider_value, anim_set_width, Anim, AnimTimeline, ANIM_TIMELINE_PROGRESS_MAX,
     },
     view::View,
-    widgets::{
-        Align, Button, Event, EventCode, FlexAlign, FlexFlow, Label, Obj, ObjFlag, ObjState,
-        Screen, ScrollbarMode, Slider, WidgetError,
-    },
+    enums::{EventCode, ObjFlag, ObjState, ScrollbarMode},
+    event::Event,
+    layout::{FlexAlign, FlexFlow},
+    widgets::{Align, Button, Label, Obj, Screen, Slider, WidgetError},
 };
 
 const OBJ_WIDTH: i32 = 90;

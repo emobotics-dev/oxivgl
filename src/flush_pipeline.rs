@@ -73,12 +73,12 @@ pub static FLUSH_OPERATION: Channel<CriticalSectionRawMutex, LvDispDrv, 1> = Cha
 
 /// Async flush task: receives pixel data from LVGL, forwards to [`DisplayOutput`].
 ///
-/// Spawn this on a high-priority interrupt executor. Signals [`DISPLAY_READY`](super::lvgl_buffers::DISPLAY_READY)
+/// Spawn this on a high-priority interrupt executor. Signals [`DISPLAY_READY`](super::display::DISPLAY_READY)
 /// once ready, then loops forever consuming [`DRAW_OPERATION`] and writing to the display.
 #[esp_hal::ram]
 pub async fn flush_frame_buffer(mut display_driver: impl DisplayOutput) -> ! {
     debug!("Starting flush task");
-    super::lvgl_buffers::DISPLAY_READY.signal(());
+    super::display::DISPLAY_READY.signal(());
     let flush_sender = FLUSH_OPERATION.sender();
     loop {
         debug!("Flushing frame buffer");

@@ -536,13 +536,13 @@ impl StyleBuilder {
     }
 
     /// Set flex layout flow direction.
-    pub fn flex_flow(&mut self, flow: crate::widgets::FlexFlow) -> &mut Self {
+    pub fn flex_flow(&mut self, flow: crate::layout::FlexFlow) -> &mut Self {
         unsafe { lv_style_set_flex_flow(&mut self.inner.lv, flow as lv_flex_flow_t) };
         self
     }
 
     /// Set flex main-axis alignment.
-    pub fn flex_main_place(&mut self, align: crate::widgets::FlexAlign) -> &mut Self {
+    pub fn flex_main_place(&mut self, align: crate::layout::FlexAlign) -> &mut Self {
         unsafe { lv_style_set_flex_main_place(&mut self.inner.lv, align as lv_flex_align_t) };
         self
     }
@@ -640,7 +640,7 @@ impl StyleBuilder {
     }
 
     /// Set layout engine (flex or grid).
-    pub fn layout(&mut self, layout: crate::widgets::Layout) -> &mut Self {
+    pub fn layout(&mut self, layout: crate::layout::Layout) -> &mut Self {
         unsafe { lv_style_set_layout(&mut self.inner.lv, layout as u16) };
         self
     }

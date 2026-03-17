@@ -11,7 +11,9 @@
 
 use oxivgl::{
     view::View,
-    widgets::{Align, Button, Event, EventCode, Label, ObjFlag, Screen, WidgetError},
+    enums::{EventCode, ObjFlag},
+    event::Event,
+    widgets::{Align, Button, Label, Screen, WidgetError},
 };
 
 struct WidgetButton1 {

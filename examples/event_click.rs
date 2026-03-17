@@ -12,7 +12,9 @@
 
 use oxivgl::{
     view::View,
-    widgets::{Button, Event, EventCode, Label, Screen, WidgetError},
+    enums::EventCode,
+    event::Event,
+    widgets::{Button, Label, Screen, WidgetError},
 };
 
 struct EventClick {

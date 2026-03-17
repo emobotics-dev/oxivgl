@@ -7,8 +7,9 @@
 //! Flex 3 — Demonstrate flex grow
 
 use oxivgl::{
+    layout::FlexFlow,
     view::View,
-    widgets::{FlexFlow, Obj, Screen, WidgetError},
+    widgets::{Obj, Screen, WidgetError},
 };
 
 struct Flex3 {

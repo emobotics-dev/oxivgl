@@ -11,7 +11,9 @@
 
 use oxivgl::{
     view::View,
-    widgets::{FlexAlign, FlexFlow, ObjState, Screen, Switch, SwitchOrientation, WidgetError},
+    enums::ObjState,
+    layout::{FlexAlign, FlexFlow},
+    widgets::{Screen, Switch, SwitchOrientation, WidgetError},
 };
 
 struct WidgetSwitch2 {
