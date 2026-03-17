@@ -16,6 +16,12 @@ pub struct Anim<'w> {
     _widget: PhantomData<&'w ()>,
 }
 
+impl<'w> core::fmt::Debug for Anim<'w> {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        f.debug_struct("Anim").finish_non_exhaustive()
+    }
+}
+
 impl<'w> Anim<'w> {
     /// Create a new animation descriptor.
     pub fn new() -> Self {

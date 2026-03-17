@@ -5,6 +5,7 @@ use core::ffi::c_char;
 use lvgl_rust_sys::*;
 
 /// Zero-sized init token. Proves `lv_init()` was called.
+#[derive(Debug)]
 pub struct LvglDriver;
 
 impl LvglDriver {

@@ -31,6 +31,12 @@ pub struct Timer {
     flag: *mut Cell<bool>,
 }
 
+impl core::fmt::Debug for Timer {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        f.debug_struct("Timer").finish_non_exhaustive()
+    }
+}
+
 impl Timer {
     /// Create a timer that fires every `period_ms` milliseconds.
     ///
