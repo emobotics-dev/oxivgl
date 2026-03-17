@@ -131,7 +131,7 @@ impl<'p> Obj<'p> {
             let target = Rc::as_ptr(&s.inner);
             let mut styles = self._styles.borrow_mut();
             if let Some(pos) = styles.iter().position(|e| Rc::as_ptr(&e.inner) == target) {
-                styles.swap_remove(pos);
+                styles.remove(pos);
             }
         }
         self
