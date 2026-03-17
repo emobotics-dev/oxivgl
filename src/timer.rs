@@ -13,7 +13,7 @@ use lvgl_rust_sys::*;
 /// # Example
 ///
 /// ```ignore
-/// use oxivgl::widgets::Timer;
+/// use oxivgl::timer::Timer;
 ///
 /// struct MyView { timer: Timer, counter: i32 }
 ///

@@ -18,12 +18,12 @@ yet.
 The intent is to publish on crates.io once the API has stabilized enough
 for external consumers. Until then, depend on it via git.
 
-## Built with AI
+## AI statement
 
 This library has been developed using AI coding agents, mostly Claude
 Code. The DMA/buffer foundations, architecture decisions, wrapper
 implementations, memory safety reviews, example porting, and
-documentation were all produced through human–AI collaboration.
+documentation were built through human–AI collaboration.
 
 The API is designed to be AI-friendly: discoverable, well-documented,
 and free of footguns. Architecture and design boundaries are captured in
