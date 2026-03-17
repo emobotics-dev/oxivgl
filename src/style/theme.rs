@@ -47,6 +47,12 @@ pub struct Theme {
     _not_send: PhantomData<*mut ()>,
 }
 
+impl core::fmt::Debug for Theme {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        f.debug_struct("Theme").finish_non_exhaustive()
+    }
+}
+
 impl Theme {
     /// Extend the active display theme: buttons created after this call will
     /// have `style` applied by the theme machinery.

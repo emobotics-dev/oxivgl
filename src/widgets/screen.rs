@@ -23,6 +23,12 @@ pub struct Screen {
     handle: *mut lv_obj_t,
 }
 
+impl core::fmt::Debug for Screen {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        f.debug_struct("Screen").finish_non_exhaustive()
+    }
+}
+
 impl AsLvHandle for Screen {
     fn lv_handle(&self) -> *mut lv_obj_t {
         self.handle

@@ -14,6 +14,12 @@ pub struct Event {
     raw: *mut lv_event_t,
 }
 
+impl core::fmt::Debug for Event {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        f.debug_struct("Event").finish_non_exhaustive()
+    }
+}
+
 impl Event {
     pub(crate) fn from_raw(raw: *mut lv_event_t) -> Self {
         Self { raw }
