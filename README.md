@@ -18,6 +18,38 @@ yet.
 The intent is to publish on crates.io once the API has stabilized enough
 for external consumers. Until then, depend on it via git.
 
+## Built with AI
+
+This library has been developed using AI coding agents, mostly Claude
+Code. The DMA/buffer foundations, architecture decisions, wrapper
+implementations, memory safety reviews, example porting, and
+documentation were all produced through human–AI collaboration.
+
+The API is designed to be AI-friendly: discoverable, well-documented,
+and free of footguns. Rust's type system and borrow checker catch
+mistakes at compile time that would silently corrupt memory in C — when
+an AI agent generates widget code, the compiler enforces correct
+lifetimes, valid enum values, and proper ownership. We envision AI
+agents as primary users of this crate, generating embedded GUIs from
+high-level descriptions.
+
+Contributors are encouraged to use AI tools. The project's specs,
+CLAUDE.md, and example patterns are structured to give AI agents the
+context they need to contribute effectively.
+
+## Memory Safety Across the FFI Boundary
+
+LVGL is a C library that stores raw pointers to styles, image descriptors, point arrays, and callback data — with no built-in ownership tracking. The [official Rust wrapper](https://github.com/lvgl/lv_binding_rust) (`lv_binding_rust`) has known soundness gaps — wrong lifetimes on widget constructors that allow dangling pointers ([#166](https://github.com/lvgl/lv_binding_rust/issues/166)), SIGSEGV on basic SDL init ([#180](https://github.com/lvgl/lv_binding_rust/issues/180)), and is stuck on LVGL v8 with no active maintenance ([#201](https://github.com/lvgl/lv_binding_rust/issues/201)).
+
+oxivgl solves this with a **compile-time ownership model** documented in [`docs/spec-memory-lifetime.md`](docs/spec-memory-lifetime.md):
+
+- **Two-phase style system** — `StyleBuilder` (mutable, stack-local) → `Style` (immutable, `Rc<StyleInner>`). Sub-descriptors (gradients, transitions, color filters) are moved into the style by value and freed in the correct order via `Drop`.
+- **`'static` enforcement** — APIs where LVGL stores a raw pointer (`Image::set_src`, `Line::set_points`, `Dropdown::set_symbol`, `StyleBuilder::bg_image_src`, `TransitionDsc::new`) require `'static` references. Non-`'static` data is rejected at compile time.
+- **Rc-based style sharing** — `Obj::add_style` clones the `Rc` *before* passing the pointer to LVGL. The `lv_style_t` remains valid as long as any widget or user code holds a clone. `Obj::drop` calls `lv_obj_delete` (which internally removes all styles) before Rust drops the `_styles` Vec.
+- **Lifetime-tied animations** — `Anim<'w>` uses `PhantomData<&'w ()>` to tie the animation descriptor to the target widget's lifetime. After `start()`, LVGL owns a copy; the widget's deletion auto-cancels the animation.
+
+These guarantees are verified by [integration tests](#testing) that exercise style-drop-before-widget, widget-drop-with-styles-applied, shared-style-across-widgets, and explicit remove-then-drop sequences.
+
 ## Examples
 
 94 ported LVGL examples covering getting started, styles, animations, events, layouts, scrolling, and individual widgets. Each is a self-contained `View` impl — runs on host SDL2 or ESP32 with zero code changes.
@@ -54,19 +86,6 @@ pub trait View: Sized {
     fn register_events(&mut self) { /* … */ }       // override for nested containers
 }
 ```
-
-## Memory Safety Across the FFI Boundary
-
-LVGL is a C library that stores raw pointers to styles, image descriptors, point arrays, and callback data — with no built-in ownership tracking. The [official Rust wrapper](https://github.com/lvgl/lv_binding_rust) (`lv_binding_rust`) has known soundness gaps — wrong lifetimes on widget constructors that allow dangling pointers ([#166](https://github.com/lvgl/lv_binding_rust/issues/166)), SIGSEGV on basic SDL init ([#180](https://github.com/lvgl/lv_binding_rust/issues/180)), and is stuck on LVGL v8 with no active maintenance ([#201](https://github.com/lvgl/lv_binding_rust/issues/201)).
-
-oxivgl solves this with a **compile-time ownership model** documented in [`docs/spec-memory-lifetime.md`](docs/spec-memory-lifetime.md):
-
-- **Two-phase style system** — `StyleBuilder` (mutable, stack-local) → `Style` (immutable, `Rc<StyleInner>`). Sub-descriptors (gradients, transitions, color filters) are moved into the style by value and freed in the correct order via `Drop`.
-- **`'static` enforcement** — APIs where LVGL stores a raw pointer (`Image::set_src`, `Line::set_points`, `Dropdown::set_symbol`, `StyleBuilder::bg_image_src`, `TransitionDsc::new`) require `'static` references. Non-`'static` data is rejected at compile time.
-- **Rc-based style sharing** — `Obj::add_style` clones the `Rc` *before* passing the pointer to LVGL. The `lv_style_t` remains valid as long as any widget or user code holds a clone. `Obj::drop` calls `lv_obj_delete` (which internally removes all styles) before Rust drops the `_styles` Vec.
-- **Lifetime-tied animations** — `Anim<'w>` uses `PhantomData<&'w ()>` to tie the animation descriptor to the target widget's lifetime. After `start()`, LVGL owns a copy; the widget's deletion auto-cancels the animation.
-
-These guarantees are verified by [integration tests](#testing) that exercise style-drop-before-widget, widget-drop-with-styles-applied, shared-style-across-widgets, and explicit remove-then-drop sequences.
 
 ## Testing
 
@@ -135,25 +154,6 @@ cargo +esp -Zbuild-std=alloc,core check --features esp-hal,log-04
 ```
 
 `build.rs` compiles LVGL from source via cmake. Expects `DEP_LV_CONFIG_PATH` pointing to `lv_conf.h`.
-
-## Built with AI
-
-This library has been developed using AI coding agents, mostly Claude
-Code. The DMA/buffer foundations, architecture decisions, wrapper
-implementations, memory safety reviews, example porting, and
-documentation were all produced through human–AI collaboration.
-
-The API is designed to be AI-friendly: discoverable, well-documented,
-and free of footguns. Rust's type system and borrow checker catch
-mistakes at compile time that would silently corrupt memory in C — when
-an AI agent generates widget code, the compiler enforces correct
-lifetimes, valid enum values, and proper ownership. We envision AI
-agents as primary users of this crate, generating embedded GUIs from
-high-level descriptions.
-
-Contributors are encouraged to use AI tools. The project's specs,
-CLAUDE.md, and example patterns are structured to give AI agents the
-context they need to contribute effectively.
 
 ## License
 
