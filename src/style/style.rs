@@ -33,6 +33,12 @@ pub struct TransitionDsc {
     pub(crate) inner: lv_style_transition_dsc_t,
 }
 
+impl core::fmt::Debug for TransitionDsc {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        f.debug_struct("TransitionDsc").finish_non_exhaustive()
+    }
+}
+
 impl TransitionDsc {
     /// Create a transition descriptor.
     ///
@@ -192,6 +198,7 @@ impl Drop for StyleInner {
 /// let style = style.build();
 /// // Apply with: widget.add_style(&style, Selector::DEFAULT);
 /// ```
+#[derive(Debug)]
 pub struct StyleBuilder {
     inner: Box<StyleInner>,
 }
@@ -678,6 +685,12 @@ impl Style {
 /// Wraps `lv_color_filter_dsc_t` with a C callback function pointer.
 pub struct ColorFilter {
     pub(crate) inner: lv_color_filter_dsc_t,
+}
+
+impl core::fmt::Debug for ColorFilter {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        f.debug_struct("ColorFilter").finish_non_exhaustive()
+    }
 }
 
 impl ColorFilter {

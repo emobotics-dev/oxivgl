@@ -26,6 +26,12 @@ pub const COLOR_BUF_LINES: usize = 40;
 #[repr(align(16))]
 pub struct LvglBuf<const BYTES: usize>(pub [u8; BYTES]);
 
+impl<const BYTES: usize> core::fmt::Debug for LvglBuf<BYTES> {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        f.debug_struct("LvglBuf").finish_non_exhaustive()
+    }
+}
+
 impl<const BYTES: usize> LvglBuf<BYTES> {
     /// Create a zeroed render buffer.
     pub const fn new() -> Self { Self([0; BYTES]) }
@@ -39,6 +45,12 @@ pub struct LvglBuffers<const BYTES: usize> {
     pub buf1: LvglBuf<BYTES>,
     /// Second render buffer (double-buffering).
     pub buf2: LvglBuf<BYTES>,
+}
+
+impl<const BYTES: usize> core::fmt::Debug for LvglBuffers<BYTES> {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        f.debug_struct("LvglBuffers").finish_non_exhaustive()
+    }
 }
 
 impl<const BYTES: usize> LvglBuffers<BYTES> {

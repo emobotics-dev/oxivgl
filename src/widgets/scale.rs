@@ -246,6 +246,12 @@ impl<'p> Scale<'p> {
 #[repr(transparent)]
 pub struct ScaleLabels(pub [*const core::ffi::c_char]);
 
+impl core::fmt::Debug for ScaleLabels {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        f.debug_struct("ScaleLabels").finish_non_exhaustive()
+    }
+}
+
 // SAFETY: The contained pointers reference 'static C string literals
 // (enforced by the `scale_labels!` macro).
 unsafe impl Sync for ScaleLabels {}
@@ -284,6 +290,12 @@ pub struct ScaleSection<'s> {
     ptr: *mut lv_scale_section_t,
     scale: *mut lv_obj_t,
     parent_styles: &'s core::cell::RefCell<Vec<crate::style::Style>>,
+}
+
+impl<'s> core::fmt::Debug for ScaleSection<'s> {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        f.debug_struct("ScaleSection").finish_non_exhaustive()
+    }
 }
 
 impl<'s> ScaleSection<'s> {
@@ -338,6 +350,7 @@ impl<'s> ScaleSection<'s> {
 ///     .major_every(5)
 ///     .build(&screen)?;
 /// ```
+#[derive(Debug)]
 pub struct ScaleBuilder {
     size: i32,
     mode: ScaleMode,
