@@ -31,18 +31,10 @@ the same, in the same order, with the same values.
 
 ## 2. Hard Constraints
 
-These are non-negotiable project rules (see also CLAUDE.md):
-
-- **Never work around missing core library functionality** — extend the
-  library instead.
-- **No `unsafe`** in example code. If an LVGL feature is not wrapped,
-  add the wrapper to the core library first.
-- **No `lvgl_rust_sys`** imports in example code. All LVGL access goes
-  through oxivgl's safe API.
-- **`'static` for pointer-stored data** — images, line points, scale
-  labels, transition property arrays, dropdown text/symbol all require
-  `'static` references. See `docs/spec-memory-lifetime.md` §3 for the
-  full list.
+The core safety promise (`docs/spec-api-vision.md` §1) applies to all
+examples: no `unsafe`, no `lvgl_rust_sys`, no working around missing
+wrappers. Pointer-stored data must be `'static`
+(`docs/spec-memory-lifetime.md` §3).
 
 ---
 

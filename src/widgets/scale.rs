@@ -40,6 +40,11 @@ pub const SCALE_LABEL_ROTATE_KEEP_UPRIGHT: i32 =
 #[derive(Debug)]
 pub struct Scale<'p> {
     obj: Obj<'p>,
+    /// Styles passed to sections — kept alive here (not in ScaleSection)
+    /// because sections are freed by LVGL in the scale destructor, so
+    /// styles must outlive sections. Obj::drop calls lv_obj_delete which
+    /// frees sections first; then Rust drops this Vec.
+    section_styles: core::cell::RefCell<Vec<crate::style::Style>>,
 }
 
 impl<'p> AsLvHandle for Scale<'p> {
@@ -68,6 +73,7 @@ impl<'p> Scale<'p> {
         } else {
             Ok(Scale {
                 obj: Obj::from_raw(handle),
+                section_styles: core::cell::RefCell::new(Vec::new()),
             })
         }
     }
@@ -128,8 +134,7 @@ impl<'p> Scale<'p> {
         ScaleSection {
             ptr,
             scale: self.lv_handle(),
-            _styles: Vec::new(),
-            _phantom: core::marker::PhantomData,
+            parent_styles: &self.section_styles,
         }
     }
 
@@ -241,6 +246,12 @@ impl<'p> Scale<'p> {
 #[repr(transparent)]
 pub struct ScaleLabels(pub [*const core::ffi::c_char]);
 
+impl core::fmt::Debug for ScaleLabels {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        f.debug_struct("ScaleLabels").finish_non_exhaustive()
+    }
+}
+
 // SAFETY: The contained pointers reference 'static C string literals
 // (enforced by the `scale_labels!` macro).
 unsafe impl Sync for ScaleLabels {}
@@ -272,18 +283,24 @@ macro_rules! scale_labels {
 /// Borrows its parent [`Scale`] — the section cannot outlive the scale
 /// (LVGL frees sections in the scale destructor, `lv_scale.c:514-526`).
 ///
-/// Styles passed to section setters are cloned internally to prevent
-/// dangling pointers (spec §5.2 ordering: clone before LVGL call).
+/// Styles passed to section setters are stored in the parent `Scale`
+/// (not here) so they outlive the section and are freed only after
+/// `lv_obj_delete` cleans up all sections (spec §5.2, §5.5).
 pub struct ScaleSection<'s> {
     ptr: *mut lv_scale_section_t,
     scale: *mut lv_obj_t,
-    _styles: Vec<crate::style::Style>,
-    _phantom: core::marker::PhantomData<&'s ()>,
+    parent_styles: &'s core::cell::RefCell<Vec<crate::style::Style>>,
+}
+
+impl<'s> core::fmt::Debug for ScaleSection<'s> {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        f.debug_struct("ScaleSection").finish_non_exhaustive()
+    }
 }
 
 impl<'s> ScaleSection<'s> {
     /// Set the value range this section covers.
-    pub fn set_range(&mut self, min: i32, max: i32) -> &mut Self {
+    pub fn set_range(&self, min: i32, max: i32) -> &Self {
         unsafe { lv_scale_set_section_range(self.scale, self.ptr, min, max) };
         self
     }
@@ -292,8 +309,8 @@ impl<'s> ScaleSection<'s> {
     ///
     /// LVGL stores the raw `lv_style_t*` (`lv_scale.c:390`). The style
     /// is cloned internally to keep the Rc alive (spec §5.2).
-    pub fn set_indicator_style(&mut self, style: &crate::style::Style) -> &mut Self {
-        self._styles.push(style.clone());
+    pub fn set_indicator_style(&self, style: &crate::style::Style) -> &Self {
+        self.parent_styles.borrow_mut().push(style.clone());
         let style_ptr = style.lv_ptr();
         unsafe { lv_scale_set_section_style_indicator(self.scale, self.ptr, style_ptr) };
         self
@@ -303,8 +320,8 @@ impl<'s> ScaleSection<'s> {
     ///
     /// LVGL stores the raw `lv_style_t*` (`lv_scale.c:399`). The style
     /// is cloned internally (spec §5.2).
-    pub fn set_items_style(&mut self, style: &crate::style::Style) -> &mut Self {
-        self._styles.push(style.clone());
+    pub fn set_items_style(&self, style: &crate::style::Style) -> &Self {
+        self.parent_styles.borrow_mut().push(style.clone());
         let style_ptr = style.lv_ptr();
         unsafe { lv_scale_set_section_style_items(self.scale, self.ptr, style_ptr) };
         self
@@ -314,8 +331,8 @@ impl<'s> ScaleSection<'s> {
     ///
     /// LVGL stores the raw `lv_style_t*` (`lv_scale.c:381`). The style
     /// is cloned internally (spec §5.2).
-    pub fn set_main_style(&mut self, style: &crate::style::Style) -> &mut Self {
-        self._styles.push(style.clone());
+    pub fn set_main_style(&self, style: &crate::style::Style) -> &Self {
+        self.parent_styles.borrow_mut().push(style.clone());
         let style_ptr = style.lv_ptr();
         unsafe { lv_scale_set_section_style_main(self.scale, self.ptr, style_ptr) };
         self
@@ -333,6 +350,7 @@ impl<'s> ScaleSection<'s> {
 ///     .major_every(5)
 ///     .build(&screen)?;
 /// ```
+#[derive(Debug)]
 pub struct ScaleBuilder {
     size: i32,
     mode: ScaleMode,

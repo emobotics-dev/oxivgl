@@ -22,6 +22,12 @@ pub struct Matrix {
     inner: lv_matrix_t,
 }
 
+impl core::fmt::Debug for Matrix {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        f.debug_struct("Matrix").finish_non_exhaustive()
+    }
+}
+
 impl Matrix {
     /// Create an identity matrix (no transform).
     pub fn identity() -> Self {
@@ -219,7 +225,7 @@ impl<'p> Obj<'p> {
     }
 
     /// Wrap a raw LVGL pointer. `ptr` must be non-null and owned by the caller.
-    pub fn from_raw(ptr: *mut lv_obj_t) -> Self {
+    pub(crate) fn from_raw(ptr: *mut lv_obj_t) -> Self {
         Obj {
             handle: ptr,
             _styles: RefCell::new(Vec::new()),

@@ -33,6 +33,12 @@ pub struct TransitionDsc {
     pub(crate) inner: lv_style_transition_dsc_t,
 }
 
+impl core::fmt::Debug for TransitionDsc {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        f.debug_struct("TransitionDsc").finish_non_exhaustive()
+    }
+}
+
 impl TransitionDsc {
     /// Create a transition descriptor.
     ///
@@ -158,6 +164,12 @@ pub(crate) struct StyleInner {
 // Compile-time guarantee that the cast `*const StyleInner → *const lv_style_t` is valid.
 const _: () = assert!(core::mem::offset_of!(StyleInner, lv) == 0);
 
+impl core::fmt::Debug for StyleInner {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        f.debug_struct("StyleInner").finish_non_exhaustive()
+    }
+}
+
 impl Drop for StyleInner {
     fn drop(&mut self) {
         // SAFETY: lv was initialized by lv_style_init. lv_style_reset frees
@@ -186,6 +198,7 @@ impl Drop for StyleInner {
 /// let style = style.build();
 /// // Apply with: widget.add_style(&style, Selector::DEFAULT);
 /// ```
+#[derive(Debug)]
 pub struct StyleBuilder {
     inner: Box<StyleInner>,
 }
@@ -595,17 +608,6 @@ impl StyleBuilder {
         self
     }
 
-    /// Set transform rotation in 0.1 degree units (e.g. 300 = 30°).
-    ///
-    /// Requires `LV_DRAW_SW_SUPPORT_RGB565A8` enabled in `lv_conf.h`.
-    ///
-    /// # Panics
-    ///
-    /// The LVGL SW renderer does not clip the transformed bounding box to
-    /// display bounds. If the rotated object extends outside the screen,
-    /// the renderer may write out of bounds. Position or
-    /// [`center()`](crate::widgets::Obj::center) the object so its rotated extents
-    /// stay within the display.
     /// Set transform width offset in pixels (expands/shrinks the widget visually).
     pub fn transform_width(&mut self, w: i32) -> &mut Self {
         unsafe { lv_style_set_transform_width(&mut self.inner.lv, w) };
@@ -619,6 +621,10 @@ impl StyleBuilder {
     }
 
     /// Set transform rotation in 0.1° units (e.g. 450 = 45°).
+    ///
+    /// **Warning**: the LVGL SW renderer does not clip the transformed
+    /// bounding box to display bounds. Center the object or ensure
+    /// rotated extents stay within the display.
     pub fn transform_rotation(&mut self, angle: i32) -> &mut Self {
         unsafe { lv_style_set_transform_rotation(&mut self.inner.lv, angle) };
         self
@@ -661,7 +667,7 @@ impl StyleBuilder {
 /// frees the LVGL property map, then sub-descriptors are freed.
 ///
 /// `Style` has no public constructor — obtain one via [`StyleBuilder`].
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct Style {
     pub(crate) inner: Rc<StyleInner>,
 }
@@ -679,6 +685,12 @@ impl Style {
 /// Wraps `lv_color_filter_dsc_t` with a C callback function pointer.
 pub struct ColorFilter {
     pub(crate) inner: lv_color_filter_dsc_t,
+}
+
+impl core::fmt::Debug for ColorFilter {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        f.debug_struct("ColorFilter").finish_non_exhaustive()
+    }
 }
 
 impl ColorFilter {

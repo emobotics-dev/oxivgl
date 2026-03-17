@@ -75,7 +75,7 @@ impl View for WidgetScale4 {
         sb.arc_color(palette_darken(Palette::Red, 3)).arc_width(4);
         let red_main = sb.build();
 
-        let mut section = scale.add_section();
+        let section = scale.add_section();
         section
             .set_range(8, 10)
             .set_indicator_style(&red_label)
@@ -98,7 +98,7 @@ impl View for WidgetScale4 {
         sb.arc_color(palette_darken(Palette::Green, 3)).arc_width(4);
         let green_main = sb.build();
 
-        let mut section = scale.add_section();
+        let section = scale.add_section();
         section
             .set_range(1, 3)
             .set_indicator_style(&green_label)

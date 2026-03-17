@@ -7,7 +7,7 @@
 #   ./run_host.sh -s                  Screenshot all examples
 set -e
 
-export LIBCLANG_PATH=/usr/lib64
+export LIBCLANG_PATH="${LIBCLANG_PATH:-/usr/lib64}"
 TARGET="x86_64-unknown-linux-gnu"
 
 SCREENSHOT=0

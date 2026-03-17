@@ -22,6 +22,12 @@ pub struct GradDsc {
     pub(crate) inner: lv_grad_dsc_t,
 }
 
+impl core::fmt::Debug for GradDsc {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        f.debug_struct("GradDsc").finish_non_exhaustive()
+    }
+}
+
 impl GradDsc {
     /// Create a zeroed gradient descriptor.
     pub fn new() -> Self {

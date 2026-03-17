@@ -8,6 +8,12 @@ pub struct AnimTimeline {
     handle: *mut lv_anim_timeline_t,
 }
 
+impl core::fmt::Debug for AnimTimeline {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        f.debug_struct("AnimTimeline").finish_non_exhaustive()
+    }
+}
+
 impl AnimTimeline {
     /// Create a new empty animation timeline.
     pub fn new() -> Self {
