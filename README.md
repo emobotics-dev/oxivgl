@@ -26,12 +26,13 @@ implementations, memory safety reviews, example porting, and
 documentation were all produced through human–AI collaboration.
 
 The API is designed to be AI-friendly: discoverable, well-documented,
-and free of footguns. Rust's type system and borrow checker catch
-mistakes at compile time that would silently corrupt memory in C — when
-an AI agent generates widget code, the compiler enforces correct
-lifetimes, valid enum values, and proper ownership. We envision AI
-agents as primary users of this crate, generating embedded GUIs from
-high-level descriptions.
+and free of footguns. Architecture and design boundaries are captured in
+explicit specs. Rust's type system and borrow checker catch mistakes at
+compile time that would silently corrupt memory in C — when an AI agent
+generates widget code, the compiler enforces correct lifetimes, valid
+enum values, and proper ownership. We envision AI agents as primary
+users of this crate, generating embedded GUIs from high-level
+descriptions.
 
 Contributors are encouraged to use AI tools. The project's specs,
 CLAUDE.md, and example patterns are structured to give AI agents the
