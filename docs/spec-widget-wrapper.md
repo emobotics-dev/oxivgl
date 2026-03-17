@@ -96,8 +96,10 @@ config flags).
 
 1. Add exports to `src/widgets/mod.rs`.
 2. Add to `src/prelude.rs` if commonly used.
-3. Write integration tests (`tests/integration.rs`).
-4. Write a leak test (`tests/leak_check.rs`).
-5. Port at least one LVGL example using the widget.
-6. Follow `docs/spec-example-porting.md` §7 checklist.
-7. Follow `docs/spec-testing.md` §7 portability check.
+3. Write unit tests for any pure logic (enum values, value mapping,
+   helpers) as `#[cfg(test)]` in the widget file.
+4. Write integration tests (`tests/integration.rs`).
+5. Write a leak test (`tests/leak_check.rs`).
+6. Port at least one LVGL example using the widget.
+7. Follow `docs/spec-example-porting.md` §7 checklist.
+8. Follow `docs/spec-testing.md` §7 portability check.
