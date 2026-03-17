@@ -773,8 +773,7 @@ oxivgl::image_declare!(img_cogwheel_argb);
 fn image_set_src_static() {
     let screen = fresh_screen();
     let img = Image::new(&screen).unwrap();
-    // SAFETY: img_cogwheel_argb is a static C symbol compiled by build.rs.
-    img.set_src(unsafe { &img_cogwheel_argb });
+    img.set_src(img_cogwheel_argb());
     pump();
     assert!(img.get_width() > 0, "image should have non-zero width");
 }
@@ -787,8 +786,7 @@ oxivgl::image_declare!(img_skew_strip);
 fn style_bg_image_src_static() {
     let screen = fresh_screen();
     let mut sb = StyleBuilder::new();
-    // SAFETY: img_skew_strip is a static C symbol compiled by build.rs.
-    sb.bg_image_src(unsafe { &img_skew_strip })
+    sb.bg_image_src(img_skew_strip())
         .bg_image_tiled(true)
         .bg_image_opa(128);
     let style = sb.build();

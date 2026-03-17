@@ -50,6 +50,16 @@ impl Font {
 // binary.
 pub static MONTSERRAT_12: Font = Font(addr_of!(lvgl_rust_sys::lv_font_montserrat_12));
 
+/// LVGL built-in Montserrat 18 pt.
+// SAFETY: lv_font_montserrat_18 is a valid static font compiled into the
+// binary.
+pub static MONTSERRAT_18: Font = Font(addr_of!(lvgl_rust_sys::lv_font_montserrat_18));
+
+/// LVGL built-in Montserrat 20 pt.
+// SAFETY: lv_font_montserrat_20 is a valid static font compiled into the
+// binary.
+pub static MONTSERRAT_20: Font = Font(addr_of!(lvgl_rust_sys::lv_font_montserrat_20));
+
 /// LVGL built-in Montserrat 32 pt.
 // SAFETY: lv_font_montserrat_32 is a valid static font compiled into the
 // binary.

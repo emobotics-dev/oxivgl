@@ -79,6 +79,15 @@ After adding examples: add the name to the `ALL_EXAMPLES` array in `run_host.sh`
 - cmake toolchain files: `src/toolchain-esp32.cmake` / `src/toolchain-esp32s3.cmake`
 - `lv_conf.h` lives in `conf/`; cmake `target_include_directories` takes priority over `-I` cflags — don't duplicate the header in the cmake source tree.
 
+## Memory & Lifetime Spec
+
+When extending or modifying the core library (`src/`), check conformance with `docs/spec-memory-lifetime.md`. Key rules:
+- If LVGL stores a raw pointer, the Rust wrapper must own the data or require `'static`.
+- Styles use two-phase ownership: mutable `StyleBuilder` → frozen `Style` (Rc-backed).
+- Widgets track applied styles in `_styles: RefCell<Vec<Style>>` to prevent premature dealloc.
+- `Obj::drop` relies on `lv_obj_delete` calling `lv_obj_remove_style_all` + `lv_anim_delete` — re-verify on LVGL upgrade.
+- Sub-descriptors (`GradDsc`, `TransitionDsc`, `ColorFilter`) are `Box`-ed for stable heap addresses.
+
 ## Key Constraints
 
 - **No `unsafe` or `lvgl_rust_sys` in user code**: This library wraps all unsafe LVGL calls behind safe Rust APIs. Examples and consumer code must never use `unsafe` blocks, `unsafe extern "C" fn`, or import `lvgl_rust_sys` directly. If an LVGL feature is needed but not yet wrapped, add the wrapper to the core lib first.

@@ -429,8 +429,7 @@ fn leak_image() {
     use oxivgl::widgets::Image;
     assert_no_leak("Image", 1, |screen| {
         let img = Image::new(screen).unwrap();
-        // SAFETY: static C symbol from build.rs.
-        img.set_src(unsafe { &img_cogwheel_argb });
+        img.set_src(img_cogwheel_argb());
         drop(img);
     });
 }

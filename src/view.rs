@@ -8,7 +8,8 @@ use lvgl_rust_sys::*;
 use crate::{
     lvgl::LvglDriver,
     lvgl_buffers::{lvgl_disp_init, LvglBuffers, DISPLAY_READY},
-    widgets::{event::Event, EventCode, WidgetError},
+    event::Event,
+    widgets::{EventCode, WidgetError},
 };
 
 /// UI view trait. Implement this for each screen layout.

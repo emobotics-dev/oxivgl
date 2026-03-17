@@ -1,0 +1,77 @@
+#![cfg_attr(target_arch = "xtensa", no_std, no_main)]
+#![cfg_attr(
+    target_arch = "xtensa",
+    feature(impl_trait_in_assoc_type, type_alias_impl_trait)
+)]
+// SPDX-License-Identifier: MIT OR Apache-2.0
+//! Widget Button 3 — Gum squeeze animation
+//!
+//! Button with style transitions that stretch width and shrink height on press,
+//! using overshoot easing on release for a "gum" effect.
+
+use oxivgl::{
+    anim::{anim_path_ease_in_out, anim_path_overshoot},
+    style::{props, Selector, Style, StyleBuilder, TransitionDsc},
+    view::View,
+    widgets::{Align, Button, Label, ObjState, Screen, WidgetError},
+};
+
+/// Transition property list: transform width + height + letter spacing + sentinel.
+static TRANS_PROPS: [props::lv_style_prop_t; 4] = [
+    props::TRANSFORM_WIDTH,
+    props::TRANSFORM_HEIGHT,
+    props::TEXT_LETTER_SPACE,
+    props::LAST,
+];
+
+struct WidgetButton3 {
+    _btn: Button<'static>,
+    _label: Label<'static>,
+    _style_def: Style,
+    _style_pr: Style,
+}
+
+impl View for WidgetButton3 {
+    fn create() -> Result<Self, WidgetError> {
+        let screen = Screen::active().ok_or(WidgetError::LvglNullPointer)?;
+
+        // Default state: overshoot transition back from press (100ms delay)
+        let trans_def =
+            TransitionDsc::new(&TRANS_PROPS, Some(anim_path_overshoot), 250, 100);
+        let mut sb_def = StyleBuilder::new();
+        sb_def.transition(trans_def);
+        let style_def = sb_def.build();
+
+        // Pressed state: stretch width, shrink height, spread letters
+        let trans_pr =
+            TransitionDsc::new(&TRANS_PROPS, Some(anim_path_ease_in_out), 250, 0);
+        let mut sb_pr = StyleBuilder::new();
+        sb_pr
+            .transform_width(10)
+            .transform_height(-10)
+            .text_letter_space(10)
+            .transition(trans_pr);
+        let style_pr = sb_pr.build();
+
+        let btn = Button::new(&screen)?;
+        btn.add_style(&style_def, Selector::DEFAULT);
+        btn.add_style(&style_pr, ObjState::PRESSED);
+        btn.align(Align::Center, 0, 0);
+
+        let label = Label::new(&btn)?;
+        label.text("Gum");
+
+        Ok(Self {
+            _btn: btn,
+            _label: label,
+            _style_def: style_def,
+            _style_pr: style_pr,
+        })
+    }
+
+    fn update(&mut self) -> Result<(), WidgetError> {
+        Ok(())
+    }
+}
+
+oxivgl_examples_common::example_main!(WidgetButton3);

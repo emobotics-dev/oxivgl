@@ -24,7 +24,7 @@ impl View for WidgetImage1 {
         let screen = Screen::active().ok_or(WidgetError::LvglNullPointer)?;
 
         let img = Image::new(&screen)?;
-        img.set_src(unsafe { &img_cogwheel_argb });
+        img.set_src(img_cogwheel_argb());
         img.center();
 
         Ok(Self { _img: img })

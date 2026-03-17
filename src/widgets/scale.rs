@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
 use core::{ops::Deref, ptr::null_mut};
 
+use alloc::vec::Vec;
 use lvgl_rust_sys::*;
 
 use super::{
@@ -25,6 +26,14 @@ pub enum ScaleMode {
     /// Round scale, ticks point outward.
     RoundOuter = 16,
 }
+
+/// Rotate labels to match tick angles on round scales.
+pub const SCALE_LABEL_ROTATE_MATCH_TICKS: i32 =
+    lvgl_rust_sys::LV_SCALE_LABEL_ROTATE_MATCH_TICKS as i32;
+
+/// Keep rotated labels upright (readable).
+pub const SCALE_LABEL_ROTATE_KEEP_UPRIGHT: i32 =
+    lvgl_rust_sys::LV_SCALE_LABEL_ROTATE_KEEP_UPRIGHT as i32;
 
 /// LVGL scale widget (tick marks only, no arc). Use
 /// [`tick_ring`](Scale::tick_ring) for the pre-configured round gauge variant.
@@ -61,6 +70,98 @@ impl<'p> Scale<'p> {
                 obj: Obj::from_raw(handle),
             })
         }
+    }
+
+    /// Set the scale mode (horizontal, vertical, or round).
+    pub fn set_mode(&self, mode: ScaleMode) -> &Self {
+        unsafe { lv_scale_set_mode(self.lv_handle(), mode as lv_scale_mode_t) };
+        self
+    }
+
+    /// Set total number of tick marks.
+    pub fn set_total_tick_count(&self, count: u32) -> &Self {
+        unsafe { lv_scale_set_total_tick_count(self.lv_handle(), count) };
+        self
+    }
+
+    /// Set interval for major ticks (e.g. every 5th tick is major).
+    pub fn set_major_tick_every(&self, interval: u32) -> &Self {
+        unsafe { lv_scale_set_major_tick_every(self.lv_handle(), interval) };
+        self
+    }
+
+    /// Set the value range (min, max).
+    pub fn set_range(&self, min: i32, max: i32) -> &Self {
+        unsafe { lv_scale_set_range(self.lv_handle(), min, max) };
+        self
+    }
+
+    /// Show or hide numeric labels on major ticks.
+    pub fn set_label_show(&self, show: bool) -> &Self {
+        unsafe { lv_scale_set_label_show(self.lv_handle(), show) };
+        self
+    }
+
+    /// Set tick length for a specific part (Items=minor ticks, Indicator=major ticks).
+    pub fn set_tick_length(&self, part: super::Part, length: i32) -> &Self {
+        unsafe { lv_obj_set_style_length(self.lv_handle(), length, part as u32) };
+        self
+    }
+
+    /// Set the start angle rotation in degrees.
+    pub fn set_rotation(&self, rotation: i32) -> &Self {
+        unsafe { lv_scale_set_rotation(self.lv_handle(), rotation) };
+        self
+    }
+
+    /// Set the angular extent in degrees.
+    pub fn set_angle_range(&self, angle_range: u32) -> &Self {
+        unsafe { lv_scale_set_angle_range(self.lv_handle(), angle_range) };
+        self
+    }
+
+    /// Add a styled section to the scale. Returns a handle for further configuration.
+    /// Add a styled section. The returned handle borrows this scale and
+    /// cannot outlive it (LVGL frees sections in the scale destructor).
+    pub fn add_section(&self) -> ScaleSection<'_> {
+        let ptr = unsafe { lv_scale_add_section(self.lv_handle()) };
+        ScaleSection {
+            ptr,
+            scale: self.lv_handle(),
+            _styles: Vec::new(),
+            _phantom: core::marker::PhantomData,
+        }
+    }
+
+    /// Set custom tick labels from a null-terminated `'static` array of C strings.
+    ///
+    /// Use [`scale_labels!`](crate::scale_labels) to create the array safely.
+    /// LVGL stores the raw pointer — the array and all strings must be `'static`.
+    pub fn set_text_src(&self, labels: &'static ScaleLabels) -> &Self {
+        unsafe { lv_scale_set_text_src(self.lv_handle(), labels.0.as_ptr() as *mut _) };
+        self
+    }
+
+    /// Position a Line child as a needle at the given scale value.
+    ///
+    /// `needle_line`: a Line widget that is a child of this scale.
+    /// `needle_length`: length in pixels from the scale center.
+    /// `value`: the scale value to point at.
+    pub fn set_line_needle_value(
+        &self,
+        needle_line: &super::Line,
+        needle_length: i32,
+        value: i32,
+    ) -> &Self {
+        unsafe {
+            lv_scale_set_line_needle_value(
+                self.lv_handle(),
+                needle_line.lv_handle(),
+                needle_length,
+                value,
+            )
+        };
+        self
     }
 
     /// Create a tick-mark ring scale (no arc drawn, transparent background).
@@ -130,6 +231,92 @@ impl<'p> Scale<'p> {
             lv_obj_set_style_line_width(h, 2, lv_part_t_LV_PART_INDICATOR as u32);
         }
         Ok(scale)
+    }
+}
+
+/// Null-terminated array of C string pointers for scale tick labels.
+///
+/// Use [`scale_labels!`](crate::scale_labels) to create instances.
+/// `Sync` is sound because all pointers are `'static` C string literals.
+#[repr(transparent)]
+pub struct ScaleLabels(pub [*const core::ffi::c_char]);
+
+// SAFETY: The contained pointers reference 'static C string literals
+// (enforced by the `scale_labels!` macro).
+unsafe impl Sync for ScaleLabels {}
+
+/// Create a `&'static` [`ScaleLabels`] array from C string literals.
+///
+/// ```ignore
+/// use oxivgl::scale_labels;
+/// static LABELS: &ScaleLabels = scale_labels!(c"Low", c"Mid", c"High");
+/// ```
+#[macro_export]
+macro_rules! scale_labels {
+    ($($label:expr),+ $(,)?) => {
+        // SAFETY: ScaleLabels is repr(transparent) over [*const c_char].
+        // All pointers come from c"…" literals which are 'static.
+        // The array is a const-promoted 'static temporary.
+        unsafe {
+            &*(&[$($label.as_ptr()),+, ::core::ptr::null()]
+                as *const [*const ::core::ffi::c_char]
+                as *const $crate::widgets::ScaleLabels)
+        }
+    };
+}
+
+/// Opaque handle to a scale section (range with custom styling).
+///
+/// Borrows its parent [`Scale`] — the section cannot outlive the scale
+/// (LVGL frees sections in the scale destructor, `lv_scale.c:514-526`).
+///
+/// Styles passed to section setters are cloned internally to prevent
+/// dangling pointers (spec §5.2 ordering: clone before LVGL call).
+pub struct ScaleSection<'s> {
+    ptr: *mut lv_scale_section_t,
+    scale: *mut lv_obj_t,
+    _styles: Vec<crate::style::Style>,
+    _phantom: core::marker::PhantomData<&'s ()>,
+}
+
+impl<'s> ScaleSection<'s> {
+    /// Set the value range this section covers.
+    pub fn set_range(&mut self, min: i32, max: i32) -> &mut Self {
+        unsafe { lv_scale_set_section_range(self.scale, self.ptr, min, max) };
+        self
+    }
+
+    /// Set style for major tick labels in this section.
+    ///
+    /// LVGL stores the raw `lv_style_t*` (`lv_scale.c:390`). The style
+    /// is cloned internally to keep the Rc alive (spec §5.2).
+    pub fn set_indicator_style(&mut self, style: &crate::style::Style) -> &mut Self {
+        self._styles.push(style.clone());
+        let style_ptr = style.lv_ptr();
+        unsafe { lv_scale_set_section_style_indicator(self.scale, self.ptr, style_ptr) };
+        self
+    }
+
+    /// Set style for minor ticks in this section.
+    ///
+    /// LVGL stores the raw `lv_style_t*` (`lv_scale.c:399`). The style
+    /// is cloned internally (spec §5.2).
+    pub fn set_items_style(&mut self, style: &crate::style::Style) -> &mut Self {
+        self._styles.push(style.clone());
+        let style_ptr = style.lv_ptr();
+        unsafe { lv_scale_set_section_style_items(self.scale, self.ptr, style_ptr) };
+        self
+    }
+
+    /// Set style for the main line in this section.
+    ///
+    /// LVGL stores the raw `lv_style_t*` (`lv_scale.c:381`). The style
+    /// is cloned internally (spec §5.2).
+    pub fn set_main_style(&mut self, style: &crate::style::Style) -> &mut Self {
+        self._styles.push(style.clone());
+        let style_ptr = style.lv_ptr();
+        unsafe { lv_scale_set_section_style_main(self.scale, self.ptr, style_ptr) };
+        self
     }
 }
 
