@@ -80,9 +80,6 @@ LIBCLANG_PATH=/usr/lib64 RUSTDOCFLAGS="-W missing-docs" cargo +nightly doc --tar
 - `LvglBuffers` must be `'static` (allocated as `static mut` by the caller).
 - Physical values → LVGL integer range: `widgets::to_lvgl(v, max)` maps to `0..LVGL_SCALE` (1000).
 - Logging: use `defmt` feature for embedded, `log-04` for host/demo.
-- **Adding a new LVGL widget**: enable it in `conf/lv_conf.h` first (`LV_USE_<WIDGET> 1`) or the functions won't appear in the generated bindings.
 - **`unsafe extern "C" fn` (Rust 2024)**: unsafe calls inside must use explicit `unsafe {}` blocks.
 - **`lv_anim_enable_t`** is `bool` in bindings — use `false`/`true` (no named constant).
 - **`Align` enum** covers all `lv_align_t` values 0–21 including `Out*` variants; prefer it over raw constants.
-- **Testing**: Integration tests need `SDL_VIDEODRIVER=dummy` or LVGL's SDL2 backend crashes (double-free). Use `./run_tests.sh` which handles this. All LVGL tests must run with `--test-threads=1` (single-threaded requirement).
-- **Doc comments**: All public API items must have `///` docs. CI checks via `RUSTDOCFLAGS="-W missing-docs"`.
