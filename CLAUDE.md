@@ -38,20 +38,6 @@ LIBCLANG_PATH=/usr/lib64 RUSTDOCFLAGS="-W missing-docs" cargo +nightly doc --tar
 ./run_fire27.sh getting_started1
 ```
 
-## Examples Structure
-
-Self-contained examples in `examples/*.rs` — each file contains View impl + `example_main!` macro.
-Run via Cargo's built-in example convention: `cargo run --example <name>`.
-- `examples/common/` — shared infra: `host_main!`, `fire27_main!`, `example_main!` (cfg-gates between host/ESP32)
-- `examples/getting_started{1-4}.rs` — LVGL Getting Started examples
-- `examples/style{1-18}.rs` — LVGL Style examples
-- `examples/scroll{1,2,4}.rs` — LVGL Scroll examples
-- `examples/doc/screenshots/` — auto-captured PNGs
-- `tests/integration.rs` — integration tests (require `SDL_VIDEODRIVER=dummy`, `--test-threads=1`)
-
-Adding a new example: create an `examples/<name>.rs` with a View struct + `oxivgl_examples_common::example_main!(MyView);`.
-After adding examples: add the name to the `ALL_EXAMPLES` array in `run_host.sh`, run `./run_host.sh -s` to generate PNGs, and update `examples/doc/README.md` with entries + screenshot links. Visually compare generated screenshots against the LVGL docs to verify correctness.
-
 ## Architecture
 
 `no_std` (embedded) / `std` (host) library providing LVGL bindings for ESP32 UIs.
@@ -79,18 +65,14 @@ After adding examples: add the name to the `ALL_EXAMPLES` array in `run_host.sh`
 - cmake toolchain files: `src/toolchain-esp32.cmake` / `src/toolchain-esp32s3.cmake`
 - `lv_conf.h` lives in `conf/`; cmake `target_include_directories` takes priority over `-I` cflags — don't duplicate the header in the cmake source tree.
 
-## Memory & Lifetime Spec
+## Specifications
 
-When extending or modifying the core library (`src/`), check conformance with `docs/spec-memory-lifetime.md`. Key rules:
-- If LVGL stores a raw pointer, the Rust wrapper must own the data or require `'static`.
-- Styles use two-phase ownership: mutable `StyleBuilder` → frozen `Style` (Rc-backed).
-- Widgets track applied styles in `_styles: RefCell<Vec<Style>>` to prevent premature dealloc.
-- `Obj::drop` relies on `lv_obj_delete` calling `lv_obj_remove_style_all` + `lv_anim_delete` — re-verify on LVGL upgrade.
-- Sub-descriptors (`GradDsc`, `TransitionDsc`, `ColorFilter`) are `Box`-ed for stable heap addresses.
+- **Memory & lifetime safety**: `docs/spec-memory-lifetime.md` — governs all core library changes.
+- **Example porting**: `docs/spec-example-porting.md` — how to translate LVGL C examples.
+- **Git workflow**: `docs/spec-git-workflow.md` — branching, commits, PRs, CI.
 
 ## Key Constraints
 
-- **No `unsafe` or `lvgl_rust_sys` in user code**: This library wraps all unsafe LVGL calls behind safe Rust APIs. Examples and consumer code must never use `unsafe` blocks, `unsafe extern "C" fn`, or import `lvgl_rust_sys` directly. If an LVGL feature is needed but not yet wrapped, add the wrapper to the core lib first.
 - LVGL must run on a **single task** — no concurrent calls from other tasks/interrupts.
 - `LvglBuffers` must be `'static` (allocated as `static mut` by the caller).
 - Physical values → LVGL integer range: `widgets::to_lvgl(v, max)` maps to `0..LVGL_SCALE` (1000).
@@ -101,4 +83,3 @@ When extending or modifying the core library (`src/`), check conformance with `d
 - **`Align` enum** covers all `lv_align_t` values 0–21 including `Out*` variants; prefer it over raw constants.
 - **Testing**: Integration tests need `SDL_VIDEODRIVER=dummy` or LVGL's SDL2 backend crashes (double-free). Use `./run_tests.sh` which handles this. All LVGL tests must run with `--test-threads=1` (single-threaded requirement).
 - **Doc comments**: All public API items must have `///` docs. CI checks via `RUSTDOCFLAGS="-W missing-docs"`.
-- **CI**: `.github/workflows/ci.yml` runs two parallel jobs: `host` (unit/doc/integration tests + coverage) and `firmware` (ESP32 build). Coverage badge via `cargo-llvm-cov` + shields.io endpoint gist.
