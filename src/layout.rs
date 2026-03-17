@@ -76,12 +76,12 @@ pub enum Layout {
 /// Used with [`Obj::set_grid_cell`](crate::widgets::Obj::set_grid_cell) to avoid
 /// positional argument confusion.
 ///
-/// ```ignore
-/// use oxivgl::widgets::{GridAlign, GridCell};
-/// obj.set_grid_cell(
-///     GridCell::new(GridAlign::Stretch, 0, 1),
-///     GridCell::new(GridAlign::Center, 0, 1),
-/// );
+/// ```
+/// use oxivgl::layout::{GridAlign, GridCell};
+///
+/// let col = GridCell::new(GridAlign::Stretch, 0, 1);
+/// let row = GridCell::new(GridAlign::Center, 0, 1);
+/// // Apply with: obj.set_grid_cell(col, row);
 /// ```
 #[derive(Clone, Copy, Debug)]
 pub struct GridCell {
