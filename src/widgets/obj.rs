@@ -225,7 +225,7 @@ impl<'p> Obj<'p> {
     }
 
     /// Wrap a raw LVGL pointer. `ptr` must be non-null and owned by the caller.
-    pub fn from_raw(ptr: *mut lv_obj_t) -> Self {
+    pub(crate) fn from_raw(ptr: *mut lv_obj_t) -> Self {
         Obj {
             handle: ptr,
             _styles: RefCell::new(Vec::new()),
