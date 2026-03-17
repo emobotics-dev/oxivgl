@@ -45,22 +45,48 @@ impl Font {
     }
 }
 
+// SAFETY: All lv_font_montserrat_* are valid static fonts compiled into the
+// binary (enabled via LV_FONT_MONTSERRAT_* in lv_conf.h). LTO removes unused.
+
+/// LVGL built-in Montserrat 8 pt.
+pub static MONTSERRAT_8: Font = Font(addr_of!(lvgl_rust_sys::lv_font_montserrat_8));
+/// LVGL built-in Montserrat 10 pt.
+pub static MONTSERRAT_10: Font = Font(addr_of!(lvgl_rust_sys::lv_font_montserrat_10));
 /// LVGL built-in Montserrat 12 pt.
-// SAFETY: lv_font_montserrat_12 is a valid static font compiled into the
-// binary.
 pub static MONTSERRAT_12: Font = Font(addr_of!(lvgl_rust_sys::lv_font_montserrat_12));
-
+/// LVGL built-in Montserrat 14 pt.
+pub static MONTSERRAT_14: Font = Font(addr_of!(lvgl_rust_sys::lv_font_montserrat_14));
+/// LVGL built-in Montserrat 16 pt.
+pub static MONTSERRAT_16: Font = Font(addr_of!(lvgl_rust_sys::lv_font_montserrat_16));
 /// LVGL built-in Montserrat 18 pt.
-// SAFETY: lv_font_montserrat_18 is a valid static font compiled into the
-// binary.
 pub static MONTSERRAT_18: Font = Font(addr_of!(lvgl_rust_sys::lv_font_montserrat_18));
-
 /// LVGL built-in Montserrat 20 pt.
-// SAFETY: lv_font_montserrat_20 is a valid static font compiled into the
-// binary.
 pub static MONTSERRAT_20: Font = Font(addr_of!(lvgl_rust_sys::lv_font_montserrat_20));
-
+/// LVGL built-in Montserrat 22 pt.
+pub static MONTSERRAT_22: Font = Font(addr_of!(lvgl_rust_sys::lv_font_montserrat_22));
+/// LVGL built-in Montserrat 24 pt.
+pub static MONTSERRAT_24: Font = Font(addr_of!(lvgl_rust_sys::lv_font_montserrat_24));
+/// LVGL built-in Montserrat 26 pt.
+pub static MONTSERRAT_26: Font = Font(addr_of!(lvgl_rust_sys::lv_font_montserrat_26));
+/// LVGL built-in Montserrat 28 pt.
+pub static MONTSERRAT_28: Font = Font(addr_of!(lvgl_rust_sys::lv_font_montserrat_28));
+/// LVGL built-in Montserrat 30 pt.
+pub static MONTSERRAT_30: Font = Font(addr_of!(lvgl_rust_sys::lv_font_montserrat_30));
 /// LVGL built-in Montserrat 32 pt.
-// SAFETY: lv_font_montserrat_32 is a valid static font compiled into the
-// binary.
 pub static MONTSERRAT_32: Font = Font(addr_of!(lvgl_rust_sys::lv_font_montserrat_32));
+/// LVGL built-in Montserrat 34 pt.
+pub static MONTSERRAT_34: Font = Font(addr_of!(lvgl_rust_sys::lv_font_montserrat_34));
+/// LVGL built-in Montserrat 36 pt.
+pub static MONTSERRAT_36: Font = Font(addr_of!(lvgl_rust_sys::lv_font_montserrat_36));
+/// LVGL built-in Montserrat 38 pt.
+pub static MONTSERRAT_38: Font = Font(addr_of!(lvgl_rust_sys::lv_font_montserrat_38));
+/// LVGL built-in Montserrat 40 pt.
+pub static MONTSERRAT_40: Font = Font(addr_of!(lvgl_rust_sys::lv_font_montserrat_40));
+/// LVGL built-in Montserrat 42 pt.
+pub static MONTSERRAT_42: Font = Font(addr_of!(lvgl_rust_sys::lv_font_montserrat_42));
+/// LVGL built-in Montserrat 44 pt.
+pub static MONTSERRAT_44: Font = Font(addr_of!(lvgl_rust_sys::lv_font_montserrat_44));
+/// LVGL built-in Montserrat 46 pt.
+pub static MONTSERRAT_46: Font = Font(addr_of!(lvgl_rust_sys::lv_font_montserrat_46));
+/// LVGL built-in Montserrat 48 pt.
+pub static MONTSERRAT_48: Font = Font(addr_of!(lvgl_rust_sys::lv_font_montserrat_48));
