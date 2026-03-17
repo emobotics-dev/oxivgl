@@ -159,8 +159,10 @@ const _: () = assert!(core::mem::offset_of!(StyleInner, lv) == 0);
 impl Drop for StyleInner {
     fn drop(&mut self) {
         // SAFETY: lv was initialized by lv_style_init. lv_style_reset frees
-        // values_and_props (lv_style.c:192-201), then zeroes the struct.
-        // After this, no LVGL data references sub-descriptor addresses.
+        // the values_and_props buffer (lv_style.c:192-201) which contained all
+        // stored property pointers, then zeroes the lv_style_t with lv_memzero.
+        // After the buffer is freed, no LVGL data structure can reference
+        // sub-descriptor addresses via it (spec §8.2).
         // Rust then drops the Option<Box<…>> fields, freeing sub-descriptors.
         unsafe { lv_style_reset(&mut self.lv) };
     }
