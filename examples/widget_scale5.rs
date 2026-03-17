@@ -57,7 +57,7 @@ impl View for WidgetScale5 {
         sb.line_color(palette_lighten(Palette::Red, 2)).line_width(4);
         let red_ticks = sb.build();
 
-        let mut section = scale.add_section();
+        let section = scale.add_section();
         section
             .set_range(75, 100)
             .set_indicator_style(&red_label)
@@ -75,7 +75,7 @@ impl View for WidgetScale5 {
             .line_width(4);
         let blue_ticks = sb.build();
 
-        let mut section = scale.add_section();
+        let section = scale.add_section();
         section
             .set_range(0, 25)
             .set_indicator_style(&blue_label)
