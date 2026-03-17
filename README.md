@@ -10,6 +10,19 @@ Safe Rust bindings for [LVGL](https://github.com/lvgl/lvgl) on embedded (`no_std
 
 Built for AI-generated UIs: Rust's type system and borrow checker catch mistakes at compile time that would silently corrupt memory in C. When an AI agent generates widget code, the compiler enforces correct parent-child relationships, valid enum values, and proper resource lifetimes — turning runtime crashes into compile errors. Our vision is that AI agents become the primary users of this crate, generating embedded GUIs from high-level descriptions.
 
+## Examples
+
+94 ported LVGL examples covering getting started, styles, animations, events, layouts, scrolling, and individual widgets. Each is a self-contained `View` impl — runs on host SDL2 or ESP32 with zero code changes.
+
+**[Browse the full gallery with screenshots](examples/doc/README.md)**
+
+```sh
+./run_host.sh getting_started1      # interactive SDL2 window
+./run_host.sh -s getting_started1   # headless screenshot
+./run_host.sh -s                    # screenshot all 94 examples
+./run_fire27.sh event_trickle       # flash to ESP32
+```
+
 ## Supported Platforms
 
 | Platform | Target | Display | Use |
@@ -21,21 +34,18 @@ Built for AI-generated UIs: Rust's type system and borrow checker catch mistakes
 
 LVGL's widget tree, layout engine, and style system are pure C — platform-independent. Running tests on the host (x86_64) gives sub-second feedback without flashing hardware. The headless SDL2 dummy driver (`SDL_VIDEODRIVER=dummy`) enables CI without a display server. Only the flush pipeline and DMA buffer handling are ESP32-specific.
 
-### LVGL configuration (`conf/lv_conf.h`)
+## Architecture
 
-LVGL is compiled from source with a project-specific `lv_conf.h`. Key settings:
+![Architecture](docs/architecture.svg)
 
-| Setting | Value | Why                                          |
-|---------|-------|----------------------------------------------|
-| `LV_COLOR_DEPTH` | 16 (RGB565) | Matches SPI TFT panel and DMA buffer format  |
-| `LV_DPI_DEF` | 130 | LVGL default; matches Montserrat font metrics |
-| `LV_DEF_REFR_PERIOD` | 32 ms | ~30 fps, balances smoothness vs CPU on ESP32 |
-| `LV_USE_FONT_MONTSERRAT_14` | 1 | Default font (LVGL default)                  |
-| `LV_USE_SDL` | 1 (host) / 0 (ESP32) | SDL2 display driver for host development     |
-| `LV_USE_SNAPSHOT` | 1 (host) | Screenshot capture for visual regression     |
-| `LV_USE_OS` | `LV_OS_NONE` | Single-threaded; no RTOS mutex overhead      |
-
-Only widgets actually used are enabled (`LV_USE_<WIDGET> 1`) to minimize binary size on embedded. Adding a new widget requires enabling it here first.
+```rust
+pub trait View: Sized {
+    fn create() -> Result<Self, WidgetError>;
+    fn update(&mut self) -> Result<(), WidgetError>;
+    fn on_event(&mut self, _event: &Event) {}       // safe event dispatch
+    fn register_events(&mut self) { /* … */ }       // override for nested containers
+}
+```
 
 ## Memory Safety Across the FFI Boundary
 
@@ -50,61 +60,16 @@ oxivgl solves this with a **compile-time ownership model** documented in [`docs/
 
 These guarantees are verified by [integration tests](#testing) that exercise style-drop-before-widget, widget-drop-with-styles-applied, shared-style-across-widgets, and explicit remove-then-drop sequences.
 
-## API Philosophy
-
-- **Full LVGL wrapping** — every LVGL function used goes through a safe Rust wrapper in `widgets/`. User code never imports `lvgl_rust_sys` or writes `unsafe`.
-- **Newtypes over raw constants** — `ObjFlag`, `ObjState`, `EventCode`, `Opa`, `Selector`, `ScaleMode` etc. are newtype wrappers with named constants. Composable via `BitOr` where appropriate.
-- **Close to LVGL's API** — method names and parameter order mirror the C API (e.g. `obj.align(Align::Center, 0, 0)`, `slider.set_range(0, 100)`). Developers familiar with LVGL's C docs can transfer knowledge directly.
-- **Builder patterns for complex constructors** — `ScaleBuilder`, `GridCell`, `TransitionDsc` avoid long positional argument lists while keeping the API surface small.
-- **AI-friendly** — discoverable, well-documented, free of footguns. No `unsafe`, no lifetime puzzles, no implicit state. Every widget follows the same `new(parent) -> Result` pattern.
-
-## Architecture
-
-![Architecture](docs/architecture.svg)
-
-## Key Types
-
-```rust
-pub trait View: Sized {
-    fn create() -> Result<Self, WidgetError>;
-    fn update(&mut self) -> Result<(), WidgetError>;
-    fn on_event(&mut self, _event: &Event) {}       // safe event dispatch
-    fn register_events(&mut self) { /* … */ }       // override for nested containers
-}
-```
-
-## Example-Driven Development
-
-Every new LVGL feature is implemented by porting the corresponding [LVGL docs example](https://docs.lvgl.io/9.3/examples.html) first. This ensures the wrapper API is ergonomic for real use cases, not just theoretically correct. Examples serve as both documentation and visual regression tests — screenshots are auto-captured and compared against the LVGL reference.
-
-70+ examples covering getting started, styles, animations, events, layouts, scrolling, and individual widgets. Each is a self-contained `View` impl + `example_main!` macro — runs on host SDL2 or ESP32 with zero code changes.
-
-See the full gallery with screenshots: **[`examples/doc/README.md`](examples/doc/README.md)**
-
-```sh
-# Interactive SDL2 window:
-./run_host.sh getting_started1
-
-# Headless screenshot (no window):
-./run_host.sh -s getting_started1
-
-# Screenshot all examples:
-./run_host.sh -s
-
-# Flash to ESP32:
-./run_fire27.sh event_trickle
-```
-
 ## Testing
 
-175 automated tests across three tiers — all run on host without hardware:
+172 automated tests across three tiers — all run on host without hardware:
 
 | Tier | Count | What it covers |
 |------|-------|----------------|
-| **Unit** | 41 | Pure logic — enums, value mapping, style bitflags, grid helpers |
+| **Unit** | 38 | Pure logic — enums, value mapping, style bitflags, grid helpers |
 | **Integration** | 99 | Full LVGL instance — widget lifecycle, style add/remove/drop ordering, layout, events, every widget type |
 | **Leak detection** | 25 | Global heap tracking via `mallinfo2()` — catches leaks in both Rust and LVGL's C code across the FFI boundary |
-| **Visual** | 70+ | Screenshot capture + comparison against LVGL reference docs |
+| **Visual** | 94 | Screenshot capture + comparison against LVGL reference docs |
 
 ```sh
 ./run_tests.sh all          # unit + integration + leak (< 5 seconds)
@@ -115,6 +80,30 @@ See the full gallery with screenshots: **[`examples/doc/README.md`](examples/doc
 ```
 
 Integration and leak tests run against a real LVGL instance with `SDL_VIDEODRIVER=dummy` (no display server needed). Sequential execution (`--test-threads=1`) because LVGL is single-threaded. CI runs both host tests and ESP32 firmware builds on every push.
+
+## Specifications
+
+| Document | What it governs |
+|---|---|
+| [`docs/spec-api-vision.md`](docs/spec-api-vision.md) | API design principles — safety, thin wrappers, `no_std`, canonical paths |
+| [`docs/spec-memory-lifetime.md`](docs/spec-memory-lifetime.md) | Memory safety invariants — pointer ownership, style lifecycle, drop ordering |
+| [`docs/spec-example-porting.md`](docs/spec-example-porting.md) | How to port LVGL C examples — View pattern, hard constraints, checklist |
+| [`docs/spec-git-workflow.md`](docs/spec-git-workflow.md) | Git conventions — branching, commits, PRs, CI |
+
+## LVGL Configuration (`conf/lv_conf.h`)
+
+LVGL is compiled from source with a project-specific `lv_conf.h`. Key settings:
+
+| Setting | Value | Why |
+|---------|-------|-----|
+| `LV_COLOR_DEPTH` | 16 (RGB565) | Matches SPI TFT panel and DMA buffer format |
+| `LV_DPI_DEF` | 130 | LVGL default; matches Montserrat font metrics |
+| `LV_DEF_REFR_PERIOD` | 32 ms | ~30 fps, balances smoothness vs CPU on ESP32 |
+| `LV_USE_SDL` | 1 (host) / 0 (ESP32) | SDL2 display driver for host development |
+| `LV_USE_SNAPSHOT` | 1 (host) | Screenshot capture for visual regression |
+| `LV_USE_OS` | `LV_OS_NONE` | Single-threaded; no RTOS mutex overhead |
+
+Only widgets actually used are enabled (`LV_USE_<WIDGET> 1`) to minimize binary size on embedded. Adding a new widget requires enabling it here first.
 
 ## Features
 
