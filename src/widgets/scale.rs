@@ -247,8 +247,10 @@ unsafe impl Sync for ScaleLabels {}
 
 /// Create a `&'static` [`ScaleLabels`] array from C string literals.
 ///
-/// ```ignore
+/// ```no_run
 /// use oxivgl::scale_labels;
+/// use oxivgl::widgets::ScaleLabels;
+///
 /// static LABELS: &ScaleLabels = scale_labels!(c"Low", c"Mid", c"High");
 /// ```
 #[macro_export]

@@ -107,6 +107,11 @@ impl<'p> Obj<'p> {
 
     /// Remove styles matching the given selector. Pass `None` for style to
     /// remove all styles for that selector.
+    ///
+    /// **Note**: when `style` is `None`, LVGL removes all styles for the
+    /// selector, but the internal `_styles` Vec is not updated — the Rc
+    /// clones remain alive until the widget is dropped. Use
+    /// [`remove_style_all`](Self::remove_style_all) for full cleanup.
     pub fn remove_style(
         &self,
         style: Option<&crate::style::Style>,
