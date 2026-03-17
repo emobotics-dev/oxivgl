@@ -10,11 +10,11 @@
 //! A switch toggles "scroll one" mode.
 
 use oxivgl::{
+    enums::{EventCode, ObjFlag, ObjState, ScrollSnap},
+    event::Event,
+    layout::FlexFlow,
     view::View,
-    widgets::{
-        Align, Button, Event, EventCode, FlexFlow, Label, Obj, ObjFlag, Screen, ScrollSnap, Switch,
-        WidgetError,
-    },
+    widgets::{Align, Button, Label, Obj, Screen, Switch, WidgetError},
 };
 
 struct Scroll2 {
@@ -81,7 +81,7 @@ impl View for Scroll2 {
 
     fn on_event(&mut self, event: &Event) {
         if event.matches(&self.sw, EventCode::VALUE_CHANGED) {
-            if self.sw.has_state(oxivgl::widgets::ObjState::CHECKED) {
+            if self.sw.has_state(ObjState::CHECKED) {
                 self.panel.add_flag(ObjFlag::SCROLL_ONE);
             } else {
                 self.panel.remove_flag(ObjFlag::SCROLL_ONE);

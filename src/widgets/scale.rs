@@ -210,7 +210,7 @@ impl<'p> Scale<'p> {
             // from arc outer edge)
             lv_obj_set_style_arc_width(h, 0, lv_part_t_LV_PART_MAIN as u32);
             lv_obj_set_style_line_width(h, 1, lv_part_t_LV_PART_MAIN as u32);
-            lv_obj_set_style_bg_opa(h, super::Opa::TRANSP.0 as lv_opa_t, 0);
+            lv_obj_set_style_bg_opa(h, crate::enums::Opa::TRANSP.0 as lv_opa_t, 0);
             lv_obj_set_style_border_width(h, 0, 0);
             lv_obj_set_style_pad_all(h, 0, 0);
             // Minor ticks

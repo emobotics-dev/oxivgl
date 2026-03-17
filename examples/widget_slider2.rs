@@ -16,7 +16,8 @@ use oxivgl::{
         TransitionDsc,
     },
     view::View,
-    widgets::{ObjState, Part, Screen, Slider, WidgetError, RADIUS_MAX},
+    enums::ObjState,
+    widgets::{Part, Screen, Slider, WidgetError, RADIUS_MAX},
 };
 
 struct WidgetSlider2 {

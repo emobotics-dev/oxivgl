@@ -14,10 +14,10 @@ extern crate alloc;
 use alloc::vec::Vec;
 use oxivgl::{
     view::{register_event_on, View},
-    widgets::{
-        Checkbox, Event, EventCode, FlexAlign, FlexFlow, Label, Obj, ObjState, Screen,
-        WidgetError,
-    },
+    enums::{EventCode, ObjState},
+    event::Event,
+    layout::{FlexAlign, FlexFlow},
+    widgets::{Checkbox, Label, Obj, Screen, WidgetError},
 };
 
 struct WidgetCheckbox2 {

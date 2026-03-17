@@ -23,13 +23,14 @@ use std::sync::Once;
 
 use oxivgl::{
     anim::anim_path_linear,
-    lvgl::LvglDriver,
+    driver::LvglDriver,
     style::{
         palette_main, props, GradDsc, GradExtend, Palette, Selector, StyleBuilder, TransitionDsc,
     },
+    enums::ObjState,
     widgets::{
-        Arc, Bar, BarMode, Button, Checkbox, Dropdown, Label, Led, Line, Obj,
-        ObjState, Part, Roller, RollerMode, Screen, Slider, Switch, ValueLabel,
+        Arc, Bar, BarMode, Button, Checkbox, Dropdown, Label, Led, Line, Obj, Part, Roller,
+        RollerMode, Screen, Slider, Switch, ValueLabel,
     },
 };
 

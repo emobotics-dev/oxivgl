@@ -9,16 +9,17 @@ use std::sync::Once;
 use oxivgl::{
     anim::anim_path_linear,
     fonts::MONTSERRAT_12,
-    lvgl::LvglDriver,
+    driver::LvglDriver,
     style::{
         color_make, palette_main, props, BorderSide, GradDsc, GradExtend, Palette, Selector,
         StyleBuilder, TextDecor, TransitionDsc,
     },
+    enums::{EventCode, ObjFlag, ObjState, Opa, ScrollDir, ScrollSnap, ScrollbarMode},
+    layout::{FlexAlign, FlexFlow, GridAlign, GridCell, Layout, GRID_TEMPLATE_LAST},
     widgets::{
-        detach, Align, Arc, AsLvHandle, Bar, Button, Checkbox, Child, Dropdown, FlexAlign,
-        FlexFlow, GridAlign, GridCell, Image, Label, Layout, Led, Line, Obj, ObjFlag, ObjState,
-        Opa, Roller, RollerMode, Screen, ScrollDir, ScrollSnap, Slider, Switch, ValueLabel,
-        WidgetError, GRID_TEMPLATE_LAST, RADIUS_MAX,
+        detach, Align, Arc, AsLvHandle, Bar, Button, Checkbox, Child, Dropdown, Image, Label,
+        Led, Line, Obj, Roller, RollerMode, Screen, Slider, Switch, ValueLabel, WidgetError,
+        RADIUS_MAX,
     },
 };
 
@@ -671,7 +672,7 @@ fn event_callback_fires() {
     let btn = Button::new(&screen).unwrap();
     btn.on_event(
         cb,
-        oxivgl::widgets::EventCode::CLICKED,
+        oxivgl::enums::EventCode::CLICKED,
         core::ptr::null_mut(),
     );
 
@@ -702,8 +703,8 @@ fn event_bubble_flag() {
 fn scrollbar_mode() {
     let screen = fresh_screen();
     let obj = Obj::new(&screen).unwrap();
-    obj.set_scrollbar_mode(oxivgl::widgets::ScrollbarMode::Off);
-    obj.set_scrollbar_mode(oxivgl::widgets::ScrollbarMode::Auto);
+    obj.set_scrollbar_mode(oxivgl::enums::ScrollbarMode::Off);
+    obj.set_scrollbar_mode(oxivgl::enums::ScrollbarMode::Auto);
     pump();
 }
 
@@ -1312,10 +1313,10 @@ fn obj_send_event() {
     let btn = Button::new(&screen).unwrap();
     btn.on_event(
         cb,
-        oxivgl::widgets::EventCode::CLICKED,
+        oxivgl::enums::EventCode::CLICKED,
         core::ptr::null_mut(),
     );
-    btn.send_event(oxivgl::widgets::EventCode::CLICKED);
+    btn.send_event(oxivgl::enums::EventCode::CLICKED);
     assert!(SENT.load(Ordering::SeqCst));
 }
 

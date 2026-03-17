@@ -11,7 +11,8 @@
 use oxivgl::{
     style::{color_make, Selector, StyleBuilder},
     view::View,
-    widgets::{Line, Opa, Part, Scale, ScaleMode, Screen, WidgetError, RADIUS_MAX},
+    enums::Opa,
+    widgets::{Line, Part, Scale, ScaleMode, Screen, WidgetError, RADIUS_MAX},
 };
 
 struct WidgetScale3 {

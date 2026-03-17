@@ -221,11 +221,11 @@ impl<'p> Arc<'p> {
             lv_obj_set_style_pad_all(h, 0, lv_part_t_LV_PART_KNOB as u32);
             lv_obj_set_style_opa(
                 h,
-                super::Opa::TRANSP.0 as lv_opa_t,
+                crate::enums::Opa::TRANSP.0 as lv_opa_t,
                 lv_part_t_LV_PART_KNOB as u32,
             );
             // Not interactive
-            lv_obj_remove_flag(h, super::ObjFlag::CLICKABLE.0);
+            lv_obj_remove_flag(h, crate::enums::ObjFlag::CLICKABLE.0);
         }
         Ok(arc)
     }

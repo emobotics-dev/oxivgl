@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
 //! Type-safe style selector combining [`Part`](crate::widgets::Part) and
-//! [`ObjState`](crate::widgets::ObjState) bits.
+//! [`ObjState`](crate::enums::ObjState) bits.
 //!
 //! Replaces raw `u32` in all style-related methods.
 //!
@@ -13,7 +13,7 @@
 //! slider.add_style(&style, Part::Indicator | ObjState::PRESSED);
 //! ```
 
-/// Style selector = [`Part`](crate::widgets::Part) + [`ObjState`](crate::widgets::ObjState)
+/// Style selector = [`Part`](crate::widgets::Part) + [`ObjState`](crate::enums::ObjState)
 /// bits. Pass to methods like [`Obj::add_style`](crate::widgets::Obj::add_style),
 /// [`Obj::radius`](crate::widgets::Obj::radius), etc.
 #[derive(Clone, Copy, Debug, Default)]
@@ -35,15 +35,15 @@ impl From<crate::widgets::Part> for Selector {
     }
 }
 
-impl From<crate::widgets::ObjState> for Selector {
-    fn from(s: crate::widgets::ObjState) -> Self {
+impl From<crate::enums::ObjState> for Selector {
+    fn from(s: crate::enums::ObjState) -> Self {
         Self(s.0)
     }
 }
 
-impl core::ops::BitOr<crate::widgets::ObjState> for crate::widgets::Part {
+impl core::ops::BitOr<crate::enums::ObjState> for crate::widgets::Part {
     type Output = Selector;
-    fn bitor(self, rhs: crate::widgets::ObjState) -> Selector {
+    fn bitor(self, rhs: crate::enums::ObjState) -> Selector {
         Selector(self as u32 | rhs.0)
     }
 }
@@ -52,7 +52,7 @@ impl core::ops::BitOr<crate::widgets::ObjState> for crate::widgets::Part {
 mod tests {
     use super::*;
     use crate::widgets::Part;
-    use crate::widgets::ObjState;
+    use crate::enums::ObjState;
 
     #[test]
     fn default_is_zero() {

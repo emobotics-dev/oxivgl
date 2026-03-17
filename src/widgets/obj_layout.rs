@@ -6,7 +6,8 @@ use core::ptr::null_mut;
 
 use lvgl_rust_sys::*;
 
-use super::obj::{FlexAlign, FlexFlow, GridAlign, Obj};
+use crate::layout::{FlexAlign, FlexFlow, GridAlign, GridCell};
+use super::obj::Obj;
 
 impl<'p> Obj<'p> {
     /// Set flex layout flow direction.
@@ -41,7 +42,7 @@ impl<'p> Obj<'p> {
     }
 
     /// Set the layout engine (flex or grid).
-    pub fn set_layout(&self, layout: super::Layout) -> &Self {
+    pub fn set_layout(&self, layout: crate::layout::Layout) -> &Self {
         assert_ne!(self.handle(), null_mut());
         // SAFETY: handle non-null (asserted above).
         unsafe { lv_obj_set_layout(self.handle(), layout as u32) };
@@ -58,7 +59,7 @@ impl<'p> Obj<'p> {
     }
 
     /// Place this child in a grid cell (column + row placement).
-    pub fn set_grid_cell(&self, col: super::grid::GridCell, row: super::grid::GridCell) -> &Self {
+    pub fn set_grid_cell(&self, col: GridCell, row: GridCell) -> &Self {
         assert_ne!(self.handle(), null_mut());
         // SAFETY: handle non-null (asserted above).
         unsafe {

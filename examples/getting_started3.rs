@@ -12,7 +12,8 @@ use oxivgl::{
         Style, StyleBuilder,
     },
     view::View,
-    widgets::{Button, Label, ObjState, Opa, Screen, WidgetError, RADIUS_MAX},
+    enums::{ObjState, Opa},
+    widgets::{Button, Label, Screen, WidgetError, RADIUS_MAX},
 };
 
 struct GettingStarted3 {

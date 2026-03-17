@@ -97,7 +97,7 @@ macro_rules! host_main {
     ($View:ty) => {
         fn main() {
             use $crate::host::{H, W, capture, pump, run_host_loop};
-            use $crate::oxivgl::lvgl::LvglDriver;
+            use $crate::oxivgl::driver::LvglDriver;
             use $crate::oxivgl::view::View;
 
             $crate::env_logger::init();
