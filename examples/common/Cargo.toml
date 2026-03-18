@@ -6,9 +6,8 @@ publish = false
 
 # --- Host (non-xtensa) dependencies ---
 [target.'cfg(not(target_arch = "xtensa"))'.dependencies]
-oxivgl = { path = "../..", features = ["log-04"] }
+oxivgl = { path = "../..", features = ["log-04", "png"] }
 lvgl_rust_sys = { git = "https://github.com/emobotics-dev/lvgl_rust_sys.git", rev = "5cb45972e2ea0f5bcc009e64652f0734f8fd57a1", default-features = false }
-png = "0.17"
 log = "0.4"
 env_logger = "0.11"
 critical-section = { version = "1", features = ["std"] }
