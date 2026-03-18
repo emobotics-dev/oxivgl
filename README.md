@@ -41,15 +41,70 @@ context they need to contribute effectively.
 ## Architecture
 
 ![Architecture](docs/architecture.svg)
+<!-- regenerate: dot -Tsvg docs/architecture.dot -o docs/architecture.svg -->
 
-```rust
-pub trait View: Sized {
-    fn create() -> Result<Self, WidgetError>;
-    fn update(&mut self) -> Result<(), WidgetError>;
-    fn on_event(&mut self, _event: &Event) {}       // safe event dispatch
-    fn register_events(&mut self) { /* … */ }       // override for nested containers
-}
-```
+### Key Types
+
+**Application framework** — implement `View` to build a screen; `run_lvgl` drives the render loop.
+
+| Type | Module | Role |
+|------|--------|------|
+| `View` | `view` | Trait: `create()` builds UI, `update()` refreshes per tick, `on_event()` handles input |
+| `LvglDriver` | `driver` | Zero-sized init token — proves `lv_init()` was called |
+| `SdlBuilder` | `driver` | Builder for SDL-backed driver: `.sdl(w,h).title().mouse().build()` |
+| `Event` | `event` | Safe wrapper around LVGL events, passed to `View::on_event()` |
+
+**Widgets** — type-safe wrappers, lifetime-tied to parent via `'p`.
+
+| Type | Module | Role |
+|------|--------|------|
+| `Obj<'p>` | `widgets` | Base LVGL object — size, position, flags, styles |
+| `Screen` | `widgets` | Active screen handle (`Screen::active()`) |
+| `Label`, `Button`, `Arc`, `Bar`, `Slider` | `widgets` | Common widget wrappers |
+| `Switch`, `Checkbox`, `Led`, `Dropdown`, `Roller` | `widgets` | Input/indicator widgets |
+| `Image`, `Line`, `Scale` | `widgets` | Visual/gauge widgets |
+| `Child<W>` | `widgets` | Non-owning wrapper — suppresses `Drop` (parent owns) |
+| `ScaleBuilder` | `widgets` | Builder for `Scale` widget configuration |
+
+**Style system** — two-phase: mutable build → frozen `Rc`-backed handle.
+
+| Type | Module | Role |
+|------|--------|------|
+| `StyleBuilder` | `style` | Mutable builder: chain setters, call `.build()` |
+| `Style` | `style` | Frozen, cheaply clonable `Rc<StyleInner>` handle |
+| `GradDsc` | `style` | Gradient descriptor (linear, radial, conical) |
+| `TransitionDsc` | `style` | Property transition with path function and timing |
+| `Theme` | `style` | Extend the active LVGL theme; restores parent on `Drop` |
+| `Palette` | `style` | Material Design color palette (18 colors) |
+| `Selector` | `style` | Part + state combination for style targeting |
+
+**Animation** — stack-local builder → LVGL-owned copy.
+
+| Type | Module | Role |
+|------|--------|------|
+| `Anim<'w>` | `anim` | Animation builder, lifetime-tied to target widget |
+| `AnimHandle` | `anim` | Handle to running animation; `pause_for()` |
+| `AnimTimeline` | `anim` | Sequenced animation timeline |
+| `Timer` | `timer` | Periodic timer with `triggered()` polling in `update()` |
+
+**Display & buffers** — DMA-aligned double-buffering for ESP32.
+
+| Type | Module | Role |
+|------|--------|------|
+| `LvglBuffers<BYTES>` | `display` | Pair of DMA-aligned render buffers (`'static`) |
+| `DisplayOutput` | `flush_pipeline` | Trait for async display write (ESP32 only) |
+| `Snapshot` | `snapshot` | Screen capture with `write_png()` (host-only, `png` feature) |
+
+**Enums & constants** — newtype wrappers over LVGL C constants.
+
+| Type | Module | Role |
+|------|--------|------|
+| `EventCode` | `enums` | Event types: `CLICKED`, `VALUE_CHANGED`, … |
+| `ObjFlag` | `enums` | Object flags: `CLICKABLE`, `EVENT_BUBBLE`, … |
+| `ObjState` | `enums` | Object states: `CHECKED`, `PRESSED`, `DISABLED`, … |
+| `Align` | `widgets` | 21 alignment positions including `Out*` variants |
+| `FlexFlow`, `FlexAlign` | `layout` | Flexbox layout parameters |
+| `GridAlign`, `GridCell` | `layout` | Grid layout parameters |
 
 ## Memory Safety Across the FFI Boundary
 
