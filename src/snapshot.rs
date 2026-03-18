@@ -60,6 +60,7 @@ impl Snapshot {
         let stride = self.stride();
         let data = self.data();
 
+        assert!(data.len() >= (h - 1) * stride + w * 2, "draw buffer too small for dimensions");
         let mut rgb = Vec::with_capacity(w * h * 3);
         for row in 0..h {
             for col in 0..w {
