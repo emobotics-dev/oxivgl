@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
-use core::{ffi::c_void, marker::PhantomData};
+use core::{ffi::c_void, marker::PhantomData, sync::atomic::AtomicI32};
 
 use lvgl_rust_sys::*;
 
@@ -138,6 +138,32 @@ impl<'w> Anim<'w> {
         self
     }
 
+    /// Set a cubic-bezier path function using two `AtomicI32` control points.
+    ///
+    /// The control points `p1` and `p2` are read each frame, so updating
+    /// them changes the curve in real-time. Values are in `[0..1024]`.
+    /// The atomics must be `'static` because LVGL copies the animation
+    /// descriptor and may read the pointers after this `Anim` is dropped.
+    pub fn set_bezier3_path(
+        &mut self,
+        p1: &'static AtomicI32,
+        p2: &'static AtomicI32,
+    ) -> &mut Self {
+        // Pack the two pointers into user_data. Since AtomicI32 refs are
+        // 'static, the pointers remain valid for the animation lifetime.
+        // We use a leaked Box to hold the pair — LVGL copies user_data by
+        // value (it's a pointer), so both the original and the copy point
+        // to the same allocation. Leak is intentional: the Box is small
+        // (2 pointers) and lives for the process lifetime.
+        let pair = alloc::boxed::Box::into_raw(alloc::boxed::Box::new([
+            p1 as *const AtomicI32,
+            p2 as *const AtomicI32,
+        ]));
+        self.inner.user_data = pair as *mut c_void;
+        unsafe { lv_anim_set_path_cb(&mut self.inner, Some(bezier3_path_cb)) };
+        self
+    }
+
     /// Start the animation. LVGL copies the descriptor internally.
     ///
     /// Returns a handle to the running (LVGL-owned) copy. The handle is
@@ -179,8 +205,26 @@ pub unsafe extern "C" fn anim_path_bounce(a: *const lv_anim_t) -> i32 {
     unsafe { lv_anim_path_bounce(a) }
 }
 
+/// Built-in cubic-bezier3 path callback. Reads P1/P2 from user_data.
+unsafe extern "C" fn bezier3_path_cb(a: *const lv_anim_t) -> i32 {
+    let a = unsafe { &*a };
+    let pair = a.user_data as *const [*const AtomicI32; 2];
+    let [p1_ptr, p2_ptr] = unsafe { &*pair };
+    let p1 = unsafe { &**p1_ptr }.load(core::sync::atomic::Ordering::Relaxed);
+    let p2 = unsafe { &**p2_ptr }.load(core::sync::atomic::Ordering::Relaxed);
+    let t = unsafe { lv_map(a.act_time, 0, a.duration, 0, 1024) };
+    let step = unsafe { lv_bezier3(t, 0, p1 as u32, p2, 1024) };
+    let new_value = (step as i64 * (a.end_value - a.start_value) as i64) >> 10;
+    new_value as i32 + a.start_value
+}
+
 /// `LV_ANIM_REPEAT_INFINITE`
 pub const ANIM_REPEAT_INFINITE: u32 = LV_ANIM_REPEAT_INFINITE;
+
+/// Exec callback: `lv_obj_set_style_translate_x(var, v, 0)`.
+pub unsafe extern "C" fn anim_set_translate_x(var: *mut c_void, v: i32) {
+    unsafe { lv_obj_set_style_translate_x(var as *mut lv_obj_t, v, 0) };
+}
 
 // ── Common animation exec callbacks (lv_anim_exec_xcb_t) ──
 
