@@ -56,11 +56,16 @@ fn fresh_screen() -> Screen {
 /// Pump LVGL timer and force a full layout + refresh pass.
 /// Mirrors LVGL's own `lv_test_helpers.c` approach.
 fn pump() {
-    // SAFETY: LVGL initialised, single-threaded.
-    unsafe {
-        lvgl_rust_sys::lv_timer_handler();
-        lvgl_rust_sys::lv_refr_now(core::ptr::null_mut());
-    }
+    let driver = unsafe { (*core::ptr::addr_of!(DRIVER)).as_ref().unwrap() };
+    driver.timer_handler();
+    unsafe { lvgl_rust_sys::lv_refr_now(core::ptr::null_mut()) };
+}
+
+#[test]
+fn timer_handler_callable() {
+    ensure_init();
+    let driver = unsafe { (*core::ptr::addr_of!(DRIVER)).as_ref().unwrap() };
+    let _ms = driver.timer_handler();
 }
 
 // ── Obj basics ───────────────────────────────────────────────────────────────
