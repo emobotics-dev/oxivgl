@@ -48,6 +48,8 @@ impl EventCode {
     pub const VALUE_CHANGED: Self = Self(lvgl_rust_sys::lv_event_code_t_LV_EVENT_VALUE_CHANGED);
     /// Object is being scrolled.
     pub const SCROLL: Self = Self(lvgl_rust_sys::lv_event_code_t_LV_EVENT_SCROLL);
+    /// A draw task has been added (for custom draw hooks).
+    pub const DRAW_TASK_ADDED: Self = Self(lvgl_rust_sys::lv_event_code_t_LV_EVENT_DRAW_TASK_ADDED);
 }
 
 /// LVGL object flag. Combine with `|` for multi-flag operations.
@@ -83,6 +85,8 @@ impl ObjFlag {
     pub const FLOATING: Self = Self(lvgl_rust_sys::lv_obj_flag_t_LV_OBJ_FLAG_FLOATING);
     /// Keep pressed state when leaving the widget.
     pub const PRESS_LOCK: Self = Self(lvgl_rust_sys::lv_obj_flag_t_LV_OBJ_FLAG_PRESS_LOCK);
+    /// Emit `DRAW_TASK_ADDED` events for custom draw hooks.
+    pub const SEND_DRAW_TASK_EVENTS: Self = Self(lvgl_rust_sys::lv_obj_flag_t_LV_OBJ_FLAG_SEND_DRAW_TASK_EVENTS);
 }
 
 impl core::ops::BitOr for ObjFlag {

@@ -63,7 +63,7 @@ impl Matrix {
 /// specific sub-part of a widget (e.g. the indicator arc vs. the background
 /// track).
 #[repr(u32)]
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Part {
     /// Main background rectangle (`LV_PART_MAIN = 0x000000`).
     Main = 0x000000,
@@ -78,6 +78,22 @@ pub enum Part {
     Items = 0x050000,
     /// Scrollbar part (`LV_PART_SCROLLBAR = 0x010000`).
     Scrollbar = lvgl_rust_sys::lv_part_t_LV_PART_SCROLLBAR,
+}
+
+impl Part {
+    /// Convert a raw `lv_part_t` value to a `Part` enum.
+    /// Unknown values map to `Main`.
+    pub fn from_raw(raw: u32) -> Self {
+        match raw {
+            0x000000 => Part::Main,
+            0x010000 => Part::Scrollbar,
+            0x020000 => Part::Indicator,
+            0x030000 => Part::Knob,
+            0x040000 => Part::Selected,
+            0x050000 => Part::Items,
+            _ => Part::Main,
+        }
+    }
 }
 
 /// Type-safe wrapper for `lv_align_t`.
@@ -606,6 +622,12 @@ impl<'p> Obj<'p> {
     /// Shorthand for `self.add_flag(ObjFlag::EVENT_BUBBLE)`.
     pub fn bubble_events(&self) -> &Self {
         self.add_flag(crate::enums::ObjFlag::EVENT_BUBBLE)
+    }
+
+    /// Enable `DRAW_TASK_ADDED` events on this widget.
+    /// Required for custom draw hooks in `on_event`.
+    pub fn send_draw_task_events(&self) -> &Self {
+        self.add_flag(crate::enums::ObjFlag::SEND_DRAW_TASK_EVENTS)
     }
 
     // ── Children ─────────────────────────────────────────────────────────

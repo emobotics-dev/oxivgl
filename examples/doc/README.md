@@ -657,6 +657,20 @@ Round gauge with timer-driven needle oscillating between 80–180 BPM.
 
 ![widget_scale10](screenshots/widget_scale10.png)
 
+### Widget Scale 7 — Custom Major Tick Label Color and Text
+
+Horizontal scale with a `DRAW_TASK_ADDED` handler that recolors major tick labels
+with a rainbow palette and reformats numeric text as one-decimal floats.
+
+![widget_scale7](screenshots/widget_scale7.png)
+
+### Widget Scale 11 — 24-Hour Clock Face
+
+Round scale with custom hour labels, day/night colored arc sections, and
+highlighted cardinal hour labels (06/12/18/24 white, rest grey).
+
+![widget_scale11](screenshots/widget_scale11.png)
+
 ## Widgets — Slider
 
 ### Widget Slider 1 — Slider with Value Label
@@ -730,7 +744,7 @@ Status of all [LVGL 9.3 examples](https://docs.lvgl.io/9.3/examples.html) in oxi
 | led | 1 | 1 | 0 | |
 | line | 1 | 1 | 0 | |
 | roller | 3 | 2 | 1 | roller3 (needs canvas/mask API) |
-| scale | 11 | 9 | 2 | scale7 (draw task), scale11 (draw task) |
+| scale | 11 | 11 | 0 | |
 | slider | 4 | 4 | 0 | |
 | switch | 2 | 2 | 0 | |
 
@@ -743,9 +757,9 @@ animimg, buttonmatrix, calendar, canvas, chart, imagebutton, keyboard, list, lot
 | | Count |
 |---|---|
 | LVGL examples total | ~184 |
-| oxivgl done | 97 |
-| Skipped (intentional) | 9 |
-| Missing (wrapper exists) | ~6 |
+| oxivgl done | 99 |
+| Skipped (intentional) | 7 |
+| Missing (wrapper exists) | ~4 |
 | No wrapper | ~68 |
 
 ## Running
