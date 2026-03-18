@@ -499,3 +499,20 @@ fn leak_complex_ui() {
         drop(style);
     });
 }
+
+#[test]
+fn leak_anim_start_widget_delete() {
+    use oxivgl::anim::{anim_set_x, Anim};
+    assert_no_leak("Anim start+widget delete", 1, |screen| {
+        let obj = Obj::new(screen).unwrap();
+        obj.size(100, 50);
+        let mut a = Anim::new();
+        a.set_var(&obj)
+            .set_values(0, 100)
+            .set_duration(500)
+            .set_exec_cb(Some(anim_set_x));
+        let _handle = a.start();
+        pump();
+        drop(obj); // LVGL cancels animation on widget delete
+    });
+}
