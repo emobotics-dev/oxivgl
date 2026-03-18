@@ -27,15 +27,25 @@ impl EventCode {
     /// Receive all event types.
     pub const ALL: Self = Self(0);
     /// Finger/pointer pressed down.
-    pub const PRESSED: Self = Self(1);
+    pub const PRESSED: Self = Self(lvgl_rust_sys::lv_event_code_t_LV_EVENT_PRESSED);
+    /// Widget is being pressed (sent continuously while pressing).
+    pub const PRESSING: Self = Self(lvgl_rust_sys::lv_event_code_t_LV_EVENT_PRESSING);
+    /// Short click (press + release, not sent if scrolled).
+    pub const SHORT_CLICKED: Self = Self(lvgl_rust_sys::lv_event_code_t_LV_EVENT_SHORT_CLICKED);
+    /// First short click within small distance and short time.
+    pub const SINGLE_CLICKED: Self = Self(lvgl_rust_sys::lv_event_code_t_LV_EVENT_SINGLE_CLICKED);
+    /// Second short click within small distance and short time.
+    pub const DOUBLE_CLICKED: Self = Self(lvgl_rust_sys::lv_event_code_t_LV_EVENT_DOUBLE_CLICKED);
+    /// Third short click within small distance and short time.
+    pub const TRIPLE_CLICKED: Self = Self(lvgl_rust_sys::lv_event_code_t_LV_EVENT_TRIPLE_CLICKED);
     /// Long press detected.
-    pub const LONG_PRESSED: Self = Self(8);
+    pub const LONG_PRESSED: Self = Self(lvgl_rust_sys::lv_event_code_t_LV_EVENT_LONG_PRESSED);
     /// Long press repeated.
-    pub const LONG_PRESSED_REPEAT: Self = Self(9);
-    /// Short click (press + release).
-    pub const CLICKED: Self = Self(10);
+    pub const LONG_PRESSED_REPEAT: Self = Self(lvgl_rust_sys::lv_event_code_t_LV_EVENT_LONG_PRESSED_REPEAT);
+    /// Short click (press + release). Alias for compatibility.
+    pub const CLICKED: Self = Self(lvgl_rust_sys::lv_event_code_t_LV_EVENT_CLICKED);
     /// Value changed (sliders, switches, etc.).
-    pub const VALUE_CHANGED: Self = Self(35);
+    pub const VALUE_CHANGED: Self = Self(lvgl_rust_sys::lv_event_code_t_LV_EVENT_VALUE_CHANGED);
     /// Object is being scrolled.
     pub const SCROLL: Self = Self(lvgl_rust_sys::lv_event_code_t_LV_EVENT_SCROLL);
 }

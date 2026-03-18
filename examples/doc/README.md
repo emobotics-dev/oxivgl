@@ -261,10 +261,15 @@ Button reports pressed, clicked, long-pressed, and long-pressed-repeat events to
 
 ![event_trickle](screenshots/event_trickle.png)
 
+### Event Streak — Short-Click Streak Counting
+
+Button reports short-clicked (with streak count), single-clicked, double-clicked, and triple-clicked events to labels.
+
+![event_streak](screenshots/event_streak.png)
+
 ### Skipped
 
 - **Event Draw** — needs `lv_timer_create` + draw task APIs
-- **Event Streak** — needs `lv_indev_get_short_click_streak` (requires input device)
 
 ## Layouts — Flex
 
@@ -387,9 +392,11 @@ Centered object with animated scale + rotation via 3×3 matrix transform.
 
 ![widget_obj3](screenshots/widget_obj3.png)
 
-### Skipped
+### Widget Obj 2 — Draggable Object
 
-- **Widget Obj 2** — Draggable object (needs `lv_indev_active`, `lv_indev_get_vect` APIs)
+A base object that follows the pointer when pressed, using indev movement vector.
+
+![widget_obj2](screenshots/widget_obj2.png)
 
 ## Widgets — Animation Image
 
@@ -703,7 +710,7 @@ Status of all [LVGL 9.3 examples](https://docs.lvgl.io/9.3/examples.html) in oxi
 | Getting Started | 4 | 4 (+4 extra gradient examples) | 0 | |
 | Styles | 19 | 18 | 1 | style19 (meta/benchmarking) |
 | Animations | 5 | 4 | 1 | anim3 (needs Chart) |
-| Events | 5 | 3 (+1 extra trickle) | 2 | event_draw (timer API), event_streak (indev API) |
+| Events | 5 | 4 (+1 extra trickle) | 1 | event_draw (timer API) |
 | Flex | 6 | 6 | 0 | |
 | Grid | 6 | 6 | 0 | |
 | Scroll | 8 | 3 | 5 | scroll3 (List), scroll5 (font), scroll6–8 (APIs) |
@@ -712,7 +719,7 @@ Status of all [LVGL 9.3 examples](https://docs.lvgl.io/9.3/examples.html) in oxi
 
 | Widget | LVGL | Done | Missing | Notes |
 |---|---|---|---|---|
-| obj | 3 | 2 | 0 | obj2 skipped (needs indev API) |
+| obj | 3 | 3 | 0 | |
 | arc | 3 | 3 | 0 | |
 | bar | 7 | 6 | 1 | bar6 (needs custom draw event) |
 | button | 3 | 3 | 0 | |
@@ -736,8 +743,8 @@ animimg, buttonmatrix, calendar, canvas, chart, imagebutton, keyboard, list, lot
 | | Count |
 |---|---|
 | LVGL examples total | ~184 |
-| oxivgl done | 95 |
-| Skipped (intentional) | 11 |
+| oxivgl done | 97 |
+| Skipped (intentional) | 9 |
 | Missing (wrapper exists) | ~6 |
 | No wrapper | ~68 |
 
