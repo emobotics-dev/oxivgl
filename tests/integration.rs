@@ -7,7 +7,7 @@
 use std::sync::Once;
 
 use oxivgl::{
-    anim::anim_path_linear,
+    anim::{anim_path_linear, anim_set_x, Anim, AnimHandle},
     fonts::MONTSERRAT_12,
     driver::LvglDriver,
     style::{
@@ -1369,5 +1369,60 @@ fn style_color_filter() {
     let obj = Obj::new(&screen).unwrap();
     obj.add_style(&style, Selector::DEFAULT);
     obj.size(60, 60);
+    pump();
+}
+
+// ── Animation ────────────────────────────────────────────────────────────────
+
+#[test]
+fn anim_start_returns_handle() {
+    let screen = fresh_screen();
+    let obj = Obj::new(&screen).unwrap();
+    obj.size(100, 50);
+
+    let mut a = Anim::new();
+    a.set_var(&obj)
+        .set_values(0, 100)
+        .set_duration(500)
+        .set_exec_cb(Some(anim_set_x));
+
+    let _handle: AnimHandle = a.start();
+    pump();
+}
+
+#[test]
+fn anim_pause_for_during_animation() {
+    let screen = fresh_screen();
+    let obj = Obj::new(&screen).unwrap();
+    obj.size(100, 50);
+
+    let mut a = Anim::new();
+    a.set_var(&obj)
+        .set_values(0, 200)
+        .set_duration(1000)
+        .set_exec_cb(Some(anim_set_x));
+
+    let handle = a.start();
+    pump();
+
+    // SAFETY: animation just started (1000 ms), guaranteed still running.
+    unsafe { handle.pause_for(500) };
+    pump();
+}
+
+#[test]
+fn anim_start_discard_handle() {
+    let screen = fresh_screen();
+    let obj = Obj::new(&screen).unwrap();
+    obj.size(100, 50);
+
+    let mut a = Anim::new();
+    a.set_var(&obj)
+        .set_values(0, 100)
+        .set_duration(500)
+        .set_exec_cb(Some(anim_set_x));
+
+    // Discard return value — mirrors anim1/anim2 usage.
+    let _ = a.start();
     pump();
 }
