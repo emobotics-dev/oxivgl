@@ -24,7 +24,7 @@ impl View for Flex6 {
         let screen = Screen::active().ok_or(WidgetError::LvglNullPointer)?;
 
         let cont = Obj::new(&screen)?;
-        cont.set_style_base_dir(BaseDir::Rtl, Selector::DEFAULT);
+        cont.style_base_dir(BaseDir::Rtl, Selector::DEFAULT);
         cont.size(300, 220).center();
         cont.set_flex_flow(FlexFlow::RowWrap);
 

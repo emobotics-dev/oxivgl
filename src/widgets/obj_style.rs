@@ -300,7 +300,7 @@ impl<'p> Obj<'p> {
     }
 
     /// Set base text direction for the given selector.
-    pub fn set_style_base_dir(
+    pub fn style_base_dir(
         &self,
         dir: super::obj::BaseDir,
         selector: impl Into<crate::style::Selector>,

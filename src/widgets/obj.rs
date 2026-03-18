@@ -417,6 +417,13 @@ impl<'p> Obj<'p> {
         self
     }
 
+    /// Check if the object has the given flag.
+    pub fn has_flag(&self, flag: crate::enums::ObjFlag) -> bool {
+        assert_ne!(self.handle, null_mut());
+        // SAFETY: handle non-null (asserted above).
+        unsafe { lv_obj_has_flag(self.handle, flag.0) }
+    }
+
     /// Remove the SCROLLABLE flag (convenience).
     pub fn remove_scrollable(&self) -> &Self {
         self.remove_flag(crate::enums::ObjFlag::SCROLLABLE)

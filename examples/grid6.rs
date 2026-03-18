@@ -28,7 +28,7 @@ impl View for Grid6 {
 
         let cont = Obj::new(&screen)?;
         cont.size(300, 220).center();
-        cont.set_style_base_dir(BaseDir::Rtl, Selector::DEFAULT);
+        cont.style_base_dir(BaseDir::Rtl, Selector::DEFAULT);
         cont.set_grid_dsc_array(&COL_DSC, &ROW_DSC);
 
         let mut items = heapless::Vec::<Obj<'static>, 9>::new();
