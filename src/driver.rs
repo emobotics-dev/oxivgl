@@ -9,10 +9,15 @@ use lvgl_rust_sys::*;
 pub struct LvglDriver;
 
 /// Shared LVGL init sequence: lv_init + log + tick callbacks.
-/// Called by all public constructors.
+/// Called by all public constructors. Panics on second call.
 fn init_common() {
-    // SAFETY: lv_init is called exactly once (LvglDriver is non-Clone,
-    // and all constructors go through this path).
+    use core::sync::atomic::{AtomicBool, Ordering};
+    static INITIALIZED: AtomicBool = AtomicBool::new(false);
+    assert!(
+        !INITIALIZED.swap(true, Ordering::SeqCst),
+        "lv_init() called twice — only one LvglDriver may exist per process"
+    );
+    // SAFETY: guarded by INITIALIZED — lv_init is called exactly once.
     unsafe {
         lv_init();
         lv_log_register_print_cb(Some(lvgl_log_print));
@@ -88,7 +93,8 @@ impl SdlBuilder {
         }
         if self.mouse {
             // SAFETY: LVGL and SDL display are initialised.
-            unsafe { lv_sdl_mouse_create() };
+            let indev = unsafe { lv_sdl_mouse_create() };
+            assert!(!indev.is_null(), "lv_sdl_mouse_create returned NULL");
         }
         LvglDriver
     }
@@ -130,7 +136,7 @@ unsafe fn init_host_display(w: i32, h: i32) {
             cbuf,
             std::ptr::null_mut(),
             buf_size as u32,
-            lv_display_render_mode_t_LV_DISPLAY_RENDER_MODE_PARTIAL,
+            lv_display_render_mode_t_LV_DISPLAY_RENDER_MODE_FULL,
         )
     };
     // SAFETY: flush_cb is a valid extern "C" fn with the correct LVGL flush

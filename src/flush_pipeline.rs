@@ -169,7 +169,13 @@ pub(crate) unsafe extern "C" fn flush_callback(
         w,
         h,
     };
+    // Believed unreachable: wait_callback blocks until flush_frame_buffer
+    // drains the channel, so it is always empty when LVGL calls flush_callback.
+    // If this fires, it indicates a protocol violation (e.g. flush task not
+    // spawned). No recovery: calling flush_ready would lie (data not flushed),
+    // not calling it deadlocks wait_callback. Log and let it hang — the error
+    // message will be visible in the log output.
     if let Err(_e) = DRAW_OPERATION.try_send(op) {
-        error!("DRAW_OPERATION channel full");
+        error!("DRAW_OPERATION channel full — should be unreachable");
     }
 }
