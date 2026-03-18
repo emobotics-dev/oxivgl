@@ -30,7 +30,7 @@ impl View for Anim4 {
         let screen = Screen::active().ok_or(WidgetError::LvglNullPointer)?;
 
         let label = Label::new(&screen)?;
-        label.text("Hello animations!").pos(100, 10);
+        label.text("Hello animations!").pos(0, 10);
 
         let sw = Switch::new(&screen)?;
         sw.center();
@@ -41,11 +41,20 @@ impl View for Anim4 {
         let pause_timer = Timer::new(200)?;
         pause_timer.set_repeat_count(1).pause();
 
+        // Intro: slide label from x=0 to x=100 with overshoot.
+        let mut a = Anim::new();
+        a.set_var(&label)
+            .set_values(0, 100)
+            .set_duration(500)
+            .set_exec_cb(Some(anim_set_x))
+            .set_path_cb(Some(anim_path_overshoot));
+        let anim_handle = Some(a.start());
+
         Ok(Self {
             label,
             sw,
             pause_timer,
-            anim_handle: None,
+            anim_handle,
         })
     }
 

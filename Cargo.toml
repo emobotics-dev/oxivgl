@@ -12,6 +12,7 @@ default = []
 esp-hal = ["dep:esp-hal"]
 defmt = ["dep:defmt"]
 log-04 = ["dep:log-04"]
+png = ["dep:png"]
 
 [dependencies]
 lvgl_rust_sys = { git = "https://github.com/emobotics-dev/lvgl_rust_sys.git", rev = "5cb45972e2ea0f5bcc009e64652f0734f8fd57a1", default-features = false }
@@ -24,6 +25,7 @@ critical-section = "1"
 esp-hal = { git = "https://github.com/emobotics-dev/esp-hal.git", branch = "local", features = ["unstable"], optional = true }
 defmt = { version = "1.0.1", optional = true }
 log-04 = { package = "log", version = "0.4", optional = true }
+png = { version = "0.17", optional = true }
 
 [build-dependencies]
 cmake = "0.1"

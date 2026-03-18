@@ -5,24 +5,23 @@
 use std::path::PathBuf;
 
 use lvgl_rust_sys::*;
+use oxivgl::driver::LvglDriver;
 
 pub const W: i32 = 320;
 pub const H: i32 = 240;
 
 /// Drive the LVGL timer loop. Call after creating all widgets. Never returns.
-pub fn run_host_loop() -> ! {
+pub fn run_host_loop(driver: &LvglDriver) -> ! {
     loop {
-        // SAFETY: lv_init() was called inside LvglDriver::init() before entering main's loop.
-        unsafe { lv_timer_handler() };
+        driver.timer_handler();
         std::thread::sleep(std::time::Duration::from_millis(5));
     }
 }
 
 /// Pump the LVGL timer `n` times (5 ms each).
-pub fn pump(n: u32) {
+pub fn pump(driver: &LvglDriver, n: u32) {
     for _ in 0..n {
-        // SAFETY: LVGL is initialised and we are on the single LVGL task.
-        unsafe { lv_timer_handler() };
+        driver.timer_handler();
         std::thread::sleep(std::time::Duration::from_millis(5));
     }
 }
@@ -34,55 +33,15 @@ pub fn fresh_screen() {
 }
 
 /// Capture current screen as a PNG file under `<dir>/<name>.png`.
-pub fn capture(name: &str, dir: &str) {
-    // SAFETY: LVGL is initialised; lv_snapshot_take allocates a draw buffer.
-    let draw_buf = unsafe {
-        lv_snapshot_take(lv_screen_active(), lv_color_format_t_LV_COLOR_FORMAT_RGB565)
-    };
-    assert!(!draw_buf.is_null(), "lv_snapshot_take returned NULL");
+pub fn capture(driver: &LvglDriver, name: &str, dir: &str) {
+    use oxivgl::snapshot::Snapshot;
 
-    // SAFETY: draw_buf is non-null and points to a valid lv_draw_buf_t.
-    let buf = unsafe { &*draw_buf };
-    let w = buf.header.w();
-    let h = buf.header.h();
-    // SAFETY: buf.data is valid for buf.data_size bytes (just allocated by LVGL).
-    let data = unsafe { std::slice::from_raw_parts(buf.data, buf.data_size as usize) };
-
+    let snap = Snapshot::take(driver).expect("lv_snapshot_take returned NULL");
     let dir = PathBuf::from(dir);
     std::fs::create_dir_all(&dir).unwrap();
     let path = dir.join(format!("{name}.png"));
-    write_png(&path, w, h, data).expect("PNG write failed");
+    snap.write_png(&path).expect("PNG write failed");
     println!("Screenshot: {}", path.display());
-
-    // SAFETY: draw_buf was allocated by lv_snapshot_take above.
-    unsafe { lv_draw_buf_destroy(draw_buf) };
-}
-
-/// Convert RGB565 pixel data to RGB8 and write as PNG.
-fn write_png(path: &std::path::Path, w: u32, h: u32, data: &[u8]) -> std::io::Result<()> {
-    let stride = w as usize * 2;
-    let mut rgb = Vec::with_capacity(w as usize * h as usize * 3);
-    for row in 0..h as usize {
-        for col in 0..w as usize {
-            let off = row * stride + col * 2;
-            let p = u16::from_le_bytes([data[off], data[off + 1]]);
-            let r = ((p >> 11) & 0x1F) as u8;
-            let g = ((p >> 5) & 0x3F) as u8;
-            let b = (p & 0x1F) as u8;
-            rgb.push((r << 3) | (r >> 2));
-            rgb.push((g << 2) | (g >> 4));
-            rgb.push((b << 3) | (b >> 2));
-        }
-    }
-
-    let file = std::fs::File::create(path)?;
-    let buf = std::io::BufWriter::new(file);
-    let mut encoder = png::Encoder::new(buf, w, h);
-    encoder.set_color(png::ColorType::Rgb);
-    encoder.set_depth(png::BitDepth::Eight);
-    let mut writer = encoder.write_header().map_err(|e| std::io::Error::other(e))?;
-    writer.write_image_data(&rgb).map_err(|e| std::io::Error::other(e))?;
-    Ok(())
 }
 
 /// Generate a host `main` function for the given [`oxivgl::view::View`] type.
@@ -103,10 +62,10 @@ macro_rules! host_main {
             $crate::env_logger::init();
             let screenshot_only =
                 std::env::var("SCREENSHOT_ONLY").as_deref() == Ok("1");
-            let _driver = if screenshot_only {
+            let driver = if screenshot_only {
                 LvglDriver::init(W, H)
             } else {
-                LvglDriver::init_sdl(W, H)
+                LvglDriver::sdl(W, H).title(c"oxivgl").mouse(true).build()
             };
             let mut _view = <$View>::create().expect("view create failed");
             $crate::oxivgl::view::register_view_events(&mut _view);
@@ -124,8 +83,8 @@ macro_rules! host_main {
             );
 
             // Always capture a screenshot.
-            pump(10);
-            capture(name, &dir);
+            pump(&driver, 10);
+            capture(&driver, name, &dir);
 
             if screenshot_only {
                 // Skip Rust destructors — LVGL's internal state (timers,
@@ -134,7 +93,7 @@ macro_rules! host_main {
                 std::process::exit(0);
             }
 
-            run_host_loop();
+            run_host_loop(&driver);
         }
     };
 }
