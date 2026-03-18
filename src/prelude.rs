@@ -26,8 +26,9 @@ pub use crate::layout::{
 
 // Widgets
 pub use crate::widgets::{
-    Align, Arc, ArcMode, AsLvHandle, Bar, BarMode, BaseDir, Button, Checkbox, Child, DdDir,
-    Dropdown, Image, ImageAlign, Label, LabelLongMode, Led, Line, Matrix, Obj, Part, Roller,
+    Align, Arc, ArcMode, AsLvHandle, Bar, BarMode, BaseDir, Button, Chart, ChartAxis, ChartSeries,
+    ChartType, Checkbox, Child, DdDir, Dropdown, Image, ImageAlign, Label, LabelLongMode, Led,
+    Line, Matrix, Obj, Part, Roller,
     RollerMode, Scale, ScaleBuilder, ScaleLabels, ScaleMode, ScaleSection, Screen, Slider,
     SliderMode, Switch, SwitchOrientation, TextAlign, ValueLabel, WidgetError, RADIUS_MAX,
     SCALE_LABEL_ROTATE_KEEP_UPRIGHT, SCALE_LABEL_ROTATE_MATCH_TICKS,
@@ -40,6 +41,9 @@ pub use crate::style::{
     palette_lighten, palette_main, props, BorderSide, ColorFilter, GradDir, GradDsc, GradExtend,
     Palette, Selector, Style, StyleBuilder, TextDecor, Theme, TransitionDsc, LV_SIZE_CONTENT,
 };
+
+// Math utilities
+pub use crate::math::{bezier3, map, BEZIER_VAL_MAX};
 
 // Animation system
 pub use crate::anim::{
