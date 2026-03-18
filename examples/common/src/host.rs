@@ -105,7 +105,7 @@ macro_rules! host_main {
             let driver = if screenshot_only {
                 LvglDriver::init(W, H)
             } else {
-                LvglDriver::init_sdl(W, H)
+                LvglDriver::sdl(W, H).title(c"oxivgl").mouse(true).build()
             };
             let mut _view = <$View>::create().expect("view create failed");
             $crate::oxivgl::view::register_view_events(&mut _view);

@@ -1431,3 +1431,14 @@ fn anim_start_discard_handle() {
     let _ = a.start();
     pump();
 }
+
+// ── SDL builder ──────────────────────────────────────────────────────────────
+
+#[test]
+fn sdl_builder_api() {
+    // Verify builder API compiles and chains. Can't call build() since
+    // LVGL is already initialised by ensure_init().
+    let _builder = oxivgl::driver::LvglDriver::sdl(320, 240)
+        .title(c"test")
+        .mouse(false);
+}

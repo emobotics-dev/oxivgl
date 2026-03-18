@@ -43,14 +43,54 @@ impl LvglDriver {
         // SAFETY: LvglDriver is the init token — lv_init() was called.
         unsafe { lv_timer_handler() }
     }
+}
 
-    /// Initialise LVGL with an SDL2 window display (interactive host demos).
-    #[cfg(not(target_os = "none"))]
-    pub fn init_sdl(w: i32, h: i32) -> Self {
+/// Builder for SDL-backed LVGL driver (interactive host demos).
+#[cfg(not(target_os = "none"))]
+pub struct SdlBuilder {
+    w: i32,
+    h: i32,
+    title: Option<&'static core::ffi::CStr>,
+    mouse: bool,
+}
+
+#[cfg(not(target_os = "none"))]
+impl LvglDriver {
+    /// Start building an SDL-backed LVGL driver.
+    pub fn sdl(w: i32, h: i32) -> SdlBuilder {
+        SdlBuilder { w, h, title: None, mouse: true }
+    }
+}
+
+#[cfg(not(target_os = "none"))]
+impl SdlBuilder {
+    /// Set SDL window title. Default: no title.
+    pub fn title(mut self, t: &'static core::ffi::CStr) -> Self {
+        self.title = Some(t);
+        self
+    }
+
+    /// Enable/disable SDL mouse input device. Default: enabled.
+    pub fn mouse(mut self, enabled: bool) -> Self {
+        self.mouse = enabled;
+        self
+    }
+
+    /// Build the driver. Initialises LVGL, creates SDL window.
+    pub fn build(self) -> LvglDriver {
         init_common();
-        // SAFETY: lv_init() was called in init_common() above.
-        unsafe { init_sdl_display(w, h) };
-        Self
+        // SAFETY: lv_init() was called in init_common().
+        let disp = unsafe { lv_sdl_window_create(self.w, self.h) };
+        assert!(!disp.is_null(), "lv_sdl_window_create returned NULL");
+        if let Some(title) = self.title {
+            // SAFETY: disp is valid, title is a valid CStr.
+            unsafe { lv_sdl_window_set_title(disp, title.as_ptr()) };
+        }
+        if self.mouse {
+            // SAFETY: LVGL and SDL display are initialised.
+            unsafe { lv_sdl_mouse_create() };
+        }
+        LvglDriver
     }
 }
 
@@ -96,16 +136,6 @@ unsafe fn init_host_display(w: i32, h: i32) {
     // SAFETY: flush_cb is a valid extern "C" fn with the correct LVGL flush
     // callback signature.
     unsafe { lv_display_set_flush_cb(disp, Some(flush_cb)) };
-}
-
-/// Create an SDL2 window display (for interactive host demos).
-/// Falls back to headless if `SDL_VIDEODRIVER=dummy`.
-#[cfg(not(target_os = "none"))]
-unsafe fn init_sdl_display(w: i32, h: i32) {
-    // SAFETY: lv_init() has been called; lv_sdl_window_create initialises
-    // SDL2 and creates a visible window with its own render loop.
-    let disp = unsafe { lv_sdl_window_create(w, h) };
-    assert!(!disp.is_null(), "lv_sdl_window_create returned NULL");
 }
 
 // ── Log callback
