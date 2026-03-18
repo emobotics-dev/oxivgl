@@ -2,9 +2,9 @@
 runner = "espflash flash --monitor --chip esp32 --baud 1000000 --flash-freq 80mhz"
 linker = "xtensa-esp32-elf-gcc"
 rustflags = [
-  "-C", "force-frame-pointers=yes",
-  "-C", "link-arg=-nostartfiles",
-  "-C", "link-arg=-Tlinkall.x",
+  # -Tlinkall.x provided by parent config (oxiforge/.cargo/config.toml)
+  # when building standalone, uncomment:
+  # "-C", "link-arg=-Tlinkall.x",
 ]
 
 [target.xtensa-esp32s3-none-elf]
