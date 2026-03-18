@@ -283,7 +283,7 @@ fn obj_style_grad_dir() {
 fn obj_style_base_dir() {
     let screen = fresh_screen();
     let obj = Obj::new(&screen).unwrap();
-    obj.set_style_base_dir(oxivgl::widgets::BaseDir::Rtl, Selector::DEFAULT);
+    obj.style_base_dir(oxivgl::widgets::BaseDir::Rtl, Selector::DEFAULT);
     pump();
 }
 
