@@ -7,7 +7,9 @@
 #   ./run_host.sh -s                  Screenshot all examples
 set -e
 
-export LIBCLANG_PATH="${LIBCLANG_PATH:-/usr/lib64}"
+# Force system libclang for host builds — the ESP toolchain sets
+# LIBCLANG_PATH to a 32-bit clang which breaks x86_64 bindgen.
+export LIBCLANG_PATH=/usr/lib64
 TARGET="x86_64-unknown-linux-gnu"
 
 SCREENSHOT=0
@@ -19,7 +21,7 @@ fi
 ALL_EXAMPLES=(
     getting_started{1,2,3,4,5,6,7,8}
     style{1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18}
-    anim{1,2} anim_timeline1
+    anim{1,2,4} anim_timeline1
     event_{click,button,bubble,trickle}
     flex{1,2,3,4,5,6}
     grid{1,2,3,4,5,6}
@@ -46,10 +48,12 @@ run_example() {
     if [[ "$SCREENSHOT" == 1 ]]; then
         echo "=== $ex ==="
         SCREENSHOT_ONLY=1 SDL_VIDEODRIVER=dummy \
-            cargo +nightly run --example "$ex" --target "$TARGET"
+            cargo +nightly run --example "$ex" --target "$TARGET" \
+            --config 'unstable.build-std=["std"]'
     else
         echo "Running $ex (SDL window)… Close the window or press Ctrl-C to exit."
-        cargo +nightly run --example "$ex" --target "$TARGET"
+        cargo +nightly run --example "$ex" --target "$TARGET" \
+            --config 'unstable.build-std=["std"]'
     fi
 }
 
