@@ -356,6 +356,96 @@ impl<'p> Obj<'p> {
         self
     }
 
+    /// Set text color for the given style selector.
+    pub fn style_text_color(
+        &self,
+        color: lv_color_t,
+        selector: impl Into<crate::style::Selector>,
+    ) -> &Self {
+        let selector = selector.into().raw();
+        assert_ne!(self.handle(), null_mut(), "Obj handle cannot be null");
+        unsafe { lv_obj_set_style_text_color(self.handle(), color, selector) };
+        self
+    }
+
+    /// Set text font for the given style selector.
+    pub fn style_text_font(
+        &self,
+        font: crate::fonts::Font,
+        selector: impl Into<crate::style::Selector>,
+    ) -> &Self {
+        let selector = selector.into().raw();
+        assert_ne!(self.handle(), null_mut(), "Obj handle cannot be null");
+        assert_ne!(font.as_ptr(), null_mut(), "Font pointer cannot be null");
+        unsafe { lv_obj_set_style_text_font(self.handle(), font.as_ptr(), selector) };
+        self
+    }
+
+    /// Set arc width for the given style selector.
+    pub fn style_arc_width(
+        &self,
+        width: i32,
+        selector: impl Into<crate::style::Selector>,
+    ) -> &Self {
+        let selector = selector.into().raw();
+        assert_ne!(self.handle(), null_mut(), "Obj handle cannot be null");
+        unsafe { lv_obj_set_style_arc_width(self.handle(), width, selector) };
+        self
+    }
+
+    /// Set line color for the given style selector.
+    pub fn style_line_color(
+        &self,
+        color: lv_color_t,
+        selector: impl Into<crate::style::Selector>,
+    ) -> &Self {
+        let selector = selector.into().raw();
+        assert_ne!(self.handle(), null_mut(), "Obj handle cannot be null");
+        unsafe { lv_obj_set_style_line_color(self.handle(), color, selector) };
+        self
+    }
+
+    /// Set the `length` property for the given style selector.
+    ///
+    /// Used for tick length on scale parts (Items=minor, Indicator=major).
+    pub fn style_length(
+        &self,
+        length: i32,
+        selector: impl Into<crate::style::Selector>,
+    ) -> &Self {
+        let selector = selector.into().raw();
+        assert_ne!(self.handle(), null_mut(), "Obj handle cannot be null");
+        unsafe { lv_obj_set_style_length(self.handle(), length, selector) };
+        self
+    }
+
+    /// Set line width for the given style selector.
+    pub fn style_line_width(
+        &self,
+        width: i32,
+        selector: impl Into<crate::style::Selector>,
+    ) -> &Self {
+        let selector = selector.into().raw();
+        assert_ne!(self.handle(), null_mut(), "Obj handle cannot be null");
+        unsafe { lv_obj_set_style_line_width(self.handle(), width, selector) };
+        self
+    }
+
+    /// Set the `width` style property for the given selector.
+    ///
+    /// Different from [`Obj::size`] — this sets the style property, useful
+    /// for sub-parts like tick marks.
+    pub fn style_width(
+        &self,
+        width: i32,
+        selector: impl Into<crate::style::Selector>,
+    ) -> &Self {
+        let selector = selector.into().raw();
+        assert_ne!(self.handle(), null_mut(), "Obj handle cannot be null");
+        unsafe { lv_obj_set_style_width(self.handle(), width, selector) };
+        self
+    }
+
     /// Set image recolor opacity (0–255).
     pub fn style_image_recolor_opa(
         &self,

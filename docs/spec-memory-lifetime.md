@@ -43,6 +43,8 @@ LVGL function that stores the pointer beyond the call's duration.
 | `lv_indev_t`                  | LVGL --- `lv_indev_create` | User --- `lv_indev_delete` | Application lifetime typically | Global indev list |
 | `lv_group_t`                  | LVGL --- `lv_group_create` | User --- `lv_group_delete` | Until explicitly deleted | User holds the pointer |
 | `lv_event_t`                  | LVGL (stack frame) | LVGL --- automatic | Duration of the event callback only | Stack frame in `lv_event_send` |
+| `lv_draw_task_t`              | LVGL --- render pipeline | LVGL --- after draw completes | Duration of `DRAW_TASK_ADDED` callback only | Render task list; passed via `lv_event_get_draw_task` |
+| `lv_draw_label_dsc_t` (in draw task) | LVGL --- render pipeline | LVGL --- after draw completes | Same scope as parent `lv_draw_task_t` | `draw_task->draw_dsc` pointer |
 
 ---
 
