@@ -32,6 +32,7 @@ impl View for EventStreak {
 
         let btn = Button::new(&screen)?;
         btn.size(100, 50).center();
+        btn.bubble_events();
 
         let btn_label = Label::new(&btn)?;
         btn_label.text("Click me!").center();
