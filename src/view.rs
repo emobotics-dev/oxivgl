@@ -55,6 +55,12 @@ pub fn register_view_events<V: View>(view: &mut V) {
 /// Register the view's event trampoline on a specific LVGL object.
 /// Use this from [`View::register_events`] to catch events on containers
 /// or other intermediate objects that don't bubble to the screen.
+///
+/// # Safety requirement (not enforced by the type system)
+///
+/// `view` must remain at a stable address for the LVGL display lifetime.
+/// This is guaranteed by `run_lvgl` (async frame pin) and `host_main!`
+/// (stack-local before infinite loop). Do not call on a local that may move.
 pub fn register_event_on<V: View>(view: &mut V, obj: *mut lv_obj_t) {
     let view_ptr = view as *mut V as *mut c_void;
     // SAFETY: obj must be a valid LVGL object; view_ptr remains valid for the
@@ -70,6 +76,9 @@ pub fn register_event_on<V: View>(view: &mut V, obj: *mut lv_obj_t) {
 }
 
 unsafe extern "C" fn view_event_trampoline<V: View>(e: *mut lv_event_t) {
+    if e.is_null() {
+        return;
+    }
     unsafe {
         let view = lv_event_get_user_data(e) as *mut V;
         if !view.is_null() {

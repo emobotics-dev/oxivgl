@@ -41,7 +41,7 @@ impl View for WidgetBar5 {
         bar_rtl.size(200, 20);
         bar_rtl.set_range_raw(0, 100);
         bar_rtl.set_value_raw(70, false);
-        bar_rtl.set_style_base_dir(BaseDir::Rtl, Selector::DEFAULT);
+        bar_rtl.style_base_dir(BaseDir::Rtl, Selector::DEFAULT);
         bar_rtl.align(Align::Center, 0, 30);
 
         let label_rtl = Label::new(&screen)?;

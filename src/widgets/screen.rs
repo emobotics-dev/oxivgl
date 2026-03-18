@@ -1,6 +1,9 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
 //! [`Screen`] — non-owning reference to the active LVGL screen.
 
+use alloc::vec::Vec;
+use core::cell::RefCell;
+
 use lvgl_rust_sys::*;
 
 use crate::layout::{FlexAlign, FlexFlow};
@@ -22,6 +25,9 @@ use super::obj::AsLvHandle;
 /// ```
 pub struct Screen {
     handle: *mut lv_obj_t,
+    /// Rc clones of styles added via `add_style`. Keeps the `lv_style_t`
+    /// alive as long as this Screen reference exists (spec §5.1).
+    _styles: RefCell<Vec<Style>>,
 }
 
 impl core::fmt::Debug for Screen {
@@ -45,7 +51,7 @@ impl Screen {
         if handle.is_null() {
             None
         } else {
-            Some(Screen { handle })
+            Some(Screen { handle, _styles: RefCell::new(Vec::new()) })
         }
     }
 
@@ -119,12 +125,13 @@ impl Screen {
 
     /// Apply a style for the given selector.
     ///
-    /// Unlike [`Obj::add_style`], Screen does not store an `Rc` clone — the
-    /// caller must keep the [`Style`] alive for the screen's lifetime (which
-    /// is typically `'static` in practice).
+    /// Clones the `Style` Rc to keep the `lv_style_t` alive for the
+    /// screen's lifetime (spec §5.1).
     pub fn add_style(&self, style: &Style, selector: impl Into<Selector>) -> &Self {
+        self._styles.borrow_mut().push(style.clone());
         let selector = selector.into().raw();
         // SAFETY: handle non-null (Screen::active() returns None for null).
+        // Style Rc clone above keeps the lv_style_t valid.
         unsafe { lv_obj_add_style(self.handle, style.lv_ptr(), selector) };
         self
     }

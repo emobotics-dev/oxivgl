@@ -96,12 +96,14 @@ impl<'p> Label<'p> {
 #[repr(u32)]
 #[derive(Debug, Clone, Copy)]
 pub enum LabelLongMode {
-    /// Wrap text if wider than the object.
+    /// Keep the object width, wrap lines and expand height.
     Wrap = lv_label_long_mode_t_LV_LABEL_LONG_MODE_WRAP,
-    /// Expand the object to fit the text.
-    Expand = lv_label_long_mode_t_LV_LABEL_LONG_MODE_SCROLL,
-    /// Clip the text if too long.
-    Clip = lv_label_long_mode_t_LV_LABEL_LONG_MODE_CLIP,
-    /// Keep scrolling text circularly.
+    /// Keep size, write dots at end if text too long.
+    Dots = lv_label_long_mode_t_LV_LABEL_LONG_MODE_DOTS,
+    /// Keep size, scroll text back and forth.
+    Scroll = lv_label_long_mode_t_LV_LABEL_LONG_MODE_SCROLL,
+    /// Keep size, scroll text circularly.
     ScrollCircular = lv_label_long_mode_t_LV_LABEL_LONG_MODE_SCROLL_CIRCULAR,
+    /// Keep size, clip text.
+    Clip = lv_label_long_mode_t_LV_LABEL_LONG_MODE_CLIP,
 }

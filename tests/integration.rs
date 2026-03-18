@@ -283,7 +283,7 @@ fn obj_style_grad_dir() {
 fn obj_style_base_dir() {
     let screen = fresh_screen();
     let obj = Obj::new(&screen).unwrap();
-    obj.set_style_base_dir(oxivgl::widgets::BaseDir::Rtl, Selector::DEFAULT);
+    obj.style_base_dir(oxivgl::widgets::BaseDir::Rtl, Selector::DEFAULT);
     pump();
 }
 
@@ -1476,4 +1476,628 @@ fn snapshot_write_png() {
     assert!(path.exists(), "PNG file should be written");
     assert!(std::fs::metadata(&path).unwrap().len() > 0);
     let _ = std::fs::remove_file(&path);
+}
+
+// ── Timer ────────────────────────────────────────────────────────────────────
+
+#[test]
+fn timer_create_and_triggered() {
+    use oxivgl::timer::Timer;
+    let _screen = fresh_screen();
+    let timer = Timer::new(100_000).unwrap();
+    // Not yet triggered before first pump (long period).
+    assert!(!timer.triggered());
+    // Force fire via ready(), then pump to execute.
+    timer.ready();
+    pump();
+    assert!(timer.triggered());
+    // triggered() clears flag — second call returns false.
+    assert!(!timer.triggered());
+}
+
+#[test]
+fn timer_set_period_and_repeat_count() {
+    use oxivgl::timer::Timer;
+    let _screen = fresh_screen();
+    let timer = Timer::new(100_000).unwrap();
+    timer.set_period(100_000).set_repeat_count(1);
+    // Force fire and verify triggered.
+    timer.ready();
+    pump();
+    assert!(timer.triggered());
+}
+
+#[test]
+fn timer_ready_fires_immediately() {
+    use oxivgl::timer::Timer;
+    let _screen = fresh_screen();
+    let timer = Timer::new(999_999).unwrap(); // very long period
+    timer.ready(); // force fire on next tick
+    pump();
+    assert!(timer.triggered());
+}
+
+#[test]
+fn timer_pause_resume() {
+    use oxivgl::timer::Timer;
+    let _screen = fresh_screen();
+    let timer = Timer::new(100_000).unwrap();
+    timer.pause();
+    timer.ready(); // mark ready, but paused — should not fire
+    pump();
+    assert!(!timer.triggered(), "paused timer should not fire");
+    timer.resume();
+    timer.ready();
+    pump();
+    assert!(timer.triggered(), "resumed timer should fire");
+}
+
+#[test]
+fn timer_drop_cleans_up() {
+    use oxivgl::timer::Timer;
+    let _screen = fresh_screen();
+    let timer = Timer::new(10).unwrap();
+    drop(timer); // should not panic or leak
+    pump();
+}
+
+// ── Event ────────────────────────────────────────────────────────────────────
+
+#[test]
+fn event_on_callback_receives_event() {
+    use std::sync::atomic::{AtomicU32, Ordering};
+    static COUNT: AtomicU32 = AtomicU32::new(0);
+
+    let screen = fresh_screen();
+    let btn = Button::new(&screen).unwrap();
+    btn.on(EventCode::CLICKED, |event| {
+        assert_eq!(event.code(), EventCode::CLICKED);
+        // target() should return a valid obj
+        let _target = event.target();
+        COUNT.fetch_add(1, Ordering::SeqCst);
+    });
+    btn.send_event(EventCode::CLICKED);
+    assert!(COUNT.load(Ordering::SeqCst) > 0);
+}
+
+#[test]
+fn event_matches() {
+    use std::sync::atomic::{AtomicBool, Ordering};
+    static MATCHED: AtomicBool = AtomicBool::new(false);
+
+    let screen = fresh_screen();
+    let btn = Button::new(&screen).unwrap();
+    let _btn_handle = btn.lv_handle();
+    // Use on_event with raw callback to capture btn_handle
+    unsafe extern "C" fn match_cb(_e: *mut lvgl_rust_sys::lv_event_t) {
+        MATCHED.store(true, std::sync::atomic::Ordering::SeqCst);
+    }
+    unsafe {
+        btn.on_event(match_cb, EventCode::CLICKED, core::ptr::null_mut());
+    }
+    btn.send_event(EventCode::CLICKED);
+    assert!(MATCHED.load(Ordering::SeqCst));
+}
+
+#[test]
+fn event_bubble_and_current_target() {
+    use std::sync::atomic::{AtomicBool, Ordering};
+    static BUBBLED: AtomicBool = AtomicBool::new(false);
+
+    let screen = fresh_screen();
+    let parent = Obj::new(&screen).unwrap();
+    let child = Button::new(&parent).unwrap();
+    child.bubble_events();
+
+    // Register handler on parent; event sent to child should bubble.
+    parent.on(EventCode::CLICKED, |event| {
+        let _current = event.current_target_handle();
+        BUBBLED.store(true, Ordering::SeqCst);
+    });
+    child.send_event(EventCode::CLICKED);
+    assert!(BUBBLED.load(Ordering::SeqCst));
+}
+
+// ── AnimTimeline ─────────────────────────────────────────────────────────────
+
+#[test]
+fn anim_timeline_create_add_start() {
+    use oxivgl::anim::{AnimTimeline, Anim, anim_set_x};
+    let screen = fresh_screen();
+    let obj = Obj::new(&screen).unwrap();
+    obj.size(50, 50);
+
+    let mut a = Anim::new();
+    a.set_var(&obj)
+        .set_values(0, 100)
+        .set_duration(300)
+        .set_exec_cb(Some(anim_set_x));
+
+    let mut tl = AnimTimeline::new();
+    tl.add(0, &a);
+    let duration = tl.start();
+    assert!(duration > 0);
+    pump();
+}
+
+#[test]
+fn anim_timeline_pause_reverse_progress() {
+    use oxivgl::anim::{AnimTimeline, ANIM_TIMELINE_PROGRESS_MAX, Anim, anim_set_x};
+    let screen = fresh_screen();
+    let obj = Obj::new(&screen).unwrap();
+    obj.size(50, 50);
+
+    let mut a = Anim::new();
+    a.set_var(&obj)
+        .set_values(0, 100)
+        .set_duration(500)
+        .set_exec_cb(Some(anim_set_x));
+
+    let mut tl = AnimTimeline::new();
+    tl.add(0, &a);
+    tl.start();
+    pump();
+    tl.pause();
+    tl.set_reverse(true);
+    tl.set_progress(ANIM_TIMELINE_PROGRESS_MAX / 2);
+    pump();
+    // Drop cleans up
+}
+
+#[test]
+fn anim_timeline_drop() {
+    use oxivgl::anim::AnimTimeline;
+    let _screen = fresh_screen();
+    let tl = AnimTimeline::new();
+    drop(tl); // should not panic
+    pump();
+}
+
+// ── Anim builder setters ─────────────────────────────────────────────────────
+
+#[test]
+fn anim_path_cb_setters() {
+    use oxivgl::anim::{Anim, anim_set_x, anim_path_overshoot, anim_path_ease_in,
+        anim_path_ease_out, anim_path_ease_in_out, anim_path_bounce};
+    let screen = fresh_screen();
+    let obj = Obj::new(&screen).unwrap();
+    obj.size(50, 50);
+
+    let mut a = Anim::new();
+    a.set_var(&obj)
+        .set_values(0, 100)
+        .set_duration(300)
+        .set_path_cb(Some(anim_path_overshoot))
+        .set_exec_cb(Some(anim_set_x));
+    let _ = a.start();
+    pump();
+
+    // Test other path callbacks compile and don't panic
+    let mut a2 = Anim::new();
+    a2.set_var(&obj)
+        .set_values(0, 50)
+        .set_duration(200)
+        .set_path_cb(Some(anim_path_ease_in));
+    let _ = a2.start();
+
+    let mut a3 = Anim::new();
+    a3.set_var(&obj)
+        .set_values(0, 50)
+        .set_duration(200)
+        .set_path_cb(Some(anim_path_ease_out));
+    let _ = a3.start();
+
+    let mut a4 = Anim::new();
+    a4.set_var(&obj)
+        .set_values(0, 50)
+        .set_duration(200)
+        .set_path_cb(Some(anim_path_ease_in_out));
+    let _ = a4.start();
+
+    let mut a5 = Anim::new();
+    a5.set_var(&obj)
+        .set_values(0, 50)
+        .set_duration(200)
+        .set_path_cb(Some(anim_path_bounce));
+    let _ = a5.start();
+    pump();
+}
+
+#[test]
+fn anim_repeat_and_playback() {
+    use oxivgl::anim::{Anim, ANIM_REPEAT_INFINITE, anim_set_x};
+    let screen = fresh_screen();
+    let obj = Obj::new(&screen).unwrap();
+    obj.size(50, 50);
+
+    let mut a = Anim::new();
+    a.set_var(&obj)
+        .set_values(0, 100)
+        .set_duration(200)
+        .set_delay(10)
+        .set_repeat_count(3)
+        .set_repeat_delay(50)
+        .set_reverse_duration(200)
+        .set_reverse_delay(20)
+        .set_exec_cb(Some(anim_set_x));
+    let _ = a.start();
+    pump();
+
+    // Also test infinite repeat
+    let mut a2 = Anim::new();
+    a2.set_var(&obj)
+        .set_values(0, 50)
+        .set_duration(100)
+        .set_repeat_count(ANIM_REPEAT_INFINITE)
+        .set_exec_cb(Some(anim_set_x));
+    let _ = a2.start();
+    pump();
+}
+
+#[test]
+fn anim_custom_exec_cb() {
+    use oxivgl::anim::{Anim, anim_set_width, anim_set_height};
+    let screen = fresh_screen();
+    let obj = Obj::new(&screen).unwrap();
+    obj.size(50, 50);
+
+    let mut a = Anim::new();
+    a.set_var(&obj)
+        .set_values(50, 100)
+        .set_duration(200)
+        .set_custom_exec_cb(Some(anim_set_width));
+    let _ = a.start();
+
+    let mut a2 = Anim::new();
+    a2.set_var(&obj)
+        .set_values(50, 80)
+        .set_duration(200)
+        .set_custom_exec_cb(Some(anim_set_height));
+    let _ = a2.start();
+    pump();
+}
+
+#[test]
+fn anim_exec_cb_variants() {
+    use oxivgl::anim::{Anim, anim_set_size, anim_set_pad_row, anim_set_pad_column,
+        anim_set_arc_value, anim_set_bar_value, anim_set_slider_value};
+    let screen = fresh_screen();
+
+    // anim_set_size
+    let obj = Obj::new(&screen).unwrap();
+    obj.size(50, 50);
+    let mut a = Anim::new();
+    a.set_var(&obj).set_values(50, 100).set_duration(200)
+        .set_exec_cb(Some(anim_set_size));
+    let _ = a.start();
+
+    // anim_set_pad_row / pad_column
+    let cont = Obj::new(&screen).unwrap();
+    cont.size(200, 200);
+    let mut a2 = Anim::new();
+    a2.set_var(&cont).set_values(0, 20).set_duration(200)
+        .set_exec_cb(Some(anim_set_pad_row));
+    let _ = a2.start();
+
+    let mut a3 = Anim::new();
+    a3.set_var(&cont).set_values(0, 20).set_duration(200)
+        .set_exec_cb(Some(anim_set_pad_column));
+    let _ = a3.start();
+
+    // anim_set_arc_value
+    let arc = Arc::new(&screen).unwrap();
+    let mut a4 = Anim::new();
+    a4.set_var(&arc).set_values(0, 100).set_duration(200)
+        .set_exec_cb(Some(anim_set_arc_value));
+    let _ = a4.start();
+
+    // anim_set_bar_value
+    let bar = Bar::new(&screen).unwrap();
+    let mut a5 = Anim::new();
+    a5.set_var(&bar).set_values(0, 100).set_duration(200)
+        .set_exec_cb(Some(anim_set_bar_value));
+    let _ = a5.start();
+
+    // anim_set_slider_value
+    let slider = Slider::new(&screen).unwrap();
+    let mut a6 = Anim::new();
+    a6.set_var(&slider).set_values(0, 100).set_duration(200)
+        .set_custom_exec_cb(Some(anim_set_slider_value));
+    let _ = a6.start();
+
+    pump();
+}
+
+// ── Image setters ────────────────────────────────────────────────────────────
+
+#[test]
+fn image_rotation_scale_pivot() {
+    let screen = fresh_screen();
+    let img = Image::new(&screen).unwrap();
+    img.set_rotation(450)   // 45 degrees
+        .set_scale(512)      // 2x
+        .set_pivot(16, 16);
+    pump();
+}
+
+#[test]
+fn image_offset_and_inner_align() {
+    use oxivgl::widgets::ImageAlign;
+    let screen = fresh_screen();
+    let img = Image::new(&screen).unwrap();
+    img.set_offset_y(10)
+        .set_inner_align(ImageAlign::Center);
+    pump();
+
+    // Test other align variants
+    img.set_inner_align(ImageAlign::TopLeft);
+    img.set_inner_align(ImageAlign::BottomRight);
+    img.set_inner_align(ImageAlign::Stretch);
+    img.set_inner_align(ImageAlign::Tile);
+    pump();
+}
+
+// ── Slider setters ───────────────────────────────────────────────────────────
+
+#[test]
+fn slider_mode_and_range_value() {
+    use oxivgl::widgets::SliderMode;
+    let screen = fresh_screen();
+    let slider = Slider::new(&screen).unwrap();
+    slider.set_range(0, 200);
+    slider.set_mode(SliderMode::Range);
+    slider.set_start_value(20);
+    slider.set_value(80);
+    pump();
+    // In range mode, set_start_value and get_left_value exercise the API.
+    // Just verify no panic and value is readable.
+    let _left = slider.get_left_value();
+    assert_eq!(slider.get_value(), 80);
+}
+
+#[test]
+fn slider_mode_symmetrical() {
+    use oxivgl::widgets::SliderMode;
+    let screen = fresh_screen();
+    let slider = Slider::new(&screen).unwrap();
+    slider.set_mode(SliderMode::Symmetrical);
+    slider.set_value(50);
+    pump();
+}
+
+// ── Switch setters ───────────────────────────────────────────────────────────
+
+#[test]
+fn switch_set_orientation() {
+    use oxivgl::widgets::SwitchOrientation;
+    let screen = fresh_screen();
+    let sw = Switch::new(&screen).unwrap();
+    sw.set_orientation(SwitchOrientation::Horizontal);
+    pump();
+    sw.set_orientation(SwitchOrientation::Vertical);
+    pump();
+    sw.set_orientation(SwitchOrientation::Auto);
+    pump();
+}
+
+// ── Obj methods (extended) ───────────────────────────────────────────────────
+
+#[test]
+fn obj_bubble_events_flag() {
+    let screen = fresh_screen();
+    let obj = Obj::new(&screen).unwrap();
+    obj.bubble_events();
+    assert!(obj.has_flag(ObjFlag::EVENT_BUBBLE));
+}
+
+#[test]
+fn obj_remove_clickable() {
+    let screen = fresh_screen();
+    let btn = Button::new(&screen).unwrap();
+    // Button should be clickable by default.
+    assert!(btn.has_flag(ObjFlag::CLICKABLE));
+    btn.remove_clickable();
+    assert!(!btn.has_flag(ObjFlag::CLICKABLE));
+}
+
+#[test]
+fn obj_has_flag() {
+    let screen = fresh_screen();
+    let obj = Obj::new(&screen).unwrap();
+    obj.add_flag(ObjFlag::FLOATING);
+    assert!(obj.has_flag(ObjFlag::FLOATING));
+    obj.remove_flag(ObjFlag::FLOATING);
+    assert!(!obj.has_flag(ObjFlag::FLOATING));
+}
+
+#[test]
+fn obj_on_callback() {
+    use std::sync::atomic::{AtomicBool, Ordering};
+    static FIRED: AtomicBool = AtomicBool::new(false);
+
+    let screen = fresh_screen();
+    let btn = Button::new(&screen).unwrap();
+    btn.on(EventCode::CLICKED, |_event| {
+        FIRED.store(true, Ordering::SeqCst);
+    });
+    btn.send_event(EventCode::CLICKED);
+    assert!(FIRED.load(Ordering::SeqCst));
+}
+
+#[test]
+fn obj_get_child() {
+    let screen = fresh_screen();
+    let parent = Obj::new(&screen).unwrap();
+    let _c1 = Obj::new(&parent).unwrap();
+    let _c2 = Obj::new(&parent).unwrap();
+
+    assert!(parent.get_child(0).is_some());
+    assert!(parent.get_child(1).is_some());
+    assert!(parent.get_child(2).is_none()); // out of range
+}
+
+#[test]
+fn obj_set_transform_and_reset() {
+    use oxivgl::widgets::Matrix;
+    let screen = fresh_screen();
+    let obj = Obj::new(&screen).unwrap();
+    obj.size(60, 60);
+    let mut m = Matrix::identity();
+    m.scale(0.5, 0.5).rotate(45.0);
+    obj.set_transform(&m);
+    pump();
+    obj.reset_transform();
+    pump();
+}
+
+#[test]
+fn obj_pos_and_getters() {
+    let screen = fresh_screen();
+    let obj = Obj::new(&screen).unwrap();
+    obj.size(40, 30).pos(10, 20);
+    pump();
+    assert_eq!(obj.get_x(), 10);
+    assert_eq!(obj.get_y(), 20);
+    assert_eq!(obj.get_width(), 40);
+    assert_eq!(obj.get_height(), 30);
+}
+
+#[test]
+fn obj_align_to_out_bottom() {
+    let screen = fresh_screen();
+    let base = Obj::new(&screen).unwrap();
+    base.size(60, 60).align(Align::Center, 0, 0);
+    let obj = Obj::new(&screen).unwrap();
+    obj.size(20, 20);
+    obj.align_to(&base, Align::OutBottomMid, 0, 5);
+    pump();
+}
+
+#[test]
+fn obj_scroll_to_view_and_update_snap() {
+    let screen = fresh_screen();
+    let cont = Obj::new(&screen).unwrap();
+    cont.size(100, 100);
+    let child = Obj::new(&cont).unwrap();
+    child.size(100, 400);
+    pump();
+    child.scroll_to_view(false);
+    cont.update_snap(false);
+    pump();
+}
+
+#[test]
+fn obj_set_scrollbar_mode() {
+    let screen = fresh_screen();
+    let obj = Obj::new(&screen).unwrap();
+    obj.size(100, 100);
+    obj.set_scrollbar_mode(ScrollbarMode::Off);
+    pump();
+    obj.set_scrollbar_mode(ScrollbarMode::Auto);
+    pump();
+}
+
+#[test]
+fn obj_remove_scrollable() {
+    let screen = fresh_screen();
+    let obj = Obj::new(&screen).unwrap();
+    obj.remove_scrollable();
+    assert!(!obj.has_flag(ObjFlag::SCROLLABLE));
+}
+
+// ── Scale (extended) ─────────────────────────────────────────────────────────
+
+#[test]
+fn scale_builder_all_setters() {
+    use oxivgl::widgets::{ScaleBuilder, ScaleMode};
+    let screen = fresh_screen();
+    let scale = ScaleBuilder::new(150, ScaleMode::RoundInner)
+        .rotation(135)
+        .sweep(270)
+        .range_max(200)
+        .total_ticks(21)
+        .major_every(5)
+        .show_labels(false)
+        .major_len(12)
+        .minor_len(6)
+        .major_color(0xFF0000)
+        .minor_color(0x888888)
+        .build(&screen)
+        .unwrap();
+    pump();
+    drop(scale);
+}
+
+#[test]
+fn scale_section_with_styles() {
+    use oxivgl::widgets::ScaleMode;
+    use oxivgl::style::{StyleBuilder, palette_main, Palette};
+    let screen = fresh_screen();
+    let scale = oxivgl::widgets::Scale::new(&screen).unwrap();
+    scale.set_mode(ScaleMode::RoundOuter)
+        .set_total_tick_count(21)
+        .set_major_tick_every(5)
+        .set_range(0, 100)
+        .set_rotation(135)
+        .set_angle_range(270)
+        .set_label_show(true);
+    scale.size(200, 200);
+
+    // Add section with styles
+    let mut sb = StyleBuilder::new();
+    sb.line_color(palette_main(Palette::Red)).line_width(3);
+    let section_style = sb.build();
+
+    let section = scale.add_section();
+    section.set_range(75, 100)
+        .set_indicator_style(&section_style)
+        .set_items_style(&section_style)
+        .set_main_style(&section_style);
+    pump();
+}
+
+#[test]
+fn scale_set_text_src() {
+    use oxivgl::widgets::ScaleMode;
+    let screen = fresh_screen();
+    let scale = oxivgl::widgets::Scale::new(&screen).unwrap();
+    scale.set_mode(ScaleMode::HorizontalBottom)
+        .set_total_tick_count(4)
+        .set_major_tick_every(1)
+        .set_range(0, 3);
+    scale.size(200, 50);
+    static LABELS: &oxivgl::widgets::ScaleLabels = oxivgl::scale_labels!(c"Low", c"Med", c"High", c"Max");
+    scale.set_text_src(LABELS);
+    pump();
+}
+
+#[test]
+fn scale_tick_lengths() {
+    use oxivgl::widgets::{ScaleMode, Part};
+    let screen = fresh_screen();
+    let scale = oxivgl::widgets::Scale::new(&screen).unwrap();
+    scale.set_mode(ScaleMode::VerticalLeft)
+        .set_total_tick_count(11)
+        .set_major_tick_every(5)
+        .set_range(0, 100);
+    scale.set_tick_length(Part::Items, 8);
+    scale.set_tick_length(Part::Indicator, 15);
+    pump();
+}
+
+// ── Event target_style convenience ───────────────────────────────────────────
+
+#[test]
+fn event_target_style_bg_color() {
+    use oxivgl::style::color_make;
+    let screen = fresh_screen();
+    let btn = Button::new(&screen).unwrap();
+    btn.on(EventCode::CLICKED, |event| {
+        event.target_style_bg_color(
+            color_make(0xFF, 0x00, 0x00),
+            oxivgl::style::Selector::DEFAULT,
+        );
+    });
+    btn.send_event(EventCode::CLICKED);
+    pump();
 }
