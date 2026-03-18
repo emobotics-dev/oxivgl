@@ -56,11 +56,16 @@ fn fresh_screen() -> Screen {
 /// Pump LVGL timer and force a full layout + refresh pass.
 /// Mirrors LVGL's own `lv_test_helpers.c` approach.
 fn pump() {
-    // SAFETY: LVGL initialised, single-threaded.
-    unsafe {
-        lvgl_rust_sys::lv_timer_handler();
-        lvgl_rust_sys::lv_refr_now(core::ptr::null_mut());
-    }
+    let driver = unsafe { (*core::ptr::addr_of!(DRIVER)).as_ref().unwrap() };
+    driver.timer_handler();
+    unsafe { lvgl_rust_sys::lv_refr_now(core::ptr::null_mut()) };
+}
+
+#[test]
+fn timer_handler_callable() {
+    ensure_init();
+    let driver = unsafe { (*core::ptr::addr_of!(DRIVER)).as_ref().unwrap() };
+    let _ms = driver.timer_handler();
 }
 
 // ── Obj basics ───────────────────────────────────────────────────────────────
@@ -1425,4 +1430,50 @@ fn anim_start_discard_handle() {
     // Discard return value — mirrors anim1/anim2 usage.
     let _ = a.start();
     pump();
+}
+
+// ── SDL builder ──────────────────────────────────────────────────────────────
+
+#[test]
+fn sdl_builder_api() {
+    // Verify builder API compiles and chains. Can't call build() since
+    // LVGL is already initialised by ensure_init().
+    let _builder = oxivgl::driver::LvglDriver::sdl(320, 240)
+        .title(c"test")
+        .mouse(false);
+}
+
+// ── Snapshot ─────────────────────────────────────────────────────────────────
+
+#[test]
+fn snapshot_take_returns_some() {
+    let screen = fresh_screen();
+    let _label = Label::new(&screen).unwrap();
+    pump();
+    let driver = unsafe { (*core::ptr::addr_of!(DRIVER)).as_ref().unwrap() };
+    let snap = oxivgl::snapshot::Snapshot::take(driver);
+    assert!(snap.is_some(), "Snapshot::take should succeed after init");
+    let snap = snap.unwrap();
+    assert_eq!(snap.width(), 320);
+    assert_eq!(snap.height(), 240);
+    assert!(!snap.data().is_empty());
+}
+
+#[cfg(feature = "png")]
+#[test]
+fn snapshot_write_png() {
+    let screen = fresh_screen();
+    let label = Label::new(&screen).unwrap();
+    label.text("PNG test");
+    pump();
+    let driver = unsafe { (*core::ptr::addr_of!(DRIVER)).as_ref().unwrap() };
+    let snap = oxivgl::snapshot::Snapshot::take(driver).unwrap();
+
+    let dir = std::env::temp_dir().join("oxivgl-test");
+    std::fs::create_dir_all(&dir).unwrap();
+    let path = dir.join("snapshot_test.png");
+    snap.write_png(&path).unwrap();
+    assert!(path.exists(), "PNG file should be written");
+    assert!(std::fs::metadata(&path).unwrap().len() > 0);
+    let _ = std::fs::remove_file(&path);
 }

@@ -8,41 +8,94 @@ use lvgl_rust_sys::*;
 #[derive(Debug)]
 pub struct LvglDriver;
 
+/// Shared LVGL init sequence: lv_init + log + tick callbacks.
+/// Called by all public constructors.
+fn init_common() {
+    // SAFETY: lv_init is called exactly once (LvglDriver is non-Clone,
+    // and all constructors go through this path).
+    unsafe {
+        lv_init();
+        lv_log_register_print_cb(Some(lvgl_log_print));
+        lv_tick_set_cb(Some(get_tick_ms));
+    }
+}
+
 impl LvglDriver {
-    /// Initialise LVGL: calls `lv_init`, registers the log and tick callbacks,
-    /// and (host-only) sets up a software display of `w × h` pixels.
-    /// Must be called exactly once.
     /// Initialise LVGL with a headless software display (for tests,
     /// screenshots, and embedded targets).
     pub fn init(w: i32, h: i32) -> Self {
-        // SAFETY: lv_init() is called exactly once (LvglDriver is non-Clone);
-        // lvgl_log_print and get_tick_ms have the correct C callback signatures.
+        init_common();
+        #[cfg(not(target_os = "none"))]
+        // SAFETY: lv_init() was called in init_common() above.
         unsafe {
-            lv_init();
-            lv_log_register_print_cb(Some(lvgl_log_print));
-            lv_tick_set_cb(Some(get_tick_ms));
-            #[cfg(not(target_os = "none"))]
-            init_host_display(w, h);
-        }
+            init_host_display(w, h)
+        };
         let _ = (w, h); // params unused on embedded target
         Self
     }
 
-    /// Initialise LVGL with an SDL2 window display (interactive host demos).
-    #[cfg(not(target_os = "none"))]
-    pub fn init_sdl(w: i32, h: i32) -> Self {
-        // SAFETY: same as init(); init_sdl_display creates an SDL2 window.
-        unsafe {
-            lv_init();
-            lv_log_register_print_cb(Some(lvgl_log_print));
-            lv_tick_set_cb(Some(get_tick_ms));
-            init_sdl_display(w, h);
-        }
-        Self
+    /// Drive LVGL timers. Returns recommended delay in ms until next call.
+    ///
+    /// Safe to call because `LvglDriver` existence proves `lv_init()` was
+    /// called. Caller is responsible for the single-task constraint: no
+    /// other code may call LVGL concurrently while this is running.
+    pub fn timer_handler(&self) -> u32 {
+        // SAFETY: LvglDriver is the init token — lv_init() was called.
+        unsafe { lv_timer_handler() }
     }
 }
 
-// ── Host-only display setup ───────────────────────────────────────────────────
+/// Builder for SDL-backed LVGL driver (interactive host demos).
+#[cfg(not(target_os = "none"))]
+pub struct SdlBuilder {
+    w: i32,
+    h: i32,
+    title: Option<&'static core::ffi::CStr>,
+    mouse: bool,
+}
+
+#[cfg(not(target_os = "none"))]
+impl LvglDriver {
+    /// Start building an SDL-backed LVGL driver.
+    pub fn sdl(w: i32, h: i32) -> SdlBuilder {
+        SdlBuilder { w, h, title: None, mouse: true }
+    }
+}
+
+#[cfg(not(target_os = "none"))]
+impl SdlBuilder {
+    /// Set SDL window title. Default: no title.
+    pub fn title(mut self, t: &'static core::ffi::CStr) -> Self {
+        self.title = Some(t);
+        self
+    }
+
+    /// Enable/disable SDL mouse input device. Default: enabled.
+    pub fn mouse(mut self, enabled: bool) -> Self {
+        self.mouse = enabled;
+        self
+    }
+
+    /// Build the driver. Initialises LVGL, creates SDL window.
+    pub fn build(self) -> LvglDriver {
+        init_common();
+        // SAFETY: lv_init() was called in init_common().
+        let disp = unsafe { lv_sdl_window_create(self.w, self.h) };
+        assert!(!disp.is_null(), "lv_sdl_window_create returned NULL");
+        if let Some(title) = self.title {
+            // SAFETY: disp is valid, title is a valid CStr.
+            unsafe { lv_sdl_window_set_title(disp, title.as_ptr()) };
+        }
+        if self.mouse {
+            // SAFETY: LVGL and SDL display are initialised.
+            unsafe { lv_sdl_mouse_create() };
+        }
+        LvglDriver
+    }
+}
+
+// ── Host-only display setup
+// ───────────────────────────────────────────────────
 
 #[cfg(not(target_os = "none"))]
 use std::time::{SystemTime, UNIX_EPOCH};
@@ -66,9 +119,11 @@ unsafe fn init_host_display(w: i32, h: i32) {
     // SAFETY: lv_init() has been called by LvglDriver::init() before this function.
     let disp = unsafe { lv_display_create(w, h) };
     assert!(!disp.is_null(), "lv_display_create returned NULL");
-    // SAFETY: disp is a valid non-null display pointer returned by lv_display_create.
+    // SAFETY: disp is a valid non-null display pointer returned by
+    // lv_display_create.
     unsafe { lv_display_set_color_format(disp, lv_color_format_t_LV_COLOR_FORMAT_RGB565) };
-    // SAFETY: cbuf is heap-allocated with buf_size bytes and lives for the program lifetime.
+    // SAFETY: cbuf is heap-allocated with buf_size bytes and lives for the program
+    // lifetime.
     unsafe {
         lv_display_set_buffers(
             disp,
@@ -78,23 +133,16 @@ unsafe fn init_host_display(w: i32, h: i32) {
             lv_display_render_mode_t_LV_DISPLAY_RENDER_MODE_PARTIAL,
         )
     };
-    // SAFETY: flush_cb is a valid extern "C" fn with the correct LVGL flush callback signature.
+    // SAFETY: flush_cb is a valid extern "C" fn with the correct LVGL flush
+    // callback signature.
     unsafe { lv_display_set_flush_cb(disp, Some(flush_cb)) };
 }
 
-/// Create an SDL2 window display (for interactive host demos).
-/// Falls back to headless if `SDL_VIDEODRIVER=dummy`.
-#[cfg(not(target_os = "none"))]
-unsafe fn init_sdl_display(w: i32, h: i32) {
-    // SAFETY: lv_init() has been called; lv_sdl_window_create initialises
-    // SDL2 and creates a visible window with its own render loop.
-    let disp = unsafe { lv_sdl_window_create(w, h) };
-    assert!(!disp.is_null(), "lv_sdl_window_create returned NULL");
-}
+// ── Log callback
+// ──────────────────────────────────────────────────────────────
 
-// ── Log callback ──────────────────────────────────────────────────────────────
-
-/// LVGL log callback for host targets. Prints to stderr, trimming the trailing newline LVGL adds.
+/// LVGL log callback for host targets. Prints to stderr, trimming the trailing
+/// newline LVGL adds.
 #[cfg(not(target_os = "none"))]
 pub unsafe extern "C" fn lvgl_log_print(_level: i8, c_str: *const c_char) {
     if !c_str.is_null() {
@@ -103,7 +151,8 @@ pub unsafe extern "C" fn lvgl_log_print(_level: i8, c_str: *const c_char) {
     }
 }
 
-/// LVGL log callback for embedded targets. Forwards log messages via defmt/log debug macro.
+/// LVGL log callback for embedded targets. Forwards log messages via defmt/log
+/// debug macro.
 #[cfg(target_os = "none")]
 #[cfg_attr(feature = "esp-hal", esp_hal::ram)]
 #[unsafe(no_mangle)]
@@ -115,16 +164,19 @@ pub unsafe extern "C" fn lvgl_log_print(_level: i8, c_str: *const c_char) {
     debug!("LVGL: {}", text.to_str().unwrap_or("").trim());
 }
 
-// ── Tick source ───────────────────────────────────────────────────────────────
+// ── Tick source
+// ───────────────────────────────────────────────────────────────
 
-/// LVGL tick source for host targets. Returns milliseconds since UNIX epoch (wraps at u32::MAX ≈ 49 days).
+/// LVGL tick source for host targets. Returns milliseconds since UNIX epoch
+/// (wraps at u32::MAX ≈ 49 days).
 #[cfg(not(target_os = "none"))]
 #[unsafe(no_mangle)]
 pub extern "C" fn get_tick_ms() -> u32 {
     SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_millis() as u32
 }
 
-/// LVGL tick source for embedded targets. Returns embassy-time milliseconds since boot.
+/// LVGL tick source for embedded targets. Returns embassy-time milliseconds
+/// since boot.
 #[cfg(target_os = "none")]
 #[cfg_attr(feature = "esp-hal", esp_hal::ram)]
 #[unsafe(no_mangle)]
