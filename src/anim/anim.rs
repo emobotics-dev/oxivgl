@@ -10,6 +10,15 @@ use crate::widgets::AsLvHandle;
 /// Returned by [`Anim::start()`]. Valid only while the animation is
 /// running — LVGL frees the copy when the animation completes or the
 /// target widget is deleted.
+///
+/// ```ignore
+/// let mut a = Anim::new();
+/// a.set_var(&obj).set_values(0, 100).set_duration(500)
+///     .set_exec_cb(Some(anim_set_x));
+/// let handle = a.start();
+/// // SAFETY: animation is still running (just started).
+/// unsafe { handle.pause_for(200) };
+/// ```
 pub struct AnimHandle {
     ptr: *mut lv_anim_t,
 }
