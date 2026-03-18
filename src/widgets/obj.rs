@@ -362,6 +362,18 @@ impl<'p> Obj<'p> {
         unsafe { lv_obj_get_y(self.handle) }
     }
 
+    /// Get X position as set by the user (before alignment resolution).
+    pub fn get_x_aligned(&self) -> i32 {
+        assert_ne!(self.handle, null_mut());
+        unsafe { lv_obj_get_x_aligned(self.handle) }
+    }
+
+    /// Get Y position as set by the user (before alignment resolution).
+    pub fn get_y_aligned(&self) -> i32 {
+        assert_ne!(self.handle, null_mut());
+        unsafe { lv_obj_get_y_aligned(self.handle) }
+    }
+
     /// Get current width after layout.
     pub fn get_width(&self) -> i32 {
         assert_ne!(self.handle, null_mut());

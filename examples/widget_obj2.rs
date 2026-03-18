@@ -13,7 +13,7 @@ use oxivgl::{
     enums::EventCode,
     event::Event,
     indev::Indev,
-    view::View,
+    view::{View, register_event_on},
     widgets::{Label, Obj, Screen, WidgetError},
 };
 
@@ -35,12 +35,16 @@ impl View for WidgetObj2 {
         Ok(Self { obj, _label: label })
     }
 
+    fn register_events(&mut self) {
+        register_event_on(self, self.obj.handle());
+    }
+
     fn on_event(&mut self, event: &Event) {
         if event.matches(&self.obj, EventCode::PRESSING) {
             if let Some(indev) = Indev::active() {
                 let vect = indev.get_vect();
-                let x = self.obj.get_x() + vect.x;
-                let y = self.obj.get_y() + vect.y;
+                let x = self.obj.get_x_aligned() + vect.x;
+                let y = self.obj.get_y_aligned() + vect.y;
                 self.obj.pos(x, y);
             }
         }
