@@ -85,12 +85,15 @@ impl Timer {
 
     /// Change the timer period.
     pub fn set_period(&self, period_ms: u32) -> &Self {
+        // SAFETY: ptr valid for Timer's lifetime (created by lv_timer_create,
+        // freed in Drop).
         unsafe { lv_timer_set_period(self.ptr, period_ms) };
         self
     }
 
     /// Set repeat count. Use `-1` for infinite, `1` for one-shot.
     pub fn set_repeat_count(&self, count: i32) -> &Self {
+        // SAFETY: ptr valid for Timer's lifetime.
         unsafe { lv_timer_set_repeat_count(self.ptr, count) };
         self
     }
@@ -98,18 +101,21 @@ impl Timer {
     /// Mark the timer ready — it will fire on the next LVGL tick
     /// regardless of remaining period.
     pub fn ready(&self) -> &Self {
+        // SAFETY: ptr valid for Timer's lifetime.
         unsafe { lv_timer_ready(self.ptr) };
         self
     }
 
     /// Pause the timer (stops firing until [`resume()`](Timer::resume)).
     pub fn pause(&self) -> &Self {
+        // SAFETY: ptr valid for Timer's lifetime.
         unsafe { lv_timer_pause(self.ptr) };
         self
     }
 
     /// Resume a paused timer.
     pub fn resume(&self) -> &Self {
+        // SAFETY: ptr valid for Timer's lifetime.
         unsafe { lv_timer_resume(self.ptr) };
         self
     }
