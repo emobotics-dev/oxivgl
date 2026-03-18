@@ -4,6 +4,7 @@ use cmake::Config;
 fn main() {
     let target = std::env::var("TARGET").unwrap_or_default();
     if target.starts_with("xtensa-") {
+        println!("cargo:rustc-link-arg=-Tlinkall.x");
         cmake_lvgl();
     }
     // On host targets, lvgl_rust_sys's own build.rs compiles LVGL.
