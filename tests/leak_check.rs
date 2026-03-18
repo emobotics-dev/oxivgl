@@ -501,7 +501,7 @@ fn leak_complex_ui() {
 }
 
 #[test]
-fn leak_anim_start_widget_delete() {
+fn leak_zz_anim_start_widget_delete() {
     use oxivgl::anim::{anim_set_x, Anim};
     assert_no_leak("Anim start+widget delete", 1, |screen| {
         let obj = Obj::new(screen).unwrap();
@@ -514,5 +514,6 @@ fn leak_anim_start_widget_delete() {
         let _handle = a.start();
         pump();
         drop(obj); // LVGL cancels animation on widget delete
+        pump(); // flush animation cleanup
     });
 }
