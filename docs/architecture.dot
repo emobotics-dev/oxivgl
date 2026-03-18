@@ -1,0 +1,72 @@
+// oxivgl architecture — generate SVG with: dot -Tsvg architecture.dot -o architecture.svg
+digraph architecture {
+    rankdir=TB
+    fontname="sans-serif"
+    node [fontname="sans-serif" fontsize=11 shape=box style="rounded,filled"
+          penwidth=1.5 width=2]
+    edge [color="#666666" penwidth=1.2]
+    compound=true
+
+    // ── User code ────────────────────────────────────────────────
+    subgraph cluster_user {
+        label="User Code" labeljust=l fontsize=10 fontcolor="#666666"
+        style="dashed,rounded" color="#999999"
+
+        app [label="examples/*.rs · consumer crate\n(implements View)"
+             fillcolor="#fff3cd" color="#d4a017"]
+    }
+
+    // ── oxivgl crate ─────────────────────────────────────────────
+    subgraph cluster_oxivgl {
+        label="oxivgl" labeljust=l fontsize=12 fontcolor="#4a86c8"
+        style="rounded,filled" fillcolor="#f8f9fa" color="#4a86c8"
+
+        view [label="view\nView trait · run_lvgl · event dispatch"
+              fillcolor="#d4e6fc" color="#4a86c8"]
+
+        widgets [label="widgets · style · anim\nObj · Label · Button · Arc · Bar · Scale …\nStyleBuilder → Style · GradDsc · Theme\nAnim · AnimHandle · Timer · Event"
+                 fillcolor="#e8f0fe" color="#4a86c8"]
+
+        driver [label="driver · display · fonts\nLvglDriver · SdlBuilder · LvglBuffers\nDMA flush pipeline · Snapshot (host)"
+                fillcolor="#e8f0fe" color="#4a86c8"]
+    }
+
+    // ── C / FFI ──────────────────────────────────────────────────
+    subgraph cluster_ffi {
+        label="C / FFI" labeljust=l fontsize=10 fontcolor="#666666"
+        style="dashed,rounded" color="#999999"
+
+        sys [label="lvgl_rust_sys — raw LVGL 9.3 bindings"
+             fillcolor="#f0f0f0" color="#888888"]
+
+        lvgl_c [label="LVGL C library — widgets · layout · rendering"
+                fillcolor="#f0f0f0" color="#888888"]
+    }
+
+    // ── Hardware / Host ──────────────────────────────────────────
+    subgraph cluster_hw {
+        label="Hardware / Host" labeljust=l fontsize=10 fontcolor="#666666"
+        style="dashed,rounded" color="#999999"
+
+        esp [label="ESP32 SPI TFT"
+             fillcolor="#e8f5e9" color="#4caf50"]
+        sdl [label="SDL2 window"
+             fillcolor="#e8f5e9" color="#4caf50"]
+        dummy [label="SDL2 dummy (CI)"
+               fillcolor="#e8f5e9" color="#4caf50"]
+    }
+
+    // ── Edges ────────────────────────────────────────────────────
+    app -> view
+    view -> widgets
+    view -> driver
+    widgets -> driver [style=dashed]
+
+    driver -> sys
+
+    sys -> lvgl_c
+
+    lvgl_c -> esp
+    lvgl_c -> sdl
+    lvgl_c -> dummy
+}
