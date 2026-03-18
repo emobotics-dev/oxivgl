@@ -91,7 +91,7 @@ pub async fn run_lvgl<V: View, const BYTES: usize>(
     bufs: &'static mut LvglBuffers<BYTES>,
 ) -> ! {
     info!("UI task started");
-    let _driver = LvglDriver::init(w, h);
+    let driver = LvglDriver::init(w, h);
     // SAFETY: lv_init() has been called inside LvglDriver::init() above.
     unsafe { lvgl_disp_init(w, h, bufs) };
 
@@ -118,9 +118,7 @@ pub async fn run_lvgl<V: View, const BYTES: usize>(
         // so LVGL animations stay smooth while update() is called once per cycle.
         for _ in 0..16 {
             debug!("LVGL tick/timer handler");
-            // SAFETY: lv_init() was called inside LvglDriver::init(); no other task
-            // calls LVGL concurrently (single-task constraint).
-            unsafe { lv_timer_handler() };
+            driver.timer_handler();
             Timer::after(Duration::from_millis(LVGL_TIMER_DELAY)).await;
         }
     }

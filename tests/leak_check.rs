@@ -88,11 +88,9 @@ fn fresh_screen() -> Screen {
 }
 
 fn pump() {
-    // SAFETY: LVGL initialised, single-threaded.
-    unsafe {
-        lvgl_rust_sys::lv_timer_handler();
-        lvgl_rust_sys::lv_refr_now(core::ptr::null_mut());
-    }
+    let driver = unsafe { (*core::ptr::addr_of!(DRIVER)).as_ref().unwrap() };
+    driver.timer_handler();
+    unsafe { lvgl_rust_sys::lv_refr_now(core::ptr::null_mut()) };
 }
 
 // ── Leak check helper ────────────────────────────────────────────────────────

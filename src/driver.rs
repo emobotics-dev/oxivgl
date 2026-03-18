@@ -28,6 +28,16 @@ impl LvglDriver {
         Self
     }
 
+    /// Drive LVGL timers. Returns recommended delay in ms until next call.
+    ///
+    /// Safe to call because `LvglDriver` existence proves `lv_init()` was called.
+    /// Caller is responsible for the single-task constraint: no other code may
+    /// call LVGL concurrently while this is running.
+    pub fn timer_handler(&self) -> u32 {
+        // SAFETY: LvglDriver is the init token — lv_init() was called.
+        unsafe { lv_timer_handler() }
+    }
+
     /// Initialise LVGL with an SDL2 window display (interactive host demos).
     #[cfg(not(target_os = "none"))]
     pub fn init_sdl(w: i32, h: i32) -> Self {

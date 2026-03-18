@@ -5,24 +5,23 @@
 use std::path::PathBuf;
 
 use lvgl_rust_sys::*;
+use oxivgl::driver::LvglDriver;
 
 pub const W: i32 = 320;
 pub const H: i32 = 240;
 
 /// Drive the LVGL timer loop. Call after creating all widgets. Never returns.
-pub fn run_host_loop() -> ! {
+pub fn run_host_loop(driver: &LvglDriver) -> ! {
     loop {
-        // SAFETY: lv_init() was called inside LvglDriver::init() before entering main's loop.
-        unsafe { lv_timer_handler() };
+        driver.timer_handler();
         std::thread::sleep(std::time::Duration::from_millis(5));
     }
 }
 
 /// Pump the LVGL timer `n` times (5 ms each).
-pub fn pump(n: u32) {
+pub fn pump(driver: &LvglDriver, n: u32) {
     for _ in 0..n {
-        // SAFETY: LVGL is initialised and we are on the single LVGL task.
-        unsafe { lv_timer_handler() };
+        driver.timer_handler();
         std::thread::sleep(std::time::Duration::from_millis(5));
     }
 }
@@ -103,7 +102,7 @@ macro_rules! host_main {
             $crate::env_logger::init();
             let screenshot_only =
                 std::env::var("SCREENSHOT_ONLY").as_deref() == Ok("1");
-            let _driver = if screenshot_only {
+            let driver = if screenshot_only {
                 LvglDriver::init(W, H)
             } else {
                 LvglDriver::init_sdl(W, H)
@@ -124,7 +123,7 @@ macro_rules! host_main {
             );
 
             // Always capture a screenshot.
-            pump(10);
+            pump(&driver, 10);
             capture(name, &dir);
 
             if screenshot_only {
@@ -134,7 +133,7 @@ macro_rules! host_main {
                 std::process::exit(0);
             }
 
-            run_host_loop();
+            run_host_loop(&driver);
         }
     };
 }
