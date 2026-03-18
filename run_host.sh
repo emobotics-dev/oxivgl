@@ -7,7 +7,14 @@
 #   ./run_host.sh -s                  Screenshot all examples
 set -e
 
-export LIBCLANG_PATH="${LIBCLANG_PATH:-/usr/lib64}"
+# Use system 64-bit libclang for host builds.
+# The ESP toolchain may set LIBCLANG_PATH to a 32-bit clang which
+# breaks x86_64 bindgen — override it when detected.
+if [[ "${LIBCLANG_PATH:-}" == *"xtensa"* || "${LIBCLANG_PATH:-}" == *"esp"* ]]; then
+    export LIBCLANG_PATH=/usr/lib64
+elif [[ -z "${LIBCLANG_PATH:-}" ]]; then
+    export LIBCLANG_PATH=/usr/lib64
+fi
 TARGET="x86_64-unknown-linux-gnu"
 
 SCREENSHOT=0
@@ -19,7 +26,7 @@ fi
 ALL_EXAMPLES=(
     getting_started{1,2,3,4,5,6,7,8}
     style{1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18}
-    anim{1,2} anim_timeline1
+    anim{1,2,4} anim_timeline1
     event_{click,button,bubble,trickle}
     flex{1,2,3,4,5,6}
     grid{1,2,3,4,5,6}
