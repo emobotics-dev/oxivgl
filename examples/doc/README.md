@@ -214,6 +214,13 @@ Red circle with repeat/reverse size + X animations (ease-in-out).
 
 ![anim2](screenshots/anim2.png)
 
+### Anim 4 — Animation with Timed Pause
+
+Switch toggles label X animation (overshoot / ease-in). A one-shot 200 ms timer
+pauses the running animation for 1 s.
+
+![anim4](screenshots/anim4.png)
+
 ### Anim Timeline 1 — Animation Timeline
 
 Three objects animated via timeline, controlled by start/pause buttons and a progress slider.
@@ -695,7 +702,7 @@ Status of all [LVGL 9.3 examples](https://docs.lvgl.io/9.3/examples.html) in oxi
 |---|---|---|---|---|
 | Getting Started | 4 | 4 (+4 extra gradient examples) | 0 | |
 | Styles | 19 | 18 | 1 | style19 (meta/benchmarking) |
-| Animations | 5 | 3 | 1 | anim3 (needs Chart); anim4 missing |
+| Animations | 5 | 4 | 1 | anim3 (needs Chart) |
 | Events | 5 | 3 (+1 extra trickle) | 2 | event_draw (timer API), event_streak (indev API) |
 | Flex | 6 | 6 | 0 | |
 | Grid | 6 | 6 | 0 | |
@@ -729,9 +736,9 @@ animimg, buttonmatrix, calendar, canvas, chart, imagebutton, keyboard, list, lot
 | | Count |
 |---|---|
 | LVGL examples total | ~184 |
-| oxivgl done | 94 |
+| oxivgl done | 95 |
 | Skipped (intentional) | 11 |
-| Missing (wrapper exists) | ~7 |
+| Missing (wrapper exists) | ~6 |
 | No wrapper | ~68 |
 
 ## Running
