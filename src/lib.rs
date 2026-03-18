@@ -42,6 +42,8 @@ pub mod indev;
 /// Screen capture (host-only).
 #[cfg(not(target_os = "none"))]
 pub mod snapshot;
+/// LVGL math utility wrappers (Bezier, mapping).
+pub mod math;
 
 /// Declare an LVGL image asset compiled by `oxivgl-build`.
 ///

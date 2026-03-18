@@ -214,6 +214,14 @@ Red circle with repeat/reverse size + X animations (ease-in-out).
 
 ![anim2](screenshots/anim2.png)
 
+### Anim 3 — Cubic Bezier with Chart
+
+Two sliders (P1, P2) adjust bezier control points. A scatter chart shows the
+curve in real-time. Click the play button to animate a red square along the
+current bezier curve.
+
+![anim3](screenshots/anim3.png)
+
 ### Anim 4 — Animation with Timed Pause
 
 Switch toggles label X animation (overshoot / ease-in). A one-shot 200 ms timer
@@ -226,10 +234,6 @@ pauses the running animation for 1 s.
 Three objects animated via timeline, controlled by start/pause buttons and a progress slider.
 
 ![anim_timeline1](screenshots/anim_timeline1.png)
-
-### Skipped
-
-- **Anim 3** — Cubic bezier with Chart (needs `LV_USE_CHART`, Chart wrapper)
 
 ## Events
 
@@ -723,7 +727,7 @@ Status of all [LVGL 9.3 examples](https://docs.lvgl.io/9.3/examples.html) in oxi
 |---|---|---|---|---|
 | Getting Started | 4 | 4 (+4 extra gradient examples) | 0 | |
 | Styles | 19 | 18 | 1 | style19 (meta/benchmarking) |
-| Animations | 5 | 4 | 1 | anim3 (needs Chart) |
+| Animations | 5 | 5 | 0 | |
 | Events | 5 | 4 (+1 extra trickle) | 1 | event_draw (timer API) |
 | Flex | 6 | 6 | 0 | |
 | Grid | 6 | 6 | 0 | |
@@ -750,16 +754,16 @@ Status of all [LVGL 9.3 examples](https://docs.lvgl.io/9.3/examples.html) in oxi
 
 ### Widgets Without Wrappers
 
-animimg, buttonmatrix, calendar, canvas, chart, imagebutton, keyboard, list, lottie, menu, msgbox, span, spinbox, spinner, table, tabview, textarea, tileview, win.
+animimg, buttonmatrix, calendar, canvas, imagebutton, keyboard, list, lottie, menu, msgbox, span, spinbox, spinner, table, tabview, textarea, tileview, win.
 
 ### Totals
 
 | | Count |
 |---|---|
 | LVGL examples total | ~184 |
-| oxivgl done | 99 |
+| oxivgl done | 100 |
 | Skipped (intentional) | 7 |
-| Missing (wrapper exists) | ~4 |
+| Missing (wrapper exists) | ~5 |
 | No wrapper | ~68 |
 
 ## Running
