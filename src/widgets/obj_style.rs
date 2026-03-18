@@ -457,4 +457,31 @@ impl<'p> Obj<'p> {
         unsafe { lv_obj_set_style_image_recolor_opa(self.handle(), opa as lv_opa_t, selector) };
         self
     }
+
+    /// Set column gap for the given selector.
+    pub fn style_pad_column(&self, gap: i32, selector: impl Into<crate::style::Selector>) -> &Self {
+        let selector = selector.into().raw();
+        assert_ne!(self.handle(), null_mut(), "Obj handle cannot be null");
+        // SAFETY: handle non-null (asserted above).
+        unsafe { lv_obj_set_style_pad_column(self.handle(), gap, selector) };
+        self
+    }
+
+    /// Set row gap for the given selector.
+    pub fn style_pad_row(&self, gap: i32, selector: impl Into<crate::style::Selector>) -> &Self {
+        let selector = selector.into().raw();
+        assert_ne!(self.handle(), null_mut(), "Obj handle cannot be null");
+        // SAFETY: handle non-null (asserted above).
+        unsafe { lv_obj_set_style_pad_row(self.handle(), gap, selector) };
+        self
+    }
+
+    /// Set indicator/point width and height for the given selector.
+    pub fn style_size(&self, w: i32, h: i32, selector: impl Into<crate::style::Selector>) -> &Self {
+        let selector = selector.into().raw();
+        assert_ne!(self.handle(), null_mut(), "Obj handle cannot be null");
+        // SAFETY: handle non-null (asserted above).
+        unsafe { lv_obj_set_style_size(self.handle(), w, h, selector) };
+        self
+    }
 }

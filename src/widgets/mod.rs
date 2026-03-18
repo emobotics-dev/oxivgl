@@ -20,6 +20,7 @@ pub(crate) fn to_lvgl(v: f32, max: f32) -> i32 {
 mod arc;
 mod bar;
 mod button;
+mod chart;
 mod checkbox;
 mod child;
 mod dropdown;
@@ -40,6 +41,7 @@ mod value_label;
 pub use arc::{Arc, ArcMode};
 pub use bar::{Bar, BarMode};
 pub use button::Button;
+pub use chart::{Chart, ChartAxis, ChartSeries, ChartType};
 pub use checkbox::Checkbox;
 pub use child::{detach, Child};
 pub use dropdown::{DdDir, Dropdown};
