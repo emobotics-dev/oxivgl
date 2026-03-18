@@ -63,6 +63,9 @@ impl Timer {
             unsafe { drop(Box::from_raw(flag)) };
             return Err(crate::widgets::WidgetError::LvglNullPointer);
         }
+        // Rust Timer owns the lifetime — prevent LVGL from auto-deleting
+        // when repeat_count reaches 0 (our Drop handles cleanup).
+        unsafe { lv_timer_set_auto_delete(ptr, false) };
         Ok(Timer { ptr, flag })
     }
 
