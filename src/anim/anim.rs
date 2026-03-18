@@ -1,8 +1,39 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
 use core::{ffi::c_void, marker::PhantomData};
+
 use lvgl_rust_sys::*;
 
 use crate::widgets::AsLvHandle;
+
+/// Handle to a running LVGL animation (the LVGL-owned copy).
+///
+/// Returned by [`Anim::start()`]. Valid only while the animation is
+/// running — LVGL frees the copy when the animation completes or the
+/// target widget is deleted.
+pub struct AnimHandle {
+    ptr: *mut lv_anim_t,
+}
+
+impl core::fmt::Debug for AnimHandle {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        f.debug_struct("AnimHandle").finish_non_exhaustive()
+    }
+}
+
+impl AnimHandle {
+    /// Pause the running animation for `ms` milliseconds.
+    ///
+    /// The animation resumes automatically after the pause expires.
+    ///
+    /// # Safety
+    /// The caller must ensure the animation is still running. LVGL frees
+    /// the internal copy when the animation completes or the target widget
+    /// is deleted — calling this after that point is undefined behaviour.
+    /// Must be called from the LVGL task (LVGL is not thread-safe).
+    pub unsafe fn pause_for(&self, ms: u32) {
+        unsafe { lv_anim_pause_for(self.ptr, ms) };
+    }
+}
 
 /// Stack-local animation builder. LVGL copies the descriptor on `start()`,
 /// so this can be dropped after starting.
@@ -27,10 +58,7 @@ impl<'w> Anim<'w> {
     pub fn new() -> Self {
         let mut inner = unsafe { core::mem::zeroed::<lv_anim_t>() };
         unsafe { lv_anim_init(&mut inner) };
-        Self {
-            inner,
-            _widget: PhantomData,
-        }
+        Self { inner, _widget: PhantomData }
     }
 
     /// Set the animated variable (the raw `lv_obj_t*` pointer).
@@ -102,8 +130,13 @@ impl<'w> Anim<'w> {
     }
 
     /// Start the animation. LVGL copies the descriptor internally.
-    pub fn start(&self) {
-        unsafe { lv_anim_start(&self.inner) };
+    ///
+    /// Returns a handle to the running (LVGL-owned) copy. The handle is
+    /// valid only while the animation is active.
+    pub fn start(&self) -> AnimHandle {
+        let ptr = unsafe { lv_anim_start(&self.inner) };
+        assert!(!ptr.is_null(), "lv_anim_start returned NULL");
+        AnimHandle { ptr }
     }
 }
 
