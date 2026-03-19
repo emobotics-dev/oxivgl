@@ -43,6 +43,8 @@ LVGL function that stores the pointer beyond the call's duration.
 | `lv_indev_t`                  | LVGL --- `lv_indev_create` | User --- `lv_indev_delete` | Application lifetime typically | Global indev list |
 | `lv_group_t`                  | LVGL --- `lv_group_create` | User --- `lv_group_delete` | Until explicitly deleted | User holds the pointer |
 | `lv_event_t`                  | LVGL (stack frame) | LVGL --- automatic | Duration of the event callback only | Stack frame in `lv_event_send` |
+| `lv_draw_task_t`              | LVGL --- render pipeline | LVGL --- after draw completes | Duration of `DRAW_TASK_ADDED` callback only | Render task list; passed via `lv_event_get_draw_task` |
+| `lv_draw_label_dsc_t` (in draw task) | LVGL --- render pipeline | LVGL --- after draw completes | Same scope as parent `lv_draw_task_t` | `draw_task->draw_dsc` pointer |
 
 ---
 
@@ -263,6 +265,13 @@ if push fails.
 Rc allocation, different selectors), `retain` would drop all clones at once
 while LVGL still holds all but the removed one.
 
+When `style` is `None`, LVGL removes all styles for the given selector, but
+the `_styles` Vec is **not** updated — the Rc clones remain alive until the
+widget is dropped. This is a known limitation: safely identifying which Rc
+entries correspond to a selector-only removal would require tracking selectors
+per entry. The extra Rc clones are a memory leak (not use-after-free) bounded
+by widget lifetime. Use `remove_style_all` for full cleanup.
+
 ### 5.4 remove_style_all
 
 `Obj::remove_style_all` SHALL call `lv_obj_remove_style_all` then clear
@@ -332,7 +341,23 @@ targeting the object. The exec callback never fires on a freed `lv_obj_t`.
 The `'w` bound ensures the widget is alive at `start()` time. LVGL ensures the
 animation is cancelled if the widget is deleted after `start()`.
 
-### 6.2 v9.3 animation API changes
+### 6.2 AnimHandle
+
+`AnimHandle` wraps a raw `*mut lv_anim_t` pointing to LVGL's internal copy
+(allocated by `lv_anim_start`). LVGL frees this copy when the animation
+completes or the target widget is deleted. `AnimHandle` has **no lifetime
+enforcement** — it is an intentional escape hatch for operations on running
+animations (e.g. `pause_for`).
+
+**Invariant**: `AnimHandle` methods are `unsafe`. The caller MUST ensure the
+animation is still running. Storing an `AnimHandle` past animation completion
+or widget deletion and then calling methods on it is undefined behaviour.
+
+**Rationale**: compile-time enforcement is impractical because animation
+completion is a runtime event. The `unsafe` + safety doc on each method is
+the only protection.
+
+### 6.3 v9.3 animation API changes
 
 v9.3 renames `playback_*` fields/setters to `reverse_*` (e.g.
 `lv_anim_set_playback_delay` → `lv_anim_set_reverse_delay`) and adds
@@ -340,7 +365,7 @@ v9.3 renames `playback_*` fields/setters to `reverse_*` (e.g.
 changes only; copy semantics (`lv_memcpy` in `lv_anim_start`) and the
 `lv_anim_delete` cleanup in `lv_obj_delete` are unchanged.
 
-### 6.3 Obj::drop --- no additional animation cleanup needed
+### 6.4 Obj::drop --- no additional animation cleanup needed
 
 `lv_obj_delete` already cancels animations. Explicitly calling `lv_anim_delete`
 in `Obj::drop` before `lv_obj_delete` would be redundant.
