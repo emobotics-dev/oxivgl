@@ -763,7 +763,7 @@ animimg, buttonmatrix, calendar, canvas, imagebutton, keyboard, list, lottie, me
 | LVGL examples total | ~184 |
 | oxivgl done | 100 |
 | Skipped (intentional) | 7 |
-| Missing (wrapper exists) | ~5 |
+| Missing (wrapper exists) | 5 |
 | No wrapper | ~68 |
 
 ## Running
