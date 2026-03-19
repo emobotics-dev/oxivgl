@@ -35,7 +35,7 @@ pub mod enums;
 pub mod layout;
 /// Type-safe LVGL widget wrappers.
 pub mod widgets;
-/// Draw task wrappers for DRAW_TASK_ADDED handlers.
+/// Draw primitives: `Area`, `Layer`, rectangle/label descriptors, draw task wrappers.
 pub mod draw;
 /// Input device queries.
 pub mod indev;
