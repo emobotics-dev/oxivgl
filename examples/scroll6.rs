@@ -17,7 +17,7 @@ use oxivgl::{
     math::map,
     style::{lv_pct, Selector},
     view::{register_event_on, View},
-    widgets::{Button, Label, Obj, Screen, WidgetError, detach},
+    widgets::{Button, Label, Obj, Screen, WidgetError, detach, RADIUS_MAX},
 };
 
 struct Scroll6 {
@@ -32,7 +32,7 @@ impl View for Scroll6 {
         cont.size(200, 200).center();
         cont.set_flex_flow(FlexFlow::Column);
         cont.style_clip_corner(true, Selector::DEFAULT);
-        cont.radius(0x7FFF, Selector::DEFAULT);
+        cont.radius(RADIUS_MAX, Selector::DEFAULT);
         cont.set_scroll_dir(ScrollDir::VER);
         cont.set_scroll_snap_y(ScrollSnap::Center);
         cont.set_scrollbar_mode(ScrollbarMode::Off);
