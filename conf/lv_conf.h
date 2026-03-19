@@ -258,8 +258,8 @@
 #define LV_USE_LINE       1
 #define LV_USE_LIST       1
 #define LV_USE_LOTTIE     0
-#define LV_USE_MENU       0
-#define LV_USE_MSGBOX     0
+#define LV_USE_MENU       1
+#define LV_USE_MSGBOX     1
 #define LV_USE_ROLLER     1
 #define LV_USE_SCALE      1
 #define LV_USE_SLIDER     1

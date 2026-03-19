@@ -687,4 +687,27 @@ impl<'p> Obj<'p> {
         // SAFETY: handle non-null (asserted above).
         unsafe { lv_obj_get_style_pad_right(self.handle, part as u32) }
     }
+
+    /// Get the left padding style value for the given part.
+    pub fn get_style_pad_left(&self, part: super::obj::Part) -> i32 {
+        assert_ne!(self.handle, null_mut());
+        // SAFETY: handle non-null (asserted above).
+        unsafe { lv_obj_get_style_pad_left(self.handle, part as u32) }
+    }
+
+    /// Get the background color for the given part.
+    pub fn get_style_bg_color(&self, part: super::obj::Part) -> lv_color_t {
+        assert_ne!(self.handle, null_mut());
+        // SAFETY: handle non-null (asserted above).
+        unsafe { lv_obj_get_style_bg_color(self.handle, part as u32) }
+    }
+
+    /// Swap positions of two objects in their parent's child list.
+    pub fn swap(&self, other: &impl AsLvHandle) -> &Self {
+        assert_ne!(self.handle, null_mut());
+        assert_ne!(other.lv_handle(), null_mut());
+        // SAFETY: both handles non-null (asserted above).
+        unsafe { lv_obj_swap(self.handle, other.lv_handle()) };
+        self
+    }
 }

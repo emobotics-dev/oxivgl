@@ -74,6 +74,15 @@ impl<'p> Obj<'p> {
         self
     }
 
+    /// Set horizontal padding (left + right) for the given selector.
+    pub fn style_pad_hor(&self, p: i32, selector: impl Into<crate::style::Selector>) -> &Self {
+        let selector = selector.into().raw();
+        assert_ne!(self.handle(), null_mut(), "Obj handle cannot be null");
+        // SAFETY: handle non-null (asserted above).
+        unsafe { lv_obj_set_style_pad_hor(self.handle(), p, selector) };
+        self
+    }
+
     /// Apply a style to this object for the given selector.
     ///
     /// The style's `Rc` refcount is bumped and stored inside this widget,

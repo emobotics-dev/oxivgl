@@ -30,8 +30,8 @@ use oxivgl::{
     enums::ObjState,
     widgets::{
         Arc, Bar, BarMode, Button, Buttonmatrix, Checkbox, Dropdown, Keyboard, KeyboardMode,
-        Label, Led, Line, Obj, Part, Roller, RollerMode, Screen, Slider, Switch, Textarea,
-        ValueLabel,
+        Label, Led, Line, Menu, Msgbox, Obj, Part, Roller, RollerMode, Screen, Slider, Switch,
+        Textarea, ValueLabel,
     },
 };
 
@@ -557,5 +557,32 @@ fn leak_list() {
         list.add_button(Some(&oxivgl::symbols::FILE), "Open");
         list.add_button(None, "Close");
         drop(list);
+    });
+}
+
+#[test]
+fn leak_menu() {
+    // Menu creates internal header, back button, and main content area children.
+    assert_no_leak("Menu", 10, |screen| {
+        let menu = Menu::new(screen).unwrap();
+        let page = menu.page_create(None);
+        let cont = Menu::cont_create(&page);
+        let lbl = Label::new(&cont).unwrap();
+        lbl.text("Item");
+        menu.set_page(&page);
+        drop(lbl);
+        drop(menu);
+    });
+}
+
+#[test]
+fn leak_msgbox() {
+    // Msgbox creates header + title label + content + close button children.
+    assert_no_leak("Msgbox", 8, |screen| {
+        let mbox = Msgbox::new(Some(screen)).unwrap();
+        mbox.add_title("Test");
+        mbox.add_text("Body");
+        mbox.add_close_button();
+        drop(mbox);
     });
 }

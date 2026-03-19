@@ -26,6 +26,8 @@ runner (`example_main!` macro selects host SDL2 or ESP32 fire27 backend).
 - [Widgets — LED](#widgets--led)
 - [Widgets — Line](#widgets--line)
 - [Widgets — List](#widgets--list)
+- [Widgets — Menu](#widgets--menu)
+- [Widgets — Msgbox](#widgets--msgbox)
 - [Widgets — Roller](#widgets--roller)
 - [Widgets — Scale](#widgets--scale)
 - [Widgets — Slider](#widgets--slider)
@@ -614,6 +616,49 @@ control buttons to reorder the selected item.
 
 ![widget_list2](screenshots/widget_list2.png)
 
+## Widgets — Menu
+
+### Widget Menu 1 — Simple Menu with Sub-Page
+
+Full-screen menu with a main page containing three items. The third item
+navigates to a sub-page.
+
+![widget_menu1](screenshots/widget_menu1.png)
+
+### Widget Menu 2 — Root Back Button with Msgbox
+
+Like menu1 but with the root back button enabled. Clicking the back button
+at root level shows a message box.
+
+![widget_menu2](screenshots/widget_menu2.png)
+
+### Widget Menu 3 — Custom Back Button Text and Titled Pages
+
+Full-screen menu with a "Back" label on the header back button.
+Three sub-pages with titles, each reachable from the main page.
+
+![widget_menu3](screenshots/widget_menu3.png)
+
+### Widget Menu 4 — Dynamic Menu with Floating Add Button
+
+A menu with one initial item and a floating "+" button. Each click
+adds a new item with a sub-page and scrolls it into view.
+
+![widget_menu4](screenshots/widget_menu4.png)
+
+### Widget Menu 5 — Settings Menu with Sidebar
+
+A full settings UI with sidebar navigation, sections, separators,
+sliders, switches, and a sidebar-toggle switch. Root back button
+shows a message box.
+
+![widget_menu5](screenshots/widget_menu5.png)
+
+## Widgets — Msgbox
+
+Msgbox is used as a supporting widget in menu2 and menu5. No standalone
+msgbox example.
+
 ## Widgets — Roller
 
 ### Widget Roller 1 — Month Roller
@@ -802,6 +847,8 @@ Status of all [LVGL 9.3 examples](https://docs.lvgl.io/9.3/examples.html) in oxi
 | led | 1 | 1 | 0 | |
 | line | 1 | 1 | 0 | |
 | list | 2 | 2 | 0 | |
+| menu | 5 | 5 | 0 | |
+| msgbox | 1 | 0 | 1 | Used via menu2/menu5; no standalone example |
 | roller | 3 | 2 | 1 | roller3 (needs canvas/mask API) |
 | scale | 11 | 11 | 0 | |
 | slider | 4 | 4 | 0 | |
@@ -810,17 +857,17 @@ Status of all [LVGL 9.3 examples](https://docs.lvgl.io/9.3/examples.html) in oxi
 
 ### Widgets Without Wrappers
 
-animimg, calendar, canvas, imagebutton, lottie, menu, msgbox, span, spinbox, spinner, table, tabview, tileview, win.
+animimg, calendar, canvas, imagebutton, lottie, span, spinbox, spinner, table, tabview, tileview, win.
 
 ### Totals
 
 | | Count |
 |---|---|
 | LVGL examples total | ~184 |
-| oxivgl done | 107 |
+| oxivgl done | 112 |
 | Skipped (intentional) | 6 |
-| Missing (wrapper exists) | 5 |
-| No wrapper | ~62 |
+| Missing (wrapper exists) | 6 |
+| No wrapper | ~56 |
 
 ## Running
 

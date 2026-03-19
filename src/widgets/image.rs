@@ -135,4 +135,27 @@ impl<'p> Image<'p> {
         };
         self
     }
+
+    /// Set the image source to a built-in LVGL symbol.
+    ///
+    /// LVGL stores the pointer (`lv_image_t.src`); the symbol is `'static`
+    /// (compiled into the binary), satisfying spec §3.1.
+    ///
+    /// ```ignore
+    /// use oxivgl::{symbols, widgets::Image};
+    /// let img = Image::new(&screen)?;
+    /// img.set_src_symbol(&symbols::SETTINGS);
+    /// ```
+    pub fn set_src_symbol(&self, symbol: &crate::symbols::Symbol) -> &Self {
+        // SAFETY: handle non-null (from Image::new); symbol.as_ptr() returns
+        // a 'static NUL-terminated string. LVGL detects the string source type
+        // by inspecting the first byte (lv_image.c:lv_image_src_get_type).
+        unsafe {
+            lv_image_set_src(
+                self.obj.handle(),
+                symbol.as_ptr() as *const core::ffi::c_void,
+            )
+        };
+        self
+    }
 }

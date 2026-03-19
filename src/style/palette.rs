@@ -100,6 +100,18 @@ pub fn color_make(r: u8, g: u8, b: u8) -> lv_color_t {
     unsafe { lv_color_make(r, g, b) }
 }
 
+/// Returns the perceived brightness of a color (0–255).
+pub fn color_brightness(c: lv_color_t) -> u8 {
+    // SAFETY: pure function operating on a value type.
+    unsafe { lv_color_brightness(c) }
+}
+
+/// Darken a color by `lvl` (0–255, where 255 = fully dark).
+pub fn color_darken(c: lv_color_t, lvl: u8) -> lv_color_t {
+    // SAFETY: pure function operating on value types.
+    unsafe { lv_color_darken(c, lvl) }
+}
+
 #[cfg(test)]
 mod tests {
     use super::{GradDir, Palette};

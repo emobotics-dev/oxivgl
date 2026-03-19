@@ -31,6 +31,8 @@ mod label;
 mod led;
 mod list;
 mod line;
+mod menu;
+mod msgbox;
 mod obj;
 mod obj_layout;
 mod obj_style;
@@ -56,6 +58,8 @@ pub use label::{Label, LabelLongMode};
 pub use led::Led;
 pub use line::Line;
 pub use list::List;
+pub use menu::{Menu, MenuHeaderMode};
+pub use msgbox::Msgbox;
 pub use obj::{
     Align, AsLvHandle, BaseDir, Matrix, Obj, Part, TextAlign,
 };

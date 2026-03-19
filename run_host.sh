@@ -43,6 +43,7 @@ ALL_EXAMPLES=(
     widget_led1
     widget_list{1,2}
     widget_line1
+    widget_menu{1,2,3,4,5}
     widget_roller{1,2}
     widget_scale{1,2,3,4,5,6,7,8,9,10,11}
     widget_slider{1,2,3,4}

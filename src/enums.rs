@@ -97,6 +97,9 @@ impl ObjFlag {
     pub const ADV_HITTEST: Self = Self(lvgl_rust_sys::lv_obj_flag_t_LV_OBJ_FLAG_ADV_HITTEST);
     /// Clicking the widget will focus it (gain `LV_STATE_FOCUSED`).
     pub const CLICK_FOCUSABLE: Self = Self(lvgl_rust_sys::lv_obj_flag_t_LV_OBJ_FLAG_CLICK_FOCUSABLE);
+    /// Start a new flex track after this item.
+    pub const FLEX_IN_NEW_TRACK: Self =
+        Self(lvgl_rust_sys::lv_obj_flag_t_LV_OBJ_FLAG_FLEX_IN_NEW_TRACK);
 }
 
 impl core::ops::BitOr for ObjFlag {

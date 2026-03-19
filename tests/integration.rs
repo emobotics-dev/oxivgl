@@ -18,8 +18,8 @@ use oxivgl::{
     layout::{FlexAlign, FlexFlow, GridAlign, GridCell, Layout, GRID_TEMPLATE_LAST},
     widgets::{
         detach, Align, Arc, AsLvHandle, Bar, Button, Buttonmatrix, Checkbox, Child, Dropdown,
-        Image, Keyboard, KeyboardMode, Label, Led, Line, Obj, Part, Roller, RollerMode, Screen,
-        Slider, Switch, Textarea, ValueLabel, WidgetError, RADIUS_MAX,
+        Image, Keyboard, KeyboardMode, Label, Led, Line, Menu, MenuHeaderMode, Msgbox, Obj, Part,
+        Roller, RollerMode, Screen, Slider, Switch, Textarea, ValueLabel, WidgetError, RADIUS_MAX,
     },
 };
 
@@ -2531,4 +2531,182 @@ fn obj_from_raw_non_owning() {
     // obj still valid after child_ref dropped (non-owning)
     pump();
     assert_eq!(obj.get_width(), 77);
+}
+
+// ── Menu ──────────────────────────────────────────────────────────────────────
+
+#[test]
+fn menu_create() {
+    let screen = fresh_screen();
+    let menu = Menu::new(&screen).unwrap();
+    pump();
+    drop(menu);
+    pump();
+}
+
+#[test]
+fn menu_page_create_untitled() {
+    let screen = fresh_screen();
+    let menu = Menu::new(&screen).unwrap();
+    let page = menu.page_create(None);
+    let cont = Menu::cont_create(&page);
+    let lbl = Label::new(&cont).unwrap();
+    lbl.text("Test");
+    menu.set_page(&page);
+    pump();
+}
+
+#[test]
+fn menu_page_create_titled() {
+    let screen = fresh_screen();
+    let menu = Menu::new(&screen).unwrap();
+    let page = menu.page_create(Some("My Page"));
+    menu.set_page(&page);
+    pump();
+}
+
+#[test]
+fn menu_set_load_page_event() {
+    let screen = fresh_screen();
+    let menu = Menu::new(&screen).unwrap();
+    let sub = menu.page_create(None);
+    let cont_sub = Menu::cont_create(&sub);
+    let lbl = Label::new(&cont_sub).unwrap();
+    lbl.text("Sub");
+
+    let main = menu.page_create(None);
+    let cont = Menu::cont_create(&main);
+    let lbl2 = Label::new(&cont).unwrap();
+    lbl2.text("Click me");
+    menu.set_load_page_event(&cont, &sub);
+    menu.set_page(&main);
+    pump();
+}
+
+#[test]
+fn menu_section_and_separator() {
+    let screen = fresh_screen();
+    let menu = Menu::new(&screen).unwrap();
+    let page = menu.page_create(None);
+    Menu::separator_create(&page);
+    let section = Menu::section_create(&page);
+    let cont = Menu::cont_create(&section);
+    let lbl = Label::new(&cont).unwrap();
+    lbl.text("In section");
+    menu.set_page(&page);
+    pump();
+}
+
+#[test]
+fn menu_root_back_button() {
+    let screen = fresh_screen();
+    let menu = Menu::new(&screen).unwrap();
+    menu.set_mode_root_back_button(true);
+    let page = menu.page_create(None);
+    menu.set_page(&page);
+    pump();
+    let back_btn = menu.get_main_header_back_button();
+    // back_button_is_root should work
+    let _is_root = menu.back_button_is_root(&back_btn);
+    pump();
+}
+
+#[test]
+fn menu_header_mode() {
+    let screen = fresh_screen();
+    let menu = Menu::new(&screen).unwrap();
+    menu.set_mode_header(MenuHeaderMode::BottomFixed);
+    pump();
+}
+
+#[test]
+fn menu_sidebar() {
+    let screen = fresh_screen();
+    let menu = Menu::new(&screen).unwrap();
+    menu.size(320, 240);
+    let page = menu.page_create(Some("Root"));
+    let cont = Menu::cont_create(&page);
+    let lbl = Label::new(&cont).unwrap();
+    lbl.text("Item");
+    menu.set_sidebar_page(&page);
+    pump();
+    assert!(menu.get_cur_sidebar_page().is_some());
+    menu.clear_sidebar();
+    pump();
+}
+
+#[test]
+fn menu_clear_history() {
+    let screen = fresh_screen();
+    let menu = Menu::new(&screen).unwrap();
+    let page = menu.page_create(None);
+    menu.set_page(&page);
+    pump();
+    menu.clear_history();
+    pump();
+}
+
+#[test]
+fn menu_get_cur_main_page() {
+    let screen = fresh_screen();
+    let menu = Menu::new(&screen).unwrap();
+    let page = menu.page_create(None);
+    menu.set_page(&page);
+    pump();
+    assert!(menu.get_cur_main_page().is_some());
+}
+
+#[test]
+fn menu_get_main_header() {
+    let screen = fresh_screen();
+    let menu = Menu::new(&screen).unwrap();
+    let _header = menu.get_main_header();
+    pump();
+}
+
+// ── Msgbox ────────────────────────────────────────────────────────────────────
+
+#[test]
+fn msgbox_create_modal() {
+    let screen = fresh_screen();
+    let mbox = Msgbox::new(None::<&Obj<'_>>).unwrap();
+    mbox.add_title("Test Title");
+    mbox.add_text("Test body");
+    mbox.add_close_button();
+    pump();
+    mbox.close();
+    pump();
+    let _ = screen; // keep screen alive
+}
+
+#[test]
+fn msgbox_create_on_parent() {
+    let screen = fresh_screen();
+    let mbox = Msgbox::new(Some(&screen)).unwrap();
+    mbox.add_title("Hello");
+    mbox.add_text("Text");
+    pump();
+}
+
+#[test]
+fn msgbox_footer_button() {
+    let screen = fresh_screen();
+    let mbox = Msgbox::new(None::<&Obj<'_>>).unwrap();
+    mbox.add_title("Confirm");
+    mbox.add_text("Are you sure?");
+    let _btn = mbox.add_footer_button("OK");
+    pump();
+    mbox.close();
+    pump();
+    let _ = screen;
+}
+
+// ── Image::set_src_symbol ─────────────────────────────────────────────────────
+
+#[test]
+fn image_set_src_symbol() {
+    let screen = fresh_screen();
+    let img = Image::new(&screen).unwrap();
+    img.set_src_symbol(&oxivgl::symbols::SETTINGS);
+    pump();
 }
