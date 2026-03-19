@@ -393,6 +393,30 @@ impl<'p> Obj<'p> {
         self
     }
 
+    /// Set arc color for the given style selector.
+    pub fn style_arc_color(
+        &self,
+        color: lv_color_t,
+        selector: impl Into<crate::style::Selector>,
+    ) -> &Self {
+        let selector = selector.into().raw();
+        assert_ne!(self.handle(), null_mut(), "Obj handle cannot be null");
+        unsafe { lv_obj_set_style_arc_color(self.handle(), color, selector) };
+        self
+    }
+
+    /// Set arc rounded end-caps for the given style selector.
+    pub fn style_arc_rounded(
+        &self,
+        rounded: bool,
+        selector: impl Into<crate::style::Selector>,
+    ) -> &Self {
+        let selector = selector.into().raw();
+        assert_ne!(self.handle(), null_mut(), "Obj handle cannot be null");
+        unsafe { lv_obj_set_style_arc_rounded(self.handle(), rounded, selector) };
+        self
+    }
+
     /// Set line color for the given style selector.
     pub fn style_line_color(
         &self,

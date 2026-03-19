@@ -6,21 +6,22 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
 //! Widget Button 1 — Click and toggle buttons
 //!
-//! Two buttons: a standard button that logs clicks and a checkable toggle
-//! button that logs state changes.
+//! Two buttons: a standard button with a click counter and a checkable toggle
+//! button whose label reflects ON/OFF state.
 
 use oxivgl::{
-    view::View,
-    enums::{EventCode, ObjFlag},
+    enums::{EventCode, ObjFlag, ObjState},
     event::Event,
+    view::{register_event_on, View},
     widgets::{Align, Button, Label, Screen, WidgetError},
 };
 
 struct WidgetButton1 {
     btn1: Button<'static>,
     btn2: Button<'static>,
-    _label1: Label<'static>,
-    _label2: Label<'static>,
+    label1: Label<'static>,
+    label2: Label<'static>,
+    cnt: u32,
 }
 
 impl View for WidgetButton1 {
@@ -46,17 +47,30 @@ impl View for WidgetButton1 {
         Ok(Self {
             btn1,
             btn2,
-            _label1: label1,
-            _label2: label2,
+            label1,
+            label2,
+            cnt: 0,
         })
+    }
+
+    fn register_events(&mut self) {
+        register_event_on(self, self.btn1.handle());
+        register_event_on(self, self.btn2.handle());
     }
 
     fn on_event(&mut self, event: &Event) {
         if event.matches(&self.btn1, EventCode::CLICKED) {
-            // Button clicked
+            self.cnt += 1;
+            let mut buf = heapless::String::<16>::new();
+            let _ = core::fmt::Write::write_fmt(&mut buf, format_args!("Button: {}", self.cnt));
+            self.label1.text(&buf);
         }
         if event.matches(&self.btn2, EventCode::VALUE_CHANGED) {
-            // Toggle changed
+            if self.btn2.has_state(ObjState::CHECKED) {
+                self.label2.text("ON");
+            } else {
+                self.label2.text("OFF");
+            }
         }
     }
 

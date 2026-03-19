@@ -6,9 +6,9 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
 //! Event Trickle — Demonstrate event trickle-down
 //!
-//! TODO: Hardware target (fire27) has no touch screen yet — press events
-//! require an input device to trigger. The GUI is fully wired; only the
-//! physical input is missing.
+//! Container with `EVENT_TRICKLE` flag and 9 sub-objects. Pressing the
+//! container trickles the PRESSED state to children (black background).
+//! Focusing a child applies FOCUSED state (also black background).
 
 use oxivgl::{
     style::{color_black, color_white, Style, StyleBuilder},
@@ -28,13 +28,6 @@ struct EventTrickle {
 impl View for EventTrickle {
     fn create() -> Result<Self, WidgetError> {
         let screen = Screen::active().ok_or(WidgetError::LvglNullPointer)?;
-
-        // TODO: No touch input on fire27 hardware — press/focus events won't
-        // fire until an input device is connected.
-        #[cfg(target_arch = "xtensa")]
-        oxivgl_examples_common::warn!(
-            "event_trickle: no touch input — press events require input device"
-        );
 
         let mut style_black = StyleBuilder::new();
         style_black
