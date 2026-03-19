@@ -243,6 +243,14 @@ impl<'p> Obj<'p> {
         }
     }
 
+    /// Create a non-owning reference to an LVGL object from a raw pointer.
+    ///
+    /// The returned `Child<Obj>` will NOT call `lv_obj_delete` on drop.
+    /// Use when you have a raw pointer from an event or stored handle.
+    pub fn from_raw_non_owning(ptr: *mut lv_obj_t) -> super::Child<Self> {
+        super::Child::new(Obj::from_raw(ptr))
+    }
+
     /// Wrap a raw LVGL pointer. `ptr` must be non-null and owned by the caller.
     pub(crate) fn from_raw(ptr: *mut lv_obj_t) -> Self {
         Obj {
@@ -646,5 +654,37 @@ impl<'p> Obj<'p> {
         } else {
             Some(super::Child::new(Obj::from_raw(child_ptr)))
         }
+    }
+
+    /// Move this object to a specific position among its siblings.
+    ///
+    /// Index 0 = background (behind all siblings). Values beyond the child
+    /// count are clamped by LVGL.
+    pub fn move_to_index(&self, index: i32) -> &Self {
+        assert_ne!(self.handle, null_mut());
+        // SAFETY: handle non-null (asserted above).
+        unsafe { lv_obj_move_to_index(self.handle, index) };
+        self
+    }
+
+    /// Get this object's index among its parent's children. Returns -1 if
+    /// the object has no parent.
+    pub fn get_index(&self) -> i32 {
+        assert_ne!(self.handle, null_mut());
+        // SAFETY: handle non-null (asserted above).
+        unsafe { lv_obj_get_index(self.handle) }
+    }
+
+    /// Move this object to the background (behind all siblings).
+    /// Equivalent to `move_to_index(0)`.
+    pub fn move_background(&self) -> &Self {
+        self.move_to_index(0)
+    }
+
+    /// Get the right padding style value for the given part.
+    pub fn get_style_pad_right(&self, part: super::obj::Part) -> i32 {
+        assert_ne!(self.handle, null_mut());
+        // SAFETY: handle non-null (asserted above).
+        unsafe { lv_obj_get_style_pad_right(self.handle, part as u32) }
     }
 }

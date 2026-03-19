@@ -256,7 +256,7 @@
 #endif
 #define LV_USE_LED        1
 #define LV_USE_LINE       1
-#define LV_USE_LIST       0
+#define LV_USE_LIST       1
 #define LV_USE_LOTTIE     0
 #define LV_USE_MENU       0
 #define LV_USE_MSGBOX     0

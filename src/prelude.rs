@@ -28,7 +28,7 @@ pub use crate::layout::{
 pub use crate::widgets::{
     Align, Arc, ArcMode, AsLvHandle, Bar, BarMode, BaseDir, Button, Buttonmatrix, ButtonmatrixMap,
     Chart, ChartAxis, ChartSeries, ChartType, Checkbox, Child, DdDir, Dropdown, Image, ImageAlign,
-    Keyboard, KeyboardMode, Label, LabelLongMode, Led, Line, Matrix, Obj, Part, Roller,
+    Keyboard, KeyboardMode, Label, LabelLongMode, Led, Line, List, Matrix, Obj, Part, Roller,
     RollerMode, Scale, ScaleBuilder, ScaleLabels, ScaleMode, ScaleSection, Screen, Slider,
     SliderMode, Switch, SwitchOrientation, Textarea, TextAlign, ValueLabel, WidgetError,
     RADIUS_MAX, SCALE_LABEL_ROTATE_KEEP_UPRIGHT, SCALE_LABEL_ROTATE_MATCH_TICKS,
@@ -44,6 +44,9 @@ pub use crate::style::{
 
 // Math utilities
 pub use crate::math::{bezier3, map, trigo_cos, trigo_sin, BEZIER_VAL_MAX, TRIGO_SHIFT};
+
+// Symbol icons
+pub use crate::symbols::Symbol;
 
 // Animation system
 pub use crate::anim::{

@@ -30,7 +30,7 @@ ALL_EXAMPLES=(
     event_{click,button,bubble,trickle,streak}
     flex{1,2,3,4,5,6}
     grid{1,2,3,4,5,6}
-    scroll{1,2,4}
+    scroll{1,2,3,4}
     widget_obj{1,2,3}
     widget_arc{1,2,3}
     image1
@@ -41,6 +41,7 @@ ALL_EXAMPLES=(
     widget_image{2,3,4,5}
     widget_label{1,2,5}
     widget_led1
+    widget_list{1,2}
     widget_line1
     widget_roller{1,2}
     widget_scale{1,2,3,4,5,6,7,8,9,10,11}
