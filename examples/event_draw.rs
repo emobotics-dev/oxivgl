@@ -16,7 +16,7 @@ use oxivgl::{
     event::Event,
     style::color_make,
     view::{register_event_on, View},
-    widgets::{Align, AsLvHandle, Obj, Part, Screen, WidgetError},
+    widgets::{Align, Obj, Part, Screen, WidgetError},
 };
 
 struct EventDraw {
