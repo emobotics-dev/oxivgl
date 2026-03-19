@@ -508,4 +508,28 @@ impl<'p> Obj<'p> {
         unsafe { lv_obj_set_style_size(self.handle(), w, h, selector) };
         self
     }
+
+    /// Set background image source to a symbol string for the given selector.
+    ///
+    /// LVGL stores the raw pointer — the [`Symbol`](crate::symbols::Symbol)
+    /// must be `'static` (all constants in [`symbols`](crate::symbols) are).
+    pub fn style_bg_image_src_symbol(
+        &self,
+        symbol: &crate::symbols::Symbol,
+        selector: impl Into<crate::style::Selector>,
+    ) -> &Self {
+        let selector = selector.into().raw();
+        assert_ne!(self.handle(), null_mut(), "Obj handle cannot be null");
+        // SAFETY: handle non-null; symbol is a 'static NUL-terminated byte
+        // slice. LVGL stores the pointer in the style property map — the
+        // static lifetime guarantees it outlives the widget.
+        unsafe {
+            lv_obj_set_style_bg_image_src(
+                self.handle(),
+                symbol.as_ptr() as *const core::ffi::c_void,
+                selector,
+            )
+        };
+        self
+    }
 }

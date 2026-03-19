@@ -2425,3 +2425,110 @@ fn part_cursor_value() {
     assert_eq!(Part::Cursor as u32, 0x060000);
     assert_eq!(Part::from_raw(0x060000), Part::Cursor);
 }
+
+// ── List ──────────────────────────────────────────────────────────────────────
+
+#[test]
+fn list_create() {
+    let screen = fresh_screen();
+    let list = oxivgl::widgets::List::new(&screen).unwrap();
+    pump();
+    assert!(list.get_width() > 0);
+}
+
+#[test]
+fn list_add_text() {
+    let screen = fresh_screen();
+    let list = oxivgl::widgets::List::new(&screen).unwrap();
+    list.add_text("Section");
+    pump();
+    assert!(list.get_child_count() > 0);
+}
+
+#[test]
+fn list_add_button_and_get_text() {
+    let screen = fresh_screen();
+    let list = oxivgl::widgets::List::new(&screen).unwrap();
+    let btn = list.add_button(Some(&oxivgl::symbols::FILE), "Open");
+    pump();
+    let text = list.get_button_text(&*btn);
+    assert_eq!(text, Some("Open"));
+}
+
+#[test]
+fn list_add_button_no_icon() {
+    let screen = fresh_screen();
+    let list = oxivgl::widgets::List::new(&screen).unwrap();
+    let btn = list.add_button(None, "NoIcon");
+    pump();
+    assert_eq!(list.get_button_text(&*btn), Some("NoIcon"));
+}
+
+#[test]
+fn list_multiple_sections() {
+    let screen = fresh_screen();
+    let list = oxivgl::widgets::List::new(&screen).unwrap();
+    list.add_text("A");
+    list.add_button(Some(&oxivgl::symbols::OK), "Item1");
+    list.add_text("B");
+    list.add_button(None, "Item2");
+    pump();
+    // 2 text labels + 2 buttons = 4 children
+    assert_eq!(list.get_child_count(), 4);
+}
+
+// ── Obj::move_to_index / get_index / move_background ─────────────────────────
+
+#[test]
+fn obj_move_to_index_and_get_index() {
+    let screen = fresh_screen();
+    let parent = Obj::new(&screen).unwrap();
+    let c0 = Obj::new(&parent).unwrap();
+    let c1 = Obj::new(&parent).unwrap();
+    let c2 = Obj::new(&parent).unwrap();
+    pump();
+    assert_eq!(c2.get_index(), 2);
+    c2.move_to_index(0);
+    pump();
+    assert_eq!(c2.get_index(), 0);
+    // c0 and c1 shifted
+    assert_eq!(c0.get_index(), 1);
+    assert_eq!(c1.get_index(), 2);
+}
+
+#[test]
+fn obj_move_background() {
+    let screen = fresh_screen();
+    let parent = Obj::new(&screen).unwrap();
+    let _c0 = Obj::new(&parent).unwrap();
+    let c1 = Obj::new(&parent).unwrap();
+    pump();
+    assert_eq!(c1.get_index(), 1);
+    c1.move_background();
+    pump();
+    assert_eq!(c1.get_index(), 0);
+}
+
+#[test]
+fn obj_get_style_pad_right() {
+    let screen = fresh_screen();
+    let obj = Obj::new(&screen).unwrap();
+    obj.pad_right(12);
+    pump();
+    assert_eq!(obj.get_style_pad_right(Part::Main), 12);
+}
+
+#[test]
+fn obj_from_raw_non_owning() {
+    let screen = fresh_screen();
+    let obj = Obj::new(&screen).unwrap();
+    let handle = obj.lv_handle();
+    {
+        let child_ref = Obj::from_raw_non_owning(handle);
+        child_ref.size(77, 33);
+        pump();
+    }
+    // obj still valid after child_ref dropped (non-owning)
+    pump();
+    assert_eq!(obj.get_width(), 77);
+}

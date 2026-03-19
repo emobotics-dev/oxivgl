@@ -25,6 +25,7 @@ runner (`example_main!` macro selects host SDL2 or ESP32 fire27 backend).
 - [Widgets — Label](#widgets--label)
 - [Widgets — LED](#widgets--led)
 - [Widgets — Line](#widgets--line)
+- [Widgets — List](#widgets--list)
 - [Widgets — Roller](#widgets--roller)
 - [Widgets — Scale](#widgets--scale)
 - [Widgets — Slider](#widgets--slider)
@@ -368,6 +369,13 @@ A switch toggles "scroll one" mode.
 
 ![scroll2](screenshots/scroll2.png)
 
+### Scroll 3 — Floating Button in List
+
+A list with initial tracks and a floating "+" button. Clicking the button
+adds a new track and scrolls it into view.
+
+![scroll3](screenshots/scroll3.png)
+
 ### Scroll 4 — Scrollbar Styling
 
 Custom blue rounded scrollbar that widens and becomes fully opaque when
@@ -377,7 +385,6 @@ actively scrolling, with animated transitions.
 
 ### Skipped
 
-- **Scroll 3** — Floating button in list (needs `LV_USE_LIST`, List wrapper)
 - **Scroll 5** — RTL scrolling (needs `LV_FONT_DEJAVU_16_PERSIAN_HEBREW`)
 - **Scroll 6** — Curved scroll (needs `lv_obj_get_coords`, `lv_sqrt`, `lv_map`)
 - **Scroll 7** — Dynamic widget loading (needs `lv_obj_move_to_index`, Checkbox wrapper)
@@ -591,6 +598,22 @@ Blue line through 5 points with 8px width and rounded ends.
 
 ![widget_line1](screenshots/widget_line1.png)
 
+## Widgets — List
+
+### Widget List 1 — File/Connectivity/Exit Sections
+
+A list with text section headers and icon+text buttons. Clicking a button
+identifies it by text via the View event handler.
+
+![widget_list1](screenshots/widget_list1.png)
+
+### Widget List 2 — Reorderable List
+
+Left panel with 15 selectable items. Right panel with Top/Up/Center/Down/Bottom/Shuffle
+control buttons to reorder the selected item.
+
+![widget_list2](screenshots/widget_list2.png)
+
 ## Widgets — Roller
 
 ### Widget Roller 1 — Month Roller
@@ -762,7 +785,7 @@ Status of all [LVGL 9.3 examples](https://docs.lvgl.io/9.3/examples.html) in oxi
 | Events | 5 | 4 (+1 extra trickle) | 1 | event_draw (timer API) |
 | Flex | 6 | 6 | 0 | |
 | Grid | 6 | 6 | 0 | |
-| Scroll | 8 | 3 | 5 | scroll3 (List), scroll5 (font), scroll6–8 (APIs) |
+| Scroll | 8 | 4 | 4 | scroll5 (font), scroll6–8 (APIs) |
 
 ### Widget Examples (wrapper exists)
 
@@ -778,6 +801,7 @@ Status of all [LVGL 9.3 examples](https://docs.lvgl.io/9.3/examples.html) in oxi
 | label | 6 | 3 | 3 | label3 (RTL fonts), label4 (canvas mask), label6 (custom font) |
 | led | 1 | 1 | 0 | |
 | line | 1 | 1 | 0 | |
+| list | 2 | 2 | 0 | |
 | roller | 3 | 2 | 1 | roller3 (needs canvas/mask API) |
 | scale | 11 | 11 | 0 | |
 | slider | 4 | 4 | 0 | |
@@ -786,17 +810,17 @@ Status of all [LVGL 9.3 examples](https://docs.lvgl.io/9.3/examples.html) in oxi
 
 ### Widgets Without Wrappers
 
-animimg, calendar, canvas, imagebutton, list, lottie, menu, msgbox, span, spinbox, spinner, table, tabview, tileview, win.
+animimg, calendar, canvas, imagebutton, lottie, menu, msgbox, span, spinbox, spinner, table, tabview, tileview, win.
 
 ### Totals
 
 | | Count |
 |---|---|
 | LVGL examples total | ~184 |
-| oxivgl done | 104 |
-| Skipped (intentional) | 7 |
+| oxivgl done | 107 |
+| Skipped (intentional) | 6 |
 | Missing (wrapper exists) | 5 |
-| No wrapper | ~64 |
+| No wrapper | ~62 |
 
 ## Running
 

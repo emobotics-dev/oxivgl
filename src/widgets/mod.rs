@@ -29,6 +29,7 @@ mod image;
 mod keyboard;
 mod label;
 mod led;
+mod list;
 mod line;
 mod obj;
 mod obj_layout;
@@ -54,6 +55,7 @@ pub use keyboard::{Keyboard, KeyboardMode};
 pub use label::{Label, LabelLongMode};
 pub use led::Led;
 pub use line::Line;
+pub use list::List;
 pub use obj::{
     Align, AsLvHandle, BaseDir, Matrix, Obj, Part, TextAlign,
 };

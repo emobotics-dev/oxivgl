@@ -546,3 +546,16 @@ fn leak_keyboard() {
         drop(kb);
     });
 }
+
+#[test]
+fn leak_list() {
+    use oxivgl::widgets::List;
+    // List + 1 text label + 2 buttons (each button has icon+label children) = ~7 widgets
+    assert_no_leak("List", 7, |screen| {
+        let list = List::new(screen).unwrap();
+        list.add_text("Section");
+        list.add_button(Some(&oxivgl::symbols::FILE), "Open");
+        list.add_button(None, "Close");
+        drop(list);
+    });
+}
