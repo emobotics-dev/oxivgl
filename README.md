@@ -63,6 +63,14 @@ context they need to contribute effectively.
 | `Label`, `Button`, `Arc`, `Bar`, `Slider` | `widgets` | Common widget wrappers |
 | `Switch`, `Checkbox`, `Led`, `Dropdown`, `Roller` | `widgets` | Input/indicator widgets |
 | `Image`, `Line`, `Scale` | `widgets` | Visual/gauge widgets |
+| `Chart` | `widgets` | Chart widget (line, bar, scatter) |
+| `Textarea` | `widgets` | Single/multi-line text input |
+| `Buttonmatrix` | `widgets` | Matrix of buttons |
+| `Keyboard` | `widgets` | On-screen virtual keyboard (linked to `Textarea`) |
+| `List` | `widgets` | Scrollable list with icon+text buttons |
+| `Menu` | `widgets` | Hierarchical menu with pages |
+| `Msgbox` | `widgets` | Modal dialog with title, text, and buttons |
+| `ValueLabel` | `widgets` | Label that formats a numeric value with a unit string |
 | `Child<W>` | `widgets` | Non-owning wrapper — suppresses `Drop` (parent owns) |
 | `ScaleBuilder` | `widgets` | Builder for `Scale` widget configuration |
 
@@ -100,7 +108,10 @@ context they need to contribute effectively.
 |------|--------|------|
 | `DrawTask` | `draw` | Non-owning handle to LVGL draw task (callback-scoped) |
 | `DrawDscBase` | `draw` | Base descriptor: part, id1, id2 (value copy) |
-| `DrawLabelDsc` | `draw` | Mutable label descriptor: color, text, font |
+| `DrawLabelDsc` | `draw` | Borrowed label descriptor: color, text, font |
+| `DrawLabelDscOwned` | `draw` | Owned label draw descriptor |
+| `DrawRectDsc` | `draw` | Owned rect draw descriptor with builder setters |
+| `Layer` | `draw` | Non-owning draw layer handle; `draw_rect()`, `draw_label()` for custom rendering |
 | `Area` | `draw` | Rectangle area (x1, y1, x2, y2) |
 
 **Display & buffers** — DMA-aligned double-buffering for ESP32.
@@ -121,6 +132,9 @@ context they need to contribute effectively.
 | `Align` | `widgets` | 21 alignment positions including `Out*` variants |
 | `FlexFlow`, `FlexAlign` | `layout` | Flexbox layout parameters |
 | `GridAlign`, `GridCell` | `layout` | Grid layout parameters |
+| `Symbol` / `symbols` | `symbols` | LVGL built-in icon symbols (Font Awesome subset); `'static` NUL-terminated byte slices |
+
+**Prelude** — `use oxivgl::prelude::*` imports all common types including draw primitives, widgets, styles, and animations.
 
 ## Memory Safety Across the FFI Boundary
 
@@ -137,14 +151,14 @@ These guarantees are verified by [integration tests](#testing) that exercise sty
 
 ## Examples
 
-107 ported LVGL examples covering getting started, styles, animations, events, layouts, scrolling, and individual widgets. Each is a self-contained `View` impl — runs on host SDL2 or ESP32 with zero code changes.
+118 ported LVGL examples covering getting started, styles, animations, events, layouts, scrolling, and individual widgets. Each is a self-contained `View` impl — runs on host SDL2 or ESP32 with zero code changes.
 
 **[Browse the full gallery with screenshots](examples/doc/README.md)**
 
 ```sh
 ./run_host.sh getting_started1      # interactive SDL2 window
 ./run_host.sh -s getting_started1   # headless screenshot
-./run_host.sh -s                    # screenshot all 107 examples
+./run_host.sh -s                    # screenshot all 118 examples
 ./run_fire27.sh event_trickle       # flash to ESP32
 ```
 
@@ -161,13 +175,13 @@ LVGL's widget tree, layout engine, and style system are pure C — platform-inde
 
 ## Testing
 
-172 automated tests across three tiers — all run on host without hardware:
+300 automated tests across three tiers — all run on host without hardware:
 
 | Tier | Count | What it covers |
 |------|-------|----------------|
 | **Unit** | 38 | Pure logic — enums, value mapping, style bitflags, grid helpers |
-| **Integration** | 99 | Full LVGL instance — widget lifecycle, style add/remove/drop ordering, layout, events, every widget type |
-| **Leak detection** | 25 | Global heap tracking via `mallinfo2()` — catches leaks in both Rust and LVGL's C code across the FFI boundary |
+| **Integration** | 229 | Full LVGL instance — widget lifecycle, style add/remove/drop ordering, layout, events, every widget type |
+| **Leak detection** | 33 | Global heap tracking via `mallinfo2()` — catches leaks in both Rust and LVGL's C code across the FFI boundary |
 | **Visual** | 100 | Screenshot capture + comparison against LVGL reference docs |
 
 ```sh
