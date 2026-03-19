@@ -28,18 +28,20 @@ pub use crate::layout::{
 pub use crate::widgets::{
     Align, Arc, ArcMode, AsLvHandle, Bar, BarMode, BaseDir, Button, Buttonmatrix, ButtonmatrixMap,
     Chart, ChartAxis, ChartSeries, ChartType, Checkbox, Child, DdDir, Dropdown, Image, ImageAlign,
-    Keyboard, KeyboardMode, Label, LabelLongMode, Led, Line, List, Matrix, Obj, Part, Roller,
-    RollerMode, Scale, ScaleBuilder, ScaleLabels, ScaleMode, ScaleSection, Screen, Slider,
-    SliderMode, Switch, SwitchOrientation, Textarea, TextAlign, ValueLabel, WidgetError,
-    RADIUS_MAX, SCALE_LABEL_ROTATE_KEEP_UPRIGHT, SCALE_LABEL_ROTATE_MATCH_TICKS,
+    Keyboard, KeyboardMode, Label, LabelLongMode, Led, Line, List, Matrix, Menu, MenuHeaderMode,
+    Msgbox, Obj, Part, Roller, RollerMode, Scale, ScaleBuilder, ScaleLabels, ScaleMode,
+    ScaleSection, Screen, Slider, SliderMode, Switch, SwitchOrientation, Textarea, TextAlign,
+    ValueLabel, WidgetError, RADIUS_MAX, SCALE_LABEL_ROTATE_KEEP_UPRIGHT,
+    SCALE_LABEL_ROTATE_MATCH_TICKS,
 };
 pub use crate::widgets::{lv_color_t, lv_image_dsc_t, lv_point_precise_t};
 
 // Style system
 pub use crate::style::{
-    color_black, color_make, color_white, darken_filter_cb, lv_pct, palette_darken,
-    palette_lighten, palette_main, props, BorderSide, ColorFilter, GradDir, GradDsc, GradExtend,
-    Palette, Selector, Style, StyleBuilder, TextDecor, Theme, TransitionDsc, LV_SIZE_CONTENT,
+    color_black, color_brightness, color_darken, color_make, color_white, darken_filter_cb, lv_pct,
+    palette_darken, palette_lighten, palette_main, props, BorderSide, ColorFilter, GradDir, GradDsc,
+    GradExtend, Palette, Selector, Style, StyleBuilder, TextDecor, Theme, TransitionDsc,
+    LV_SIZE_CONTENT,
 };
 
 // Math utilities
