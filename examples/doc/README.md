@@ -265,10 +265,15 @@ Button reports pressed, clicked, long-pressed, and long-pressed-repeat events to
 
 ![event_trickle](screenshots/event_trickle.png)
 
+### Event Streak — Short-Click Streak Counting
+
+Button reports short-clicked (with streak count), single-clicked, double-clicked, and triple-clicked events to labels.
+
+![event_streak](screenshots/event_streak.png)
+
 ### Skipped
 
 - **Event Draw** — needs `lv_timer_create` + draw task APIs
-- **Event Streak** — needs `lv_indev_get_short_click_streak` (requires input device)
 
 ## Layouts — Flex
 
@@ -391,9 +396,11 @@ Centered object with animated scale + rotation via 3×3 matrix transform.
 
 ![widget_obj3](screenshots/widget_obj3.png)
 
-### Skipped
+### Widget Obj 2 — Draggable Object
 
-- **Widget Obj 2** — Draggable object (needs `lv_indev_active`, `lv_indev_get_vect` APIs)
+A base object that follows the pointer when pressed, using indev movement vector.
+
+![widget_obj2](screenshots/widget_obj2.png)
 
 ## Widgets — Animation Image
 
@@ -654,6 +661,20 @@ Round gauge with timer-driven needle oscillating between 80–180 BPM.
 
 ![widget_scale10](screenshots/widget_scale10.png)
 
+### Widget Scale 7 — Custom Major Tick Label Color and Text
+
+Horizontal scale with a `DRAW_TASK_ADDED` handler that recolors major tick labels
+with a rainbow palette and reformats numeric text as one-decimal floats.
+
+![widget_scale7](screenshots/widget_scale7.png)
+
+### Widget Scale 11 — 24-Hour Clock Face
+
+Round scale with custom hour labels, day/night colored arc sections, and
+highlighted cardinal hour labels (06/12/18/24 white, rest grey).
+
+![widget_scale11](screenshots/widget_scale11.png)
+
 ## Widgets — Slider
 
 ### Widget Slider 1 — Slider with Value Label
@@ -707,7 +728,7 @@ Status of all [LVGL 9.3 examples](https://docs.lvgl.io/9.3/examples.html) in oxi
 | Getting Started | 4 | 4 (+4 extra gradient examples) | 0 | |
 | Styles | 19 | 18 | 1 | style19 (meta/benchmarking) |
 | Animations | 5 | 5 | 0 | |
-| Events | 5 | 3 (+1 extra trickle) | 2 | event_draw (timer API), event_streak (indev API) |
+| Events | 5 | 4 (+1 extra trickle) | 1 | event_draw (timer API) |
 | Flex | 6 | 6 | 0 | |
 | Grid | 6 | 6 | 0 | |
 | Scroll | 8 | 3 | 5 | scroll3 (List), scroll5 (font), scroll6–8 (APIs) |
@@ -716,7 +737,7 @@ Status of all [LVGL 9.3 examples](https://docs.lvgl.io/9.3/examples.html) in oxi
 
 | Widget | LVGL | Done | Missing | Notes |
 |---|---|---|---|---|
-| obj | 3 | 2 | 0 | obj2 skipped (needs indev API) |
+| obj | 3 | 3 | 0 | |
 | arc | 3 | 3 | 0 | |
 | bar | 7 | 6 | 1 | bar6 (needs custom draw event) |
 | button | 3 | 3 | 0 | |
@@ -727,7 +748,7 @@ Status of all [LVGL 9.3 examples](https://docs.lvgl.io/9.3/examples.html) in oxi
 | led | 1 | 1 | 0 | |
 | line | 1 | 1 | 0 | |
 | roller | 3 | 2 | 1 | roller3 (needs canvas/mask API) |
-| scale | 11 | 9 | 2 | scale7 (draw task), scale11 (draw task) |
+| scale | 11 | 11 | 0 | |
 | slider | 4 | 4 | 0 | |
 | switch | 2 | 2 | 0 | |
 
@@ -740,9 +761,9 @@ animimg, buttonmatrix, calendar, canvas, imagebutton, keyboard, list, lottie, me
 | | Count |
 |---|---|
 | LVGL examples total | ~184 |
-| oxivgl done | 97 |
-| Skipped (intentional) | 9 |
-| Missing (wrapper exists) | ~6 |
+| oxivgl done | 100 |
+| Skipped (intentional) | 7 |
+| Missing (wrapper exists) | ~5 |
 | No wrapper | ~68 |
 
 ## Running

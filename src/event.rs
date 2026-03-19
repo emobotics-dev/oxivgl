@@ -3,6 +3,7 @@
 
 use lvgl_rust_sys::*;
 
+use crate::draw::DrawTask;
 use crate::enums::EventCode;
 use crate::widgets::{AsLvHandle, Child, Obj};
 
@@ -69,5 +70,19 @@ impl Event {
         let selector = selector.into().raw();
         // SAFETY: target_handle() returns a valid LVGL object for callback duration.
         unsafe { lv_obj_set_style_bg_color(self.target_handle(), color, selector) };
+    }
+
+    /// Get the draw task associated with a `DRAW_TASK_ADDED` event.
+    ///
+    /// Returns `None` if the event has no draw task (wrong event type).
+    /// The returned handle is valid only for the duration of this callback.
+    pub fn draw_task(&self) -> Option<DrawTask> {
+        // SAFETY: raw pointer valid for callback duration.
+        let ptr = unsafe { lv_event_get_draw_task(self.raw) };
+        if ptr.is_null() {
+            None
+        } else {
+            Some(DrawTask::from_raw(ptr))
+        }
     }
 }

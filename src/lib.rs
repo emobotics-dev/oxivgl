@@ -35,6 +35,10 @@ pub mod enums;
 pub mod layout;
 /// Type-safe LVGL widget wrappers.
 pub mod widgets;
+/// Draw task wrappers for DRAW_TASK_ADDED handlers.
+pub mod draw;
+/// Input device queries.
+pub mod indev;
 /// Screen capture (host-only).
 #[cfg(not(target_os = "none"))]
 pub mod snapshot;

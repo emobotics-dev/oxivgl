@@ -126,6 +126,11 @@ impl<'p> Scale<'p> {
         self
     }
 
+    /// Get the major tick interval.
+    pub fn get_major_tick_every(&self) -> i32 {
+        unsafe { lv_scale_get_major_tick_every(self.lv_handle()) }
+    }
+
     /// Add a styled section to the scale. Returns a handle for further configuration.
     /// Add a styled section. The returned handle borrows this scale and
     /// cannot outlive it (LVGL frees sections in the scale destructor).
