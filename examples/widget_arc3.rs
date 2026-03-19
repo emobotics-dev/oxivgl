@@ -10,6 +10,7 @@
 //! it outward; clicking again or clicking another slice animates it back.
 
 extern crate alloc;
+use alloc::vec::Vec;
 
 use oxivgl::{
     anim::{anim_set_x, anim_set_y, Anim},
@@ -85,12 +86,9 @@ impl View for WidgetArc3 {
         cont.remove_flag(ObjFlag::SCROLLABLE);
 
         let mut angle_accum: f32 = 0.0;
-        let mut arcs_arr: [core::mem::MaybeUninit<Arc<'static>>; NUM_SLICES] =
-            unsafe { core::mem::MaybeUninit::uninit().assume_init() };
-        let mut labels_arr: [core::mem::MaybeUninit<Label<'static>>; NUM_SLICES] =
-            unsafe { core::mem::MaybeUninit::uninit().assume_init() };
-        let mut slices_arr: [core::mem::MaybeUninit<SliceInfo>; NUM_SLICES] =
-            unsafe { core::mem::MaybeUninit::uninit().assume_init() };
+        let mut arcs_vec = Vec::with_capacity(NUM_SLICES);
+        let mut labels_vec = Vec::with_capacity(NUM_SLICES);
+        let mut slices_vec = Vec::with_capacity(NUM_SLICES);
 
         for i in 0..NUM_SLICES {
             let pct = PERCENTAGES[i];
@@ -132,22 +130,17 @@ impl View for WidgetArc3 {
             let home_x = arc.get_x();
             let home_y = arc.get_y();
 
-            arcs_arr[i].write(arc);
-            labels_arr[i].write(label);
-            slices_arr[i].write(SliceInfo {
-                mid_angle,
-                home_x,
-                home_y,
-                out: false,
-            });
+            arcs_vec.push(arc);
+            labels_vec.push(label);
+            slices_vec.push(SliceInfo { mid_angle, home_x, home_y, out: false });
         }
 
-        // SAFETY: all elements initialized in the loop above.
-        let arcs = unsafe { core::mem::transmute::<_, [Arc<'static>; NUM_SLICES]>(arcs_arr) };
-        let labels =
-            unsafe { core::mem::transmute::<_, [Label<'static>; NUM_SLICES]>(labels_arr) };
-        let slices =
-            unsafe { core::mem::transmute::<_, [SliceInfo; NUM_SLICES]>(slices_arr) };
+        let arcs: [Arc<'static>; NUM_SLICES] = arcs_vec.try_into().ok()
+            .ok_or(WidgetError::LvglNullPointer)?;
+        let labels: [Label<'static>; NUM_SLICES] = labels_vec.try_into().ok()
+            .ok_or(WidgetError::LvglNullPointer)?;
+        let slices: [SliceInfo; NUM_SLICES] = slices_vec.try_into().ok()
+            .ok_or(WidgetError::LvglNullPointer)?;
 
         Ok(Self {
             _container: cont,
