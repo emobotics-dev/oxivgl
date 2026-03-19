@@ -87,6 +87,8 @@ impl ObjFlag {
     pub const PRESS_LOCK: Self = Self(lvgl_rust_sys::lv_obj_flag_t_LV_OBJ_FLAG_PRESS_LOCK);
     /// Emit `DRAW_TASK_ADDED` events for custom draw hooks.
     pub const SEND_DRAW_TASK_EVENTS: Self = Self(lvgl_rust_sys::lv_obj_flag_t_LV_OBJ_FLAG_SEND_DRAW_TASK_EVENTS);
+    /// Use precise (arc-aware) hit testing instead of bounding box.
+    pub const ADV_HITTEST: Self = Self(lvgl_rust_sys::lv_obj_flag_t_LV_OBJ_FLAG_ADV_HITTEST);
 }
 
 impl core::ops::BitOr for ObjFlag {

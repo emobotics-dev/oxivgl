@@ -2,6 +2,19 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## MANDATORY: Consult Specs Before Any Change
+
+**Before designing, implementing, or reviewing ANY code change**, read and follow the relevant specifications in `docs/`. This is not optional — every design decision, API addition, wrapper method, example, and test MUST comply with these specs. Check compliance DURING implementation, not after.
+
+| Spec | When to consult |
+|------|----------------|
+| `spec-api-vision.md` | Any public API change — naming, return types, safety model |
+| `spec-memory-lifetime.md` | Any code touching pointers, lifetimes, Drop, styles, animations |
+| `spec-widget-wrapper.md` | Any new widget/module — struct pattern, SAFETY comments, doc comments, tests |
+| `spec-testing.md` | After ANY new public method — integration test required, leak test if allocating |
+| `spec-example-porting.md` | Any new/modified example — run_host.sh, README, screenshots, doc audit |
+| `spec-git-workflow.md` | Commits, branches, PRs |
+
 ## Build & Test
 
 Toolchain: `esp` (nightly Xtensa). Set via `rust-toolchain.toml`.

@@ -6,9 +6,9 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
 //! Event Bubble — Demonstrate event bubbling
 //!
-//! TODO: Hardware target (fire27) has no touch screen yet — click events
-//! require an input device to trigger. The GUI is fully wired; only the
-//! physical input is missing.
+//! 30 buttons in a flex container with event bubbling enabled. Clicking any
+//! button turns it red — the container's single event handler catches all
+//! bubbled CLICKED events.
 
 use oxivgl::{
     style::{palette_main, Palette, Selector},
@@ -28,13 +28,6 @@ struct EventBubble {
 impl View for EventBubble {
     fn create() -> Result<Self, WidgetError> {
         let screen = Screen::active().ok_or(WidgetError::LvglNullPointer)?;
-
-        // TODO: No touch input on fire27 hardware — click events won't fire
-        // until an input device is connected.
-        #[cfg(target_arch = "xtensa")]
-        oxivgl_examples_common::warn!(
-            "event_bubble: no touch input — click events require input device"
-        );
 
         let cont = Obj::new(&screen)?;
         cont.size(290, 200).center();

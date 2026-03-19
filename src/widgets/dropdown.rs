@@ -169,4 +169,28 @@ impl<'p> Dropdown<'p> {
         // SAFETY: handle non-null (asserted above).
         unsafe { lv_dropdown_get_selected(self.obj.handle()) }
     }
+
+    /// Copy the selected item text into `buf`. Returns the written slice
+    /// (without null terminator), or `None` if the handle is null.
+    pub fn get_selected_str<'b>(&self, buf: &'b mut [u8]) -> Option<&'b str> {
+        assert_ne!(
+            self.obj.handle(),
+            null_mut(),
+            "Dropdown handle cannot be null"
+        );
+        if buf.is_empty() {
+            return None;
+        }
+        // SAFETY: handle non-null; buf is valid writable memory.
+        unsafe {
+            lv_dropdown_get_selected_str(
+                self.obj.handle(),
+                buf.as_mut_ptr() as *mut core::ffi::c_char,
+                buf.len() as u32,
+            );
+        }
+        // Find null terminator written by LVGL.
+        let len = buf.iter().position(|&b| b == 0).unwrap_or(buf.len());
+        core::str::from_utf8(&buf[..len]).ok()
+    }
 }

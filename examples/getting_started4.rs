@@ -4,16 +4,21 @@
     feature(impl_trait_in_assoc_type, type_alias_impl_trait)
 )]
 // SPDX-License-Identifier: MIT OR Apache-2.0
-//! Getting Started 4 — Slider
+//! Getting Started 4 — Slider with live value label
+//!
+//! A centered slider with a label above showing the current value, updated
+//! via VALUE_CHANGED event.
 
 use oxivgl::{
-    view::View,
+    enums::EventCode,
+    event::Event,
+    view::{register_event_on, View},
     widgets::{Align, Label, Screen, Slider, WidgetError},
 };
 
 struct GettingStarted4 {
-    _slider: Slider<'static>,
-    _label: Label<'static>,
+    slider: Slider<'static>,
+    label: Label<'static>,
 }
 
 impl View for GettingStarted4 {
@@ -22,15 +27,28 @@ impl View for GettingStarted4 {
 
         let slider = Slider::new(&screen)?;
         slider.width(200).center();
+        slider.bubble_events();
 
         let label = Label::new(&screen)?;
         label.text("0");
         label.align_to(&slider, Align::OutTopMid, 0, -15);
 
-        Ok(Self {
-            _slider: slider,
-            _label: label,
-        })
+        Ok(Self { slider, label })
+    }
+
+    fn register_events(&mut self) {
+        register_event_on(self, self.slider.handle());
+    }
+
+    fn on_event(&mut self, event: &Event) {
+        if event.code() == EventCode::VALUE_CHANGED {
+            let val = self.slider.get_value();
+            let mut buf = heapless::String::<8>::new();
+            let _ = core::fmt::Write::write_fmt(&mut buf, format_args!("{}", val));
+            self.label.text(&buf);
+            self.label
+                .align_to(&self.slider, Align::OutTopMid, 0, -15);
+        }
     }
 
     fn update(&mut self) -> Result<(), WidgetError> {

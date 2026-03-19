@@ -16,7 +16,7 @@ use oxivgl::{
     fonts,
     scale_labels,
     style::{
-        color_white, palette_darken, palette_main, Palette, Selector, StyleBuilder,
+        color_white, palette_darken, palette_main, Palette, Selector, Style, StyleBuilder,
     },
     view::{register_event_on, View},
     widgets::{
@@ -36,6 +36,9 @@ static HOUR_LABELS: &ScaleLabels = scale_labels!(
 struct WidgetScale11 {
     _bg: Obj<'static>,
     scale: Scale<'static>,
+    _tick_style: Style,
+    _night_style: Style,
+    _day_style: Style,
     _today: Label<'static>,
     _sunrise_lbl: Label<'static>,
     _sunrise_time: Label<'static>,
@@ -161,6 +164,9 @@ impl View for WidgetScale11 {
         Ok(Self {
             _bg: bg,
             scale,
+            _tick_style: tick_style,
+            _night_style: night_style,
+            _day_style: day_style,
             _today: today,
             _sunrise_lbl: sunrise_lbl,
             _sunrise_time: sunrise_time,
