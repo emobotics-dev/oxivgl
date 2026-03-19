@@ -8,6 +8,10 @@
 //!
 //! A modal message box with a title, body text, and a close button.
 //! Clicking the button dismisses the message box.
+//!
+//! Ownership note: when `parent = None`, LVGL creates a full-screen backdrop
+//! and becomes the owner of the msgbox object. The Rust handle is detached
+//! with `mem::forget` to prevent a double-free on drop.
 
 use oxivgl::{
     view::View,

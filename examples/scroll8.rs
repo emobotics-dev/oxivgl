@@ -19,6 +19,9 @@ use oxivgl::{
     widgets::{Align, Button, Label, Obj, Part, Screen, WidgetError, detach},
 };
 
+/// Width/height of each button child. The circular scroll adjustment math
+/// assumes all children have this exact dimension — changing child sizes
+/// without updating this constant will break the wrap-around positioning.
 const ITEM_SIZE: i32 = 80;
 
 struct Scroll8 {

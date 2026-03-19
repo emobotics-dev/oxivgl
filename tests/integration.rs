@@ -2816,10 +2816,10 @@ fn obj_delete_child() {
     core::mem::forget(_c2);
     pump();
     assert_eq!(cont.get_child_count(), 2);
-    cont.delete_child(0);
+    cont.delete_child(0);  // delete by index
     pump();
     assert_eq!(cont.get_child_count(), 1);
-    cont.delete_child(-1);
+    cont.delete_child(-1); // -1 = last child (LVGL convention)
     pump();
     assert_eq!(cont.get_child_count(), 0);
     let _ = screen;
@@ -2889,8 +2889,9 @@ fn area_align_to_area() {
     let base = Area { x1: 0, y1: 0, x2: 99, y2: 19 };
     let mut txt = Area { x1: 0, y1: 0, x2: 29, y2: 9 };
     txt.align_to_area(base, Align::RightMid, -10, 0);
-    // After RIGHT_MID align: txt.x2 should be near base.x2 - 10
-    assert!(txt.x2 <= base.x2);
+    // RightMid aligns txt's right edge to base's right edge, then adds ofs_x.
+    // Expected: txt.x2 = base.x2 + ofs_x = 99 + (-10) = 89
+    assert_eq!(txt.x2, 89);
 }
 
 #[test]

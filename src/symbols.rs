@@ -8,7 +8,7 @@
 /// LVGL symbol constant — a NUL-terminated UTF-8 byte slice.
 ///
 /// Use [`as_ptr`](Symbol::as_ptr) to get a `*const c_char` for LVGL APIs.
-pub struct Symbol(pub(crate) &'static [u8]);
+pub struct Symbol(&'static [u8]);
 
 impl Symbol {
     /// Raw C string pointer. The symbol is statically allocated and NUL-terminated.
