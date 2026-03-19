@@ -2710,3 +2710,176 @@ fn image_set_src_symbol() {
     img.set_src_symbol(&oxivgl::symbols::SETTINGS);
     pump();
 }
+
+// ── Obj scroll/layout methods ────────────────────────────────────────────────
+
+#[test]
+fn obj_get_coords() {
+    let screen = fresh_screen();
+    let obj = Obj::new(&screen).unwrap();
+    obj.size(100, 50).center();
+    pump();
+    let area = obj.get_coords();
+    assert!(area.width() > 0);
+    assert!(area.height() > 0);
+    let _ = screen;
+}
+
+#[test]
+fn obj_invalidate() {
+    let screen = fresh_screen();
+    let obj = Obj::new(&screen).unwrap();
+    obj.invalidate(); // should not panic
+    pump();
+    let _ = screen;
+}
+
+#[test]
+fn obj_scroll_to_x_y() {
+    let screen = fresh_screen();
+    let cont = Obj::new(&screen).unwrap();
+    cont.size(200, 200);
+    for _ in 0..5 {
+        let child = Obj::new(&cont).unwrap();
+        child.size(300, 300);
+        core::mem::forget(child);
+    }
+    pump();
+    cont.scroll_to_x(10, false);
+    cont.scroll_to_y(10, false);
+    pump();
+    let _ = screen;
+}
+
+#[test]
+fn obj_get_scroll_top_bottom() {
+    let screen = fresh_screen();
+    let cont = Obj::new(&screen).unwrap();
+    cont.size(100, 100);
+    for _ in 0..5 {
+        let child = Obj::new(&cont).unwrap();
+        child.size(100, 80);
+        core::mem::forget(child);
+    }
+    pump();
+    let _top = cont.get_scroll_top();
+    let _bot = cont.get_scroll_bottom();
+    // just ensure no crash
+    let _ = screen;
+}
+
+#[test]
+fn obj_scroll_by() {
+    let screen = fresh_screen();
+    let cont = Obj::new(&screen).unwrap();
+    cont.size(100, 100);
+    for _ in 0..3 {
+        let child = Obj::new(&cont).unwrap();
+        child.size(100, 80);
+        core::mem::forget(child);
+    }
+    pump();
+    cont.scroll_by(0, 20, false);
+    pump();
+    let _ = screen;
+}
+
+#[test]
+fn obj_update_layout() {
+    let screen = fresh_screen();
+    let cont = Obj::new(&screen).unwrap();
+    let child = Obj::new(&cont).unwrap();
+    child.size(50, 50);
+    cont.update_layout();
+    pump();
+    core::mem::forget(child);
+    let _ = screen;
+}
+
+#[test]
+fn obj_delete_child() {
+    let screen = fresh_screen();
+    let cont = Obj::new(&screen).unwrap();
+    let _c1 = Obj::new(&cont).unwrap();
+    let _c2 = Obj::new(&cont).unwrap();
+    core::mem::forget(_c1);
+    core::mem::forget(_c2);
+    pump();
+    assert_eq!(cont.get_child_count(), 2);
+    cont.delete_child(0);
+    pump();
+    assert_eq!(cont.get_child_count(), 1);
+    cont.delete_child(-1);
+    pump();
+    assert_eq!(cont.get_child_count(), 0);
+    let _ = screen;
+}
+
+#[test]
+fn obj_get_style_pad_top_bottom() {
+    let screen = fresh_screen();
+    let obj = Obj::new(&screen).unwrap();
+    // default pad values should not crash
+    let _top = obj.get_style_pad_top(Part::Main);
+    let _bot = obj.get_style_pad_bottom(Part::Main);
+    pump();
+    let _ = screen;
+}
+
+#[test]
+fn obj_get_style_pad_row_column() {
+    let screen = fresh_screen();
+    let obj = Obj::new(&screen).unwrap();
+    let _row = obj.get_style_pad_row(Part::Main);
+    let _col = obj.get_style_pad_column(Part::Main);
+    pump();
+    let _ = screen;
+}
+
+// ── Draw layer types ──────────────────────────────────────────────────────────
+
+#[test]
+fn draw_rect_dsc_new() {
+    use oxivgl::draw::{DrawRectDsc, RADIUS_CIRCLE};
+    use oxivgl::style::color_make;
+    let mut dsc = DrawRectDsc::new();
+    dsc.bg_color(color_make(255, 170, 170))
+        .radius(RADIUS_CIRCLE)
+        .border_color(color_make(255, 85, 85))
+        .border_width(2)
+        .outline_color(color_make(255, 0, 0))
+        .outline_width(2)
+        .outline_pad(3);
+    // just ensure construction and chaining don't panic
+    let _ = dsc;
+}
+
+#[test]
+fn draw_label_dsc_owned_text_size() {
+    let screen = fresh_screen();
+    let dsc = oxivgl::draw::DrawLabelDscOwned::default_font();
+    let (w, h) = dsc.text_size("Hello");
+    assert!(w > 0, "text width should be > 0");
+    assert!(h > 0, "text height should be > 0");
+    let _ = screen;
+}
+
+#[test]
+fn area_align_to_area() {
+    use oxivgl::draw::Area;
+    use oxivgl::widgets::Align;
+    let base = Area { x1: 0, y1: 0, x2: 99, y2: 19 };
+    let mut txt = Area { x1: 0, y1: 0, x2: 29, y2: 9 };
+    txt.align_to_area(base, Align::RightMid, -10, 0);
+    // After RIGHT_MID align: txt.x2 should be near base.x2 - 10
+    assert!(txt.x2 <= base.x2);
+}
+
+#[test]
+fn area_set_width() {
+    use oxivgl::draw::Area;
+    let mut a = Area { x1: 10, y1: 0, x2: 29, y2: 9 };
+    a.set_width(5);
+    assert_eq!(a.x2, 14); // x1=10, new x2 = 10+5-1 = 14
+    assert_eq!(a.x1, 10); // x1 unchanged
+}

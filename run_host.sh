@@ -27,14 +27,14 @@ ALL_EXAMPLES=(
     getting_started{1,2,3,4,5,6,7,8}
     style{1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18}
     anim{1,2,3,4} anim_timeline1
-    event_{click,button,bubble,trickle,streak}
+    event_{click,button,bubble,trickle,streak,draw}
     flex{1,2,3,4,5,6}
     grid{1,2,3,4,5,6}
-    scroll{1,2,3,4}
+    scroll{1,2,3,4,6,7,8}
     widget_obj{1,2,3}
     widget_arc{1,2,3}
     image1
-    widget_bar{1,2,3,4,5,7}
+    widget_bar{1,2,3,4,5,6,7}
     widget_button{1,2,3}
     widget_checkbox{1,2}
     widget_dropdown{1,2,3}
@@ -44,6 +44,7 @@ ALL_EXAMPLES=(
     widget_list{1,2}
     widget_line1
     widget_menu{1,2,3,4,5}
+    widget_msgbox1
     widget_roller{1,2}
     widget_scale{1,2,3,4,5,6,7,8,9,10,11}
     widget_slider{1,2,3,4}

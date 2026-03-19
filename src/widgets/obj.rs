@@ -710,4 +710,108 @@ impl<'p> Obj<'p> {
         unsafe { lv_obj_swap(self.handle, other.lv_handle()) };
         self
     }
+
+    /// Get the absolute screen coordinates of this object.
+    pub fn get_coords(&self) -> crate::draw::Area {
+        assert_ne!(self.handle, null_mut());
+        let mut a = lv_area_t { x1: 0, y1: 0, x2: 0, y2: 0 };
+        // SAFETY: handle non-null (asserted above); lv_obj_get_coords writes into `a`.
+        unsafe { lv_obj_get_coords(self.handle, &mut a) };
+        a.into()
+    }
+
+    /// Invalidate this object's area, scheduling a redraw.
+    pub fn invalidate(&self) -> &Self {
+        assert_ne!(self.handle, null_mut());
+        // SAFETY: handle non-null (asserted above).
+        unsafe { lv_obj_invalidate(self.handle) };
+        self
+    }
+
+    /// Scroll to an absolute X position with optional animation.
+    pub fn scroll_to_x(&self, x: i32, anim: bool) -> &Self {
+        assert_ne!(self.handle, null_mut());
+        // SAFETY: handle non-null (asserted above).
+        unsafe { lv_obj_scroll_to_x(self.handle, x, anim) };
+        self
+    }
+
+    /// Scroll to an absolute Y position with optional animation.
+    pub fn scroll_to_y(&self, y: i32, anim: bool) -> &Self {
+        assert_ne!(self.handle, null_mut());
+        // SAFETY: handle non-null (asserted above).
+        unsafe { lv_obj_scroll_to_y(self.handle, y, anim) };
+        self
+    }
+
+    /// Amount of content scrollable above the current scroll position (pixels).
+    pub fn get_scroll_top(&self) -> i32 {
+        assert_ne!(self.handle, null_mut());
+        // SAFETY: handle non-null (asserted above).
+        unsafe { lv_obj_get_scroll_top(self.handle) }
+    }
+
+    /// Amount of content scrollable below the current scroll position (pixels).
+    pub fn get_scroll_bottom(&self) -> i32 {
+        assert_ne!(self.handle, null_mut());
+        // SAFETY: handle non-null (asserted above).
+        unsafe { lv_obj_get_scroll_bottom(self.handle) }
+    }
+
+    /// Scroll by a relative offset. `anim` enables smooth animation.
+    pub fn scroll_by(&self, dx: i32, dy: i32, anim: bool) -> &Self {
+        assert_ne!(self.handle, null_mut());
+        // SAFETY: handle non-null (asserted above).
+        unsafe { lv_obj_scroll_by(self.handle, dx, dy, anim) };
+        self
+    }
+
+    /// Force immediate layout recalculation (needed after dynamic child add/remove).
+    pub fn update_layout(&self) -> &Self {
+        assert_ne!(self.handle, null_mut());
+        // SAFETY: handle non-null (asserted above).
+        unsafe { lv_obj_update_layout(self.handle) };
+        self
+    }
+
+    /// Delete a child by index. Negative index counts from the end (`-1` = last child).
+    ///
+    /// No-op if the index is out of range.
+    pub fn delete_child(&self, idx: i32) {
+        assert_ne!(self.handle, null_mut());
+        // SAFETY: handle non-null (asserted above); lv_obj_get_child returns
+        // NULL for out-of-range idx — checked before delete.
+        let child = unsafe { lv_obj_get_child(self.handle, idx) };
+        if !child.is_null() {
+            unsafe { lv_obj_delete(child) };
+        }
+    }
+
+    /// Get top padding style value for the given part.
+    pub fn get_style_pad_top(&self, part: super::obj::Part) -> i32 {
+        assert_ne!(self.handle, null_mut());
+        // SAFETY: handle non-null (asserted above).
+        unsafe { lv_obj_get_style_pad_top(self.handle, part as u32) }
+    }
+
+    /// Get bottom padding style value for the given part.
+    pub fn get_style_pad_bottom(&self, part: super::obj::Part) -> i32 {
+        assert_ne!(self.handle, null_mut());
+        // SAFETY: handle non-null (asserted above).
+        unsafe { lv_obj_get_style_pad_bottom(self.handle, part as u32) }
+    }
+
+    /// Get row gap style value for the given part.
+    pub fn get_style_pad_row(&self, part: super::obj::Part) -> i32 {
+        assert_ne!(self.handle, null_mut());
+        // SAFETY: handle non-null (asserted above).
+        unsafe { lv_obj_get_style_pad_row(self.handle, part as u32) }
+    }
+
+    /// Get column gap style value for the given part.
+    pub fn get_style_pad_column(&self, part: super::obj::Part) -> i32 {
+        assert_ne!(self.handle, null_mut());
+        // SAFETY: handle non-null (asserted above).
+        unsafe { lv_obj_get_style_pad_column(self.handle, part as u32) }
+    }
 }
