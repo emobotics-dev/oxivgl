@@ -3184,3 +3184,242 @@ fn anim_set_bezier3_path_no_panic() {
     let _ = anim.start();
     pump();
 }
+
+// ── draw::DrawLabelDscOwned::set_color ────────────────────────────────────────
+
+#[test]
+fn draw_label_dsc_owned_set_color() {
+    use oxivgl::draw::DrawLabelDscOwned;
+    use oxivgl::style::color_make;
+    let _screen = fresh_screen();
+    let mut dsc = DrawLabelDscOwned::default_font();
+    dsc.set_color(color_make(255, 0, 0));
+    let _ = dsc;
+}
+
+// ── Arc::set_mode / set_bg_start_angle / set_bg_end_angle ────────────────────
+
+#[test]
+fn arc_set_mode_variants() {
+    use oxivgl::widgets::ArcMode;
+    let screen = fresh_screen();
+    let arc = Arc::new(&screen).unwrap();
+    arc.set_mode(ArcMode::Normal);
+    arc.set_mode(ArcMode::Symmetrical);
+    arc.set_mode(ArcMode::Reverse);
+    pump();
+}
+
+#[test]
+fn arc_set_bg_start_end_angle() {
+    let screen = fresh_screen();
+    let arc = Arc::new(&screen).unwrap();
+    arc.set_bg_start_angle(45);
+    arc.set_bg_end_angle(315);
+    pump();
+}
+
+// ── Label::text_long / LabelLongMode variants ─────────────────────────────────
+
+#[test]
+fn label_text_long() {
+    let screen = fresh_screen();
+    let lbl = Label::new(&screen).unwrap();
+    lbl.text_long("A much longer string that would overflow the 127-byte stack buffer in text()");
+    pump();
+    assert!(lbl.get_width() > 0);
+}
+
+#[test]
+fn label_long_mode_variants() {
+    use oxivgl::widgets::LabelLongMode;
+    let screen = fresh_screen();
+    let lbl = Label::new(&screen).unwrap();
+    lbl.text("overflow").width(30);
+    lbl.set_long_mode(LabelLongMode::Dots);
+    pump();
+    lbl.set_long_mode(LabelLongMode::Scroll);
+    pump();
+    lbl.set_long_mode(LabelLongMode::ScrollCircular);
+    pump();
+    lbl.set_long_mode(LabelLongMode::Clip);
+    pump();
+}
+
+// ── Dropdown::set_text / set_selected_highlight ───────────────────────────────
+
+#[test]
+fn dropdown_set_text_static() {
+    let screen = fresh_screen();
+    let dd = Dropdown::new(&screen).unwrap();
+    dd.set_options("A\nB\nC");
+    dd.set_text(c"Menu");
+    pump();
+}
+
+#[test]
+fn dropdown_set_selected_highlight() {
+    let screen = fresh_screen();
+    let dd = Dropdown::new(&screen).unwrap();
+    dd.set_options("X\nY\nZ");
+    dd.set_selected_highlight(false);
+    pump();
+    dd.set_selected_highlight(true);
+    pump();
+}
+
+// ── Child::Debug ──────────────────────────────────────────────────────────────
+
+#[test]
+fn child_debug_fmt() {
+    let screen = fresh_screen();
+    let lbl = Label::new(&screen).unwrap();
+    let c: Child<Label> = Child::new(lbl);
+    let s = format!("{c:?}");
+    assert!(!s.is_empty());
+    // Suppress Drop — LVGL parent owns the object.
+}
+
+// ── ValueLabel::Debug ─────────────────────────────────────────────────────────
+
+#[test]
+fn value_label_debug_fmt() {
+    let screen = fresh_screen();
+    let vl = ValueLabel::new(&screen, "A").unwrap();
+    let s = format!("{vl:?}");
+    assert!(!s.is_empty());
+}
+
+// ── Screen::add_style ─────────────────────────────────────────────────────────
+
+#[test]
+fn screen_add_style() {
+    let screen = fresh_screen();
+    let mut sb = StyleBuilder::new();
+    sb.bg_color_hex(0x111111).bg_opa(255);
+    let style = sb.build();
+    screen.add_style(&style, Selector::DEFAULT);
+    pump();
+}
+
+// ── Obj style: clip_corner, translate_x ───────────────────────────────────────
+
+#[test]
+fn obj_style_clip_corner() {
+    let screen = fresh_screen();
+    let obj = Obj::new(&screen).unwrap();
+    obj.radius(20, Selector::DEFAULT);
+    obj.style_clip_corner(true, Selector::DEFAULT);
+    pump();
+    obj.style_clip_corner(false, Selector::DEFAULT);
+    pump();
+}
+
+#[test]
+fn obj_style_translate_x() {
+    let screen = fresh_screen();
+    let obj = Obj::new(&screen).unwrap();
+    obj.style_translate_x(15, Selector::DEFAULT);
+    pump();
+}
+
+// ── Obj style: image_recolor / image_recolor_opa / radial_offset / line_opa ──
+
+#[test]
+fn obj_style_image_recolor_and_opa() {
+    let screen = fresh_screen();
+    let obj = Obj::new(&screen).unwrap();
+    obj.style_image_recolor(palette_main(Palette::Red), Selector::DEFAULT);
+    obj.style_image_recolor_opa(200, Selector::DEFAULT);
+    pump();
+}
+
+#[test]
+fn obj_style_radial_offset() {
+    let screen = fresh_screen();
+    let obj = Obj::new(&screen).unwrap();
+    obj.style_radial_offset(5, Selector::DEFAULT);
+    pump();
+}
+
+#[test]
+fn obj_style_line_opa() {
+    use oxivgl::widgets::Part;
+    let screen = fresh_screen();
+    let obj = Obj::new(&screen).unwrap();
+    obj.style_line_opa(128, Part::Main);
+    pump();
+}
+
+// ── Obj style: style_opa with selector ───────────────────────────────────────
+
+#[test]
+fn obj_style_opa_with_selector() {
+    let screen = fresh_screen();
+    let obj = Obj::new(&screen).unwrap();
+    obj.style_opa(200, Selector::DEFAULT);
+    pump();
+}
+
+// ── Obj style: style_pad_all with selector ────────────────────────────────────
+
+#[test]
+fn obj_style_pad_all_with_selector() {
+    use oxivgl::widgets::Part;
+    let screen = fresh_screen();
+    let obj = Obj::new(&screen).unwrap();
+    obj.style_pad_all(8, Part::Main);
+    pump();
+    assert_eq!(obj.get_style_pad_left(Part::Main), 8);
+}
+
+// ── Obj style: style_pad_row and style_pad_column ─────────────────────────────
+
+#[test]
+fn obj_style_pad_row_and_column_setters() {
+    use oxivgl::widgets::Part;
+    let screen = fresh_screen();
+    let obj = Obj::new(&screen).unwrap();
+    obj.style_pad_row(4, Selector::DEFAULT);
+    obj.style_pad_column(7, Selector::DEFAULT);
+    pump();
+    assert_eq!(obj.get_style_pad_row(Part::Main), 4);
+    assert_eq!(obj.get_style_pad_column(Part::Main), 7);
+}
+
+// ── Event::current_target_handle via static fn ───────────────────────────────
+
+#[test]
+fn event_current_target_handle_static() {
+    use std::sync::atomic::{AtomicBool, Ordering};
+    static CHECKED: AtomicBool = AtomicBool::new(false);
+
+    fn check_cb(ev: &oxivgl::event::Event) {
+        assert_eq!(ev.code(), EventCode::CLICKED);
+        let _current = ev.current_target_handle();
+        CHECKED.store(true, Ordering::SeqCst);
+    }
+
+    let screen = fresh_screen();
+    let btn = Button::new(&screen).unwrap();
+    btn.on(EventCode::CLICKED, check_cb);
+    btn.send_event(EventCode::CLICKED);
+    assert!(CHECKED.load(Ordering::SeqCst));
+}
+
+// ── Buttonmatrix: get_button_text out-of-range returns None ──────────────────
+
+#[test]
+fn buttonmatrix_get_button_text_oob() {
+    use oxivgl::btnmatrix_map;
+    use oxivgl::widgets::ButtonmatrixMap;
+    let screen = fresh_screen();
+    let btnm = Buttonmatrix::new(&screen).unwrap();
+    static MAP2: &ButtonmatrixMap = btnmatrix_map!(c"P", c"Q");
+    btnm.set_map(MAP2);
+    pump();
+    assert_eq!(btnm.get_button_text(0), Some("P"));
+    assert_eq!(btnm.get_button_text(1), Some("Q"));
+    // Out-of-range index — LVGL returns NULL → None.
+    assert_eq!(btnm.get_button_text(99), None);
+}

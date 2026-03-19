@@ -144,3 +144,50 @@ pub const BACKSPACE: Symbol = Symbol(b"\xEF\x95\x9A\0");
 pub const SD_CARD: Symbol = Symbol(b"\xEF\x9F\x82\0");
 /// New line icon.
 pub const NEW_LINE: Symbol = Symbol(b"\xEF\xA2\xA2\0");
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn symbol_as_ptr_nonnull() {
+        assert!(!OK.as_ptr().is_null());
+        assert!(!CLOSE.as_ptr().is_null());
+        assert!(!SETTINGS.as_ptr().is_null());
+    }
+
+    #[test]
+    fn symbol_as_ptr_nul_terminated() {
+        // The byte slice ends with \0; as_ptr() must point to valid memory.
+        let ptr = OK.as_ptr();
+        // SAFETY: ptr is a valid static NUL-terminated byte slice.
+        let len = unsafe { core::ffi::CStr::from_ptr(ptr) }.to_bytes().len();
+        assert!(len > 0, "symbol bytes should be non-empty before NUL");
+    }
+
+    #[test]
+    fn symbol_debug_fmt() {
+        let s = format!("{:?}", OK);
+        assert!(!s.is_empty());
+    }
+
+    #[test]
+    fn symbol_all_nonnull() {
+        let syms: &[&[u8]] = &[
+            AUDIO.0, VIDEO.0, LIST.0, OK.0, CLOSE.0, POWER.0, SETTINGS.0,
+            HOME.0, DOWNLOAD.0, DRIVE.0, REFRESH.0, MUTE.0, VOLUME_MID.0,
+            VOLUME_MAX.0, IMAGE.0, TINT.0, PREV.0, PLAY.0, PAUSE.0, STOP.0,
+            NEXT.0, EJECT.0, LEFT.0, RIGHT.0, PLUS.0, MINUS.0, EYE_OPEN.0,
+            EYE_CLOSE.0, WARNING.0, SHUFFLE.0, UP.0, DOWN.0, LOOP.0,
+            DIRECTORY.0, UPLOAD.0, CALL.0, CUT.0, COPY.0, SAVE.0, BARS.0,
+            ENVELOPE.0, CHARGE.0, PASTE.0, BELL.0, KEYBOARD.0, GPS.0,
+            FILE.0, WIFI.0, BATTERY_FULL.0, BATTERY_3.0, BATTERY_2.0,
+            BATTERY_1.0, BATTERY_EMPTY.0, USB.0, BLUETOOTH.0, TRASH.0,
+            EDIT.0, BACKSPACE.0, SD_CARD.0, NEW_LINE.0,
+        ];
+        for s in syms {
+            assert!(!s.is_empty(), "symbol slice should not be empty");
+            assert_eq!(*s.last().unwrap(), 0u8, "symbol should be NUL-terminated");
+        }
+    }
+}
