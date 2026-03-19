@@ -27,11 +27,11 @@ ALL_EXAMPLES=(
     getting_started{1,2,3,4,5,6,7,8}
     style{1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18}
     anim{1,2,3,4} anim_timeline1
-    event_{click,button,bubble,trickle}
+    event_{click,button,bubble,trickle,streak}
     flex{1,2,3,4,5,6}
     grid{1,2,3,4,5,6}
     scroll{1,2,4}
-    widget_obj{1,3}
+    widget_obj{1,2,3}
     widget_arc{1,2,3}
     image1
     widget_bar{1,2,3,4,5,7}
@@ -43,7 +43,7 @@ ALL_EXAMPLES=(
     widget_led1
     widget_line1
     widget_roller{1,2}
-    widget_scale{1,2,3,4,5,6,8,9,10}
+    widget_scale{1,2,3,4,5,6,7,8,9,10,11}
     widget_slider{1,2,3,4}
     widget_switch{1,2}
 )

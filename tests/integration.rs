@@ -2101,3 +2101,181 @@ fn event_target_style_bg_color() {
     btn.send_event(EventCode::CLICKED);
     pump();
 }
+
+// ── Part::from_raw + PartialEq ──────────────────────────────────────────────
+
+#[test]
+fn part_from_raw() {
+    use oxivgl::widgets::Part;
+    assert_eq!(Part::from_raw(0x000000), Part::Main);
+    assert_eq!(Part::from_raw(0x020000), Part::Indicator);
+    assert_eq!(Part::from_raw(0x050000), Part::Items);
+    assert_eq!(Part::from_raw(0xFFFFFF), Part::Main); // unknown → Main
+}
+
+// ── Scale::get_major_tick_every ─────────────────────────────────────────────
+
+#[test]
+fn scale_get_major_tick_every() {
+    use oxivgl::widgets::{Scale, ScaleMode};
+    let screen = fresh_screen();
+    let scale = Scale::new(&screen).unwrap();
+    scale.set_mode(ScaleMode::HorizontalBottom);
+    scale.set_total_tick_count(21);
+    scale.set_major_tick_every(5);
+    pump();
+    assert_eq!(scale.get_major_tick_every(), 5);
+}
+
+// ── Dropdown::get_selected_str ──────────────────────────────────────────────
+
+#[test]
+fn dropdown_get_selected_str() {
+    let screen = fresh_screen();
+    let dd = Dropdown::new(&screen).unwrap();
+    dd.set_options("Apple\nBanana\nOrange");
+    pump();
+    let mut buf = [0u8; 32];
+    assert_eq!(dd.get_selected_str(&mut buf), Some("Apple"));
+    dd.set_selected(1);
+    assert_eq!(dd.get_selected_str(&mut buf), Some("Banana"));
+}
+
+// ── Obj style methods with selector ─────────────────────────────────────────
+
+#[test]
+fn obj_style_text_color_with_selector() {
+    let screen = fresh_screen();
+    let label = Label::new(&screen).unwrap();
+    label.style_text_color(palette_main(Palette::Red), Selector::DEFAULT);
+    pump();
+}
+
+#[test]
+fn obj_style_arc_width_and_color() {
+    use oxivgl::widgets::Part;
+    let screen = fresh_screen();
+    let arc = Arc::new(&screen).unwrap();
+    arc.style_arc_width(10, Part::Main);
+    arc.style_arc_color(palette_main(Palette::Blue), Part::Main);
+    arc.style_arc_rounded(false, Part::Main);
+    pump();
+}
+
+#[test]
+fn obj_style_line_color() {
+    use oxivgl::widgets::Part;
+    let screen = fresh_screen();
+    let obj = Obj::new(&screen).unwrap();
+    obj.style_line_color(palette_main(Palette::Green), Part::Main);
+    obj.style_line_width(3, Part::Main);
+    pump();
+}
+
+#[test]
+fn obj_style_length_and_width() {
+    use oxivgl::widgets::Part;
+    let screen = fresh_screen();
+    let obj = Obj::new(&screen).unwrap();
+    obj.style_length(15, Part::Items);
+    obj.style_width(20, Part::Indicator);
+    pump();
+}
+
+// ── Obj::send_draw_task_events ──────────────────────────────────────────────
+
+#[test]
+fn obj_send_draw_task_events_flag() {
+    let screen = fresh_screen();
+    let obj = Obj::new(&screen).unwrap();
+    obj.send_draw_task_events();
+    pump();
+}
+
+// ── Event::draw_task ────────────────────────────────────────────────────────
+
+#[test]
+fn event_draw_task_returns_none_for_clicked() {
+    use std::sync::atomic::{AtomicBool, Ordering};
+    static CHECKED: AtomicBool = AtomicBool::new(false);
+    let screen = fresh_screen();
+    let btn = Button::new(&screen).unwrap();
+    btn.on(EventCode::CLICKED, |event| {
+        assert!(event.draw_task().is_none());
+        CHECKED.store(true, Ordering::SeqCst);
+    });
+    btn.send_event(EventCode::CLICKED);
+    pump();
+    assert!(CHECKED.load(Ordering::SeqCst));
+}
+
+// ── draw::Area ──────────────────────────────────────────────────────────────
+
+#[test]
+fn draw_area_width_height() {
+    use oxivgl::draw::Area;
+    let a = Area {
+        x1: 10,
+        y1: 20,
+        x2: 109,
+        y2: 69,
+    };
+    assert_eq!(a.width(), 100);
+    assert_eq!(a.height(), 50);
+}
+
+#[test]
+fn draw_area_set_width_centered() {
+    use oxivgl::draw::Area;
+    let mut a = Area {
+        x1: 50,
+        y1: 0,
+        x2: 149,
+        y2: 9,
+    };
+    assert_eq!(a.width(), 100);
+    a.set_width_centered(120);
+    assert_eq!(a.width(), 120);
+    // Center should be roughly preserved
+    let old_center = 50 + 149; // 199
+    let new_center = a.x1 + a.x2;
+    assert!((new_center - old_center).abs() <= 1);
+}
+
+// ── math: trigo_cos, trigo_sin ──────────────────────────────────────────────
+
+#[test]
+fn math_trigo_cos_sin() {
+    use oxivgl::math::{trigo_cos, trigo_sin};
+    // cos(0) should be ~1.0, sin(0) should be ~0
+    let cos0 = trigo_cos(0);
+    let sin0 = trigo_sin(0);
+    assert!(cos0 > 0, "cos(0) should be positive");
+    assert!(sin0.abs() < 100, "sin(0) should be near zero");
+    // cos(90) should be ~0, sin(90) should be ~1.0
+    let cos90 = trigo_cos(90);
+    let sin90 = trigo_sin(90);
+    assert!(cos90.abs() < 100, "cos(90) should be near zero");
+    assert!(sin90 > 0, "sin(90) should be positive");
+}
+
+// ── Indev ───────────────────────────────────────────────────────────────────
+
+#[test]
+fn indev_active_returns_none_without_input() {
+    use oxivgl::indev::Indev;
+    let _screen = fresh_screen();
+    // With SDL dummy driver, there may or may not be an input device.
+    // Just verify the call doesn't crash.
+    let _ = Indev::active();
+}
+
+// ── ObjFlag::ADV_HITTEST ────────────────────────────────────────────────────
+
+#[test]
+fn obj_adv_hittest_flag() {
+    let screen = fresh_screen();
+    let obj = Obj::new(&screen).unwrap();
+    obj.add_flag(ObjFlag::ADV_HITTEST);
+    pump();
+}

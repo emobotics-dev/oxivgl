@@ -423,9 +423,9 @@ Full-circle arc animating 0→100 in 1 s (infinite repeat, 500 ms delay). Knob h
 
 ![widget_arc2](screenshots/widget_arc2.png)
 
-### Widget Arc 3 — Donut Chart
+### Widget Arc 3 — Interactive Pie Chart
 
-Three colored arc segments (red, green, blue) forming a donut chart.
+Interactive pie chart with click-to-pop-out animation.
 
 ![widget_arc3](screenshots/widget_arc3.png)
 
@@ -538,7 +538,7 @@ Clicking one unchecks the rest in its group.
 
 ### Widget Dropdown 1 — Simple Drop-Down
 
-Dropdown with ten fruit options at top center.
+Dropdown with ten fruit options; a VALUE_CHANGED event handler updates a selection label below.
 
 ![widget_dropdown1](screenshots/widget_dropdown1.png)
 
