@@ -130,9 +130,16 @@ impl<'p> Msgbox<'p> {
     }
 
     /// Close the message box immediately.
-    pub fn close(&self) {
+    ///
+    /// Consumes `self` because `lv_msgbox_close` calls `lv_obj_delete`
+    /// internally — the LVGL object is freed by the call, so `Obj::drop`
+    /// must not run.
+    pub fn close(self) {
         assert_ne!(self.obj.handle(), null_mut(), "Msgbox handle cannot be null");
-        // SAFETY: handle non-null (asserted above).
-        unsafe { lv_msgbox_close(self.obj.handle()) };
+        let handle = self.obj.handle();
+        // SAFETY: lv_msgbox_close deletes the LVGL object internally.
+        // mem::forget suppresses Obj::drop to prevent a double-free.
+        core::mem::forget(self);
+        unsafe { lv_msgbox_close(handle) };
     }
 }

@@ -398,10 +398,6 @@ pub struct DrawLabelDscOwned {
 
 impl DrawLabelDscOwned {
     /// Create with default font (`lv_font_montserrat_14`) and LVGL defaults.
-    ///
-    /// # Safety
-    ///
-    /// `lv_font_montserrat_14` is a `'static` global symbol linked from LVGL.
     pub fn default_font() -> Self {
         // SAFETY: zeroed is a valid starting state; init fills required fields.
         let mut inner = unsafe { core::mem::zeroed() };
@@ -412,8 +408,9 @@ impl DrawLabelDscOwned {
     }
 
     /// Set text color.
-    pub fn set_color(&mut self, color: lv_color_t) {
+    pub fn set_color(&mut self, color: lv_color_t) -> &mut Self {
         self.inner.color = color;
+        self
     }
 
     /// Measure pixel size of `text` using this descriptor's current font and spacing.

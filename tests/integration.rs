@@ -2385,7 +2385,9 @@ fn buttonmatrix_get_selected() {
     let screen = fresh_screen();
     let btnm = Buttonmatrix::new(&screen).unwrap();
     pump();
-    let _sel = btnm.get_selected_button();
+    // LVGL returns LV_BTNMATRIX_BTN_NONE (0xFFFF) when nothing is selected.
+    let sel = btnm.get_selected_button();
+    assert_eq!(sel, 0xFFFF);
 }
 
 // ── Keyboard ──────────────────────────────────────────────────────────────────
@@ -2414,7 +2416,7 @@ fn keyboard_set_mode() {
     kb.set_mode(KeyboardMode::Number);
     kb.set_mode(KeyboardMode::TextLower);
     kb.set_mode(KeyboardMode::TextUpper);
-    kb.set_mode(KeyboardMode::SpecialChars);
+    kb.set_mode(KeyboardMode::Special);
     pump();
 }
 
@@ -2748,6 +2750,10 @@ fn obj_scroll_to_x_y() {
     cont.scroll_to_x(10, false);
     cont.scroll_to_y(10, false);
     pump();
+    // After scrolling, at least one scroll position should be non-zero.
+    let sx = cont.get_scroll_x();
+    let sy = cont.get_scroll_y();
+    assert!(sx != 0 || sy != 0, "expected scroll position to change, got x={sx} y={sy}");
     let _ = screen;
 }
 
@@ -2762,9 +2768,13 @@ fn obj_get_scroll_top_bottom() {
         core::mem::forget(child);
     }
     pump();
-    let _top = cont.get_scroll_top();
-    let _bot = cont.get_scroll_bottom();
-    // just ensure no crash
+    // scroll down a bit; get_scroll_top() should reflect it
+    cont.scroll_to_y(20, false);
+    pump();
+    let top = cont.get_scroll_top();
+    assert!(top >= 0, "scroll_top should be non-negative, got {top}");
+    let bot = cont.get_scroll_bottom();
+    assert!(bot >= 0, "scroll_bottom should be non-negative, got {bot}");
     let _ = screen;
 }
 
@@ -2819,10 +2829,11 @@ fn obj_delete_child() {
 fn obj_get_style_pad_top_bottom() {
     let screen = fresh_screen();
     let obj = Obj::new(&screen).unwrap();
-    // default pad values should not crash
-    let _top = obj.get_style_pad_top(Part::Main);
-    let _bot = obj.get_style_pad_bottom(Part::Main);
+    obj.pad_top(8);
+    obj.pad_bottom(12);
     pump();
+    assert_eq!(obj.get_style_pad_top(Part::Main), 8);
+    assert_eq!(obj.get_style_pad_bottom(Part::Main), 12);
     let _ = screen;
 }
 
@@ -2830,9 +2841,11 @@ fn obj_get_style_pad_top_bottom() {
 fn obj_get_style_pad_row_column() {
     let screen = fresh_screen();
     let obj = Obj::new(&screen).unwrap();
-    let _row = obj.get_style_pad_row(Part::Main);
-    let _col = obj.get_style_pad_column(Part::Main);
+    obj.style_pad_row(6, Selector::DEFAULT);
+    obj.style_pad_column(9, Selector::DEFAULT);
     pump();
+    assert_eq!(obj.get_style_pad_row(Part::Main), 6);
+    assert_eq!(obj.get_style_pad_column(Part::Main), 9);
     let _ = screen;
 }
 
@@ -2840,7 +2853,7 @@ fn obj_get_style_pad_row_column() {
 
 #[test]
 fn draw_rect_dsc_new() {
-    use oxivgl::draw::{DrawRectDsc, RADIUS_CIRCLE};
+    use oxivgl::draw::{DrawRectDsc, DrawLabelDscOwned, RADIUS_CIRCLE};
     use oxivgl::style::color_make;
     let mut dsc = DrawRectDsc::new();
     dsc.bg_color(color_make(255, 170, 170))
@@ -2850,7 +2863,12 @@ fn draw_rect_dsc_new() {
         .outline_color(color_make(255, 0, 0))
         .outline_width(2)
         .outline_pad(3);
-    // just ensure construction and chaining don't panic
+    // Verify the label descriptor initialises a usable font (text_size > 0).
+    let label_dsc = DrawLabelDscOwned::default_font();
+    let (w, h) = label_dsc.text_size("X");
+    assert!(w > 0, "label dsc font width > 0");
+    assert!(h > 0, "label dsc font height > 0");
+    // dsc construction must not panic (inner fields not pub — smoke-test only).
     let _ = dsc;
 }
 
@@ -2882,4 +2900,286 @@ fn area_set_width() {
     a.set_width(5);
     assert_eq!(a.x2, 14); // x1=10, new x2 = 10+5-1 = 14
     assert_eq!(a.x1, 10); // x1 unchanged
+}
+
+// ── Chart ─────────────────────────────────────────────────────────────────────
+
+#[test]
+fn chart_create() {
+    use oxivgl::widgets::Chart;
+    let screen = fresh_screen();
+    let chart = Chart::new(&screen).unwrap();
+    pump();
+    assert!(chart.get_width() > 0);
+}
+
+#[test]
+fn chart_add_series_and_set_value() {
+    use oxivgl::widgets::{Chart, ChartAxis, ChartType, lv_color_t};
+    let screen = fresh_screen();
+    let chart = Chart::new(&screen).unwrap();
+    chart.set_type(ChartType::Line);
+    chart.set_point_count(5);
+    chart.set_axis_range(ChartAxis::PrimaryY, 0, 100);
+    let color = lv_color_t { blue: 0, green: 0, red: 255 };
+    let series = chart.add_series(color, ChartAxis::PrimaryY);
+    chart.set_next_value(&series, 42);
+    chart.set_next_value(&series, 80);
+    chart.refresh();
+    pump();
+    assert!(chart.get_width() > 0);
+}
+
+#[test]
+fn chart_scatter_series() {
+    use oxivgl::widgets::{Chart, ChartAxis, ChartType, lv_color_t};
+    let screen = fresh_screen();
+    let chart = Chart::new(&screen).unwrap();
+    chart.set_type(ChartType::Scatter);
+    chart.set_point_count(3);
+    let color = lv_color_t { blue: 255, green: 0, red: 0 };
+    let series = chart.add_series(color, ChartAxis::PrimaryY);
+    chart.set_next_value2(&series, 10, 20);
+    chart.set_next_value2(&series, 50, 80);
+    chart.refresh();
+    pump();
+}
+
+// ── DrawTask and Layer ────────────────────────────────────────────────────────
+
+#[test]
+fn event_draw_task_layer_smoke() {
+    // send_draw_task_events() enables DRAW_TASK_ADDED on obj.
+    // With SDL dummy backend DRAW_TASK_ADDED may or may not fire headlessly;
+    // this is a no-panic smoke test.
+    let screen = fresh_screen();
+    let obj = Obj::new(&screen).unwrap();
+    obj.size(100, 100);
+    obj.send_draw_task_events();
+    obj.on(EventCode::DRAW_TASK_ADDED, |ev| {
+        if let Some(task) = ev.draw_task() {
+            let _layer = task.layer(); // None or Some — both are fine
+            let _area = task.area();
+            let _base = task.base();
+        }
+    });
+    pump();
+}
+
+#[test]
+fn event_layer_returns_none_for_clicked() {
+    // Event::layer() only works for draw events, not CLICKED.
+    let screen = fresh_screen();
+    let btn = Button::new(&screen).unwrap();
+    btn.on(EventCode::CLICKED, |ev| {
+        assert!(ev.layer().is_none());
+    });
+    btn.send_event(EventCode::CLICKED);
+    pump();
+}
+
+// ── Indev ─────────────────────────────────────────────────────────────────────
+
+#[test]
+fn indev_get_vect_without_input() {
+    use oxivgl::indev::Indev;
+    let _screen = fresh_screen();
+    pump();
+    if let Some(indev) = Indev::active() {
+        let _vect = indev.get_vect();
+        let _streak = indev.short_click_streak();
+    }
+    // No input device in headless mode — just verify no panic.
+}
+
+// ── Buttonmatrix set_map / get_button_text ────────────────────────────────────
+
+#[test]
+fn buttonmatrix_set_map_and_get_text() {
+    use oxivgl::btnmatrix_map;
+    use oxivgl::widgets::ButtonmatrixMap;
+    let screen = fresh_screen();
+    let btnm = Buttonmatrix::new(&screen).unwrap();
+    static MAP: &ButtonmatrixMap = btnmatrix_map!(c"X", c"Y", c"Z");
+    btnm.set_map(MAP);
+    pump();
+    assert_eq!(btnm.get_button_text(0), Some("X"));
+    assert_eq!(btnm.get_button_text(1), Some("Y"));
+    assert_eq!(btnm.get_button_text(2), Some("Z"));
+}
+
+// ── Obj::swap, get_x_aligned, get_y_aligned, get_style_pad_left, get_style_bg_color ──
+
+#[test]
+fn obj_swap_children() {
+    let screen = fresh_screen();
+    let parent = Obj::new(&screen).unwrap();
+    let a = Obj::new(&parent).unwrap();
+    let b = Obj::new(&parent).unwrap();
+    pump();
+    assert_eq!(a.get_index(), 0);
+    assert_eq!(b.get_index(), 1);
+    a.swap(&b);
+    pump();
+    assert_eq!(a.get_index(), 1);
+    assert_eq!(b.get_index(), 0);
+}
+
+#[test]
+fn obj_get_x_y_aligned() {
+    let screen = fresh_screen();
+    let obj = Obj::new(&screen).unwrap();
+    obj.pos(15, 25);
+    pump();
+    // get_x_aligned returns the user-set position before alignment resolution.
+    let xa = obj.get_x_aligned();
+    let ya = obj.get_y_aligned();
+    assert_eq!(xa, 15);
+    assert_eq!(ya, 25);
+}
+
+#[test]
+fn obj_get_style_pad_left() {
+    let screen = fresh_screen();
+    let obj = Obj::new(&screen).unwrap();
+    obj.pad_left(7);
+    pump();
+    assert_eq!(obj.get_style_pad_left(Part::Main), 7);
+}
+
+#[test]
+fn obj_get_style_bg_color() {
+    let screen = fresh_screen();
+    let obj = Obj::new(&screen).unwrap();
+    obj.bg_color(0xFF0000).bg_opa(255);
+    pump();
+    let _c = obj.get_style_bg_color(Part::Main);
+    // Just verify no panic; lv_color_t fields depend on color format.
+}
+
+// ── ObjStyle methods ──────────────────────────────────────────────────────────
+
+#[test]
+fn obj_style_pad_hor_smoke() {
+    let screen = fresh_screen();
+    let obj = Obj::new(&screen).unwrap();
+    obj.style_pad_hor(10, Selector::DEFAULT);
+    pump();
+    // pad_hor sets both left and right; verify left side
+    assert_eq!(obj.get_style_pad_left(Part::Main), 10);
+}
+
+#[test]
+fn obj_style_text_font_with_selector() {
+    let screen = fresh_screen();
+    let label = Label::new(&screen).unwrap();
+    label.text("test");
+    label.style_text_font(MONTSERRAT_12, Selector::DEFAULT);
+    pump();
+    assert!(label.get_width() > 0);
+}
+
+#[test]
+fn obj_style_pad_column_smoke() {
+    let screen = fresh_screen();
+    let obj = Obj::new(&screen).unwrap();
+    obj.style_pad_column(5, Selector::DEFAULT);
+    pump();
+    assert_eq!(obj.get_style_pad_column(Part::Main), 5);
+}
+
+#[test]
+fn obj_style_size_smoke() {
+    use oxivgl::widgets::Part;
+    let screen = fresh_screen();
+    let obj = Obj::new(&screen).unwrap();
+    // style_size sets a style property on sub-parts (e.g. indicator size).
+    obj.style_size(8, 8, Part::Indicator);
+    pump();
+}
+
+#[test]
+fn obj_style_bg_image_src_symbol_smoke() {
+    let screen = fresh_screen();
+    let obj = Obj::new(&screen).unwrap();
+    obj.style_bg_image_src_symbol(&oxivgl::symbols::SETTINGS, Selector::DEFAULT);
+    obj.bg_opa(255);
+    pump();
+}
+
+// ── Anim exec cb variants: anim_set_y, anim_set_translate_x ─────────────────
+
+#[test]
+fn anim_exec_cb_y_and_translate_x() {
+    use oxivgl::anim::{Anim, anim_set_y, anim_set_translate_x};
+    let screen = fresh_screen();
+    let obj = Obj::new(&screen).unwrap();
+    obj.size(50, 50);
+
+    let mut a = Anim::new();
+    a.set_var(&obj).set_values(0, 100).set_duration(200)
+        .set_exec_cb(Some(anim_set_y));
+    let _ = a.start();
+
+    let mut a2 = Anim::new();
+    a2.set_var(&obj).set_values(0, 50).set_duration(200)
+        .set_exec_cb(Some(anim_set_translate_x));
+    let _ = a2.start();
+
+    pump();
+}
+
+// ── math::bezier3, map ────────────────────────────────────────────────────────
+
+#[test]
+fn math_map_basic() {
+    use oxivgl::math;
+    // map(500, 0, 1000, 0, 100) == 50
+    assert_eq!(math::map(500, 0, 1000, 0, 100), 50);
+    // map at boundaries
+    assert_eq!(math::map(0, 0, 1000, 0, 100), 0);
+    assert_eq!(math::map(1000, 0, 1000, 0, 100), 100);
+}
+
+#[test]
+fn math_bezier3_endpoints() {
+    use oxivgl::math;
+    // t=0 → result should be near u0=0
+    let v0 = math::bezier3(0, 0, 256, 768, 1024);
+    assert_eq!(v0, 0);
+    // t=1024 → result should be near u3=1024
+    let v1024 = math::bezier3(1024, 0, 256, 768, 1024);
+    assert_eq!(v1024, 1024);
+}
+
+#[test]
+fn style_color_brightness_and_darken() {
+    use oxivgl::style::{color_brightness, color_darken, color_make};
+    let white = color_make(255, 255, 255);
+    let brightness = color_brightness(white);
+    assert!(brightness > 200, "white should have high brightness, got {brightness}");
+    let dark = color_darken(white, 2);
+    let dark_brightness = color_brightness(dark);
+    assert!(dark_brightness < brightness, "darkened color should be less bright");
+}
+
+// ── Anim::set_bezier3_path ────────────────────────────────────────────────────
+
+#[test]
+fn anim_set_bezier3_path_no_panic() {
+    use std::sync::atomic::AtomicI32;
+    use oxivgl::anim::{Anim, anim_set_x};
+    let screen = fresh_screen();
+    let obj = Obj::new(&screen).unwrap();
+    obj.size(50, 50);
+    static P1: AtomicI32 = AtomicI32::new(128);
+    static P2: AtomicI32 = AtomicI32::new(900);
+    let mut anim = Anim::new();
+    anim.set_exec_cb(Some(anim_set_x));
+    anim.set_var(&obj);
+    anim.set_values(0, 100);
+    anim.set_duration(500);
+    anim.set_bezier3_path(&P1, &P2);
+    let _ = anim.start();
+    pump();
 }

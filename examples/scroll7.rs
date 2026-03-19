@@ -16,7 +16,7 @@ use oxivgl::{
     layout::FlexFlow,
     style::lv_pct,
     view::{register_event_on, View},
-    widgets::{Align, AsLvHandle, Checkbox, Label, Obj, Part, Screen, WidgetError, detach},
+    widgets::{Align, Checkbox, Label, Obj, Part, Screen, WidgetError, detach},
 };
 
 struct Scroll7 {
@@ -164,7 +164,7 @@ impl View for Scroll7 {
 
     fn register_events(&mut self) {
         register_event_on(self, self.cont.handle());
-        register_event_on(self, self.screen.lv_handle());
+        register_event_on(self, self.screen.handle());
     }
 
     fn on_event(&mut self, event: &Event) {

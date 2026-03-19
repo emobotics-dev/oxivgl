@@ -29,9 +29,9 @@ use oxivgl::{
     },
     enums::ObjState,
     widgets::{
-        Arc, Bar, BarMode, Button, Buttonmatrix, Checkbox, Dropdown, Keyboard, KeyboardMode,
-        Label, Led, Line, Menu, Msgbox, Obj, Part, Roller, RollerMode, Screen, Slider, Switch,
-        Textarea, ValueLabel,
+        Arc, Bar, BarMode, Button, Buttonmatrix, Chart, ChartAxis, ChartType, Checkbox, Dropdown,
+        Keyboard, KeyboardMode, Label, Led, Line, Menu, Msgbox, Obj, Part, Roller, RollerMode,
+        Screen, Slider, Switch, Textarea, ValueLabel, lv_color_t,
     },
 };
 
@@ -584,5 +584,20 @@ fn leak_msgbox() {
         mbox.add_text("Body");
         mbox.add_close_button();
         drop(mbox);
+    });
+}
+
+#[test]
+fn leak_chart() {
+    assert_no_leak("Chart", 1, |screen| {
+        let chart = Chart::new(screen).unwrap();
+        chart.set_type(ChartType::Line);
+        chart.set_point_count(5);
+        chart.set_axis_range(ChartAxis::PrimaryY, 0, 100);
+        let color = lv_color_t { blue: 0, green: 0, red: 255 };
+        let series = chart.add_series(color, ChartAxis::PrimaryY);
+        chart.set_next_value(&series, 50);
+        chart.refresh();
+        drop(chart);
     });
 }

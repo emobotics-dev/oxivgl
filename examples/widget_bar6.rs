@@ -17,7 +17,7 @@ use oxivgl::{
     event::Event,
     style::color_make,
     view::{register_event_on, View},
-    widgets::{Align, AsLvHandle, Bar, Screen, WidgetError},
+    widgets::{Align, Bar, Screen, WidgetError},
 };
 
 struct WidgetBar6 {
@@ -63,6 +63,8 @@ impl View for WidgetBar6 {
         let mut dsc = DrawLabelDscOwned::default_font();
         let (txt_w, txt_h) = dsc.text_size(&buf);
         let mut txt_area = Area { x1: 0, y1: 0, x2: txt_w - 1, y2: txt_h - 1 };
+        // Simplified: lv_bar_get_indicator_area() not yet wrapped, so approximate
+        // the indicator rect from get_coords() + proportional width.
         let mut indic_area = self.bar.get_coords();
         indic_area.set_width(indic_area.width() * value / 100);
         if indic_area.width() > txt_w + 20 {
