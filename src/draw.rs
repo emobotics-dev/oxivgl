@@ -116,6 +116,26 @@ impl DrawTask {
         let task = unsafe { &mut *self.ptr };
         task.area = area.into();
     }
+
+    /// Get the draw layer from this task's base descriptor.
+    ///
+    /// Required for `DRAW_TASK_ADDED` handlers that call [`Layer::draw_rect`] /
+    /// [`Layer::draw_label`]. Valid only during the callback.
+    pub fn layer(&self) -> Option<Layer> {
+        // SAFETY: ptr valid during callback; lv_draw_task_get_draw_dsc returns
+        // a pointer to the embedded base descriptor (lv_draw.c).
+        let dsc = unsafe { lv_draw_task_get_draw_dsc(self.ptr) };
+        if dsc.is_null() {
+            return None;
+        }
+        // SAFETY: dsc is a valid lv_draw_dsc_base_t * (first field in every draw dsc).
+        let base = unsafe { &*(dsc as *const lv_draw_dsc_base_t) };
+        if base.layer.is_null() {
+            None
+        } else {
+            Some(Layer::from_raw(base.layer))
+        }
+    }
 }
 
 /// Base draw descriptor fields (value copy — no pointer risk).
@@ -219,6 +239,201 @@ impl DrawLabelDsc {
                 0,    // letter_space
                 0,    // line_space
                 1000, // max_width
+                lv_text_flag_t_LV_TEXT_FLAG_NONE,
+            );
+        }
+        (size.x, size.y)
+    }
+}
+
+// ── Area utilities ────────────────────────────────────────────────────────────
+
+impl Area {
+    /// Align this area relative to `base` by `align`, then offset by `(ofs_x, ofs_y)`.
+    ///
+    /// Equivalent to `lv_area_align(base, self, align, ofs_x, ofs_y)`.
+    pub fn align_to_area(&mut self, base: Area, align: crate::widgets::Align, ofs_x: i32, ofs_y: i32) {
+        let base_lv: lv_area_t = base.into();
+        let mut self_lv: lv_area_t = (*self).into();
+        // SAFETY: both areas are valid stack values; lv_area_align writes to self_lv.
+        unsafe { lv_area_align(&base_lv, &mut self_lv, align as lv_align_t, ofs_x, ofs_y) };
+        *self = self_lv.into();
+    }
+
+    /// Set width from the left edge (x2 = x1 + new_w - 1). x1 is unchanged.
+    pub fn set_width(&mut self, new_w: i32) {
+        self.x2 = self.x1 + new_w - 1;
+    }
+}
+
+/// Maximum radius constant — produces a circle or fully-rounded corners.
+/// Equivalent to `LV_RADIUS_CIRCLE` (0x7FFF).
+pub const RADIUS_CIRCLE: i32 = 0x7FFF;
+
+// ── Layer ─────────────────────────────────────────────────────────────────────
+
+/// Non-owning handle to an LVGL draw layer.
+///
+/// Valid only during a draw event callback. Obtain via [`Event::layer`](crate::event::Event::layer).
+pub struct Layer {
+    ptr: *mut lv_layer_t,
+}
+
+impl core::fmt::Debug for Layer {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        f.debug_struct("Layer").finish_non_exhaustive()
+    }
+}
+
+impl Layer {
+    /// Create from a raw LVGL layer pointer (used by `Event::layer()`).
+    pub(crate) fn from_raw(ptr: *mut lv_layer_t) -> Self {
+        Self { ptr }
+    }
+
+    /// Draw a filled rectangle onto this layer.
+    ///
+    /// The descriptor is passed by reference; `area` is a copy.
+    pub fn draw_rect(&self, dsc: &DrawRectDsc, area: Area) {
+        let area_lv: lv_area_t = area.into();
+        // SAFETY: ptr valid during callback; dsc and area_lv are stack values.
+        unsafe { lv_draw_rect(self.ptr, &dsc.inner, &area_lv) };
+    }
+
+    /// Draw a text label onto this layer.
+    ///
+    /// `text` must fit in 63 bytes; longer strings are truncated.
+    /// The text pointer is valid only for the duration of this call.
+    pub fn draw_label(&self, dsc: &DrawLabelDscOwned, area: Area, text: &str) {
+        let mut buf = [0u8; 64];
+        let len = text.len().min(buf.len() - 1);
+        buf[..len].copy_from_slice(&text.as_bytes()[..len]);
+        buf[len] = 0;
+        // lv_draw_label_dsc_t derives Copy — simple copy is safe.
+        let mut local_dsc = dsc.inner;
+        local_dsc.text = buf.as_ptr() as *const _;
+        local_dsc.set_text_local(0);
+        let area_lv: lv_area_t = area.into();
+        // SAFETY: ptr valid during callback; local_dsc.text points to buf on this stack frame.
+        unsafe { lv_draw_label(self.ptr, &local_dsc, &area_lv) };
+    }
+}
+
+// ── DrawRectDsc ───────────────────────────────────────────────────────────────
+
+/// Owned LVGL rectangle draw descriptor.
+///
+/// Initialised via `lv_draw_rect_dsc_init`. Pass to [`Layer::draw_rect`].
+pub struct DrawRectDsc {
+    inner: lv_draw_rect_dsc_t,
+}
+
+impl DrawRectDsc {
+    /// Create with LVGL defaults (`lv_draw_rect_dsc_init`).
+    pub fn new() -> Self {
+        // SAFETY: zeroed memory is a valid starting state; lv_draw_rect_dsc_init
+        // fills all required fields (lv_draw.c).
+        let mut inner = unsafe { core::mem::zeroed() };
+        unsafe { lv_draw_rect_dsc_init(&mut inner) };
+        Self { inner }
+    }
+
+    /// Set background color.
+    pub fn bg_color(&mut self, color: lv_color_t) -> &mut Self {
+        self.inner.bg_color = color;
+        self
+    }
+
+    /// Set corner radius. Use `RADIUS_CIRCLE` (0x7FFF) for a full circle.
+    pub fn radius(&mut self, r: i32) -> &mut Self {
+        self.inner.radius = r;
+        self
+    }
+
+    /// Set border color.
+    pub fn border_color(&mut self, color: lv_color_t) -> &mut Self {
+        self.inner.border_color = color;
+        self
+    }
+
+    /// Set border width in pixels.
+    pub fn border_width(&mut self, w: i32) -> &mut Self {
+        self.inner.border_width = w;
+        self
+    }
+
+    /// Set outline color.
+    pub fn outline_color(&mut self, color: lv_color_t) -> &mut Self {
+        self.inner.outline_color = color;
+        self
+    }
+
+    /// Set outline width in pixels.
+    pub fn outline_width(&mut self, w: i32) -> &mut Self {
+        self.inner.outline_width = w;
+        self
+    }
+
+    /// Set gap between the object border and the outline.
+    pub fn outline_pad(&mut self, pad: i32) -> &mut Self {
+        self.inner.outline_pad = pad;
+        self
+    }
+}
+
+impl Default for DrawRectDsc {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+// ── DrawLabelDscOwned ─────────────────────────────────────────────────────────
+
+/// Owned LVGL label draw descriptor.
+///
+/// Initialised via `lv_draw_label_dsc_init`. Pass to [`Layer::draw_label`].
+pub struct DrawLabelDscOwned {
+    inner: lv_draw_label_dsc_t,
+}
+
+impl DrawLabelDscOwned {
+    /// Create with default font (`lv_font_montserrat_14`) and LVGL defaults.
+    ///
+    /// # Safety
+    ///
+    /// `lv_font_montserrat_14` is a `'static` global symbol linked from LVGL.
+    pub fn default_font() -> Self {
+        // SAFETY: zeroed is a valid starting state; init fills required fields.
+        let mut inner = unsafe { core::mem::zeroed() };
+        unsafe { lv_draw_label_dsc_init(&mut inner) };
+        // SAFETY: lv_font_montserrat_14 is a 'static LVGL global; pointer is always valid.
+        inner.font = unsafe { &lv_font_montserrat_14 };
+        Self { inner }
+    }
+
+    /// Set text color.
+    pub fn set_color(&mut self, color: lv_color_t) {
+        self.inner.color = color;
+    }
+
+    /// Measure pixel size of `text` using this descriptor's current font and spacing.
+    ///
+    /// Returns `(width, height)`.
+    pub fn text_size(&self, text: &str) -> (i32, i32) {
+        let mut buf = [0u8; 64];
+        let len = text.len().min(buf.len() - 1);
+        buf[..len].copy_from_slice(&text.as_bytes()[..len]);
+        buf[len] = 0;
+        let mut size: lv_point_t = unsafe { core::mem::zeroed() };
+        // SAFETY: font pointer valid (set in default_font); buf is null-terminated stack data.
+        unsafe {
+            lv_text_get_size(
+                &mut size,
+                buf.as_ptr() as *const core::ffi::c_char,
+                self.inner.font,
+                self.inner.letter_space,
+                self.inner.line_space,
+                0x7FFF,
                 lv_text_flag_t_LV_TEXT_FLAG_NONE,
             );
         }
