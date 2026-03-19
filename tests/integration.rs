@@ -17,9 +17,9 @@ use oxivgl::{
     enums::{EventCode, ObjFlag, ObjState, Opa, ScrollDir, ScrollSnap, ScrollbarMode},
     layout::{FlexAlign, FlexFlow, GridAlign, GridCell, Layout, GRID_TEMPLATE_LAST},
     widgets::{
-        detach, Align, Arc, AsLvHandle, Bar, Button, Checkbox, Child, Dropdown, Image, Label,
-        Led, Line, Obj, Roller, RollerMode, Screen, Slider, Switch, ValueLabel, WidgetError,
-        RADIUS_MAX,
+        detach, Align, Arc, AsLvHandle, Bar, Button, Buttonmatrix, Checkbox, Child, Dropdown,
+        Image, Keyboard, KeyboardMode, Label, Led, Line, Obj, Part, Roller, RollerMode, Screen,
+        Slider, Switch, Textarea, ValueLabel, WidgetError, RADIUS_MAX,
     },
 };
 
@@ -2278,4 +2278,150 @@ fn obj_adv_hittest_flag() {
     let obj = Obj::new(&screen).unwrap();
     obj.add_flag(ObjFlag::ADV_HITTEST);
     pump();
+}
+
+// ── Textarea ──────────────────────────────────────────────────────────────────
+
+#[test]
+fn textarea_create() {
+    let screen = fresh_screen();
+    let ta = Textarea::new(&screen).unwrap();
+    pump();
+    assert!(ta.get_width() > 0);
+}
+
+#[test]
+fn textarea_set_get_text() {
+    let screen = fresh_screen();
+    let ta = Textarea::new(&screen).unwrap();
+    ta.set_text("Hello");
+    assert_eq!(ta.get_text(), Some("Hello"));
+}
+
+#[test]
+fn textarea_one_line() {
+    let screen = fresh_screen();
+    let ta = Textarea::new(&screen).unwrap();
+    ta.set_one_line(true);
+    ta.set_text("single line");
+    pump();
+    assert_eq!(ta.get_text(), Some("single line"));
+}
+
+#[test]
+fn textarea_password_mode() {
+    let screen = fresh_screen();
+    let ta = Textarea::new(&screen).unwrap();
+    ta.set_password_mode(true);
+    ta.set_text("secret");
+    pump();
+    assert_eq!(ta.get_text(), Some("secret"));
+}
+
+#[test]
+fn textarea_cursor_pos() {
+    let screen = fresh_screen();
+    let ta = Textarea::new(&screen).unwrap();
+    ta.set_text("abc");
+    ta.set_cursor_pos(1);
+    ta.add_text("X");
+    assert_eq!(ta.get_text(), Some("aXbc"));
+}
+
+#[test]
+fn textarea_max_length() {
+    let screen = fresh_screen();
+    let ta = Textarea::new(&screen).unwrap();
+    ta.set_max_length(3);
+    ta.set_text("");
+    ta.add_text("abcdef");
+    let text = ta.get_text().unwrap_or("");
+    assert!(text.len() <= 3, "max_length should limit to 3 chars, got: {text}");
+}
+
+#[test]
+fn textarea_add_delete_char() {
+    let screen = fresh_screen();
+    let ta = Textarea::new(&screen).unwrap();
+    ta.set_text("");
+    ta.add_char('A');
+    ta.add_char('B');
+    assert_eq!(ta.get_text(), Some("AB"));
+    ta.delete_char();
+    assert_eq!(ta.get_text(), Some("A"));
+}
+
+#[test]
+fn textarea_placeholder() {
+    let screen = fresh_screen();
+    let ta = Textarea::new(&screen).unwrap();
+    ta.set_placeholder_text("Enter text...");
+    pump();
+}
+
+#[test]
+fn textarea_accepted_chars() {
+    let screen = fresh_screen();
+    let ta = Textarea::new(&screen).unwrap();
+    ta.set_accepted_chars(c"0123456789");
+    ta.set_text("");
+    ta.add_text("12abc34");
+    let text = ta.get_text().unwrap_or("");
+    assert!(!text.contains('a'), "should filter non-digit chars, got: {text}");
+}
+
+// ── Buttonmatrix ──────────────────────────────────────────────────────────────
+
+#[test]
+fn buttonmatrix_create() {
+    let screen = fresh_screen();
+    let btnm = Buttonmatrix::new(&screen).unwrap();
+    pump();
+    assert!(btnm.get_width() > 0);
+}
+
+#[test]
+fn buttonmatrix_get_selected() {
+    let screen = fresh_screen();
+    let btnm = Buttonmatrix::new(&screen).unwrap();
+    pump();
+    let _sel = btnm.get_selected_button();
+}
+
+// ── Keyboard ──────────────────────────────────────────────────────────────────
+
+#[test]
+fn keyboard_create() {
+    let screen = fresh_screen();
+    let kb = Keyboard::new(&screen).unwrap();
+    pump();
+    assert!(kb.get_width() > 0);
+}
+
+#[test]
+fn keyboard_set_textarea() {
+    let screen = fresh_screen();
+    let ta = Textarea::new(&screen).unwrap();
+    let kb = Keyboard::new(&screen).unwrap();
+    kb.set_textarea(&ta);
+    pump();
+}
+
+#[test]
+fn keyboard_set_mode() {
+    let screen = fresh_screen();
+    let kb = Keyboard::new(&screen).unwrap();
+    kb.set_mode(KeyboardMode::Number);
+    kb.set_mode(KeyboardMode::TextLower);
+    kb.set_mode(KeyboardMode::TextUpper);
+    kb.set_mode(KeyboardMode::SpecialChars);
+    pump();
+}
+
+// ── Part::Cursor ──────────────────────────────────────────────────────────────
+
+#[test]
+fn part_cursor_value() {
+    assert_eq!(Part::Cursor as u32, 0x060000);
+    assert_eq!(Part::from_raw(0x060000), Part::Cursor);
 }

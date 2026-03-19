@@ -29,8 +29,9 @@ use oxivgl::{
     },
     enums::ObjState,
     widgets::{
-        Arc, Bar, BarMode, Button, Checkbox, Dropdown, Label, Led, Line, Obj, Part, Roller,
-        RollerMode, Screen, Slider, Switch, ValueLabel,
+        Arc, Bar, BarMode, Button, Buttonmatrix, Checkbox, Dropdown, Keyboard, KeyboardMode,
+        Label, Led, Line, Obj, Part, Roller, RollerMode, Screen, Slider, Switch, Textarea,
+        ValueLabel,
     },
 };
 
@@ -513,5 +514,35 @@ fn leak_zz_anim_start_widget_delete() {
         pump();
         drop(obj); // LVGL cancels animation on widget delete
         pump(); // flush animation cleanup
+    });
+}
+
+#[test]
+fn leak_textarea() {
+    // Textarea creates internal child objects (text label, placeholder label, cursor).
+    assert_no_leak("Textarea", 4, |screen| {
+        let ta = Textarea::new(screen).unwrap();
+        ta.set_one_line(true);
+        ta.set_text("test");
+        ta.add_text(" more");
+        drop(ta);
+    });
+}
+
+#[test]
+fn leak_buttonmatrix() {
+    assert_no_leak("Buttonmatrix", 1, |screen| {
+        let btnm = Buttonmatrix::new(screen).unwrap();
+        drop(btnm);
+    });
+}
+
+#[test]
+fn leak_keyboard() {
+    // Keyboard creates internal buttonmatrix + label children.
+    assert_no_leak("Keyboard", 3, |screen| {
+        let kb = Keyboard::new(screen).unwrap();
+        kb.set_mode(KeyboardMode::Number);
+        drop(kb);
     });
 }
