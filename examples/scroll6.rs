@@ -9,6 +9,10 @@
 //! A circular clipped flex column where items are displaced horizontally based
 //! on their distance from the container centre, creating a curved/perspective
 //! effect. Items far from centre are also made more transparent.
+//!
+//! Note: the C original uses plain `lv_obj_t` children. This port uses
+//! `Button` widgets; they are visual-only here — scroll events are caught on
+//! the container via `SCROLL`, not on the buttons themselves.
 
 use oxivgl::{
     enums::{EventCode, ScrollDir, ScrollSnap, ScrollbarMode},

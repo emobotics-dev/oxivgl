@@ -47,6 +47,9 @@ pub use crate::style::{
 // Math utilities
 pub use crate::math::{bezier3, map, trigo_cos, trigo_sin, BEZIER_VAL_MAX, TRIGO_SHIFT};
 
+// Draw primitives (needed in DRAW_TASK_ADDED / DRAW_MAIN_END handlers)
+pub use crate::draw::{DrawLabelDscOwned, DrawRectDsc, Layer};
+
 // Symbol icons
 pub use crate::symbols::Symbol;
 

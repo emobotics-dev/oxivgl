@@ -571,6 +571,11 @@ fn leak_menu() {
         lbl.text("Item");
         menu.set_page(&page);
         drop(lbl);
+        // page and cont are Child<Obj> — Child<W> suppresses Drop, so LVGL
+        // (not Rust) will free them when menu is deleted. Explicit drops here
+        // clarify intent; order doesn't affect safety.
+        drop(cont);
+        drop(page);
         drop(menu);
     });
 }
