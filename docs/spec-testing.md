@@ -114,7 +114,22 @@ errors.
 
 ---
 
-## 7. Portability
+## 7. Regression Tests
+
+When a bug is confirmed, follow this procedure:
+
+1. **Write a test that reproduces the bug** — it MUST fail on the
+   current code.
+2. **Fix the bug** — the test MUST now pass.
+3. **Commit both** — the test and the fix go together.
+
+The regression test ensures that if the same or a similar bug is
+reintroduced later, it is caught immediately. Never fix a bug without
+a corresponding test.
+
+---
+
+## 8. Portability
 
 Every change to `src/` must build on both targets:
 
