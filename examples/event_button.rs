@@ -6,12 +6,11 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
 //! Event Button — Handle multiple events
 //!
-//! TODO: Hardware target (fire27) has no touch screen yet — button events
-//! require an input device to trigger. The GUI is fully wired; only the
-//! physical input is missing.
+//! A button that displays which event was last triggered (PRESSED, CLICKED,
+//! LONG_PRESSED, LONG_PRESSED_REPEAT) in an info label.
 
 use oxivgl::{
-    view::View,
+    view::{register_event_on, View},
     enums::EventCode,
     event::Event,
     widgets::{Button, Label, Screen, WidgetError},
@@ -26,13 +25,6 @@ struct EventButton {
 impl View for EventButton {
     fn create() -> Result<Self, WidgetError> {
         let screen = Screen::active().ok_or(WidgetError::LvglNullPointer)?;
-
-        // TODO: No touch input on fire27 hardware — button events won't fire
-        // until an input device is connected.
-        #[cfg(target_arch = "xtensa")]
-        oxivgl_examples_common::warn!(
-            "event_button: no touch input — button events require input device"
-        );
 
         let btn = Button::new(&screen)?;
         btn.size(100, 50).center();
@@ -51,10 +43,11 @@ impl View for EventButton {
         })
     }
 
+    fn register_events(&mut self) {
+        register_event_on(self, self.btn.handle());
+    }
+
     fn on_event(&mut self, event: &Event) {
-        if event.target_handle() != self.btn.handle() {
-            return;
-        }
         let text = match event.code() {
             EventCode::PRESSED => "The last button event:\nLV_EVENT_PRESSED",
             EventCode::CLICKED => "The last button event:\nLV_EVENT_CLICKED",

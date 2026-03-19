@@ -233,6 +233,11 @@ pub unsafe extern "C" fn anim_set_x(var: *mut c_void, v: i32) {
     unsafe { lv_obj_set_x(var as *mut lv_obj_t, v) };
 }
 
+/// Exec callback: `lv_obj_set_y(var, v)`.
+pub unsafe extern "C" fn anim_set_y(var: *mut c_void, v: i32) {
+    unsafe { lv_obj_set_y(var as *mut lv_obj_t, v) };
+}
+
 /// Exec callback: `lv_obj_set_size(var, v, v)` — uniform width+height.
 pub unsafe extern "C" fn anim_set_size(var: *mut c_void, v: i32) {
     unsafe { lv_obj_set_size(var as *mut lv_obj_t, v, v) };

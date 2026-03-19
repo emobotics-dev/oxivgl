@@ -6,9 +6,7 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
 //! Event Click — Add click event to a button
 //!
-//! TODO: Hardware target (fire27) has no touch screen yet — click events
-//! require an input device to trigger. The GUI is fully wired; only the
-//! physical input is missing.
+//! A button that counts clicks and displays the count as the label text.
 
 use oxivgl::{
     view::View,
@@ -26,13 +24,6 @@ struct EventClick {
 impl View for EventClick {
     fn create() -> Result<Self, WidgetError> {
         let screen = Screen::active().ok_or(WidgetError::LvglNullPointer)?;
-
-        // TODO: No touch input on fire27 hardware — click events won't fire
-        // until an input device is connected.
-        #[cfg(target_arch = "xtensa")]
-        oxivgl_examples_common::warn!(
-            "event_click: no touch input — click events require input device"
-        );
 
         let btn = Button::new(&screen)?;
         btn.size(100, 50).center();
