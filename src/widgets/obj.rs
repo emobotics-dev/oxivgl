@@ -76,6 +76,8 @@ pub enum Part {
     Selected = 0x040000,
     /// Repeated sub-elements such as tick marks (`LV_PART_ITEMS = 0x050000`).
     Items = 0x050000,
+    /// Text cursor (e.g. textarea cursor, `LV_PART_CURSOR = 0x060000`).
+    Cursor = 0x060000,
     /// Scrollbar part (`LV_PART_SCROLLBAR = 0x010000`).
     Scrollbar = lvgl_rust_sys::lv_part_t_LV_PART_SCROLLBAR,
 }
@@ -91,6 +93,7 @@ impl Part {
             0x030000 => Part::Knob,
             0x040000 => Part::Selected,
             0x050000 => Part::Items,
+            0x060000 => Part::Cursor,
             _ => Part::Main,
         }
     }

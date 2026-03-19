@@ -29,6 +29,7 @@ runner (`example_main!` macro selects host SDL2 or ESP32 fire27 backend).
 - [Widgets — Scale](#widgets--scale)
 - [Widgets — Slider](#widgets--slider)
 - [Widgets — Switch](#widgets--switch)
+- [Widgets — Textarea](#widgets--textarea)
 - [Implementation Coverage](#implementation-coverage)
 - [Running](#running)
 
@@ -715,6 +716,36 @@ Horizontal switch (default) and vertical switch (pre-checked), using `set_orient
 
 ![widget_switch2](screenshots/widget_switch2.png)
 
+## Widgets — Textarea
+
+### Widget Textarea 1 — Numeric Keypad
+
+One-line textarea with a custom numeric button matrix keypad (Buttonmatrix widget).
+Pressing digits appends; backspace deletes; enter sends READY.
+
+![widget_textarea1](screenshots/widget_textarea1.png)
+
+### Widget Textarea 2 — Password and Text with Keyboard
+
+Password textarea (left) and plain text textarea (right) with an on-screen Keyboard widget.
+Clicking either textarea switches keyboard focus.
+
+![widget_textarea2](screenshots/widget_textarea2.png)
+
+### Widget Textarea 3 — Clock Format Auto-Insert
+
+Textarea restricted to digits and ':', max 5 characters. After two digits, ':' is
+auto-inserted via VALUE_CHANGED event. Numeric keyboard below.
+
+![widget_textarea3](screenshots/widget_textarea3.png)
+
+### Widget Textarea 4 — Cursor Styles
+
+Three one-line textareas with unique cursor styles applied via Part::Cursor + ObjState::FOCUSED:
+simple red bar, underline blue, and block orange/yellow gradient.
+
+![widget_textarea4](screenshots/widget_textarea4.png)
+
 ## Implementation Coverage
 
 Status of all [LVGL 9.3 examples](https://docs.lvgl.io/9.3/examples.html) in oxivgl.
@@ -751,20 +782,21 @@ Status of all [LVGL 9.3 examples](https://docs.lvgl.io/9.3/examples.html) in oxi
 | scale | 11 | 11 | 0 | |
 | slider | 4 | 4 | 0 | |
 | switch | 2 | 2 | 0 | |
+| textarea | 4 | 4 | 0 | Includes Buttonmatrix + Keyboard wrappers |
 
 ### Widgets Without Wrappers
 
-animimg, buttonmatrix, calendar, canvas, imagebutton, keyboard, list, lottie, menu, msgbox, span, spinbox, spinner, table, tabview, textarea, tileview, win.
+animimg, calendar, canvas, imagebutton, list, lottie, menu, msgbox, span, spinbox, spinner, table, tabview, tileview, win.
 
 ### Totals
 
 | | Count |
 |---|---|
 | LVGL examples total | ~184 |
-| oxivgl done | 100 |
+| oxivgl done | 104 |
 | Skipped (intentional) | 7 |
 | Missing (wrapper exists) | 5 |
-| No wrapper | ~68 |
+| No wrapper | ~64 |
 
 ## Running
 

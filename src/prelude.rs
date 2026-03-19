@@ -26,12 +26,12 @@ pub use crate::layout::{
 
 // Widgets
 pub use crate::widgets::{
-    Align, Arc, ArcMode, AsLvHandle, Bar, BarMode, BaseDir, Button, Chart, ChartAxis, ChartSeries,
-    ChartType, Checkbox, Child, DdDir, Dropdown, Image, ImageAlign, Label, LabelLongMode, Led,
-    Line, Matrix, Obj, Part, Roller,
+    Align, Arc, ArcMode, AsLvHandle, Bar, BarMode, BaseDir, Button, Buttonmatrix, ButtonmatrixMap,
+    Chart, ChartAxis, ChartSeries, ChartType, Checkbox, Child, DdDir, Dropdown, Image, ImageAlign,
+    Keyboard, KeyboardMode, Label, LabelLongMode, Led, Line, Matrix, Obj, Part, Roller,
     RollerMode, Scale, ScaleBuilder, ScaleLabels, ScaleMode, ScaleSection, Screen, Slider,
-    SliderMode, Switch, SwitchOrientation, TextAlign, ValueLabel, WidgetError, RADIUS_MAX,
-    SCALE_LABEL_ROTATE_KEEP_UPRIGHT, SCALE_LABEL_ROTATE_MATCH_TICKS,
+    SliderMode, Switch, SwitchOrientation, Textarea, TextAlign, ValueLabel, WidgetError,
+    RADIUS_MAX, SCALE_LABEL_ROTATE_KEEP_UPRIGHT, SCALE_LABEL_ROTATE_MATCH_TICKS,
 };
 pub use crate::widgets::{lv_color_t, lv_image_dsc_t, lv_point_precise_t};
 
