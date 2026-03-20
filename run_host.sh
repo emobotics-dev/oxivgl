@@ -49,6 +49,7 @@ ALL_EXAMPLES=(
     widget_scale{1,2,3,4,5,6,7,8,9,10,11}
     widget_slider{1,2,3,4}
     widget_switch{1,2}
+    table_{1,2}
     widget_textarea{1,2,3,4}
     canvas_{1,2,3,4,5,7,9,10,11}
 )

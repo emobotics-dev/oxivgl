@@ -914,6 +914,25 @@ HSV-cycled colors shifting each frame via `DrawLetterDsc`. Animated each frame.
 
 ![canvas_11](screenshots/canvas_11.png)
 
+## Table
+
+### table_1 — Scrollable fruit/price table
+
+2-column, 8-row table (Name / Price) with height=200 (scrollable). A
+`DRAW_TASK_ADDED` handler applies: blue-tinted header row with centered text,
+right-aligned first column, grey-tinted even non-header rows.
+
+![table_1](screenshots/table_1.png)
+
+### table_2 — Scrollable list with toggle state
+
+Single-column 200-row table used as a lightweight scrollable list. Each row
+stores a boolean checked state via `CUSTOM_1` cell-ctrl. A `DRAW_TASK_ADDED`
+handler highlights checked rows in blue; `VALUE_CHANGED` toggles the state on
+click.
+
+![table_2](screenshots/table_2.png)
+
 ## Implementation Coverage
 
 Status of all [LVGL 9.3 examples](https://docs.lvgl.io/9.3/examples.html) in oxivgl.
@@ -955,20 +974,21 @@ Status of all [LVGL 9.3 examples](https://docs.lvgl.io/9.3/examples.html) in oxi
 | switch | 2 | 2 | 0 | |
 | textarea | 4 | 4 | 0 | Includes Buttonmatrix + Keyboard wrappers |
 | canvas | 11 | 9 | 2 | canvas_6 (image asset), canvas_8 (vector graphics) |
+| table | 2 | 2 | 0 | |
 
 ### Widgets Without Wrappers
 
-animimg, calendar, imagebutton, lottie, span, spinbox, spinner, table, tabview, tileview, win.
+animimg, calendar, imagebutton, lottie, span, spinbox, spinner, tabview, tileview, win.
 
 ### Totals
 
 | | Count |
 |---|---|
 | LVGL examples total | ~184 |
-| oxivgl done | 127 |
+| oxivgl done | 129 |
 | Skipped (intentional) | 3 |
 | Missing (wrapper exists) | 4 |
-| No wrapper | ~55 |
+| No wrapper | ~53 |
 
 ## Running
 
