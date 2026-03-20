@@ -54,7 +54,7 @@ pub use buttonmatrix::{Buttonmatrix, ButtonmatrixMap};
 pub use canvas::{Canvas, CanvasLayer};
 pub use chart::{Chart, ChartAxis, ChartSeries, ChartType};
 pub use checkbox::Checkbox;
-pub use child::{Child, detach};
+pub use child::Child;
 pub use dropdown::{DdDir, Dropdown};
 pub use image::{Image, ImageAlign};
 pub use keyboard::{Keyboard, KeyboardMode};

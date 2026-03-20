@@ -9,14 +9,14 @@
 use oxivgl::{
     view::View,
     layout::{GridAlign, GridCell, GRID_TEMPLATE_LAST},
-    widgets::{Button, Label, Screen, WidgetError},
+    widgets::{Button, Label, Obj, Screen, WidgetError},
 };
 
 static COL_DSC: [i32; 4] = [70, 70, 70, GRID_TEMPLATE_LAST];
 static ROW_DSC: [i32; 4] = [50, 50, 50, GRID_TEMPLATE_LAST];
 
 struct Grid1 {
-    _cont: oxivgl::widgets::Obj<'static>,
+    _cont: Obj<'static>,
     _buttons: heapless::Vec<Button<'static>, 9>,
     _labels: heapless::Vec<Label<'static>, 9>,
 }

@@ -4,10 +4,10 @@ use core::{ffi::c_char, ops::Deref, ptr::null_mut};
 use lvgl_rust_sys::*;
 
 use super::{
+    WidgetError,
     button::Button,
     child::Child,
     obj::{AsLvHandle, Obj},
-    WidgetError,
 };
 use crate::symbols::Symbol;
 
@@ -58,13 +58,7 @@ impl<'p> List<'p> {
         // SAFETY: parent_ptr non-null (asserted above); lv_init() called via
         // LvglDriver.
         let handle = unsafe { lv_list_create(parent_ptr) };
-        if handle.is_null() {
-            Err(WidgetError::LvglNullPointer)
-        } else {
-            Ok(List {
-                obj: Obj::from_raw(handle),
-            })
-        }
+        if handle.is_null() { Err(WidgetError::LvglNullPointer) } else { Ok(List { obj: Obj::from_raw(handle) }) }
     }
 
     /// Add a text header (section label) to the list.
@@ -104,13 +98,7 @@ impl<'p> List<'p> {
         // SAFETY: handle non-null (asserted above); icon_ptr is NULL or a valid
         // symbol string pointer; buf is NUL-terminated. LVGL creates child
         // widgets that are owned by the list (lv_list.c:88-106).
-        let btn_ptr = unsafe {
-            lv_list_add_button(
-                self.obj.handle(),
-                icon_ptr,
-                buf.as_ptr() as *const c_char,
-            )
-        };
+        let btn_ptr = unsafe { lv_list_add_button(self.obj.handle(), icon_ptr, buf.as_ptr() as *const c_char) };
         assert!(!btn_ptr.is_null(), "lv_list_add_button returned NULL");
         // The button is a child of the list — wrap as Child to suppress Drop.
         Child::new(Button::from_raw(btn_ptr))

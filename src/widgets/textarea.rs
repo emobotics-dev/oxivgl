@@ -4,8 +4,8 @@ use core::{ffi::c_char, ops::Deref, ptr::null_mut};
 use lvgl_rust_sys::*;
 
 use super::{
-    obj::{AsLvHandle, Obj},
     WidgetError,
+    obj::{AsLvHandle, Obj},
 };
 
 /// LVGL textarea widget (single- or multi-line text input).
@@ -46,15 +46,10 @@ impl<'p> Textarea<'p> {
     pub fn new(parent: &impl AsLvHandle) -> Result<Self, WidgetError> {
         let parent_ptr = parent.lv_handle();
         assert_ne!(parent_ptr, null_mut(), "Parent widget cannot be null");
-        // SAFETY: parent_ptr non-null (asserted above); lv_init() called via LvglDriver.
+        // SAFETY: parent_ptr non-null (asserted above); lv_init() called via
+        // LvglDriver.
         let handle = unsafe { lv_textarea_create(parent_ptr) };
-        if handle.is_null() {
-            Err(WidgetError::LvglNullPointer)
-        } else {
-            Ok(Textarea {
-                obj: Obj::from_raw(handle),
-            })
-        }
+        if handle.is_null() { Err(WidgetError::LvglNullPointer) } else { Ok(Textarea { obj: Obj::from_raw(handle) }) }
     }
 
     /// Set the textarea text. LVGL copies the string internally.
@@ -120,9 +115,7 @@ impl<'p> Textarea<'p> {
         let len = text.len().min(127);
         buf[..len].copy_from_slice(&text.as_bytes()[..len]);
         // SAFETY: handle non-null; buf is NUL-terminated. LVGL copies internally.
-        unsafe {
-            lv_textarea_set_placeholder_text(self.obj.handle(), buf.as_ptr() as *const c_char)
-        };
+        unsafe { lv_textarea_set_placeholder_text(self.obj.handle(), buf.as_ptr() as *const c_char) };
         self
     }
 
@@ -160,9 +153,7 @@ impl<'p> Textarea<'p> {
         // SAFETY: handle non-null; chars is 'static and NUL-terminated.
         // LVGL stores the raw pointer; 'static satisfies the lifetime
         // requirement (spec-memory-lifetime §1/§3).
-        unsafe {
-            lv_textarea_set_accepted_chars(self.obj.handle(), chars.as_ptr() as *const c_char)
-        };
+        unsafe { lv_textarea_set_accepted_chars(self.obj.handle(), chars.as_ptr() as *const c_char) };
         self
     }
 

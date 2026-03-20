@@ -4,9 +4,9 @@ use core::{ffi::c_char, ops::Deref, ptr::null_mut};
 use lvgl_rust_sys::*;
 
 use super::{
+    WidgetError,
     child::Child,
     obj::{AsLvHandle, Obj},
-    WidgetError,
 };
 
 /// LVGL menu widget — a navigation container with pages, sub-pages, headers,
@@ -65,14 +65,13 @@ impl<'p> Menu<'p> {
     pub fn new(parent: &impl AsLvHandle) -> Result<Self, WidgetError> {
         let parent_ptr = parent.lv_handle();
         assert_ne!(parent_ptr, null_mut(), "Parent widget cannot be null");
-        // SAFETY: parent_ptr non-null (asserted above); lv_init() called via LvglDriver.
+        // SAFETY: parent_ptr non-null (asserted above); lv_init() called via
+        // LvglDriver.
         let handle = unsafe { lv_menu_create(parent_ptr) };
         if handle.is_null() {
             Err(WidgetError::LvglNullPointer)
         } else {
-            Ok(Menu {
-                obj: Obj::from_raw(handle),
-            })
+            Ok(Menu { obj: Obj::from_raw(handle) })
         }
     }
 
@@ -172,21 +171,11 @@ impl<'p> Menu<'p> {
     }
 
     /// Configure a container to navigate to `page` when clicked.
-    pub fn set_load_page_event(
-        &self,
-        cont: &impl AsLvHandle,
-        page: &impl AsLvHandle,
-    ) -> &Self {
+    pub fn set_load_page_event(&self, cont: &impl AsLvHandle, page: &impl AsLvHandle) -> &Self {
         assert_ne!(self.obj.handle(), null_mut(), "Menu handle cannot be null");
         // SAFETY: all handles non-null. LVGL registers a CLICKED event on cont
         // that navigates to page.
-        unsafe {
-            lv_menu_set_load_page_event(
-                self.obj.handle(),
-                cont.lv_handle(),
-                page.lv_handle(),
-            )
-        };
+        unsafe { lv_menu_set_load_page_event(self.obj.handle(), cont.lv_handle(), page.lv_handle()) };
         self
     }
 
@@ -241,11 +230,7 @@ impl<'p> Menu<'p> {
         assert_ne!(self.obj.handle(), null_mut(), "Menu handle cannot be null");
         // SAFETY: handle non-null.
         let ptr = unsafe { lv_menu_get_cur_sidebar_page(self.obj.handle()) };
-        if ptr.is_null() {
-            None
-        } else {
-            Some(Child::new(Obj::from_raw(ptr)))
-        }
+        if ptr.is_null() { None } else { Some(Child::new(Obj::from_raw(ptr))) }
     }
 
     /// Get the currently displayed main page.
@@ -253,11 +238,7 @@ impl<'p> Menu<'p> {
         assert_ne!(self.obj.handle(), null_mut(), "Menu handle cannot be null");
         // SAFETY: handle non-null.
         let ptr = unsafe { lv_menu_get_cur_main_page(self.obj.handle()) };
-        if ptr.is_null() {
-            None
-        } else {
-            Some(Child::new(Obj::from_raw(ptr)))
-        }
+        if ptr.is_null() { None } else { Some(Child::new(Obj::from_raw(ptr))) }
     }
 
     /// Clear menu navigation history.

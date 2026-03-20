@@ -6,8 +6,8 @@ use core::ptr::null_mut;
 
 use lvgl_rust_sys::*;
 
-use crate::layout::{FlexAlign, FlexFlow, GridAlign, GridCell};
 use super::obj::Obj;
+use crate::layout::{FlexAlign, FlexFlow, GridAlign, GridCell};
 
 impl<'p> Obj<'p> {
     /// Set flex layout flow direction.
@@ -80,13 +80,7 @@ impl<'p> Obj<'p> {
     pub fn set_grid_align(&self, col_align: GridAlign, row_align: GridAlign) -> &Self {
         assert_ne!(self.handle(), null_mut());
         // SAFETY: handle non-null (asserted above).
-        unsafe {
-            lv_obj_set_grid_align(
-                self.handle(),
-                col_align as lv_grid_align_t,
-                row_align as lv_grid_align_t,
-            )
-        };
+        unsafe { lv_obj_set_grid_align(self.handle(), col_align as lv_grid_align_t, row_align as lv_grid_align_t) };
         self
     }
 }

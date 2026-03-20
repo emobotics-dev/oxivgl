@@ -11,12 +11,12 @@
 
 use oxivgl::{
     view::View,
-    widgets::{Child, Label, Menu, Screen, WidgetError},
+    widgets::{Label, Menu, Screen, WidgetError},
 };
 
 struct WidgetMenu1 {
     _menu: Menu<'static>,
-    _labels: [Child<Label<'static>>; 4],
+    _labels: [Label<'static>; 4],
 }
 
 impl View for WidgetMenu1 {
@@ -53,10 +53,10 @@ impl View for WidgetMenu1 {
         Ok(Self {
             _menu: menu,
             _labels: [
-                Child::new(l0),
-                Child::new(l1),
-                Child::new(l2),
-                Child::new(l3),
+                l0,
+                l1,
+                l2,
+                l3,
             ],
         })
     }

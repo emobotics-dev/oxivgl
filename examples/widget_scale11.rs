@@ -19,8 +19,7 @@ use oxivgl::{
         color_white, palette_darken, palette_main, Palette, Selector, Style, StyleBuilder,
     },
     view::{register_event_on, View},
-    widgets::{
-        Align, Label, Obj, Part, Scale, ScaleLabels, ScaleMode, Screen, WidgetError,
+    widgets::{Align, Label, Obj, Part, Scale, ScaleLabels, ScaleMode, Screen, WidgetError,
         SCALE_LABEL_ROTATE_KEEP_UPRIGHT, SCALE_LABEL_ROTATE_MATCH_TICKS,
     },
 };

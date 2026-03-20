@@ -17,7 +17,7 @@ use oxivgl::{
     enums::{EventCode, ObjFlag, ObjState, Opa, ScrollDir, ScrollSnap, ScrollbarMode},
     layout::{FlexAlign, FlexFlow, GridAlign, GridCell, Layout, GRID_TEMPLATE_LAST},
     widgets::{
-        detach, Align, Arc, AsLvHandle, Bar, Button, Buttonmatrix, Canvas, Checkbox, Child,
+        Align, Arc, AsLvHandle, Bar, Button, Buttonmatrix, Canvas, Checkbox,
         Dropdown, Image, Keyboard, KeyboardMode, Label, Led, Line, Menu, MenuHeaderMode, Msgbox,
         Obj, Part, Roller, RollerMode, Screen, Slider, Switch, Table, TableCellCtrl, Tabview,
         Textarea, ValueLabel, WidgetError, RADIUS_MAX,
@@ -1001,12 +1001,10 @@ fn led_color() {
 #[test]
 fn child_wrapper_deref() {
     let screen = fresh_screen();
-    let label = Label::new(&screen).unwrap();
-    let child: Child<Label> = Child::new(label);
+    let child = Label::new(&screen).unwrap();
     child.text("via Child");
     pump();
     assert!(child.get_width() > 0);
-    // Child suppresses Drop — LVGL parent owns the object.
 }
 
 #[test]
@@ -1014,8 +1012,7 @@ fn detach_fire_and_forget() {
     let screen = fresh_screen();
     let label = Label::new(&screen).unwrap();
     label.text("ephemeral");
-    detach(label);
-    // label consumed, no Drop runs. LVGL parent will clean up.
+    // Child<Label> drop is a no-op — LVGL parent owns and cleans up.
     pump();
 }
 
@@ -1988,6 +1985,20 @@ fn obj_scroll_to_view_and_update_snap() {
 }
 
 #[test]
+fn obj_scroll_to_view_recursive() {
+    let screen = fresh_screen();
+    let outer = Obj::new(&screen).unwrap();
+    outer.size(100, 100);
+    let inner = Obj::new(&outer).unwrap();
+    inner.size(100, 400);
+    let target = Obj::new(&inner).unwrap();
+    target.size(50, 50);
+    pump();
+    target.scroll_to_view_recursive(false);
+    pump();
+}
+
+#[test]
 fn obj_set_scrollbar_mode() {
     let screen = fresh_screen();
     let obj = Obj::new(&screen).unwrap();
@@ -2677,7 +2688,7 @@ fn msgbox_create_modal() {
     mbox.add_text("Test body");
     mbox.add_close_button();
     pump();
-    mbox.close();
+    Msgbox::close(mbox);
     pump();
     let _ = screen; // keep screen alive
 }
@@ -2699,7 +2710,7 @@ fn msgbox_footer_button() {
     mbox.add_text("Are you sure?");
     let _btn = mbox.add_footer_button("OK");
     pump();
-    mbox.close();
+    Msgbox::close(mbox);
     pump();
     let _ = screen;
 }
@@ -3274,11 +3285,9 @@ fn dropdown_set_selected_highlight() {
 #[test]
 fn child_debug_fmt() {
     let screen = fresh_screen();
-    let lbl = Label::new(&screen).unwrap();
-    let c: Child<Label> = Child::new(lbl);
+    let c = Label::new(&screen).unwrap();
     let s = format!("{c:?}");
     assert!(!s.is_empty());
-    // Suppress Drop — LVGL parent owns the object.
 }
 
 // ── ValueLabel::Debug ─────────────────────────────────────────────────────────
@@ -3609,3 +3618,15 @@ fn tabview_get_content_and_bar() {
     let _content = tv.get_content();
     let _bar = tv.get_tab_bar();
 }
+
+#[test]
+fn tabview_set_tab_bar_position_and_size() {
+    use oxivgl::widgets::DdDir;
+    let screen = fresh_screen();
+    let tv = Tabview::new(&screen).unwrap();
+    let _tab = tv.add_tab("A");
+    tv.set_tab_bar_position(DdDir::Left);
+    tv.set_tab_bar_size(80);
+    pump();
+}
+
