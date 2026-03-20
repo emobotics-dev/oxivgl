@@ -142,12 +142,15 @@ impl<'c> CanvasLayer<'c> {
         buf[..len].copy_from_slice(&text.as_bytes()[..len]);
         buf[len] = 0;
         // lv_draw_label_dsc_t derives Copy — copy descriptor and set text pointer.
+        // text_local=1: lv_draw_label calls lv_strndup when queueing the task,
+        // so buf (on the stack) need only live until lv_draw_label returns, not
+        // until lv_canvas_finish_layer in Drop renders the queued commands.
         let mut local_dsc = unsafe { *dsc.as_ptr() };
         local_dsc.text = buf.as_ptr() as *const _;
-        local_dsc.set_text_local(0);
+        local_dsc.set_text_local(1);
         let lv_area = lv_area_t::from(area);
-        // SAFETY: layer valid; local_dsc.text points to buf on this stack frame,
-        // valid for the duration of this call.
+        // SAFETY: layer valid; lv_draw_label copies text via lv_strndup before
+        // returning (text_local=1), so buf lifetime need only cover this call.
         unsafe { lv_draw_label(&mut self.layer, &local_dsc, &lv_area) };
     }
 }
