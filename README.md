@@ -70,8 +70,8 @@ context they need to contribute effectively.
 | `List` | `widgets` | Scrollable list with icon+text buttons |
 | `Menu` | `widgets` | Hierarchical menu with pages |
 | `Msgbox` | `widgets` | Modal dialog with title, text, and buttons |
-| `Canvas<'p>` | `widgets` | Off-screen drawing surface; owns its `DrawBuf`; `fill_bg()`, `set_px()`, `init_layer()` → `CanvasLayer` |
-| `CanvasLayer<'c>` | `widgets` | RAII draw guard: `draw_rect()`, `draw_arc()`, `draw_line()`, `draw_triangle()`, `draw_image()`, `draw_label()`, `draw_letter()`; commits on `Drop` |
+| `Canvas<'p>` | `widgets` | Off-screen drawing surface; owns its `DrawBuf`; `fill_bg()`, `set_px()`, `init_layer()` → `CanvasLayer`. Use `RGB565` on embedded (fits in RAM); `ARGB8888` for host-only effects. |
+| `CanvasLayer<'c>` | `widgets` | RAII draw guard: `draw_rect()`, `draw_arc()`, `draw_line()`, `draw_triangle()`, `draw_image()`, `draw_label()`, `draw_letter()`; commits on `Drop`. Note: `draw_letter` with `rotation≠0` uses the vector font path — requires `ARGB8888` canvas internally. |
 | `ValueLabel` | `widgets` | Label that formats a numeric value with a unit string |
 | `Child<W>` | `widgets` | Non-owning wrapper — suppresses `Drop` (parent owns) |
 | `ScaleBuilder` | `widgets` | Builder for `Scale` widget configuration |
