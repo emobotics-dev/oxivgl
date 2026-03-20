@@ -17,7 +17,7 @@ pub enum KeyboardMode {
     /// Uppercase letters.
     TextUpper = 1,
     /// Special characters.
-    SpecialChars = 2,
+    Special = 2,
     /// Numeric keypad.
     Number = 3,
 }

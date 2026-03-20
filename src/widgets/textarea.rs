@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
 use core::{ffi::c_char, ops::Deref, ptr::null_mut};
 
-use alloc::vec::Vec;
 use lvgl_rust_sys::*;
 
 use super::{
@@ -61,9 +60,9 @@ impl<'p> Textarea<'p> {
     /// Set the textarea text. LVGL copies the string internally.
     pub fn set_text(&self, text: &str) -> &Self {
         assert_ne!(self.obj.handle(), null_mut(), "Textarea handle cannot be null");
-        let mut buf = Vec::with_capacity(text.len() + 1);
-        buf.extend_from_slice(text.as_bytes());
-        buf.push(0);
+        let mut buf = [0u8; 128];
+        let len = text.len().min(127);
+        buf[..len].copy_from_slice(&text.as_bytes()[..len]);
         // SAFETY: handle non-null; buf is NUL-terminated. LVGL copies internally.
         unsafe { lv_textarea_set_text(self.obj.handle(), buf.as_ptr() as *const c_char) };
         self
@@ -89,9 +88,9 @@ impl<'p> Textarea<'p> {
     /// Append text at the cursor position. LVGL copies the string internally.
     pub fn add_text(&self, text: &str) -> &Self {
         assert_ne!(self.obj.handle(), null_mut(), "Textarea handle cannot be null");
-        let mut buf = Vec::with_capacity(text.len() + 1);
-        buf.extend_from_slice(text.as_bytes());
-        buf.push(0);
+        let mut buf = [0u8; 128];
+        let len = text.len().min(127);
+        buf[..len].copy_from_slice(&text.as_bytes()[..len]);
         // SAFETY: handle non-null; buf is NUL-terminated. LVGL copies internally.
         unsafe { lv_textarea_add_text(self.obj.handle(), buf.as_ptr() as *const c_char) };
         self
@@ -117,9 +116,9 @@ impl<'p> Textarea<'p> {
     /// LVGL copies the string internally.
     pub fn set_placeholder_text(&self, text: &str) -> &Self {
         assert_ne!(self.obj.handle(), null_mut(), "Textarea handle cannot be null");
-        let mut buf = Vec::with_capacity(text.len() + 1);
-        buf.extend_from_slice(text.as_bytes());
-        buf.push(0);
+        let mut buf = [0u8; 128];
+        let len = text.len().min(127);
+        buf[..len].copy_from_slice(&text.as_bytes()[..len]);
         // SAFETY: handle non-null; buf is NUL-terminated. LVGL copies internally.
         unsafe {
             lv_textarea_set_placeholder_text(self.obj.handle(), buf.as_ptr() as *const c_char)

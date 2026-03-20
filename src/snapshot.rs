@@ -45,6 +45,7 @@ impl Snapshot {
     }
 
     /// Row stride in bytes (may differ from `width * 2` due to alignment).
+    #[cfg(feature = "png")]
     fn stride(&self) -> usize {
         let buf = unsafe { &*self.buf };
         buf.header.stride() as usize

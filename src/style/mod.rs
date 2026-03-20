@@ -9,12 +9,12 @@ mod theme;
 
 pub use grad::{GradDsc, GradExtend};
 pub use palette::{
-    color_black, color_brightness, color_darken, color_make, color_white, palette_darken,
-    palette_lighten, palette_main, GradDir, Palette,
+    GradDir, Palette, color_black, color_brightness, color_darken, color_hsv, color_make, color_white, palette_darken,
+    palette_lighten, palette_main,
 };
 pub use selector::Selector;
 pub use style::{
-    darken_filter_cb, lv_pct, props, BorderSide, ColorFilter, Style, StyleBuilder, TextDecor,
-    TransitionDsc, LV_SIZE_CONTENT,
+    BorderSide, ColorFilter, LV_SIZE_CONTENT, Style, StyleBuilder, TextDecor, TransitionDsc, darken_filter_cb, lv_pct,
+    props,
 };
 pub use theme::Theme;

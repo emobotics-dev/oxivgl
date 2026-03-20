@@ -17,9 +17,10 @@ use oxivgl::{
     enums::{EventCode, ObjFlag, ObjState, Opa, ScrollDir, ScrollSnap, ScrollbarMode},
     layout::{FlexAlign, FlexFlow, GridAlign, GridCell, Layout, GRID_TEMPLATE_LAST},
     widgets::{
-        detach, Align, Arc, AsLvHandle, Bar, Button, Buttonmatrix, Checkbox, Child, Dropdown,
-        Image, Keyboard, KeyboardMode, Label, Led, Line, Menu, MenuHeaderMode, Msgbox, Obj, Part,
-        Roller, RollerMode, Screen, Slider, Switch, Textarea, ValueLabel, WidgetError, RADIUS_MAX,
+        detach, Align, Arc, AsLvHandle, Bar, Button, Buttonmatrix, Canvas, Checkbox, Child,
+        Dropdown, Image, Keyboard, KeyboardMode, Label, Led, Line, Menu, MenuHeaderMode, Msgbox,
+        Obj, Part, Roller, RollerMode, Screen, Slider, Switch, Textarea, ValueLabel, WidgetError,
+        RADIUS_MAX,
     },
 };
 
@@ -2385,7 +2386,9 @@ fn buttonmatrix_get_selected() {
     let screen = fresh_screen();
     let btnm = Buttonmatrix::new(&screen).unwrap();
     pump();
-    let _sel = btnm.get_selected_button();
+    // LVGL returns LV_BTNMATRIX_BTN_NONE (0xFFFF) when nothing is selected.
+    let sel = btnm.get_selected_button();
+    assert_eq!(sel, 0xFFFF);
 }
 
 // ── Keyboard ──────────────────────────────────────────────────────────────────
@@ -2414,7 +2417,7 @@ fn keyboard_set_mode() {
     kb.set_mode(KeyboardMode::Number);
     kb.set_mode(KeyboardMode::TextLower);
     kb.set_mode(KeyboardMode::TextUpper);
-    kb.set_mode(KeyboardMode::SpecialChars);
+    kb.set_mode(KeyboardMode::Special);
     pump();
 }
 
@@ -2709,4 +2712,808 @@ fn image_set_src_symbol() {
     let img = Image::new(&screen).unwrap();
     img.set_src_symbol(&oxivgl::symbols::SETTINGS);
     pump();
+}
+
+// ── Obj scroll/layout methods ────────────────────────────────────────────────
+
+#[test]
+fn obj_get_coords() {
+    let screen = fresh_screen();
+    let obj = Obj::new(&screen).unwrap();
+    obj.size(100, 50).center();
+    pump();
+    let area = obj.get_coords();
+    assert!(area.width() > 0);
+    assert!(area.height() > 0);
+    let _ = screen;
+}
+
+#[test]
+fn obj_invalidate() {
+    let screen = fresh_screen();
+    let obj = Obj::new(&screen).unwrap();
+    obj.invalidate(); // should not panic
+    pump();
+    let _ = screen;
+}
+
+#[test]
+fn obj_scroll_to_x_y() {
+    let screen = fresh_screen();
+    let cont = Obj::new(&screen).unwrap();
+    cont.size(200, 200);
+    for _ in 0..5 {
+        let child = Obj::new(&cont).unwrap();
+        child.size(300, 300);
+        core::mem::forget(child);
+    }
+    pump();
+    cont.scroll_to_x(10, false);
+    cont.scroll_to_y(10, false);
+    pump();
+    // After scrolling, at least one scroll position should be non-zero.
+    let sx = cont.get_scroll_x();
+    let sy = cont.get_scroll_y();
+    assert!(sx != 0 || sy != 0, "expected scroll position to change, got x={sx} y={sy}");
+    let _ = screen;
+}
+
+#[test]
+fn obj_get_scroll_top_bottom() {
+    let screen = fresh_screen();
+    let cont = Obj::new(&screen).unwrap();
+    cont.size(100, 100);
+    for _ in 0..5 {
+        let child = Obj::new(&cont).unwrap();
+        child.size(100, 80);
+        core::mem::forget(child);
+    }
+    pump();
+    // scroll down a bit; get_scroll_top() should reflect it
+    cont.scroll_to_y(20, false);
+    pump();
+    let top = cont.get_scroll_top();
+    assert!(top >= 0, "scroll_top should be non-negative, got {top}");
+    let bot = cont.get_scroll_bottom();
+    assert!(bot >= 0, "scroll_bottom should be non-negative, got {bot}");
+    let _ = screen;
+}
+
+#[test]
+fn obj_scroll_by() {
+    let screen = fresh_screen();
+    let cont = Obj::new(&screen).unwrap();
+    cont.size(100, 100);
+    for _ in 0..3 {
+        let child = Obj::new(&cont).unwrap();
+        child.size(100, 80);
+        core::mem::forget(child);
+    }
+    pump();
+    cont.scroll_by(0, 20, false);
+    pump();
+    let _ = screen;
+}
+
+#[test]
+fn obj_update_layout() {
+    let screen = fresh_screen();
+    let cont = Obj::new(&screen).unwrap();
+    let child = Obj::new(&cont).unwrap();
+    child.size(50, 50);
+    cont.update_layout();
+    pump();
+    core::mem::forget(child);
+    let _ = screen;
+}
+
+#[test]
+fn obj_delete_child() {
+    let screen = fresh_screen();
+    let cont = Obj::new(&screen).unwrap();
+    let _c1 = Obj::new(&cont).unwrap();
+    let _c2 = Obj::new(&cont).unwrap();
+    core::mem::forget(_c1);
+    core::mem::forget(_c2);
+    pump();
+    assert_eq!(cont.get_child_count(), 2);
+    cont.delete_child(0);  // delete by index
+    pump();
+    assert_eq!(cont.get_child_count(), 1);
+    cont.delete_child(-1); // -1 = last child (LVGL convention)
+    pump();
+    assert_eq!(cont.get_child_count(), 0);
+    let _ = screen;
+}
+
+#[test]
+fn obj_get_style_pad_top_bottom() {
+    let screen = fresh_screen();
+    let obj = Obj::new(&screen).unwrap();
+    obj.pad_top(8);
+    obj.pad_bottom(12);
+    pump();
+    assert_eq!(obj.get_style_pad_top(Part::Main), 8);
+    assert_eq!(obj.get_style_pad_bottom(Part::Main), 12);
+    let _ = screen;
+}
+
+#[test]
+fn obj_get_style_pad_row_column() {
+    let screen = fresh_screen();
+    let obj = Obj::new(&screen).unwrap();
+    obj.style_pad_row(6, Selector::DEFAULT);
+    obj.style_pad_column(9, Selector::DEFAULT);
+    pump();
+    assert_eq!(obj.get_style_pad_row(Part::Main), 6);
+    assert_eq!(obj.get_style_pad_column(Part::Main), 9);
+    let _ = screen;
+}
+
+// ── Draw layer types ──────────────────────────────────────────────────────────
+
+#[test]
+fn draw_rect_dsc_new() {
+    use oxivgl::draw::{DrawRectDsc, DrawLabelDscOwned, RADIUS_CIRCLE};
+    use oxivgl::style::color_make;
+    let mut dsc = DrawRectDsc::new();
+    dsc.bg_color(color_make(255, 170, 170))
+        .radius(RADIUS_CIRCLE)
+        .border_color(color_make(255, 85, 85))
+        .border_width(2)
+        .outline_color(color_make(255, 0, 0))
+        .outline_width(2)
+        .outline_pad(3);
+    // Verify the label descriptor initialises a usable font (text_size > 0).
+    let label_dsc = DrawLabelDscOwned::default_font();
+    let (w, h) = label_dsc.text_size("X");
+    assert!(w > 0, "label dsc font width > 0");
+    assert!(h > 0, "label dsc font height > 0");
+    // dsc construction must not panic (inner fields not pub — smoke-test only).
+    let _ = dsc;
+}
+
+#[test]
+fn draw_label_dsc_owned_text_size() {
+    let screen = fresh_screen();
+    let dsc = oxivgl::draw::DrawLabelDscOwned::default_font();
+    let (w, h) = dsc.text_size("Hello");
+    assert!(w > 0, "text width should be > 0");
+    assert!(h > 0, "text height should be > 0");
+    let _ = screen;
+}
+
+#[test]
+fn area_align_to_area() {
+    use oxivgl::draw::Area;
+    use oxivgl::widgets::Align;
+    let base = Area { x1: 0, y1: 0, x2: 99, y2: 19 };
+    let mut txt = Area { x1: 0, y1: 0, x2: 29, y2: 9 };
+    txt.align_to_area(base, Align::RightMid, -10, 0);
+    // RightMid aligns txt's right edge to base's right edge, then adds ofs_x.
+    // Expected: txt.x2 = base.x2 + ofs_x = 99 + (-10) = 89
+    assert_eq!(txt.x2, 89);
+}
+
+#[test]
+fn area_set_width() {
+    use oxivgl::draw::Area;
+    let mut a = Area { x1: 10, y1: 0, x2: 29, y2: 9 };
+    a.set_width(5);
+    assert_eq!(a.x2, 14); // x1=10, new x2 = 10+5-1 = 14
+    assert_eq!(a.x1, 10); // x1 unchanged
+}
+
+// ── Chart ─────────────────────────────────────────────────────────────────────
+
+#[test]
+fn chart_create() {
+    use oxivgl::widgets::Chart;
+    let screen = fresh_screen();
+    let chart = Chart::new(&screen).unwrap();
+    pump();
+    assert!(chart.get_width() > 0);
+}
+
+#[test]
+fn chart_add_series_and_set_value() {
+    use oxivgl::widgets::{Chart, ChartAxis, ChartType, lv_color_t};
+    let screen = fresh_screen();
+    let chart = Chart::new(&screen).unwrap();
+    chart.set_type(ChartType::Line);
+    chart.set_point_count(5);
+    chart.set_axis_range(ChartAxis::PrimaryY, 0, 100);
+    let color = lv_color_t { blue: 0, green: 0, red: 255 };
+    let series = chart.add_series(color, ChartAxis::PrimaryY);
+    chart.set_next_value(&series, 42);
+    chart.set_next_value(&series, 80);
+    chart.refresh();
+    pump();
+    assert!(chart.get_width() > 0);
+}
+
+#[test]
+fn chart_scatter_series() {
+    use oxivgl::widgets::{Chart, ChartAxis, ChartType, lv_color_t};
+    let screen = fresh_screen();
+    let chart = Chart::new(&screen).unwrap();
+    chart.set_type(ChartType::Scatter);
+    chart.set_point_count(3);
+    let color = lv_color_t { blue: 255, green: 0, red: 0 };
+    let series = chart.add_series(color, ChartAxis::PrimaryY);
+    chart.set_next_value2(&series, 10, 20);
+    chart.set_next_value2(&series, 50, 80);
+    chart.refresh();
+    pump();
+}
+
+// ── DrawTask and Layer ────────────────────────────────────────────────────────
+
+#[test]
+fn event_draw_task_layer_smoke() {
+    // send_draw_task_events() enables DRAW_TASK_ADDED on obj.
+    // With SDL dummy backend DRAW_TASK_ADDED may or may not fire headlessly;
+    // this is a no-panic smoke test.
+    let screen = fresh_screen();
+    let obj = Obj::new(&screen).unwrap();
+    obj.size(100, 100);
+    obj.send_draw_task_events();
+    obj.on(EventCode::DRAW_TASK_ADDED, |ev| {
+        if let Some(task) = ev.draw_task() {
+            let _layer = task.layer(); // None or Some — both are fine
+            let _area = task.area();
+            let _base = task.base();
+        }
+    });
+    pump();
+}
+
+#[test]
+fn event_layer_returns_none_for_clicked() {
+    // Event::layer() only works for draw events, not CLICKED.
+    let screen = fresh_screen();
+    let btn = Button::new(&screen).unwrap();
+    btn.on(EventCode::CLICKED, |ev| {
+        assert!(ev.layer().is_none());
+    });
+    btn.send_event(EventCode::CLICKED);
+    pump();
+}
+
+// ── Indev ─────────────────────────────────────────────────────────────────────
+
+#[test]
+fn indev_get_vect_without_input() {
+    use oxivgl::indev::Indev;
+    let _screen = fresh_screen();
+    pump();
+    if let Some(indev) = Indev::active() {
+        let _vect = indev.get_vect();
+        let _streak = indev.short_click_streak();
+    }
+    // No input device in headless mode — just verify no panic.
+}
+
+// ── Buttonmatrix set_map / get_button_text ────────────────────────────────────
+
+#[test]
+fn buttonmatrix_set_map_and_get_text() {
+    use oxivgl::btnmatrix_map;
+    use oxivgl::widgets::ButtonmatrixMap;
+    let screen = fresh_screen();
+    let btnm = Buttonmatrix::new(&screen).unwrap();
+    static MAP: &ButtonmatrixMap = btnmatrix_map!(c"X", c"Y", c"Z");
+    btnm.set_map(MAP);
+    pump();
+    assert_eq!(btnm.get_button_text(0), Some("X"));
+    assert_eq!(btnm.get_button_text(1), Some("Y"));
+    assert_eq!(btnm.get_button_text(2), Some("Z"));
+}
+
+// ── Obj::swap, get_x_aligned, get_y_aligned, get_style_pad_left, get_style_bg_color ──
+
+#[test]
+fn obj_swap_children() {
+    let screen = fresh_screen();
+    let parent = Obj::new(&screen).unwrap();
+    let a = Obj::new(&parent).unwrap();
+    let b = Obj::new(&parent).unwrap();
+    pump();
+    assert_eq!(a.get_index(), 0);
+    assert_eq!(b.get_index(), 1);
+    a.swap(&b);
+    pump();
+    assert_eq!(a.get_index(), 1);
+    assert_eq!(b.get_index(), 0);
+}
+
+#[test]
+fn obj_get_x_y_aligned() {
+    let screen = fresh_screen();
+    let obj = Obj::new(&screen).unwrap();
+    obj.pos(15, 25);
+    pump();
+    // get_x_aligned returns the user-set position before alignment resolution.
+    let xa = obj.get_x_aligned();
+    let ya = obj.get_y_aligned();
+    assert_eq!(xa, 15);
+    assert_eq!(ya, 25);
+}
+
+#[test]
+fn obj_get_style_pad_left() {
+    let screen = fresh_screen();
+    let obj = Obj::new(&screen).unwrap();
+    obj.pad_left(7);
+    pump();
+    assert_eq!(obj.get_style_pad_left(Part::Main), 7);
+}
+
+#[test]
+fn obj_get_style_bg_color() {
+    let screen = fresh_screen();
+    let obj = Obj::new(&screen).unwrap();
+    obj.bg_color(0xFF0000).bg_opa(255);
+    pump();
+    let _c = obj.get_style_bg_color(Part::Main);
+    // Just verify no panic; lv_color_t fields depend on color format.
+}
+
+// ── ObjStyle methods ──────────────────────────────────────────────────────────
+
+#[test]
+fn obj_style_pad_hor_smoke() {
+    let screen = fresh_screen();
+    let obj = Obj::new(&screen).unwrap();
+    obj.style_pad_hor(10, Selector::DEFAULT);
+    pump();
+    // pad_hor sets both left and right; verify left side
+    assert_eq!(obj.get_style_pad_left(Part::Main), 10);
+}
+
+#[test]
+fn obj_style_text_font_with_selector() {
+    let screen = fresh_screen();
+    let label = Label::new(&screen).unwrap();
+    label.text("test");
+    label.style_text_font(MONTSERRAT_12, Selector::DEFAULT);
+    pump();
+    assert!(label.get_width() > 0);
+}
+
+#[test]
+fn obj_style_pad_column_smoke() {
+    let screen = fresh_screen();
+    let obj = Obj::new(&screen).unwrap();
+    obj.style_pad_column(5, Selector::DEFAULT);
+    pump();
+    assert_eq!(obj.get_style_pad_column(Part::Main), 5);
+}
+
+#[test]
+fn obj_style_size_smoke() {
+    use oxivgl::widgets::Part;
+    let screen = fresh_screen();
+    let obj = Obj::new(&screen).unwrap();
+    // style_size sets a style property on sub-parts (e.g. indicator size).
+    obj.style_size(8, 8, Part::Indicator);
+    pump();
+}
+
+#[test]
+fn obj_style_bg_image_src_symbol_smoke() {
+    let screen = fresh_screen();
+    let obj = Obj::new(&screen).unwrap();
+    obj.style_bg_image_src_symbol(&oxivgl::symbols::SETTINGS, Selector::DEFAULT);
+    obj.bg_opa(255);
+    pump();
+}
+
+// ── Anim exec cb variants: anim_set_y, anim_set_translate_x ─────────────────
+
+#[test]
+fn anim_exec_cb_y_and_translate_x() {
+    use oxivgl::anim::{Anim, anim_set_y, anim_set_translate_x};
+    let screen = fresh_screen();
+    let obj = Obj::new(&screen).unwrap();
+    obj.size(50, 50);
+
+    let mut a = Anim::new();
+    a.set_var(&obj).set_values(0, 100).set_duration(200)
+        .set_exec_cb(Some(anim_set_y));
+    let _ = a.start();
+
+    let mut a2 = Anim::new();
+    a2.set_var(&obj).set_values(0, 50).set_duration(200)
+        .set_exec_cb(Some(anim_set_translate_x));
+    let _ = a2.start();
+
+    pump();
+}
+
+// ── math::bezier3, map ────────────────────────────────────────────────────────
+
+#[test]
+fn math_map_basic() {
+    use oxivgl::math;
+    // map(500, 0, 1000, 0, 100) == 50
+    assert_eq!(math::map(500, 0, 1000, 0, 100), 50);
+    // map at boundaries
+    assert_eq!(math::map(0, 0, 1000, 0, 100), 0);
+    assert_eq!(math::map(1000, 0, 1000, 0, 100), 100);
+}
+
+#[test]
+fn math_bezier3_endpoints() {
+    use oxivgl::math;
+    // t=0 → result should be near u0=0
+    let v0 = math::bezier3(0, 0, 256, 768, 1024);
+    assert_eq!(v0, 0);
+    // t=1024 → result should be near u3=1024
+    let v1024 = math::bezier3(1024, 0, 256, 768, 1024);
+    assert_eq!(v1024, 1024);
+}
+
+#[test]
+fn style_color_brightness_and_darken() {
+    use oxivgl::style::{color_brightness, color_darken, color_make};
+    let white = color_make(255, 255, 255);
+    let brightness = color_brightness(white);
+    assert!(brightness > 200, "white should have high brightness, got {brightness}");
+    let dark = color_darken(white, 2);
+    let dark_brightness = color_brightness(dark);
+    assert!(dark_brightness < brightness, "darkened color should be less bright");
+}
+
+// ── Anim::set_bezier3_path ────────────────────────────────────────────────────
+
+#[test]
+fn anim_set_bezier3_path_no_panic() {
+    use std::sync::atomic::AtomicI32;
+    use oxivgl::anim::{Anim, anim_set_x};
+    let screen = fresh_screen();
+    let obj = Obj::new(&screen).unwrap();
+    obj.size(50, 50);
+    static P1: AtomicI32 = AtomicI32::new(128);
+    static P2: AtomicI32 = AtomicI32::new(900);
+    let mut anim = Anim::new();
+    anim.set_exec_cb(Some(anim_set_x));
+    anim.set_var(&obj);
+    anim.set_values(0, 100);
+    anim.set_duration(500);
+    anim.set_bezier3_path(&P1, &P2);
+    let _ = anim.start();
+    pump();
+}
+
+// ── draw::DrawLabelDscOwned::set_color ────────────────────────────────────────
+
+#[test]
+fn draw_label_dsc_owned_set_color() {
+    use oxivgl::draw::DrawLabelDscOwned;
+    use oxivgl::style::color_make;
+    let _screen = fresh_screen();
+    let mut dsc = DrawLabelDscOwned::default_font();
+    dsc.set_color(color_make(255, 0, 0));
+    let _ = dsc;
+}
+
+// ── Arc::set_mode / set_bg_start_angle / set_bg_end_angle ────────────────────
+
+#[test]
+fn arc_set_mode_variants() {
+    use oxivgl::widgets::ArcMode;
+    let screen = fresh_screen();
+    let arc = Arc::new(&screen).unwrap();
+    arc.set_mode(ArcMode::Normal);
+    arc.set_mode(ArcMode::Symmetrical);
+    arc.set_mode(ArcMode::Reverse);
+    pump();
+}
+
+#[test]
+fn arc_set_bg_start_end_angle() {
+    let screen = fresh_screen();
+    let arc = Arc::new(&screen).unwrap();
+    arc.set_bg_start_angle(45);
+    arc.set_bg_end_angle(315);
+    pump();
+}
+
+// ── Label::text_long / LabelLongMode variants ─────────────────────────────────
+
+#[test]
+fn label_text_long() {
+    let screen = fresh_screen();
+    let lbl = Label::new(&screen).unwrap();
+    lbl.text_long("A much longer string that would overflow the 127-byte stack buffer in text()");
+    pump();
+    assert!(lbl.get_width() > 0);
+}
+
+#[test]
+fn label_long_mode_variants() {
+    use oxivgl::widgets::LabelLongMode;
+    let screen = fresh_screen();
+    let lbl = Label::new(&screen).unwrap();
+    lbl.text("overflow").width(30);
+    lbl.set_long_mode(LabelLongMode::Dots);
+    pump();
+    lbl.set_long_mode(LabelLongMode::Scroll);
+    pump();
+    lbl.set_long_mode(LabelLongMode::ScrollCircular);
+    pump();
+    lbl.set_long_mode(LabelLongMode::Clip);
+    pump();
+}
+
+// ── Dropdown::set_text / set_selected_highlight ───────────────────────────────
+
+#[test]
+fn dropdown_set_text_static() {
+    let screen = fresh_screen();
+    let dd = Dropdown::new(&screen).unwrap();
+    dd.set_options("A\nB\nC");
+    dd.set_text(c"Menu");
+    pump();
+}
+
+#[test]
+fn dropdown_set_selected_highlight() {
+    let screen = fresh_screen();
+    let dd = Dropdown::new(&screen).unwrap();
+    dd.set_options("X\nY\nZ");
+    dd.set_selected_highlight(false);
+    pump();
+    dd.set_selected_highlight(true);
+    pump();
+}
+
+// ── Child::Debug ──────────────────────────────────────────────────────────────
+
+#[test]
+fn child_debug_fmt() {
+    let screen = fresh_screen();
+    let lbl = Label::new(&screen).unwrap();
+    let c: Child<Label> = Child::new(lbl);
+    let s = format!("{c:?}");
+    assert!(!s.is_empty());
+    // Suppress Drop — LVGL parent owns the object.
+}
+
+// ── ValueLabel::Debug ─────────────────────────────────────────────────────────
+
+#[test]
+fn value_label_debug_fmt() {
+    let screen = fresh_screen();
+    let vl = ValueLabel::new(&screen, "A").unwrap();
+    let s = format!("{vl:?}");
+    assert!(!s.is_empty());
+}
+
+// ── Screen::add_style ─────────────────────────────────────────────────────────
+
+#[test]
+fn screen_add_style() {
+    let screen = fresh_screen();
+    let mut sb = StyleBuilder::new();
+    sb.bg_color_hex(0x111111).bg_opa(255);
+    let style = sb.build();
+    screen.add_style(&style, Selector::DEFAULT);
+    pump();
+}
+
+// ── Obj style: clip_corner, translate_x ───────────────────────────────────────
+
+#[test]
+fn obj_style_clip_corner() {
+    let screen = fresh_screen();
+    let obj = Obj::new(&screen).unwrap();
+    obj.radius(20, Selector::DEFAULT);
+    obj.style_clip_corner(true, Selector::DEFAULT);
+    pump();
+    obj.style_clip_corner(false, Selector::DEFAULT);
+    pump();
+}
+
+#[test]
+fn obj_style_translate_x() {
+    let screen = fresh_screen();
+    let obj = Obj::new(&screen).unwrap();
+    obj.style_translate_x(15, Selector::DEFAULT);
+    pump();
+}
+
+// ── Obj style: image_recolor / image_recolor_opa / radial_offset / line_opa ──
+
+#[test]
+fn obj_style_image_recolor_and_opa() {
+    let screen = fresh_screen();
+    let obj = Obj::new(&screen).unwrap();
+    obj.style_image_recolor(palette_main(Palette::Red), Selector::DEFAULT);
+    obj.style_image_recolor_opa(200, Selector::DEFAULT);
+    pump();
+}
+
+#[test]
+fn obj_style_radial_offset() {
+    let screen = fresh_screen();
+    let obj = Obj::new(&screen).unwrap();
+    obj.style_radial_offset(5, Selector::DEFAULT);
+    pump();
+}
+
+#[test]
+fn obj_style_line_opa() {
+    use oxivgl::widgets::Part;
+    let screen = fresh_screen();
+    let obj = Obj::new(&screen).unwrap();
+    obj.style_line_opa(128, Part::Main);
+    pump();
+}
+
+// ── Obj style: style_opa with selector ───────────────────────────────────────
+
+#[test]
+fn obj_style_opa_with_selector() {
+    let screen = fresh_screen();
+    let obj = Obj::new(&screen).unwrap();
+    obj.style_opa(200, Selector::DEFAULT);
+    pump();
+}
+
+// ── Obj style: style_pad_all with selector ────────────────────────────────────
+
+#[test]
+fn obj_style_pad_all_with_selector() {
+    use oxivgl::widgets::Part;
+    let screen = fresh_screen();
+    let obj = Obj::new(&screen).unwrap();
+    obj.style_pad_all(8, Part::Main);
+    pump();
+    assert_eq!(obj.get_style_pad_left(Part::Main), 8);
+}
+
+// ── Obj style: style_pad_row and style_pad_column ─────────────────────────────
+
+#[test]
+fn obj_style_pad_row_and_column_setters() {
+    use oxivgl::widgets::Part;
+    let screen = fresh_screen();
+    let obj = Obj::new(&screen).unwrap();
+    obj.style_pad_row(4, Selector::DEFAULT);
+    obj.style_pad_column(7, Selector::DEFAULT);
+    pump();
+    assert_eq!(obj.get_style_pad_row(Part::Main), 4);
+    assert_eq!(obj.get_style_pad_column(Part::Main), 7);
+}
+
+// ── Event::current_target_handle via static fn ───────────────────────────────
+
+#[test]
+fn event_current_target_handle_static() {
+    use std::sync::atomic::{AtomicBool, Ordering};
+    static CHECKED: AtomicBool = AtomicBool::new(false);
+
+    fn check_cb(ev: &oxivgl::event::Event) {
+        assert_eq!(ev.code(), EventCode::CLICKED);
+        let _current = ev.current_target_handle();
+        CHECKED.store(true, Ordering::SeqCst);
+    }
+
+    let screen = fresh_screen();
+    let btn = Button::new(&screen).unwrap();
+    btn.on(EventCode::CLICKED, check_cb);
+    btn.send_event(EventCode::CLICKED);
+    assert!(CHECKED.load(Ordering::SeqCst));
+}
+
+// ── Buttonmatrix: get_button_text out-of-range returns None ──────────────────
+
+#[test]
+fn buttonmatrix_get_button_text_oob() {
+    use oxivgl::btnmatrix_map;
+    use oxivgl::widgets::ButtonmatrixMap;
+    let screen = fresh_screen();
+    let btnm = Buttonmatrix::new(&screen).unwrap();
+    static MAP2: &ButtonmatrixMap = btnmatrix_map!(c"P", c"Q");
+    btnm.set_map(MAP2);
+    pump();
+    assert_eq!(btnm.get_button_text(0), Some("P"));
+    assert_eq!(btnm.get_button_text(1), Some("Q"));
+    // Out-of-range index — LVGL returns NULL → None.
+    assert_eq!(btnm.get_button_text(99), None);
+}
+
+// ── Canvas ────────────────────────────────────────────────────────────────────
+
+#[test]
+fn canvas_create_and_fill() {
+    use oxivgl::draw_buf::{ColorFormat, DrawBuf};
+    let screen = fresh_screen();
+    let buf = DrawBuf::create(50, 50, ColorFormat::RGB565).unwrap();
+    let canvas = Canvas::new(&screen, buf).unwrap();
+    canvas.fill_bg(color_make(255, 0, 0), 255).size(50, 50).center();
+    pump();
+}
+
+#[test]
+fn canvas_set_px_and_get() {
+    use oxivgl::draw_buf::{ColorFormat, DrawBuf};
+    let screen = fresh_screen();
+    let buf = DrawBuf::create(10, 10, ColorFormat::ARGB8888).unwrap();
+    let canvas = Canvas::new(&screen, buf).unwrap();
+    canvas.fill_bg(color_make(0, 0, 0), 255);
+    canvas.set_px(5, 5, color_make(255, 255, 255), 255);
+    // We set a white pixel; verify the canvas accepted the call without panic.
+    // (Exact pixel read-back depends on color format internals.)
+    pump();
+}
+
+#[test]
+fn canvas_layer_draw_rect() {
+    use oxivgl::draw::{Area, DrawRectDsc};
+    use oxivgl::draw_buf::{ColorFormat, DrawBuf};
+    let screen = fresh_screen();
+    let buf = DrawBuf::create(100, 100, ColorFormat::ARGB8888).unwrap();
+    let canvas = Canvas::new(&screen, buf).unwrap();
+    canvas.fill_bg(color_make(200, 200, 200), 255);
+    {
+        let mut layer = canvas.init_layer();
+        let mut dsc = DrawRectDsc::new();
+        dsc.bg_color(color_make(255, 0, 0)).radius(5);
+        layer.draw_rect(&dsc, Area { x1: 10, y1: 10, x2: 50, y2: 50 });
+    }
+    pump();
+}
+
+#[test]
+fn drawbuf_create_returns_some() {
+    use oxivgl::draw_buf::{ColorFormat, DrawBuf};
+    let buf = DrawBuf::create(100, 100, ColorFormat::RGB565);
+    assert!(buf.is_some());
+}
+
+#[test]
+fn canvas_draw_buf_accessor() {
+    use oxivgl::draw_buf::{ColorFormat, DrawBuf};
+    let screen = fresh_screen();
+    let buf = DrawBuf::create(40, 40, ColorFormat::RGB565).unwrap();
+    let canvas = Canvas::new(&screen, buf).unwrap();
+    // draw_buf() returns &DrawBuf — just verify we can call image_dsc() on it.
+    let _img = canvas.draw_buf().image_dsc();
+}
+
+#[test]
+fn canvas_layer_draw_label() {
+    use oxivgl::draw::{Area, DrawLabelDscOwned};
+    use oxivgl::draw_buf::{ColorFormat, DrawBuf};
+    let screen = fresh_screen();
+    let buf = DrawBuf::create(80, 30, ColorFormat::RGB565).unwrap();
+    let canvas = Canvas::new(&screen, buf).unwrap();
+    canvas.fill_bg(color_make(200, 200, 200), 255);
+    {
+        let mut layer = canvas.init_layer();
+        let mut dsc = DrawLabelDscOwned::default_font();
+        dsc.set_color(color_make(255, 0, 0));
+        layer.draw_label(&dsc, Area { x1: 5, y1: 5, x2: 75, y2: 25 }, "Test");
+    }
+}
+
+#[test]
+fn canvas_layer_draw_letter() {
+    use oxivgl::draw::DrawLetterDsc;
+    use oxivgl::draw_buf::{ColorFormat, DrawBuf};
+    let screen = fresh_screen();
+    let buf = DrawBuf::create(40, 40, ColorFormat::RGB565).unwrap();
+    let canvas = Canvas::new(&screen, buf).unwrap();
+    canvas.fill_bg(color_make(200, 200, 200), 255);
+    {
+        let mut layer = canvas.init_layer();
+        let mut dsc = DrawLetterDsc::new();
+        dsc.unicode(b'A' as u32)
+            .color(color_make(0, 0, 255))
+            .rotation(0);
+        layer.draw_letter(&dsc, 10, 20);
+    }
 }

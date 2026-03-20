@@ -19,6 +19,7 @@ pub(crate) fn to_lvgl(v: f32, max: f32) -> i32 {
 
 mod arc;
 mod bar;
+mod canvas;
 mod button;
 mod buttonmatrix;
 mod chart;
@@ -46,6 +47,7 @@ mod value_label;
 
 pub use arc::{Arc, ArcMode};
 pub use bar::{Bar, BarMode};
+pub use canvas::{Canvas, CanvasLayer};
 pub use button::Button;
 pub use buttonmatrix::{Buttonmatrix, ButtonmatrixMap};
 pub use chart::{Chart, ChartAxis, ChartSeries, ChartType};

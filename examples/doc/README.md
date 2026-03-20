@@ -33,6 +33,7 @@ runner (`example_main!` macro selects host SDL2 or ESP32 fire27 backend).
 - [Widgets — Slider](#widgets--slider)
 - [Widgets — Switch](#widgets--switch)
 - [Widgets — Textarea](#widgets--textarea)
+- [Widgets — Canvas](#widgets--canvas)
 - [Implementation Coverage](#implementation-coverage)
 - [Running](#running)
 
@@ -275,9 +276,12 @@ Button reports short-clicked (with streak count), single-clicked, double-clicked
 
 ![event_streak](screenshots/event_streak.png)
 
-### Skipped
+### Event Draw — Custom Draw Task
 
-- **Event Draw** — needs `lv_timer_create` + draw task APIs
+Container with `DRAW_TASK_ADDED` events. `update()` cycles a size value 0→50→0;
+the draw handler draws a growing/shrinking circle centered in the container.
+
+![event_draw](screenshots/event_draw.png)
 
 ## Layouts — Flex
 
@@ -385,12 +389,33 @@ actively scrolling, with animated transitions.
 
 ![scroll4](screenshots/scroll4.png)
 
+### Scroll 6 — Curved Scroll
+
+A circular clipped flex column where items are displaced horizontally based on
+their distance from the container centre (circle arc formula). Items far from
+centre are also made more transparent.
+
+![scroll6](screenshots/scroll6.png)
+
+### Scroll 7 — Dynamic Widget Loading
+
+A scrollable column that dynamically loads and unloads items as the user scrolls.
+Labels show the current range of loaded item numbers. A checkbox toggles scrollbar
+visibility.
+
+![scroll7](screenshots/scroll7.png)
+
+### Scroll 8 — Circular Scroll
+
+Two scroll containers (horizontal row, vertical column) that loop infinitely:
+when the list reaches either end, the last/first item is moved to the opposite
+end and the scroll position is adjusted.
+
+![scroll8](screenshots/scroll8.png)
+
 ### Skipped
 
 - **Scroll 5** — RTL scrolling (needs `LV_FONT_DEJAVU_16_PERSIAN_HEBREW`)
-- **Scroll 6** — Curved scroll (needs `lv_obj_get_coords`, `lv_sqrt`, `lv_map`)
-- **Scroll 7** — Dynamic widget loading (needs `lv_obj_move_to_index`, Checkbox wrapper)
-- **Scroll 8** — Circular list (needs `lv_obj_move_to_index`, content size APIs)
 
 ## Widgets — Base Object
 
@@ -502,6 +527,14 @@ Range-mode bar with tiled stripe background image on the indicator at 30% opacit
 Two bars: one left-to-right (default), one right-to-left, with labels.
 
 ![widget_bar5](screenshots/widget_bar5.png)
+
+### Widget Bar 6 — Bar with Custom Draw Value Label
+
+A bar animating 0→100→0 (4 s each). A `DRAW_MAIN_END` handler draws the current
+value as text: white inside the indicator when wide enough, black outside on the
+right when the indicator is short.
+
+![widget_bar6](screenshots/widget_bar6.png)
 
 ### Widget Bar 7 — Reversed Vertical Bar
 
@@ -656,8 +689,12 @@ shows a message box.
 
 ## Widgets — Msgbox
 
-Msgbox is used as a supporting widget in menu2 and menu5. No standalone
-msgbox example.
+### Widget Msgbox 1 — Standalone Message Box
+
+A modal message box with a title, body text, and a close button.
+Msgbox is also used as a supporting widget in menu2 and menu5.
+
+![widget_msgbox1](screenshots/widget_msgbox1.png)
 
 ## Widgets — Roller
 
@@ -814,6 +851,69 @@ simple red bar, underline blue, and block orange/yellow gradient.
 
 ![widget_textarea4](screenshots/widget_textarea4.png)
 
+## Widgets — Canvas
+
+### canvas_1 — Dual canvas + image rotation
+
+Two 100×70 RGB565 canvases. Canvas 1: red filled rect with black border + orange
+"Canvas 1" label. Canvas 2: rotated (12°) snapshot of canvas 1 drawn via
+`DrawImageDsc`.
+
+![canvas_1](screenshots/canvas_1.png)
+
+### canvas_2 — Transparent pixels
+
+80×60 RGB565 canvas filled blue. Three horizontal bands of decreasing opacity
+(50 %, 20 %, 0 %) drawn via `set_px`.
+
+![canvas_2](screenshots/canvas_2.png)
+
+### canvas_3 — Rectangle with border and outline
+
+70×70 RGB565 canvas. Red rectangle with blue border (4 px), green outline (2 px),
+and 5 px corner radius, drawn via `CanvasLayer::draw_rect`.
+
+![canvas_3](screenshots/canvas_3.png)
+
+### canvas_4 — Text label
+
+80×30 RGB565 canvas. "Hello" in red via `CanvasLayer::draw_label`.
+
+![canvas_4](screenshots/canvas_4.png)
+
+### canvas_5 — Arc
+
+50×50 RGB565 canvas. Red arc (center 25,25; radius 15; width 10; 0°–220°).
+
+![canvas_5](screenshots/canvas_5.png)
+
+### canvas_7 — Line
+
+50×50 RGB565 canvas. Red line (15,15)→(35,10), width 4, rounded caps.
+
+![canvas_7](screenshots/canvas_7.png)
+
+### canvas_9 — Gradient triangle
+
+80×80 RGB565 canvas. Semi-transparent triangle (3 vertices) with a vertical
+red→blue gradient via `DrawTriangleDsc`.
+
+![canvas_9](screenshots/canvas_9.png)
+
+### canvas_10 — Wavy text animation
+
+160×100 RGB565 canvas. "Hello wavy world!" rendered letter-by-letter with HSV
+rainbow colors and sine-wave y-offsets via `DrawLetterDsc`. Animated each frame.
+
+![canvas_10](screenshots/canvas_10.png)
+
+### canvas_11 — Windstorm text animation
+
+160×100 RGB565 canvas (black). "windstorm" repeated with sinusoidal y-positions,
+HSV-cycled colors shifting each frame via `DrawLetterDsc`. Animated each frame.
+
+![canvas_11](screenshots/canvas_11.png)
+
 ## Implementation Coverage
 
 Status of all [LVGL 9.3 examples](https://docs.lvgl.io/9.3/examples.html) in oxivgl.
@@ -827,10 +927,10 @@ Status of all [LVGL 9.3 examples](https://docs.lvgl.io/9.3/examples.html) in oxi
 | Getting Started | 4 | 4 (+4 extra gradient examples) | 0 | |
 | Styles | 19 | 18 | 1 | style19 (meta/benchmarking) |
 | Animations | 5 | 5 | 0 | |
-| Events | 5 | 4 (+1 extra trickle) | 1 | event_draw (timer API) |
+| Events | 5 | 5 (+1 extra trickle) | 0 | |
 | Flex | 6 | 6 | 0 | |
 | Grid | 6 | 6 | 0 | |
-| Scroll | 8 | 4 | 4 | scroll5 (font), scroll6–8 (APIs) |
+| Scroll | 8 | 7 | 1 | scroll5 (RTL font) |
 
 ### Widget Examples (wrapper exists)
 
@@ -838,7 +938,7 @@ Status of all [LVGL 9.3 examples](https://docs.lvgl.io/9.3/examples.html) in oxi
 |---|---|---|---|---|
 | obj | 3 | 3 | 0 | |
 | arc | 3 | 3 | 0 | |
-| bar | 7 | 6 | 1 | bar6 (needs custom draw event) |
+| bar | 7 | 7 | 0 | |
 | button | 3 | 3 | 0 | |
 | checkbox | 2 | 2 | 0 | |
 | dropdown | 3 | 3 | 0 | |
@@ -848,26 +948,27 @@ Status of all [LVGL 9.3 examples](https://docs.lvgl.io/9.3/examples.html) in oxi
 | line | 1 | 1 | 0 | |
 | list | 2 | 2 | 0 | |
 | menu | 5 | 5 | 0 | |
-| msgbox | 1 | 0 | 1 | Used via menu2/menu5; no standalone example |
+| msgbox | 1 | 1 | 0 | |
 | roller | 3 | 2 | 1 | roller3 (needs canvas/mask API) |
 | scale | 11 | 11 | 0 | |
 | slider | 4 | 4 | 0 | |
 | switch | 2 | 2 | 0 | |
 | textarea | 4 | 4 | 0 | Includes Buttonmatrix + Keyboard wrappers |
+| canvas | 11 | 9 | 2 | canvas_6 (image asset), canvas_8 (vector graphics) |
 
 ### Widgets Without Wrappers
 
-animimg, calendar, canvas, imagebutton, lottie, span, spinbox, spinner, table, tabview, tileview, win.
+animimg, calendar, imagebutton, lottie, span, spinbox, spinner, table, tabview, tileview, win.
 
 ### Totals
 
 | | Count |
 |---|---|
 | LVGL examples total | ~184 |
-| oxivgl done | 112 |
-| Skipped (intentional) | 6 |
-| Missing (wrapper exists) | 6 |
-| No wrapper | ~56 |
+| oxivgl done | 127 |
+| Skipped (intentional) | 3 |
+| Missing (wrapper exists) | 4 |
+| No wrapper | ~55 |
 
 ## Running
 

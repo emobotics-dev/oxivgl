@@ -90,3 +90,39 @@ pub static MONTSERRAT_44: Font = Font(addr_of!(lvgl_rust_sys::lv_font_montserrat
 pub static MONTSERRAT_46: Font = Font(addr_of!(lvgl_rust_sys::lv_font_montserrat_46));
 /// LVGL built-in Montserrat 48 pt.
 pub static MONTSERRAT_48: Font = Font(addr_of!(lvgl_rust_sys::lv_font_montserrat_48));
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn font_as_ptr_nonnull() {
+        assert!(!MONTSERRAT_12.as_ptr().is_null());
+        assert!(!MONTSERRAT_14.as_ptr().is_null());
+        assert!(!MONTSERRAT_20.as_ptr().is_null());
+        assert!(!MONTSERRAT_48.as_ptr().is_null());
+    }
+
+    #[test]
+    fn font_copy_clone() {
+        let f = MONTSERRAT_12;
+        let g = f;
+        assert_eq!(f.as_ptr(), g.as_ptr());
+        let h = f;
+        assert_eq!(f.as_ptr(), h.as_ptr());
+    }
+
+    #[test]
+    fn font_debug_fmt() {
+        let s = format!("{:?}", MONTSERRAT_14);
+        assert!(!s.is_empty());
+    }
+
+    #[test]
+    fn font_from_extern() {
+        // from_extern wraps the same address; round-trip should match.
+        let ptr = MONTSERRAT_12.as_ptr() as *const ();
+        let f = unsafe { Font::from_extern(ptr) };
+        assert_eq!(f.as_ptr(), MONTSERRAT_12.as_ptr());
+    }
+}
