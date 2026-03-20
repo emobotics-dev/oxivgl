@@ -113,7 +113,10 @@ pub fn color_darken(c: lv_color_t, lvl: u8) -> lv_color_t {
     unsafe { lv_color_darken(c, lvl) }
 }
 
-/// Convert HSV to an LVGL color value.
+/// Convert HSV to an LVGL color value. Re-exported from [`crate::prelude`].
+///
+/// Often paired with [`crate::math::trigo_sin`] / [`crate::math::trigo_cos`]
+/// for per-frame color cycling in canvas animations.
 ///
 /// - `h`: hue, 0–360
 /// - `s`: saturation, 0–100
