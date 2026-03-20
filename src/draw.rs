@@ -303,10 +303,10 @@ impl Layer {
         // lv_draw_label_dsc_t derives Copy — simple copy is safe.
         let mut local_dsc = dsc.inner;
         local_dsc.text = buf.as_ptr() as *const _;
-        local_dsc.set_text_local(0);
+        local_dsc.set_text_local(1);
         let area_lv: lv_area_t = area.into();
-        // SAFETY: ptr valid during callback; local_dsc.text points to buf on this stack
-        // frame.
+        // SAFETY: ptr valid during callback; text_local=1 means lv_draw_label calls
+        // lv_strndup when queuing the task, so buf need only live until this call returns.
         unsafe { lv_draw_label(self.ptr, &local_dsc, &area_lv) };
     }
 }

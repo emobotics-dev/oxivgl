@@ -3483,3 +3483,37 @@ fn canvas_draw_buf_accessor() {
     // draw_buf() returns &DrawBuf — just verify we can call image_dsc() on it.
     let _img = canvas.draw_buf().image_dsc();
 }
+
+#[test]
+fn canvas_layer_draw_label() {
+    use oxivgl::draw::{Area, DrawLabelDscOwned};
+    use oxivgl::draw_buf::{ColorFormat, DrawBuf};
+    let screen = fresh_screen();
+    let buf = DrawBuf::create(80, 30, ColorFormat::RGB565).unwrap();
+    let canvas = Canvas::new(&screen, buf).unwrap();
+    canvas.fill_bg(color_make(200, 200, 200), 255);
+    {
+        let mut layer = canvas.init_layer();
+        let mut dsc = DrawLabelDscOwned::default_font();
+        dsc.set_color(color_make(255, 0, 0));
+        layer.draw_label(&dsc, Area { x1: 5, y1: 5, x2: 75, y2: 25 }, "Test");
+    }
+}
+
+#[test]
+fn canvas_layer_draw_letter() {
+    use oxivgl::draw::DrawLetterDsc;
+    use oxivgl::draw_buf::{ColorFormat, DrawBuf};
+    let screen = fresh_screen();
+    let buf = DrawBuf::create(40, 40, ColorFormat::RGB565).unwrap();
+    let canvas = Canvas::new(&screen, buf).unwrap();
+    canvas.fill_bg(color_make(200, 200, 200), 255);
+    {
+        let mut layer = canvas.init_layer();
+        let mut dsc = DrawLetterDsc::new();
+        dsc.unicode(b'A' as u32)
+            .color(color_make(0, 0, 255))
+            .rotation(0);
+        layer.draw_letter(&dsc, 10, 20);
+    }
+}

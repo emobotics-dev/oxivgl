@@ -628,11 +628,3 @@ fn leak_canvas() {
     });
 }
 
-#[test]
-fn leak_drawbuf_create_drop() {
-    assert_no_leak_rust("DrawBuf create/drop", || {
-        // Cannot test without LVGL init (lv_draw_buf_create uses lv_malloc).
-        // This is a compile-time check that DrawBuf is accessible.
-        let _ = std::mem::size_of::<DrawBuf>();
-    });
-}
