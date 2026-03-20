@@ -23,7 +23,7 @@ impl View for Canvas11 {
         let screen = Screen::active().ok_or(WidgetError::LvglNullPointer)?;
         let canvas = Canvas::new(
             &screen,
-            DrawBuf::create(300, 200, ColorFormat::ARGB8888).ok_or(WidgetError::LvglNullPointer)?,
+            DrawBuf::create(160, 100, ColorFormat::RGB565).ok_or(WidgetError::LvglNullPointer)?,
         )?;
         canvas.fill_bg(color_make(0, 0, 0), 255);
         canvas.align(Align::Center, 0, 0);
@@ -35,8 +35,8 @@ impl View for Canvas11 {
         use oxivgl::math::{trigo_cos, trigo_sin};
         use oxivgl::style::color_hsv;
         const TXT: &[u8] = b"windstorm";
-        const W: i32 = 300;
-        const H: i32 = 200;
+        const W: i32 = 160;
+        const H: i32 = 100;
         self.canvas.fill_bg(color_make(0, 0, 0), 255);
         {
             let mut layer = self.canvas.init_layer();
@@ -45,9 +45,9 @@ impl View for Canvas11 {
                 let ch_idx = (i % n) as usize;
                 let ch = TXT[ch_idx];
                 let x = (i * 7 + self.counter / 3) % W;
-                let y = trigo_sin(i * 7 + self.counter) * 50 / 32767
+                let y = trigo_sin(i * 7 + self.counter) * 25 / 32767
                     + H / 2
-                    + trigo_cos(i * 3 + self.counter / 2) * 30 / 32767;
+                    + trigo_cos(i * 3 + self.counter / 2) * 15 / 32767;
                 let mut dsc = DrawLetterDsc::new();
                 dsc.unicode(ch as u32)
                     .color(color_hsv(

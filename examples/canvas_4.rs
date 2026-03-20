@@ -23,7 +23,7 @@ impl View for Canvas4 {
         let screen = Screen::active().ok_or(WidgetError::LvglNullPointer)?;
         let canvas = Canvas::new(
             &screen,
-            DrawBuf::create(80, 30, ColorFormat::ARGB8888).ok_or(WidgetError::LvglNullPointer)?,
+            DrawBuf::create(80, 30, ColorFormat::RGB565).ok_or(WidgetError::LvglNullPointer)?,
         )?;
         canvas.fill_bg(color_make(0xcc, 0xcc, 0xcc), 255);
         canvas.align(Align::Center, 0, 0);

@@ -20,7 +20,7 @@ struct Canvas2 {
 impl View for Canvas2 {
     fn create() -> Result<Self, WidgetError> {
         let screen = Screen::active().ok_or(WidgetError::LvglNullPointer)?;
-        let buf = DrawBuf::create(80, 60, ColorFormat::ARGB8888)
+        let buf = DrawBuf::create(80, 60, ColorFormat::RGB565)
             .ok_or(WidgetError::LvglNullPointer)?;
         let canvas = Canvas::new(&screen, buf)?;
         canvas.fill_bg(color_make(0, 0, 196), 255);

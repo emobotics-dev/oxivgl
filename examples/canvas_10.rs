@@ -23,7 +23,7 @@ impl View for Canvas10 {
         let screen = Screen::active().ok_or(WidgetError::LvglNullPointer)?;
         let canvas = Canvas::new(
             &screen,
-            DrawBuf::create(300, 200, ColorFormat::ARGB8888).ok_or(WidgetError::LvglNullPointer)?,
+            DrawBuf::create(160, 100, ColorFormat::RGB565).ok_or(WidgetError::LvglNullPointer)?,
         )?;
         canvas.fill_bg(color_make(0xff, 0xff, 0xff), 255);
         canvas.align(Align::Center, 0, 0);
@@ -38,12 +38,12 @@ impl View for Canvas10 {
         self.canvas.fill_bg(color_make(0xff, 0xff, 0xff), 255);
         {
             let mut layer = self.canvas.init_layer();
-            let mut pre_x = 10_i32;
-            let mut pre_y = 100_i32;
+            let mut pre_x = 5_i32;
+            let mut pre_y = 50_i32;
             for (i, &ch) in TXT.iter().enumerate() {
                 let angle = i as i32 * 10;
-                let x = angle * 7 + 10;
-                let y = trigo_sin(((angle + self.counter / 2) * 5) as i32) * 40 / 32767 + 100;
+                let x = angle * 4 + 5;
+                let y = trigo_sin(((angle + self.counter / 2) * 5) as i32) * 20 / 32767 + 50;
                 let mut dsc = DrawLetterDsc::new();
                 dsc.unicode(ch as u32)
                     .color(color_hsv(((i as u16 * 15) % 360) as u16, 100, 100))
