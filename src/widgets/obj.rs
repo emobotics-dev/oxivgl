@@ -72,7 +72,8 @@ pub enum Part {
     Indicator = 0x020000,
     /// Grab handle (`LV_PART_KNOB = 0x030000`).
     Knob = 0x030000,
-    /// Selected item highlight, e.g. roller selected row (`LV_PART_SELECTED = 0x040000`).
+    /// Selected item highlight, e.g. roller selected row (`LV_PART_SELECTED =
+    /// 0x040000`).
     Selected = 0x040000,
     /// Repeated sub-elements such as tick marks (`LV_PART_ITEMS = 0x050000`).
     Items = 0x050000,
@@ -236,11 +237,7 @@ impl<'p> Obj<'p> {
         // SAFETY: parent.lv_handle() is a valid non-null LVGL object; lv_init() was
         // called.
         let handle = unsafe { lv_obj_create(parent.lv_handle()) };
-        if handle.is_null() {
-            Err(WidgetError::LvglNullPointer)
-        } else {
-            Ok(Obj::from_raw(handle))
-        }
+        if handle.is_null() { Err(WidgetError::LvglNullPointer) } else { Ok(Obj::from_raw(handle)) }
     }
 
     /// Create a non-owning reference to an LVGL object from a raw pointer.
@@ -253,11 +250,7 @@ impl<'p> Obj<'p> {
 
     /// Wrap a raw LVGL pointer. `ptr` must be non-null and owned by the caller.
     pub(crate) fn from_raw(ptr: *mut lv_obj_t) -> Self {
-        Obj {
-            handle: ptr,
-            _styles: RefCell::new(Vec::new()),
-            _parent: PhantomData,
-        }
+        Obj { handle: ptr, _styles: RefCell::new(Vec::new()), _parent: PhantomData }
     }
 
     /// Return the raw `lv_obj_t` pointer.
@@ -334,7 +327,8 @@ impl<'p> Obj<'p> {
     /// Position this object relative to `base` using `lv_obj_align_to`.
     pub fn align_to(&self, base: &impl AsLvHandle, align: Align, x: i32, y: i32) -> &Self {
         assert_ne!(self.handle, null_mut(), "Obj handle cannot be null");
-        // SAFETY: handle and base.lv_handle() non-null (asserted / guaranteed by AsLvHandle).
+        // SAFETY: handle and base.lv_handle() non-null (asserted / guaranteed by
+        // AsLvHandle).
         unsafe { lv_obj_align_to(self.handle, base.lv_handle(), align as lv_align_t, x, y) };
         self
     }
@@ -356,8 +350,10 @@ impl<'p> Obj<'p> {
     /// **Safe only when the display uses a full-screen buffer** (host) or
     /// the transformed bounding box fits entirely within a single render
     /// band (very small objects). For embedded targets with partial
-    /// rendering, prefer [`StyleBuilder::transform_rotation`](crate::style::StyleBuilder::transform_rotation) — it allocates an
-    /// intermediate layer but handles band clipping correctly.
+    /// rendering, prefer
+    /// [`StyleBuilder::transform_rotation`](crate::style::StyleBuilder::transform_rotation)
+    /// — it allocates an intermediate layer but handles band clipping
+    /// correctly.
     pub fn set_transform(&self, matrix: &Matrix) -> &Self {
         assert_ne!(self.handle, null_mut(), "Obj handle cannot be null");
         // SAFETY: handle non-null, matrix pointer valid.
@@ -521,6 +517,15 @@ impl<'p> Obj<'p> {
         self
     }
 
+    /// Scroll every ancestor that needs to in order to bring this object into
+    /// view. `anim` enables slide animation.
+    pub fn scroll_to_view_recursive(&self, anim: bool) -> &Self {
+        assert_ne!(self.handle, null_mut());
+        // SAFETY: handle non-null (asserted above).
+        unsafe { lv_obj_scroll_to_view_recursive(self.handle, anim) };
+        self
+    }
+
     /// Update snap alignment after children are added.
     pub fn update_snap(&self, anim: bool) -> &Self {
         assert_ne!(self.handle, null_mut());
@@ -600,8 +605,9 @@ impl<'p> Obj<'p> {
     /// });
     /// ```
     ///
-    /// For handlers that need View state, use [`View::on_event`](crate::view::View::on_event)
-    /// with event bubbling instead.
+    /// For handlers that need View state, use
+    /// [`View::on_event`](crate::view::View::on_event) with event bubbling
+    /// instead.
     pub fn on(&self, code: crate::enums::EventCode, cb: fn(&crate::event::Event)) -> &Self {
         assert_ne!(self.handle, null_mut(), "Obj handle cannot be null");
 
@@ -618,14 +624,7 @@ impl<'p> Obj<'p> {
 
         // SAFETY: handle non-null; cb is stored as user_data and retrieved by
         // trampoline. fn pointers have the same size as *mut c_void.
-        unsafe {
-            lv_obj_add_event_cb(
-                self.handle,
-                Some(trampoline),
-                code.0,
-                cb as *const () as *mut c_void,
-            )
-        };
+        unsafe { lv_obj_add_event_cb(self.handle, Some(trampoline), code.0, cb as *const () as *mut c_void) };
         self
     }
 
@@ -643,17 +642,15 @@ impl<'p> Obj<'p> {
 
     // ── Children ─────────────────────────────────────────────────────────
 
-    /// Get child widget by index (0-based). Returns `None` if index out of range.
-    /// The returned `Child` does NOT own the pointer — LVGL frees it when the parent is deleted.
+    /// Get child widget by index (0-based). Returns `None` if index out of
+    /// range. The returned `Child` does NOT own the pointer — LVGL frees it
+    /// when the parent is deleted.
     pub fn get_child(&self, idx: i32) -> Option<super::Child<Obj<'_>>> {
         assert_ne!(self.handle, null_mut(), "Obj handle cannot be null");
-        // SAFETY: handle non-null (asserted above); LVGL returns NULL for out-of-range idx.
+        // SAFETY: handle non-null (asserted above); LVGL returns NULL for out-of-range
+        // idx.
         let child_ptr = unsafe { lv_obj_get_child(self.handle, idx) };
-        if child_ptr.is_null() {
-            None
-        } else {
-            Some(super::Child::new(Obj::from_raw(child_ptr)))
-        }
+        if child_ptr.is_null() { None } else { Some(super::Child::new(Obj::from_raw(child_ptr))) }
     }
 
     /// Move this object to a specific position among its siblings.
@@ -766,7 +763,8 @@ impl<'p> Obj<'p> {
         self
     }
 
-    /// Force immediate layout recalculation (needed after dynamic child add/remove).
+    /// Force immediate layout recalculation (needed after dynamic child
+    /// add/remove).
     pub fn update_layout(&self) -> &Self {
         assert_ne!(self.handle, null_mut());
         // SAFETY: handle non-null (asserted above).
@@ -774,7 +772,8 @@ impl<'p> Obj<'p> {
         self
     }
 
-    /// Delete a child by index. Negative index counts from the end (`-1` = last child).
+    /// Delete a child by index. Negative index counts from the end (`-1` = last
+    /// child).
     ///
     /// No-op if the index is out of range.
     pub fn delete_child(&self, idx: i32) {

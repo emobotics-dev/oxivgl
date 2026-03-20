@@ -44,7 +44,7 @@ pub use crate::widgets::{
     ChartSeries, ChartType, Checkbox, Child, DdDir, Dropdown, Image, ImageAlign, Keyboard, KeyboardMode, Label,
     LabelLongMode, Led, Line, List, Matrix, Menu, MenuHeaderMode, Msgbox, Obj, Part, RADIUS_MAX, Roller, RollerMode,
     SCALE_LABEL_ROTATE_KEEP_UPRIGHT, SCALE_LABEL_ROTATE_MATCH_TICKS, Scale, ScaleBuilder, ScaleLabels, ScaleMode,
-    ScaleSection, Screen, Slider, SliderMode, Switch, SwitchOrientation, Table, TableCellCtrl, TextAlign, Textarea,
+    ScaleSection, Screen, Slider, SliderMode, Switch, SwitchOrientation, Table, TableCellCtrl, Tabview, TextAlign, Textarea,
     ValueLabel, WidgetError,
 };
 pub use crate::{
