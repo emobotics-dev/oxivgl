@@ -853,6 +853,14 @@ simple red bar, underline blue, and block orange/yellow gradient.
 
 ## Widgets — Canvas
 
+### canvas_1 — Dual canvas + image rotation
+
+Two 200×150 canvases. Canvas 1 (RGB565): red filled rect with black border + orange
+"Canvas 1" label. Canvas 2 (ARGB8888): rotated (12°) snapshot of canvas 1 drawn via
+`DrawImageDsc`.
+
+![canvas_1](screenshots/canvas_1.png)
+
 ### canvas_2 — Transparent pixels
 
 80×60 ARGB8888 canvas filled blue. Three horizontal bands of decreasing opacity
@@ -884,6 +892,28 @@ and 5 px corner radius, drawn via `CanvasLayer::draw_rect`.
 50×50 ARGB8888 canvas. Red line (15,15)→(35,10), width 4, rounded caps.
 
 ![canvas_7](screenshots/canvas_7.png)
+
+### canvas_9 — Gradient triangle
+
+150×150 ARGB8888 canvas. Semi-transparent triangle (3 vertices) with a vertical
+red→blue gradient via `DrawTriangleDsc`.
+
+![canvas_9](screenshots/canvas_9.png)
+
+### canvas_10 — Wavy text animation
+
+300×200 ARGB8888 canvas. "Hello wavy world!" rendered letter-by-letter with HSV
+rainbow colors and sine-wave y-offsets; letters tilt toward the next letter via
+`math::atan2`. Animated each frame.
+
+![canvas_10](screenshots/canvas_10.png)
+
+### canvas_11 — Windstorm text animation
+
+300×200 ARGB8888 canvas (black). "windstorm" repeated with sinusoidal y-positions,
+HSV-cycled colors shifting each frame via `DrawLetterDsc`. Animated each frame.
+
+![canvas_11](screenshots/canvas_11.png)
 
 ## Implementation Coverage
 
@@ -925,7 +955,7 @@ Status of all [LVGL 9.3 examples](https://docs.lvgl.io/9.3/examples.html) in oxi
 | slider | 4 | 4 | 0 | |
 | switch | 2 | 2 | 0 | |
 | textarea | 4 | 4 | 0 | Includes Buttonmatrix + Keyboard wrappers |
-| canvas | 11 | 5 | 6 | canvas_1 (DrawImageDsc), canvas_6 (image asset), canvas_8 (vector graphics), canvas_9 (triangle), canvas_10–11 (letter/animated) |
+| canvas | 11 | 9 | 2 | canvas_6 (image asset), canvas_8 (vector graphics) |
 
 ### Widgets Without Wrappers
 
@@ -936,7 +966,7 @@ animimg, calendar, imagebutton, lottie, span, spinbox, spinner, table, tabview, 
 | | Count |
 |---|---|
 | LVGL examples total | ~184 |
-| oxivgl done | 123 |
+| oxivgl done | 127 |
 | Skipped (intentional) | 3 |
 | Missing (wrapper exists) | 4 |
 | No wrapper | ~55 |
