@@ -33,6 +33,7 @@ runner (`example_main!` macro selects host SDL2 or ESP32 fire27 backend).
 - [Widgets — Slider](#widgets--slider)
 - [Widgets — Switch](#widgets--switch)
 - [Widgets — Textarea](#widgets--textarea)
+- [Widgets — Canvas](#widgets--canvas)
 - [Implementation Coverage](#implementation-coverage)
 - [Running](#running)
 
@@ -850,6 +851,40 @@ simple red bar, underline blue, and block orange/yellow gradient.
 
 ![widget_textarea4](screenshots/widget_textarea4.png)
 
+## Widgets — Canvas
+
+### canvas_2 — Transparent pixels
+
+80×60 ARGB8888 canvas filled blue. Three horizontal bands of decreasing opacity
+(50 %, 20 %, 0 %) drawn via `set_px`.
+
+![canvas_2](screenshots/canvas_2.png)
+
+### canvas_3 — Rectangle with border and outline
+
+70×70 ARGB8888 canvas. Red rectangle with blue border (4 px), green outline (2 px),
+and 5 px corner radius, drawn via `CanvasLayer::draw_rect`.
+
+![canvas_3](screenshots/canvas_3.png)
+
+### canvas_4 — Text label
+
+80×30 ARGB8888 canvas. "Hello" in red via `CanvasLayer::draw_label`.
+
+![canvas_4](screenshots/canvas_4.png)
+
+### canvas_5 — Arc
+
+50×50 ARGB8888 canvas. Red arc (center 25,25; radius 15; width 10; 0°–220°).
+
+![canvas_5](screenshots/canvas_5.png)
+
+### canvas_7 — Line
+
+50×50 ARGB8888 canvas. Red line (15,15)→(35,10), width 4, rounded caps.
+
+![canvas_7](screenshots/canvas_7.png)
+
 ## Implementation Coverage
 
 Status of all [LVGL 9.3 examples](https://docs.lvgl.io/9.3/examples.html) in oxivgl.
@@ -890,20 +925,21 @@ Status of all [LVGL 9.3 examples](https://docs.lvgl.io/9.3/examples.html) in oxi
 | slider | 4 | 4 | 0 | |
 | switch | 2 | 2 | 0 | |
 | textarea | 4 | 4 | 0 | Includes Buttonmatrix + Keyboard wrappers |
+| canvas | 11 | 5 | 6 | canvas_1 (DrawImageDsc), canvas_6 (image asset), canvas_8 (vector graphics), canvas_9 (triangle), canvas_10–11 (letter/animated) |
 
 ### Widgets Without Wrappers
 
-animimg, calendar, canvas, imagebutton, lottie, span, spinbox, spinner, table, tabview, tileview, win.
+animimg, calendar, imagebutton, lottie, span, spinbox, spinner, table, tabview, tileview, win.
 
 ### Totals
 
 | | Count |
 |---|---|
 | LVGL examples total | ~184 |
-| oxivgl done | 118 |
+| oxivgl done | 123 |
 | Skipped (intentional) | 3 |
 | Missing (wrapper exists) | 4 |
-| No wrapper | ~56 |
+| No wrapper | ~55 |
 
 ## Running
 
