@@ -1,8 +1,5 @@
 #![cfg_attr(target_arch = "xtensa", no_std, no_main)]
-#![cfg_attr(
-    target_arch = "xtensa",
-    feature(impl_trait_in_assoc_type, type_alias_impl_trait)
-)]
+#![cfg_attr(target_arch = "xtensa", feature(impl_trait_in_assoc_type, type_alias_impl_trait))]
 // SPDX-License-Identifier: MIT OR Apache-2.0
 //! Table 2 — Lightweight scrollable list of 200 items with toggle state.
 //!
@@ -15,8 +12,8 @@ use oxivgl::{
     draw::DrawTask,
     enums::EventCode,
     event::Event,
-    style::{palette_lighten, Palette},
-    view::{register_event_on, View},
+    style::{Palette, palette_lighten},
+    view::{View, register_event_on},
     widgets::{Align, Part, Screen, Table, TableCellCtrl, WidgetError},
 };
 
@@ -56,8 +53,7 @@ impl View for Table2 {
             buf[..prefix.len()].copy_from_slice(prefix);
             let num_len = u32_to_str(n, &mut buf[prefix.len()..]);
             let total = prefix.len() + num_len;
-            // SAFETY: buf contains only ASCII digits and spaces.
-            let text = unsafe { core::str::from_utf8_unchecked(&buf[..total]) };
+            let text = core::str::from_utf8(&buf[..total]).unwrap_or("Item");
             table.set_cell_value(i, 0, text);
         }
 
