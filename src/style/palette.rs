@@ -63,7 +63,8 @@ pub enum GradDir {
     Conical = 5,
 }
 
-/// Returns the main (500-shade) color for a palette entry as a raw `lv_color_t`.
+/// Returns the main (500-shade) color for a palette entry as a raw
+/// `lv_color_t`.
 pub fn palette_main(p: Palette) -> lv_color_t {
     // SAFETY: lv_palette_main is a pure lookup function.
     unsafe { lv_palette_main(p as lv_palette_t) }
@@ -110,6 +111,16 @@ pub fn color_brightness(c: lv_color_t) -> u8 {
 pub fn color_darken(c: lv_color_t, lvl: u8) -> lv_color_t {
     // SAFETY: pure function operating on value types.
     unsafe { lv_color_darken(c, lvl) }
+}
+
+/// Convert HSV to an LVGL color value.
+///
+/// - `h`: hue, 0–360
+/// - `s`: saturation, 0–100
+/// - `v`: value (brightness), 0–100
+pub fn color_hsv(h: u16, s: u8, v: u8) -> lv_color_t {
+    // SAFETY: pure computation, no LVGL object state.
+    unsafe { lv_color_hsv_to_rgb(h, s, v) }
 }
 
 #[cfg(test)]

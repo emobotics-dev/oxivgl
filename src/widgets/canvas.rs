@@ -2,17 +2,23 @@
 //! Canvas widget — off-screen drawing surface.
 
 use core::marker::PhantomData;
+
 use lvgl_rust_sys::*;
 
-use crate::draw::{Area, DrawArcDsc, DrawLabelDscOwned, DrawLineDsc, DrawRectDsc};
-use crate::draw_buf::DrawBuf;
-use crate::widgets::{AsLvHandle, Obj, WidgetError};
+use crate::{
+    draw::{
+        Area, DrawArcDsc, DrawImageDsc, DrawLabelDscOwned, DrawLetterDsc, DrawLineDsc, DrawRectDsc, DrawTriangleDsc,
+    },
+    draw_buf::DrawBuf,
+    widgets::{AsLvHandle, Obj, WidgetError},
+};
 
 /// Off-screen drawing surface backed by a [`DrawBuf`].
 ///
 /// `Canvas` takes ownership of its draw buffer, ensuring the buffer outlives
 /// the LVGL canvas object. Use [`init_layer`](Canvas::init_layer) to batch-draw
-/// onto the canvas; drawing is committed when the returned [`CanvasLayer`] is dropped.
+/// onto the canvas; drawing is committed when the returned [`CanvasLayer`] is
+/// dropped.
 ///
 /// # Example
 ///
@@ -137,17 +143,44 @@ impl<'c> CanvasLayer<'c> {
 
     /// Draw an arc.
     pub fn draw_arc(&mut self, dsc: &DrawArcDsc) {
-        // SAFETY: layer valid until Drop; lv_draw_arc reads dsc synchronously before returning.
+        // SAFETY: layer valid until Drop; lv_draw_arc reads dsc synchronously before
+        // returning.
         unsafe { lv_draw_arc(&mut self.layer, dsc.as_ptr()) };
     }
 
     /// Draw a straight line.
     pub fn draw_line(&mut self, dsc: &DrawLineDsc) {
-        // SAFETY: layer valid until Drop; lv_draw_line reads dsc synchronously before returning.
+        // SAFETY: layer valid until Drop; lv_draw_line reads dsc synchronously before
+        // returning.
         unsafe { lv_draw_line(&mut self.layer, dsc.as_ptr()) };
     }
 
-    /// Draw a text label. `text` must fit in 63 bytes; longer strings are truncated.
+    /// Draw a filled or gradient-filled triangle.
+    pub fn draw_triangle(&mut self, dsc: &DrawTriangleDsc) {
+        // SAFETY: layer valid until Drop; lv_draw_triangle reads dsc synchronously.
+        unsafe { lv_draw_triangle(&mut self.layer, dsc.as_ptr()) };
+    }
+
+    /// Draw an image (or rotated canvas snapshot).
+    ///
+    /// The [`DrawImageDsc`] lifetime ensures the image source lives long
+    /// enough.
+    pub fn draw_image<'i>(&mut self, dsc: &DrawImageDsc<'i>, area: Area) {
+        let lv_area = lv_area_t::from(area);
+        // SAFETY: layer valid; image src in dsc valid for 'i; lv_canvas_finish_layer
+        // (called in Drop) processes commands before 'i expires.
+        unsafe { lv_draw_image(&mut self.layer, dsc.as_ptr(), &lv_area) };
+    }
+
+    /// Draw a single Unicode glyph at canvas position `(x, y)`.
+    pub fn draw_letter(&mut self, dsc: &mut DrawLetterDsc, x: i32, y: i32) {
+        let pt = lv_point_t { x, y };
+        // SAFETY: layer valid; lv_draw_letter reads dsc synchronously.
+        unsafe { lv_draw_letter(&mut self.layer, dsc.as_mut_ptr(), &pt) };
+    }
+
+    /// Draw a text label. `text` must fit in 63 bytes; longer strings are
+    /// truncated.
     pub fn draw_label(&mut self, dsc: &DrawLabelDscOwned, area: Area, text: &str) {
         let mut buf = [0u8; 64];
         let len = text.len().min(buf.len() - 1);
