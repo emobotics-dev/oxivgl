@@ -855,62 +855,61 @@ simple red bar, underline blue, and block orange/yellow gradient.
 
 ### canvas_1 — Dual canvas + image rotation
 
-Two 200×150 canvases. Canvas 1 (RGB565): red filled rect with black border + orange
-"Canvas 1" label. Canvas 2 (ARGB8888): rotated (12°) snapshot of canvas 1 drawn via
+Two 100×70 RGB565 canvases. Canvas 1: red filled rect with black border + orange
+"Canvas 1" label. Canvas 2: rotated (12°) snapshot of canvas 1 drawn via
 `DrawImageDsc`.
 
 ![canvas_1](screenshots/canvas_1.png)
 
 ### canvas_2 — Transparent pixels
 
-80×60 ARGB8888 canvas filled blue. Three horizontal bands of decreasing opacity
+80×60 RGB565 canvas filled blue. Three horizontal bands of decreasing opacity
 (50 %, 20 %, 0 %) drawn via `set_px`.
 
 ![canvas_2](screenshots/canvas_2.png)
 
 ### canvas_3 — Rectangle with border and outline
 
-70×70 ARGB8888 canvas. Red rectangle with blue border (4 px), green outline (2 px),
+70×70 RGB565 canvas. Red rectangle with blue border (4 px), green outline (2 px),
 and 5 px corner radius, drawn via `CanvasLayer::draw_rect`.
 
 ![canvas_3](screenshots/canvas_3.png)
 
 ### canvas_4 — Text label
 
-80×30 ARGB8888 canvas. "Hello" in red via `CanvasLayer::draw_label`.
+80×30 RGB565 canvas. "Hello" in red via `CanvasLayer::draw_label`.
 
 ![canvas_4](screenshots/canvas_4.png)
 
 ### canvas_5 — Arc
 
-50×50 ARGB8888 canvas. Red arc (center 25,25; radius 15; width 10; 0°–220°).
+50×50 RGB565 canvas. Red arc (center 25,25; radius 15; width 10; 0°–220°).
 
 ![canvas_5](screenshots/canvas_5.png)
 
 ### canvas_7 — Line
 
-50×50 ARGB8888 canvas. Red line (15,15)→(35,10), width 4, rounded caps.
+50×50 RGB565 canvas. Red line (15,15)→(35,10), width 4, rounded caps.
 
 ![canvas_7](screenshots/canvas_7.png)
 
 ### canvas_9 — Gradient triangle
 
-150×150 ARGB8888 canvas. Semi-transparent triangle (3 vertices) with a vertical
+80×80 RGB565 canvas. Semi-transparent triangle (3 vertices) with a vertical
 red→blue gradient via `DrawTriangleDsc`.
 
 ![canvas_9](screenshots/canvas_9.png)
 
 ### canvas_10 — Wavy text animation
 
-300×200 ARGB8888 canvas. "Hello wavy world!" rendered letter-by-letter with HSV
-rainbow colors and sine-wave y-offsets; letters tilt toward the next letter via
-`math::atan2`. Animated each frame.
+160×100 RGB565 canvas. "Hello wavy world!" rendered letter-by-letter with HSV
+rainbow colors and sine-wave y-offsets via `DrawLetterDsc`. Animated each frame.
 
 ![canvas_10](screenshots/canvas_10.png)
 
 ### canvas_11 — Windstorm text animation
 
-300×200 ARGB8888 canvas (black). "windstorm" repeated with sinusoidal y-positions,
+160×100 RGB565 canvas (black). "windstorm" repeated with sinusoidal y-positions,
 HSV-cycled colors shifting each frame via `DrawLetterDsc`. Animated each frame.
 
 ![canvas_11](screenshots/canvas_11.png)
