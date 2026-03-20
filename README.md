@@ -70,6 +70,8 @@ context they need to contribute effectively.
 | `List` | `widgets` | Scrollable list with icon+text buttons |
 | `Menu` | `widgets` | Hierarchical menu with pages |
 | `Msgbox` | `widgets` | Modal dialog with title, text, and buttons |
+| `Canvas<'p>` | `widgets` | Off-screen drawing surface; owns its `DrawBuf`; `fill_bg()`, `set_px()`, `init_layer()` → `CanvasLayer` |
+| `CanvasLayer<'c>` | `widgets` | RAII draw guard: `draw_rect()`, `draw_arc()`, `draw_line()`, `draw_triangle()`, `draw_image()`, `draw_label()`, `draw_letter()`; commits on `Drop` |
 | `ValueLabel` | `widgets` | Label that formats a numeric value with a unit string |
 | `Child<W>` | `widgets` | Non-owning wrapper — suppresses `Drop` (parent owns) |
 | `ScaleBuilder` | `widgets` | Builder for `Scale` widget configuration |
@@ -111,8 +113,16 @@ context they need to contribute effectively.
 | `DrawLabelDsc` | `draw` | Borrowed label descriptor: color, text, font |
 | `DrawLabelDscOwned` | `draw` | Owned label draw descriptor |
 | `DrawRectDsc` | `draw` | Owned rect draw descriptor with builder setters |
+| `DrawArcDsc` | `draw` | Arc draw descriptor (center, radius, angles, width, color) |
+| `DrawLineDsc` | `draw` | Line draw descriptor (p1, p2 — `f32`; width, color, rounded caps) |
+| `DrawTriangleDsc` | `draw` | Triangle draw descriptor with gradient builder (stops, direction) |
+| `DrawImageDsc<'i>` | `draw` | Image draw descriptor; `'i` ties to `ImageDsc` / `DrawBuf` lifetime |
+| `DrawLetterDsc` | `draw` | Single Unicode glyph draw descriptor (unicode, color, rotation) |
 | `Layer` | `draw` | Non-owning draw layer handle; `draw_rect()`, `draw_label()` for custom rendering |
 | `Area` | `draw` | Rectangle area (x1, y1, x2, y2) |
+| `DrawBuf` | `draw_buf` | Owned LVGL draw buffer (`lv_draw_buf_t`); freed on `Drop` |
+| `ImageDsc<'buf>` | `draw_buf` | Image descriptor view into `DrawBuf`'s pixel data; borrows from `DrawBuf` |
+| `ColorFormat` | `draw_buf` | Pixel color format (RGB565, ARGB8888) |
 
 **Display & buffers** — DMA-aligned double-buffering for ESP32.
 
@@ -151,14 +161,14 @@ These guarantees are verified by [integration tests](#testing) that exercise sty
 
 ## Examples
 
-118 ported LVGL examples covering getting started, styles, animations, events, layouts, scrolling, and individual widgets. Each is a self-contained `View` impl — runs on host SDL2 or ESP32 with zero code changes.
+127 ported LVGL examples covering getting started, styles, animations, events, layouts, scrolling, and individual widgets (including canvas). Each is a self-contained `View` impl — runs on host SDL2 or ESP32 with zero code changes.
 
 **[Browse the full gallery with screenshots](examples/doc/README.md)**
 
 ```sh
 ./run_host.sh getting_started1      # interactive SDL2 window
 ./run_host.sh -s getting_started1   # headless screenshot
-./run_host.sh -s                    # screenshot all 118 examples
+./run_host.sh -s                    # screenshot all 127 examples
 ./run_fire27.sh event_trickle       # flash to ESP32
 ```
 
@@ -175,14 +185,14 @@ LVGL's widget tree, layout engine, and style system are pure C — platform-inde
 
 ## Testing
 
-300 automated tests across three tiers — all run on host without hardware:
+326 automated tests across three tiers — all run on host without hardware:
 
 | Tier | Count | What it covers |
 |------|-------|----------------|
 | **Unit** | 38 | Pure logic — enums, value mapping, style bitflags, grid helpers |
-| **Integration** | 229 | Full LVGL instance — widget lifecycle, style add/remove/drop ordering, layout, events, every widget type |
-| **Leak detection** | 33 | Global heap tracking via `mallinfo2()` — catches leaks in both Rust and LVGL's C code across the FFI boundary |
-| **Visual** | 100 | Screenshot capture + comparison against LVGL reference docs |
+| **Integration** | 253 | Full LVGL instance — widget lifecycle, style add/remove/drop ordering, layout, events, every widget type incl. Canvas |
+| **Leak detection** | 35 | Global heap tracking via `mallinfo2()` — catches leaks in both Rust and LVGL's C code across the FFI boundary |
+| **Visual** | 127 | Screenshot capture for all ported examples |
 
 ```sh
 ./run_tests.sh all          # unit + integration + leak (< 5 seconds)

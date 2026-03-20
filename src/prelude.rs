@@ -38,17 +38,23 @@ pub use crate::widgets::{lv_color_t, lv_image_dsc_t, lv_point_precise_t};
 
 // Style system
 pub use crate::style::{
-    color_black, color_brightness, color_darken, color_make, color_white, darken_filter_cb, lv_pct,
+    color_black, color_brightness, color_darken, color_hsv, color_make, color_white,
+    darken_filter_cb, lv_pct,
     palette_darken, palette_lighten, palette_main, props, BorderSide, ColorFilter, GradDir, GradDsc,
     GradExtend, Palette, Selector, Style, StyleBuilder, TextDecor, Theme, TransitionDsc,
     LV_SIZE_CONTENT,
 };
 
 // Math utilities
-pub use crate::math::{bezier3, map, trigo_cos, trigo_sin, BEZIER_VAL_MAX, TRIGO_SHIFT};
+pub use crate::math::{atan2, bezier3, map, trigo_cos, trigo_sin, BEZIER_VAL_MAX, TRIGO_SHIFT};
 
 // Draw primitives (needed in DRAW_TASK_ADDED / DRAW_MAIN_END handlers)
-pub use crate::draw::{DrawLabelDscOwned, DrawRectDsc, Layer};
+pub use crate::draw::{DrawArcDsc, DrawImageDsc, DrawLabelDscOwned, DrawLetterDsc, DrawLineDsc,
+    DrawRectDsc, DrawTriangleDsc, Layer};
+
+// Canvas
+pub use crate::draw_buf::{ColorFormat, DrawBuf, ImageDsc};
+pub use crate::widgets::Canvas;
 
 // Symbol icons
 pub use crate::symbols::Symbol;
