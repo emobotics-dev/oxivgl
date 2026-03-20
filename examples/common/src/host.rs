@@ -55,7 +55,7 @@ pub fn capture(driver: &LvglDriver, name: &str, dir: &str) {
 macro_rules! host_main {
     ($View:ty) => {
         fn main() {
-            use $crate::host::{H, W, capture, pump, run_host_loop};
+            use $crate::host::{H, W, capture, pump};
             use $crate::oxivgl::driver::LvglDriver;
             use $crate::oxivgl::view::View;
 
@@ -82,7 +82,8 @@ macro_rules! host_main {
                 env!("CARGO_MANIFEST_DIR")
             );
 
-            // Always capture a screenshot.
+            // Always capture a screenshot (call update once first for animated views).
+            _view.update().expect("update failed");
             pump(&driver, 10);
             capture(&driver, name, &dir);
 
@@ -93,7 +94,14 @@ macro_rules! host_main {
                 std::process::exit(0);
             }
 
-            run_host_loop(&driver);
+            // Interactive loop: drive update() at ~30 fps (every 4 × 8 ms).
+            loop {
+                _view.update().unwrap_or_else(|e| eprintln!("update: {e:?}"));
+                for _ in 0..4 {
+                    driver.timer_handler();
+                    std::thread::sleep(std::time::Duration::from_millis(8));
+                }
+            }
         }
     };
 }

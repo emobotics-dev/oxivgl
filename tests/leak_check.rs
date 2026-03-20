@@ -23,15 +23,18 @@ use std::sync::Once;
 
 use oxivgl::{
     anim::anim_path_linear,
+    draw::{Area, DrawRectDsc},
+    draw_buf::{ColorFormat, DrawBuf},
     driver::LvglDriver,
     style::{
-        palette_main, props, GradDsc, GradExtend, Palette, Selector, StyleBuilder, TransitionDsc,
+        color_make, palette_main, props, GradDsc, GradExtend, Palette, Selector, StyleBuilder,
+        TransitionDsc,
     },
     enums::ObjState,
     widgets::{
-        Arc, Bar, BarMode, Button, Buttonmatrix, Checkbox, Dropdown, Keyboard, KeyboardMode,
-        Label, Led, Line, Menu, Msgbox, Obj, Part, Roller, RollerMode, Screen, Slider, Switch,
-        Textarea, ValueLabel,
+        Arc, Bar, BarMode, Button, Buttonmatrix, Canvas, Chart, ChartAxis, ChartType, Checkbox,
+        Dropdown, Keyboard, KeyboardMode, Label, Led, Line, Menu, Msgbox, Obj, Part, Roller,
+        RollerMode, Screen, Slider, Switch, Textarea, ValueLabel, lv_color_t,
     },
 };
 
@@ -571,6 +574,11 @@ fn leak_menu() {
         lbl.text("Item");
         menu.set_page(&page);
         drop(lbl);
+        // page and cont are Child<Obj> — Child<W> suppresses Drop, so LVGL
+        // (not Rust) will free them when menu is deleted. Explicit drops here
+        // clarify intent; order doesn't affect safety.
+        drop(cont);
+        drop(page);
         drop(menu);
     });
 }
@@ -586,3 +594,37 @@ fn leak_msgbox() {
         drop(mbox);
     });
 }
+
+#[test]
+fn leak_chart() {
+    assert_no_leak("Chart", 1, |screen| {
+        let chart = Chart::new(screen).unwrap();
+        chart.set_type(ChartType::Line);
+        chart.set_point_count(5);
+        chart.set_axis_range(ChartAxis::PrimaryY, 0, 100);
+        let color = lv_color_t { blue: 0, green: 0, red: 255 };
+        let series = chart.add_series(color, ChartAxis::PrimaryY);
+        chart.set_next_value(&series, 50);
+        chart.refresh();
+        drop(chart);
+    });
+}
+
+// ── Canvas ────────────────────────────────────────────────────────────────────
+
+#[test]
+fn leak_canvas() {
+    assert_no_leak("Canvas", 1, |screen| {
+        let buf = DrawBuf::create(50, 50, ColorFormat::RGB565).unwrap();
+        let canvas = Canvas::new(screen, buf).unwrap();
+        canvas.fill_bg(color_make(100, 100, 100), 255);
+        {
+            let mut layer = canvas.init_layer();
+            let mut dsc = DrawRectDsc::new();
+            dsc.bg_color(color_make(255, 0, 0));
+            layer.draw_rect(&dsc, Area { x1: 5, y1: 5, x2: 45, y2: 45 });
+        }
+        drop(canvas); // drops draw_buf field automatically
+    });
+}
+

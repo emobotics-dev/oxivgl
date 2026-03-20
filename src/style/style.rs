@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
-use alloc::boxed::Box;
-use alloc::rc::Rc;
+use alloc::{boxed::Box, rc::Rc};
+
 use lvgl_rust_sys::*;
 
 use super::GradDir;
@@ -42,10 +42,10 @@ impl core::fmt::Debug for TransitionDsc {
 impl TransitionDsc {
     /// Create a transition descriptor.
     ///
-    /// `props`: null-terminated `'static` array of `lv_style_prop_t` (use [`props`] constants).
-    /// `path_cb`: animation path function (e.g. [`crate::anim::anim_path_linear`]).
-    /// `time`: transition duration in ms.
-    /// `delay`: delay before transition starts in ms.
+    /// `props`: null-terminated `'static` array of `lv_style_prop_t` (use
+    /// [`props`] constants). `path_cb`: animation path function (e.g.
+    /// [`crate::anim::anim_path_linear`]). `time`: transition duration in
+    /// ms. `delay`: delay before transition starts in ms.
     pub fn new(
         props: &'static [lv_style_prop_t],
         path_cb: Option<unsafe extern "C" fn(*const lv_anim_t) -> i32>,
@@ -55,14 +55,7 @@ impl TransitionDsc {
         let mut inner = unsafe { core::mem::zeroed::<lv_style_transition_dsc_t>() };
         // SAFETY: inner is zeroed; props pointer is 'static so outlives everything.
         unsafe {
-            lv_style_transition_dsc_init(
-                &mut inner,
-                props.as_ptr(),
-                path_cb,
-                time,
-                delay,
-                core::ptr::null_mut(),
-            )
+            lv_style_transition_dsc_init(&mut inner, props.as_ptr(), path_cb, time, delay, core::ptr::null_mut())
         };
         Self { inner }
     }
@@ -73,26 +66,19 @@ pub mod props {
     pub use lvgl_rust_sys::lv_style_prop_t;
 
     /// Background color property.
-    pub const BG_COLOR: lv_style_prop_t =
-        lvgl_rust_sys::_lv_style_id_t_LV_STYLE_BG_COLOR as lv_style_prop_t;
+    pub const BG_COLOR: lv_style_prop_t = lvgl_rust_sys::_lv_style_id_t_LV_STYLE_BG_COLOR as lv_style_prop_t;
     /// Border color property.
-    pub const BORDER_COLOR: lv_style_prop_t =
-        lvgl_rust_sys::_lv_style_id_t_LV_STYLE_BORDER_COLOR as lv_style_prop_t;
+    pub const BORDER_COLOR: lv_style_prop_t = lvgl_rust_sys::_lv_style_id_t_LV_STYLE_BORDER_COLOR as lv_style_prop_t;
     /// Border width property.
-    pub const BORDER_WIDTH: lv_style_prop_t =
-        lvgl_rust_sys::_lv_style_id_t_LV_STYLE_BORDER_WIDTH as lv_style_prop_t;
+    pub const BORDER_WIDTH: lv_style_prop_t = lvgl_rust_sys::_lv_style_id_t_LV_STYLE_BORDER_WIDTH as lv_style_prop_t;
     /// Background opacity property.
-    pub const BG_OPA: lv_style_prop_t =
-        lvgl_rust_sys::_lv_style_id_t_LV_STYLE_BG_OPA as lv_style_prop_t;
+    pub const BG_OPA: lv_style_prop_t = lvgl_rust_sys::_lv_style_id_t_LV_STYLE_BG_OPA as lv_style_prop_t;
     /// Width property.
-    pub const WIDTH: lv_style_prop_t =
-        lvgl_rust_sys::_lv_style_id_t_LV_STYLE_WIDTH as lv_style_prop_t;
+    pub const WIDTH: lv_style_prop_t = lvgl_rust_sys::_lv_style_id_t_LV_STYLE_WIDTH as lv_style_prop_t;
     /// Outline width property.
-    pub const OUTLINE_WIDTH: lv_style_prop_t =
-        lvgl_rust_sys::_lv_style_id_t_LV_STYLE_OUTLINE_WIDTH as lv_style_prop_t;
+    pub const OUTLINE_WIDTH: lv_style_prop_t = lvgl_rust_sys::_lv_style_id_t_LV_STYLE_OUTLINE_WIDTH as lv_style_prop_t;
     /// Outline opacity property.
-    pub const OUTLINE_OPA: lv_style_prop_t =
-        lvgl_rust_sys::_lv_style_id_t_LV_STYLE_OUTLINE_OPA as lv_style_prop_t;
+    pub const OUTLINE_OPA: lv_style_prop_t = lvgl_rust_sys::_lv_style_id_t_LV_STYLE_OUTLINE_OPA as lv_style_prop_t;
     /// Transform width offset property.
     pub const TRANSFORM_WIDTH: lv_style_prop_t =
         lvgl_rust_sys::_lv_style_id_t_LV_STYLE_TRANSFORM_WIDTH as lv_style_prop_t;
@@ -146,8 +132,7 @@ pub fn lv_pct(v: i32) -> i32 {
 
 /// Special LVGL size value: object sizes itself to fit its content.
 /// Equivalent to the C macro `LV_SIZE_CONTENT`.
-pub const LV_SIZE_CONTENT: i32 =
-    (lvgl_rust_sys::LV_COORD_MAX | lvgl_rust_sys::LV_COORD_TYPE_SPEC) as i32;
+pub const LV_SIZE_CONTENT: i32 = (lvgl_rust_sys::LV_COORD_MAX | lvgl_rust_sys::LV_COORD_TYPE_SPEC) as i32;
 
 // ── StyleInner ──────────────────────────────────────────────────────────
 
@@ -161,7 +146,8 @@ pub(crate) struct StyleInner {
     _color_filter: Option<Box<ColorFilter>>,
 }
 
-// Compile-time guarantee that the cast `*const StyleInner → *const lv_style_t` is valid.
+// Compile-time guarantee that the cast `*const StyleInner → *const lv_style_t`
+// is valid.
 const _: () = assert!(core::mem::offset_of!(StyleInner, lv) == 0);
 
 impl core::fmt::Debug for StyleInner {
@@ -209,23 +195,14 @@ impl StyleBuilder {
         // SAFETY: lv_style_t can be zero-initialized; lv_style_init sets it up.
         let mut lv = unsafe { core::mem::zeroed::<lv_style_t>() };
         unsafe { lv_style_init(&mut lv) };
-        Self {
-            inner: Box::new(StyleInner {
-                lv,
-                _grad: None,
-                _transition: None,
-                _color_filter: None,
-            }),
-        }
+        Self { inner: Box::new(StyleInner { lv, _grad: None, _transition: None, _color_filter: None }) }
     }
 
     /// Consume this builder and produce a frozen [`Style`] handle.
     pub fn build(self) -> Style {
         // Box<StyleInner> → Rc<StyleInner>. Sub-descriptor Box<T> addresses
         // are stable because they are behind their own heap indirection.
-        Style {
-            inner: Rc::from(self.inner),
-        }
+        Style { inner: Rc::from(self.inner) }
     }
 
     /// Set corner radius.
@@ -330,11 +307,13 @@ impl StyleBuilder {
 
     /// Apply a color filter with given opacity. Takes ownership of `filter`.
     ///
-    /// The filter is stored inside the style; no external lifetime management needed.
+    /// The filter is stored inside the style; no external lifetime management
+    /// needed.
     pub fn color_filter(&mut self, filter: ColorFilter, opa: u8) -> &mut Self {
         let filter = Box::new(filter);
         // SAFETY: set new pointer first (LVGL overwrites in-place, lv_style.c:344-346),
-        // then store the Box — old allocation (if any) drops after LVGL no longer references it.
+        // then store the Box — old allocation (if any) drops after LVGL no longer
+        // references it.
         unsafe {
             lv_style_set_color_filter_dsc(&mut self.inner.lv, &filter.inner);
             lv_style_set_color_filter_opa(&mut self.inner.lv, opa as lv_opa_t);
@@ -397,10 +376,12 @@ impl StyleBuilder {
         self
     }
 
-    /// Set background gradient from a full gradient descriptor. Takes ownership.
+    /// Set background gradient from a full gradient descriptor. Takes
+    /// ownership.
     ///
-    /// The descriptor is stored inside the style; no external lifetime management needed.
-    /// For simple two-color gradients, prefer [`bg_grad_color`](Self::bg_grad_color)
+    /// The descriptor is stored inside the style; no external lifetime
+    /// management needed. For simple two-color gradients, prefer
+    /// [`bg_grad_color`](Self::bg_grad_color)
     /// + [`bg_grad_dir`](Self::bg_grad_dir).
     pub fn bg_grad(&mut self, grad: super::GradDsc) -> &mut Self {
         let grad = Box::new(grad);
@@ -503,7 +484,8 @@ impl StyleBuilder {
 
     /// Set transition descriptor. Takes ownership.
     ///
-    /// The descriptor is stored inside the style; no external lifetime management needed.
+    /// The descriptor is stored inside the style; no external lifetime
+    /// management needed.
     pub fn transition(&mut self, tr: TransitionDsc) -> &mut Self {
         let tr = Box::new(tr);
         // SAFETY: set new pointer first, then store Box.
@@ -570,16 +552,14 @@ impl StyleBuilder {
     /// LVGL stores the raw pointer — the descriptor must be `'static`.
     ///
     /// LVGL stores the raw pointer in the style property map. The descriptor
-    /// must be `'static` (spec §3.1). Use [`image_declare!`](crate::image_declare):
+    /// must be `'static` (spec §3.1). Use
+    /// [`image_declare!`](crate::image_declare):
     /// `style.bg_image_src(my_img())`.
     pub fn bg_image_src(&mut self, src: &'static lv_image_dsc_t) -> &mut Self {
         // SAFETY: inner was initialized; src is 'static and points to a valid
         // compiled image descriptor. LVGL stores the pointer (spec §3.1).
         unsafe {
-            lv_style_set_bg_image_src(
-                &mut self.inner.lv,
-                src as *const lv_image_dsc_t as *const core::ffi::c_void,
-            )
+            lv_style_set_bg_image_src(&mut self.inner.lv, src as *const lv_image_dsc_t as *const core::ffi::c_void)
         };
         self
     }
@@ -608,13 +588,15 @@ impl StyleBuilder {
         self
     }
 
-    /// Set transform width offset in pixels (expands/shrinks the widget visually).
+    /// Set transform width offset in pixels (expands/shrinks the widget
+    /// visually).
     pub fn transform_width(&mut self, w: i32) -> &mut Self {
         unsafe { lv_style_set_transform_width(&mut self.inner.lv, w) };
         self
     }
 
-    /// Set transform height offset in pixels (expands/shrinks the widget visually).
+    /// Set transform height offset in pixels (expands/shrinks the widget
+    /// visually).
     pub fn transform_height(&mut self, h: i32) -> &mut Self {
         unsafe { lv_style_set_transform_height(&mut self.inner.lv, h) };
         self
@@ -694,10 +676,9 @@ impl core::fmt::Debug for ColorFilter {
 }
 
 impl ColorFilter {
-    /// `lv_color_filter_dsc_init` is not available in bindings; set field directly.
-    pub fn new(
-        cb: unsafe extern "C" fn(*const lv_color_filter_dsc_t, lv_color_t, lv_opa_t) -> lv_color_t,
-    ) -> Self {
+    /// `lv_color_filter_dsc_init` is not available in bindings; set field
+    /// directly.
+    pub fn new(cb: unsafe extern "C" fn(*const lv_color_filter_dsc_t, lv_color_t, lv_opa_t) -> lv_color_t) -> Self {
         let mut inner = unsafe { core::mem::zeroed::<lv_color_filter_dsc_t>() };
         inner.filter_cb = Some(cb);
         Self { inner }

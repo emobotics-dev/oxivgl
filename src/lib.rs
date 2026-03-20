@@ -35,7 +35,7 @@ pub mod enums;
 pub mod layout;
 /// Type-safe LVGL widget wrappers.
 pub mod widgets;
-/// Draw task wrappers for DRAW_TASK_ADDED handlers.
+/// Draw primitives: `Area`, `Layer`, rectangle/label descriptors, draw task wrappers.
 pub mod draw;
 /// Input device queries.
 pub mod indev;
@@ -46,6 +46,8 @@ pub mod snapshot;
 pub mod math;
 /// LVGL built-in icon symbols (Font Awesome subset).
 pub mod symbols;
+/// Owned LVGL draw buffer wrapping `lv_draw_buf_t`.
+pub mod draw_buf;
 
 /// Declare an LVGL image asset compiled by `oxivgl-build`.
 ///

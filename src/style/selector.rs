@@ -14,8 +14,9 @@
 //! slider.add_style(&style, Part::Indicator | ObjState::PRESSED);
 //! ```
 
-/// Style selector = [`Part`](crate::widgets::Part) + [`ObjState`](crate::enums::ObjState)
-/// bits. Pass to methods like [`Obj::add_style`](crate::widgets::Obj::add_style),
+/// Style selector = [`Part`](crate::widgets::Part) +
+/// [`ObjState`](crate::enums::ObjState) bits. Pass to methods like
+/// [`Obj::add_style`](crate::widgets::Obj::add_style),
 /// [`Obj::radius`](crate::widgets::Obj::radius), etc.
 #[derive(Clone, Copy, Debug, Default)]
 pub struct Selector(u32);
@@ -52,8 +53,7 @@ impl core::ops::BitOr<crate::enums::ObjState> for crate::widgets::Part {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::widgets::Part;
-    use crate::enums::ObjState;
+    use crate::{enums::ObjState, widgets::Part};
 
     #[test]
     fn default_is_zero() {

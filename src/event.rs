@@ -3,7 +3,7 @@
 
 use lvgl_rust_sys::*;
 
-use crate::draw::DrawTask;
+use crate::draw::{DrawTask, Layer};
 use crate::enums::EventCode;
 use crate::widgets::{AsLvHandle, Child, Obj};
 
@@ -83,6 +83,20 @@ impl Event {
             None
         } else {
             Some(DrawTask::from_raw(ptr))
+        }
+    }
+
+    /// Get the draw layer for a draw event (`DRAW_MAIN_END`, `DRAW_TASK_ADDED`, etc.).
+    ///
+    /// Returns `None` if the event has no associated layer (wrong event type).
+    /// The returned handle is valid only for the duration of this callback.
+    pub fn layer(&self) -> Option<Layer> {
+        // SAFETY: raw pointer valid for callback duration.
+        let ptr = unsafe { lv_event_get_layer(self.raw) };
+        if ptr.is_null() {
+            None
+        } else {
+            Some(Layer::from_raw(ptr))
         }
     }
 }

@@ -123,9 +123,9 @@ pub async fn run_lvgl<V: View, const BYTES: usize>(
         view.update()
             .unwrap_or_else(|e| warn!("Failed to update widgets: {:?}", e));
 
-        // Drive lv_timer_handler 16× per update cycle (4 per refresh period × 4 periods)
-        // so LVGL animations stay smooth while update() is called once per cycle.
-        for _ in 0..16 {
+        // Drive lv_timer_handler 4× per update cycle (once per refresh period)
+        // so LVGL animations stay smooth while update() is called at ~30fps.
+        for _ in 0..4 {
             debug!("LVGL tick/timer handler");
             driver.timer_handler();
             Timer::after(Duration::from_millis(LVGL_TIMER_DELAY)).await;

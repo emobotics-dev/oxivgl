@@ -31,9 +31,7 @@ impl core::fmt::Debug for GradDsc {
 impl GradDsc {
     /// Create a zeroed gradient descriptor.
     pub fn new() -> Self {
-        Self {
-            inner: unsafe { core::mem::zeroed::<lv_grad_dsc_t>() },
-        }
+        Self { inner: unsafe { core::mem::zeroed::<lv_grad_dsc_t>() } }
     }
 
     /// Initialize gradient color stops.
@@ -42,16 +40,8 @@ impl GradDsc {
     /// `fracs`: per-stop position 0–255 (or empty for even spacing).
     pub fn init_stops(&mut self, colors: &[lv_color_t], opas: &[u8], fracs: &[u8]) -> &mut Self {
         let count = colors.len() as i32;
-        let opas_ptr = if opas.is_empty() {
-            core::ptr::null()
-        } else {
-            opas.as_ptr() as *const lv_opa_t
-        };
-        let fracs_ptr = if fracs.is_empty() {
-            core::ptr::null()
-        } else {
-            fracs.as_ptr()
-        };
+        let opas_ptr = if opas.is_empty() { core::ptr::null() } else { opas.as_ptr() as *const lv_opa_t };
+        let fracs_ptr = if fracs.is_empty() { core::ptr::null() } else { fracs.as_ptr() };
         unsafe { lv_grad_init_stops(&mut self.inner, colors.as_ptr(), opas_ptr, fracs_ptr, count) };
         self
     }
@@ -89,24 +79,8 @@ impl GradDsc {
     }
 
     /// Configure as a conical gradient.
-    pub fn conical(
-        &mut self,
-        cx: i32,
-        cy: i32,
-        start_angle: i32,
-        end_angle: i32,
-        extend: GradExtend,
-    ) -> &mut Self {
-        unsafe {
-            lv_grad_conical_init(
-                &mut self.inner,
-                cx,
-                cy,
-                start_angle,
-                end_angle,
-                extend as u32,
-            )
-        };
+    pub fn conical(&mut self, cx: i32, cy: i32, start_angle: i32, end_angle: i32, extend: GradExtend) -> &mut Self {
+        unsafe { lv_grad_conical_init(&mut self.inner, cx, cy, start_angle, end_angle, extend as u32) };
         self
     }
 
