@@ -23,14 +23,14 @@ impl View for Canvas9 {
         let screen = Screen::active().ok_or(WidgetError::LvglNullPointer)?;
         let canvas = Canvas::new(
             &screen,
-            DrawBuf::create(150, 150, ColorFormat::ARGB8888).ok_or(WidgetError::LvglNullPointer)?,
+            DrawBuf::create(100, 100, ColorFormat::RGB565).ok_or(WidgetError::LvglNullPointer)?,
         )?;
         canvas.fill_bg(color_make(0xcc, 0xcc, 0xcc), 255);
         canvas.align(Align::Center, 0, 0);
         {
             let mut layer = canvas.init_layer();
             let mut dsc = DrawTriangleDsc::new();
-            dsc.points([(10.0, 10.0), (100.0, 30.0), (50.0, 100.0)])
+            dsc.points([(7.0, 7.0), (67.0, 20.0), (33.0, 67.0)])
                 .opa(128)
                 .grad_stops_count(2)
                 .grad_dir(GradDir::Ver)

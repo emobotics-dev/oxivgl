@@ -24,11 +24,11 @@ impl View for Canvas1 {
         let screen = Screen::active().ok_or(WidgetError::LvglNullPointer)?;
 
         // Canvas 1: RGB565, gradient rect + label
-        let buf1 = DrawBuf::create(200, 150, ColorFormat::RGB565)
+        let buf1 = DrawBuf::create(100, 70, ColorFormat::RGB565)
             .ok_or(WidgetError::LvglNullPointer)?;
         let canvas1 = Canvas::new(&screen, buf1)?;
         canvas1.fill_bg(color_make(0xcc, 0xcc, 0xcc), 255);
-        canvas1.align(Align::TopMid, 0, 10);
+        canvas1.align(Align::TopMid, 0, 5);
         {
             let mut layer = canvas1.init_layer();
             let mut rdc = DrawRectDsc::new();
@@ -36,24 +36,24 @@ impl View for Canvas1 {
                 .border_width(2)
                 .border_color(color_make(0, 0, 0))
                 .radius(5);
-            layer.draw_rect(&rdc, Area { x1: 10, y1: 10, x2: 190, y2: 140 });
+            layer.draw_rect(&rdc, Area { x1: 5, y1: 5, x2: 94, y2: 64 });
             let mut ldc = DrawLabelDscOwned::default_font();
             ldc.set_color(color_make(0xff, 0xa5, 0x00));
-            layer.draw_label(&ldc, Area { x1: 80, y1: 65, x2: 180, y2: 85 }, "Canvas 1");
+            layer.draw_label(&ldc, Area { x1: 30, y1: 27, x2: 90, y2: 43 }, "Canvas 1");
         }
 
-        // Canvas 2: ARGB8888, rotated snapshot of canvas1
-        let buf2 = DrawBuf::create(200, 150, ColorFormat::ARGB8888)
+        // Canvas 2: RGB565, rotated snapshot of canvas1
+        let buf2 = DrawBuf::create(100, 70, ColorFormat::RGB565)
             .ok_or(WidgetError::LvglNullPointer)?;
         let canvas2 = Canvas::new(&screen, buf2)?;
         canvas2.fill_bg(color_make(0x80, 0x80, 0x80), 255);
-        canvas2.align(Align::BottomMid, 0, -10);
+        canvas2.align(Align::BottomMid, 0, -5);
         {
             let img = canvas1.draw_buf().image_dsc();
             let mut layer = canvas2.init_layer();
             let mut dsc = DrawImageDsc::from_image_dsc(&img);
-            dsc.rotation(120).pivot(100, 75).opa(255);
-            layer.draw_image(&dsc, Area { x1: 0, y1: 0, x2: 199, y2: 149 });
+            dsc.rotation(120).pivot(50, 35).opa(255);
+            layer.draw_image(&dsc, Area { x1: 0, y1: 0, x2: 99, y2: 69 });
         }
 
         Ok(Self { _canvas1: canvas1, _canvas2: canvas2 })
