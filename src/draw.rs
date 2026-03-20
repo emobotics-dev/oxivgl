@@ -109,6 +109,24 @@ impl DrawTask {
         task.area = area.into();
     }
 
+    /// Fill draw descriptor, if this task draws a filled rectangle.
+    ///
+    /// Returns `None` if the task is not a fill draw operation.
+    pub fn fill_dsc(&self) -> Option<DrawFillDsc> {
+        // SAFETY: ptr valid during callback; returns null if not a fill task.
+        let dsc = unsafe { lv_draw_task_get_fill_dsc(self.ptr) };
+        if dsc.is_null() { None } else { Some(DrawFillDsc { ptr: dsc }) }
+    }
+
+    /// Raw draw task type discriminant (`lv_draw_task_type_t` cast to `u32`).
+    ///
+    /// Use the `LV_DRAW_TASK_TYPE_*` constants from `lvgl_rust_sys` to
+    /// distinguish fill, label, image, etc. tasks.
+    pub fn task_type(&self) -> u32 {
+        // SAFETY: ptr valid during callback.
+        unsafe { lv_draw_task_get_type(self.ptr) as u32 }
+    }
+
     /// Get the draw layer from this task's base descriptor.
     ///
     /// Required for `DRAW_TASK_ADDED` handlers that call [`Layer::draw_rect`] /
@@ -202,6 +220,12 @@ impl DrawLabelDsc {
         dsc.set_text_local(1);
     }
 
+    /// Set the text alignment (`lv_text_align_t`).
+    pub fn set_align(&self, align: crate::widgets::TextAlign) {
+        // SAFETY: ptr valid during callback; align is a plain integer field.
+        unsafe { (*self.ptr).align = align as lv_text_align_t };
+    }
+
     /// Current font pointer.
     pub fn font(&self) -> *const lv_font_t {
         // SAFETY: ptr valid during callback.
@@ -231,6 +255,46 @@ impl DrawLabelDsc {
             );
         }
         (size.x, size.y)
+    }
+}
+
+/// Mutable handle to a fill draw descriptor.
+///
+/// Valid only during the `DRAW_TASK_ADDED` callback. Modifications take
+/// effect on the current draw operation.
+pub struct DrawFillDsc {
+    ptr: *mut lv_draw_fill_dsc_t,
+}
+
+impl core::fmt::Debug for DrawFillDsc {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        f.debug_struct("DrawFillDsc").finish_non_exhaustive()
+    }
+}
+
+impl DrawFillDsc {
+    /// Current fill color.
+    pub fn color(&self) -> lv_color_t {
+        // SAFETY: ptr valid during callback.
+        unsafe { (*self.ptr).color }
+    }
+
+    /// Set the fill color.
+    pub fn set_color(&self, color: lv_color_t) {
+        // SAFETY: ptr valid during callback; color is a plain value field.
+        unsafe { (*self.ptr).color = color };
+    }
+
+    /// Current opacity (0 = transparent, 255 = opaque).
+    pub fn opa(&self) -> u8 {
+        // SAFETY: ptr valid during callback.
+        unsafe { (*self.ptr).opa }
+    }
+
+    /// Set the fill opacity.
+    pub fn set_opa(&self, opa: u8) {
+        // SAFETY: ptr valid during callback; opa is a plain integer field.
+        unsafe { (*self.ptr).opa = opa };
     }
 }
 
@@ -306,7 +370,8 @@ impl Layer {
         local_dsc.set_text_local(1);
         let area_lv: lv_area_t = area.into();
         // SAFETY: ptr valid during callback; text_local=1 means lv_draw_label calls
-        // lv_strndup when queuing the task, so buf need only live until this call returns.
+        // lv_strndup when queuing the task, so buf need only live until this call
+        // returns.
         unsafe { lv_draw_label(self.ptr, &local_dsc, &area_lv) };
     }
 }
@@ -678,9 +743,10 @@ impl Default for DrawTriangleDsc {
 /// Descriptor for drawing an image onto a
 /// [`CanvasLayer`](crate::widgets::CanvasLayer).
 ///
-/// The `'i` lifetime ties this descriptor to the [`ImageDsc`](crate::draw_buf::ImageDsc)
-/// source, which in turn borrows from the originating [`DrawBuf`](crate::draw_buf::DrawBuf).
-/// This ensures the pixel data remains valid until `lv_canvas_finish_layer` completes.
+/// The `'i` lifetime ties this descriptor to the
+/// [`ImageDsc`](crate::draw_buf::ImageDsc) source, which in turn borrows from
+/// the originating [`DrawBuf`](crate::draw_buf::DrawBuf). This ensures the
+/// pixel data remains valid until `lv_canvas_finish_layer` completes.
 pub struct DrawImageDsc<'i> {
     inner: lv_draw_image_dsc_t,
     _img_lifetime: core::marker::PhantomData<&'i ()>,

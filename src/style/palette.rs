@@ -101,6 +101,12 @@ pub fn color_make(r: u8, g: u8, b: u8) -> lv_color_t {
     unsafe { lv_color_make(r, g, b) }
 }
 
+/// Mix two colors. `mix` = 0 → full `c2`, `mix` = 255 → full `c1`.
+pub fn color_mix(c1: lv_color_t, c2: lv_color_t, mix: u8) -> lv_color_t {
+    // SAFETY: pure function operating on value types.
+    unsafe { lv_color_mix(c1, c2, mix) }
+}
+
 /// Returns the perceived brightness of a color (0–255).
 pub fn color_brightness(c: lv_color_t) -> u8 {
     // SAFETY: pure function operating on a value type.

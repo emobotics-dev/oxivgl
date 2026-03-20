@@ -34,7 +34,7 @@ use oxivgl::{
     widgets::{
         Arc, Bar, BarMode, Button, Buttonmatrix, Canvas, Chart, ChartAxis, ChartType, Checkbox,
         Dropdown, Keyboard, KeyboardMode, Label, Led, Line, Menu, Msgbox, Obj, Part, Roller,
-        RollerMode, Screen, Slider, Switch, Textarea, ValueLabel, lv_color_t,
+        RollerMode, Screen, Slider, Switch, Table, Textarea, ValueLabel, lv_color_t,
     },
 };
 
@@ -628,3 +628,19 @@ fn leak_canvas() {
     });
 }
 
+
+// ── Table ─────────────────────────────────────────────────────────────────────
+
+#[test]
+fn leak_table() {
+    assert_no_leak("Table", 1, |screen| {
+        let table = Table::new(screen).unwrap();
+        table.set_row_count(5);
+        table.set_column_count(2);
+        for row in 0..5u32 {
+            table.set_cell_value(row, 0, "Name");
+            table.set_cell_value(row, 1, "Value");
+        }
+        drop(table);
+    });
+}
