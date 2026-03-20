@@ -13,8 +13,7 @@ use oxivgl::{
     style::{color_black, color_white, palette_main, Palette, Selector, StyleBuilder},
     timer::Timer,
     view::View,
-    widgets::{
-        Line, Part, Scale, ScaleLabels, ScaleMode, Screen, WidgetError, RADIUS_MAX,
+    widgets::{Line, Part, Scale, ScaleLabels, ScaleMode, Screen, WidgetError, RADIUS_MAX,
     },
 };
 

@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
 use core::ops::Deref;
 
-use heapless::{format, String};
+use heapless::{String, format};
 use lvgl_rust_sys::lv_obj_t;
 
-use super::{label::Label, obj::AsLvHandle, WidgetError};
+use super::{WidgetError, label::Label, obj::AsLvHandle};
 
 /// A [`Label`] that formats an `f32` value with a fixed unit suffix.
 ///

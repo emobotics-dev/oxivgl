@@ -16,7 +16,7 @@ use oxivgl::{
     layout::FlexFlow,
     style::lv_pct,
     view::{register_event_on, View},
-    widgets::{Align, Checkbox, Label, Obj, Part, Screen, WidgetError, detach},
+    widgets::{Align, Checkbox, Label, Obj, Part, Screen, WidgetError},
 };
 
 struct Scroll7 {
@@ -38,9 +38,7 @@ impl Scroll7 {
                 let mut s = heapless::String::<16>::new();
                 let _ = core::fmt::Write::write_fmt(&mut s, format_args!("{}", num));
                 lbl.text(&s);
-                detach(lbl);
             }
-            detach(item);
         }
     }
 
@@ -51,10 +49,8 @@ impl Scroll7 {
                 let mut s = heapless::String::<16>::new();
                 let _ = core::fmt::Write::write_fmt(&mut s, format_args!("{}", num));
                 lbl.text(&s);
-                detach(lbl);
             }
             item.move_to_index(0);
-            detach(item);
         }
     }
 
@@ -144,8 +140,6 @@ impl View for Scroll7 {
         item.size(lv_pct(100), 40);
         let lbl = Label::new(&item)?;
         lbl.text("3");
-        detach(lbl);
-        detach(item);
 
         let mut view = Self {
             screen,

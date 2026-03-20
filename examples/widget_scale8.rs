@@ -11,8 +11,7 @@
 use oxivgl::{
     style::{lv_pct, palette_lighten, Palette, Selector, StyleBuilder},
     view::View,
-    widgets::{
-        Align, Line, Part, Scale, ScaleMode, Screen, WidgetError, RADIUS_MAX,
+    widgets::{Align, Line, Part, Scale, ScaleMode, Screen, WidgetError, RADIUS_MAX,
         SCALE_LABEL_ROTATE_KEEP_UPRIGHT, SCALE_LABEL_ROTATE_MATCH_TICKS,
     },
 };

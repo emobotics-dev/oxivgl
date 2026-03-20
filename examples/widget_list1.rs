@@ -15,7 +15,7 @@ use oxivgl::{
     event::Event,
     symbols,
     view::View,
-    widgets::{Child, Button, List, Screen, WidgetError},
+    widgets::{Button, Child, List, Screen, WidgetError},
 };
 
 struct WidgetList1 {

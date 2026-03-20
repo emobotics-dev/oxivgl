@@ -21,7 +21,7 @@ use oxivgl::{
     math::map,
     style::{lv_pct, Selector},
     view::{register_event_on, View},
-    widgets::{Button, Label, Obj, Screen, WidgetError, detach, RADIUS_MAX},
+    widgets::{Button, Label, Obj, Screen, WidgetError, RADIUS_MAX},
 };
 
 struct Scroll6 {
@@ -48,8 +48,6 @@ impl View for Scroll6 {
             let mut s = heapless::String::<16>::new();
             let _ = core::fmt::Write::write_fmt(&mut s, format_args!("Button {}", i));
             lbl.text(&s);
-            detach(lbl);
-            detach(btn);
         }
 
         // Scroll first child to center (layout must be done first)

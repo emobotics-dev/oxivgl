@@ -213,13 +213,14 @@ impl<'p> core::fmt::Debug for Obj<'p> {
 
 impl<'p> Drop for Obj<'p> {
     fn drop(&mut self) {
-        if !self.handle.is_null() {
-            // SAFETY: handle non-null; Obj is non-Clone so this is the unique owner.
-            // lv_obj_delete (LVGL v9.3, lv_obj.c) calls lv_obj_remove_style_all
-            // (lv_obj.c:521) and lv_anim_delete(obj, NULL) (lv_obj.c:525) internally,
-            // so all style and animation back-references are cleared before Rust
-            // drops _styles and any live Anim.
-            // Re-verify these call sites when upgrading LVGL.
+        // SAFETY: handle non-null; lv_obj_is_valid returns false for already-deleted
+        // objects (parent cascade), making this a safe no-op in that case.
+        // lv_obj_delete (LVGL v9.3, lv_obj.c) calls lv_obj_remove_style_all
+        // (lv_obj.c:521) and lv_anim_delete(obj, NULL) (lv_obj.c:525) internally,
+        // so all style and animation back-references are cleared before Rust
+        // drops _styles and any live Anim.
+        // Re-verify these call sites when upgrading LVGL.
+        if !self.handle.is_null() && unsafe { lv_obj_is_valid(self.handle) } {
             unsafe { lv_obj_delete(self.handle) };
         }
     }

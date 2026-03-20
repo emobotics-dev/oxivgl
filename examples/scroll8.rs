@@ -16,7 +16,7 @@ use oxivgl::{
     layout::FlexFlow,
     style::lv_pct,
     view::{register_event_on, View},
-    widgets::{Align, Button, Label, Obj, Part, Screen, WidgetError, detach},
+    widgets::{Align, Button, Label, Obj, Part, Screen, WidgetError},
 };
 
 /// Width/height of each button child. The circular scroll adjustment math
@@ -135,15 +135,11 @@ impl View for Scroll8 {
             btn_r.size(ITEM_SIZE, lv_pct(100));
             let lbl_r = Label::new(&btn_r)?;
             lbl_r.text(&s).center();
-            detach(lbl_r);
-            detach(btn_r);
 
             let btn_c = Button::new(&cont_col)?;
             btn_c.size(lv_pct(100), ITEM_SIZE);
             let lbl_c = Label::new(&btn_c)?;
             lbl_c.text(&s).center();
-            detach(lbl_c);
-            detach(btn_c);
         }
 
         Ok(Self {

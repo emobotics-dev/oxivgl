@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
+use alloc::vec::Vec;
 use core::{ops::Deref, ptr::null_mut};
 
-use alloc::vec::Vec;
 use lvgl_rust_sys::*;
 
 use super::{
-    obj::{Align, AsLvHandle, Obj},
     WidgetError,
+    obj::{Align, AsLvHandle, Obj},
 };
 
 /// Type-safe wrapper for `lv_scale_mode_t`.
@@ -28,12 +28,10 @@ pub enum ScaleMode {
 }
 
 /// Rotate labels to match tick angles on round scales.
-pub const SCALE_LABEL_ROTATE_MATCH_TICKS: i32 =
-    lvgl_rust_sys::LV_SCALE_LABEL_ROTATE_MATCH_TICKS as i32;
+pub const SCALE_LABEL_ROTATE_MATCH_TICKS: i32 = lvgl_rust_sys::LV_SCALE_LABEL_ROTATE_MATCH_TICKS as i32;
 
 /// Keep rotated labels upright (readable).
-pub const SCALE_LABEL_ROTATE_KEEP_UPRIGHT: i32 =
-    lvgl_rust_sys::LV_SCALE_LABEL_ROTATE_KEEP_UPRIGHT as i32;
+pub const SCALE_LABEL_ROTATE_KEEP_UPRIGHT: i32 = lvgl_rust_sys::LV_SCALE_LABEL_ROTATE_KEEP_UPRIGHT as i32;
 
 /// LVGL scale widget (tick marks only, no arc). Use
 /// [`tick_ring`](Scale::tick_ring) for the pre-configured round gauge variant.
@@ -71,10 +69,7 @@ impl<'p> Scale<'p> {
         if handle.is_null() {
             Err(WidgetError::LvglNullPointer)
         } else {
-            Ok(Scale {
-                obj: Obj::from_raw(handle),
-                section_styles: core::cell::RefCell::new(Vec::new()),
-            })
+            Ok(Scale { obj: Obj::from_raw(handle), section_styles: core::cell::RefCell::new(Vec::new()) })
         }
     }
 
@@ -108,7 +103,8 @@ impl<'p> Scale<'p> {
         self
     }
 
-    /// Set tick length for a specific part (Items=minor ticks, Indicator=major ticks).
+    /// Set tick length for a specific part (Items=minor ticks, Indicator=major
+    /// ticks).
     pub fn set_tick_length(&self, part: super::Part, length: i32) -> &Self {
         unsafe { lv_obj_set_style_length(self.lv_handle(), length, part as u32) };
         self
@@ -131,22 +127,21 @@ impl<'p> Scale<'p> {
         unsafe { lv_scale_get_major_tick_every(self.lv_handle()) }
     }
 
-    /// Add a styled section to the scale. Returns a handle for further configuration.
-    /// Add a styled section. The returned handle borrows this scale and
-    /// cannot outlive it (LVGL frees sections in the scale destructor).
+    /// Add a styled section to the scale. Returns a handle for further
+    /// configuration. Add a styled section. The returned handle borrows
+    /// this scale and cannot outlive it (LVGL frees sections in the scale
+    /// destructor).
     pub fn add_section(&self) -> ScaleSection<'_> {
         let ptr = unsafe { lv_scale_add_section(self.lv_handle()) };
-        ScaleSection {
-            ptr,
-            scale: self.lv_handle(),
-            parent_styles: &self.section_styles,
-        }
+        ScaleSection { ptr, scale: self.lv_handle(), parent_styles: &self.section_styles }
     }
 
-    /// Set custom tick labels from a null-terminated `'static` array of C strings.
+    /// Set custom tick labels from a null-terminated `'static` array of C
+    /// strings.
     ///
     /// Use [`scale_labels!`](crate::scale_labels) to create the array safely.
-    /// LVGL stores the raw pointer — the array and all strings must be `'static`.
+    /// LVGL stores the raw pointer — the array and all strings must be
+    /// `'static`.
     pub fn set_text_src(&self, labels: &'static ScaleLabels) -> &Self {
         unsafe { lv_scale_set_text_src(self.lv_handle(), labels.0.as_ptr() as *mut _) };
         self
@@ -157,20 +152,8 @@ impl<'p> Scale<'p> {
     /// `needle_line`: a Line widget that is a child of this scale.
     /// `needle_length`: length in pixels from the scale center.
     /// `value`: the scale value to point at.
-    pub fn set_line_needle_value(
-        &self,
-        needle_line: &super::Line,
-        needle_length: i32,
-        value: i32,
-    ) -> &Self {
-        unsafe {
-            lv_scale_set_line_needle_value(
-                self.lv_handle(),
-                needle_line.lv_handle(),
-                needle_length,
-                value,
-            )
-        };
+    pub fn set_line_needle_value(&self, needle_line: &super::Line, needle_length: i32, value: i32) -> &Self {
+        unsafe { lv_scale_set_line_needle_value(self.lv_handle(), needle_line.lv_handle(), needle_length, value) };
         self
     }
 
@@ -225,19 +208,11 @@ impl<'p> Scale<'p> {
             lv_obj_set_style_pad_all(h, 0, 0);
             // Minor ticks
             lv_obj_set_style_length(h, minor_len, lv_part_t_LV_PART_ITEMS as u32);
-            lv_obj_set_style_line_color(
-                h,
-                lv_color_hex(minor_color),
-                lv_part_t_LV_PART_ITEMS as u32,
-            );
+            lv_obj_set_style_line_color(h, lv_color_hex(minor_color), lv_part_t_LV_PART_ITEMS as u32);
             lv_obj_set_style_line_width(h, 1, lv_part_t_LV_PART_ITEMS as u32);
             // Major ticks
             lv_obj_set_style_length(h, major_len, lv_part_t_LV_PART_INDICATOR as u32);
-            lv_obj_set_style_line_color(
-                h,
-                lv_color_hex(major_color),
-                lv_part_t_LV_PART_INDICATOR as u32,
-            );
+            lv_obj_set_style_line_color(h, lv_color_hex(major_color), lv_part_t_LV_PART_INDICATOR as u32);
             lv_obj_set_style_line_width(h, 2, lv_part_t_LV_PART_INDICATOR as u32);
         }
         Ok(scale)
