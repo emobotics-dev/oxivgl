@@ -392,7 +392,7 @@ impl Default for DrawRectDsc {
 ///
 /// Initialised via `lv_draw_label_dsc_init`. Pass to [`Layer::draw_label`].
 pub struct DrawLabelDscOwned {
-    inner: lv_draw_label_dsc_t,
+    pub(crate) inner: lv_draw_label_dsc_t,
 }
 
 impl DrawLabelDscOwned {
@@ -760,6 +760,10 @@ impl DrawLetterDsc {
     }
 
     /// Rotation in 0.1-degree units (e.g. `900` = 90°).
+    ///
+    /// **Embedded note:** non-zero rotation triggers LVGL's vector-font path,
+    /// which allocates an internal `ARGB8888` scratch buffer per glyph.
+    /// On RAM-constrained targets use `rotation(0)` with an `RGB565` canvas.
     pub fn rotation(&mut self, r: i32) -> &mut Self {
         self.inner.rotation = r;
         self

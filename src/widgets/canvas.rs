@@ -193,7 +193,7 @@ impl<'c> CanvasLayer<'c> {
         // text_local=1: lv_draw_label calls lv_strndup when queueing the task,
         // so buf (on the stack) need only live until lv_draw_label returns, not
         // until lv_canvas_finish_layer in Drop renders the queued commands.
-        let mut local_dsc = unsafe { *dsc.as_ptr() };
+        let mut local_dsc = dsc.inner;
         local_dsc.text = buf.as_ptr() as *const _;
         local_dsc.set_text_local(1);
         let lv_area = lv_area_t::from(area);
