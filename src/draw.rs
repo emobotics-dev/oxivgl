@@ -447,3 +447,147 @@ impl DrawLabelDscOwned {
         &self.inner
     }
 }
+
+// ── DrawArcDsc ────────────────────────────────────────────────────────────────
+
+/// Descriptor for drawing an arc onto a [`CanvasLayer`](crate::widgets::CanvasLayer).
+pub struct DrawArcDsc {
+    inner: lv_draw_arc_dsc_t,
+}
+
+impl DrawArcDsc {
+    /// Create with LVGL defaults (`lv_draw_arc_dsc_init`).
+    pub fn new() -> Self {
+        // SAFETY: zeroed is a valid starting state; lv_draw_arc_dsc_init fills required fields.
+        let mut inner = unsafe { core::mem::zeroed::<lv_draw_arc_dsc_t>() };
+        unsafe { lv_draw_arc_dsc_init(&mut inner) };
+        Self { inner }
+    }
+
+    /// Arc center in canvas coordinates.
+    pub fn center(&mut self, x: i32, y: i32) -> &mut Self {
+        self.inner.center.x = x;
+        self.inner.center.y = y;
+        self
+    }
+
+    /// Outer radius in pixels.
+    pub fn radius(&mut self, r: u16) -> &mut Self {
+        self.inner.radius = r;
+        self
+    }
+
+    /// Start and end angles in degrees (0–360, clockwise from 3 o'clock).
+    ///
+    /// Angles are `f32` (`lv_value_precise_t`) in LVGL 9.3.
+    pub fn angles(&mut self, start: f32, end: f32) -> &mut Self {
+        self.inner.start_angle = start;
+        self.inner.end_angle = end;
+        self
+    }
+
+    /// Arc stroke width in pixels.
+    pub fn width(&mut self, w: i32) -> &mut Self {
+        self.inner.width = w;
+        self
+    }
+
+    /// Stroke color.
+    pub fn color(&mut self, c: lv_color_t) -> &mut Self {
+        self.inner.color = c;
+        self
+    }
+
+    /// Overall opacity (0 = transparent, 255 = opaque).
+    pub fn opa(&mut self, o: u8) -> &mut Self {
+        self.inner.opa = o;
+        self
+    }
+
+    /// Draw rounded start and end caps.
+    pub fn rounded(&mut self, r: bool) -> &mut Self {
+        self.inner.set_rounded(r as u8);
+        self
+    }
+
+    pub(crate) fn as_ptr(&self) -> *const lv_draw_arc_dsc_t {
+        &self.inner
+    }
+}
+
+impl Default for DrawArcDsc {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+// ── DrawLineDsc ───────────────────────────────────────────────────────────────
+
+/// Descriptor for drawing a straight line onto a [`CanvasLayer`](crate::widgets::CanvasLayer).
+pub struct DrawLineDsc {
+    inner: lv_draw_line_dsc_t,
+}
+
+impl DrawLineDsc {
+    /// Create with LVGL defaults (`lv_draw_line_dsc_init`).
+    pub fn new() -> Self {
+        // SAFETY: zeroed is a valid starting state; lv_draw_line_dsc_init fills required fields.
+        let mut inner = unsafe { core::mem::zeroed::<lv_draw_line_dsc_t>() };
+        unsafe { lv_draw_line_dsc_init(&mut inner) };
+        Self { inner }
+    }
+
+    /// Start point. Coordinates are `f32` (`lv_point_precise_t`) in LVGL 9.3.
+    pub fn p1(&mut self, x: f32, y: f32) -> &mut Self {
+        self.inner.p1.x = x;
+        self.inner.p1.y = y;
+        self
+    }
+
+    /// End point. Coordinates are `f32` (`lv_point_precise_t`) in LVGL 9.3.
+    pub fn p2(&mut self, x: f32, y: f32) -> &mut Self {
+        self.inner.p2.x = x;
+        self.inner.p2.y = y;
+        self
+    }
+
+    /// Line stroke width in pixels.
+    pub fn width(&mut self, w: i32) -> &mut Self {
+        self.inner.width = w;
+        self
+    }
+
+    /// Stroke color.
+    pub fn color(&mut self, c: lv_color_t) -> &mut Self {
+        self.inner.color = c;
+        self
+    }
+
+    /// Overall opacity (0–255).
+    pub fn opa(&mut self, o: u8) -> &mut Self {
+        self.inner.opa = o;
+        self
+    }
+
+    /// Draw a rounded cap at the start.
+    pub fn round_start(&mut self, r: bool) -> &mut Self {
+        self.inner.set_round_start(r as u8);
+        self
+    }
+
+    /// Draw a rounded cap at the end.
+    pub fn round_end(&mut self, r: bool) -> &mut Self {
+        self.inner.set_round_end(r as u8);
+        self
+    }
+
+    pub(crate) fn as_ptr(&self) -> *const lv_draw_line_dsc_t {
+        &self.inner
+    }
+}
+
+impl Default for DrawLineDsc {
+    fn default() -> Self {
+        Self::new()
+    }
+}

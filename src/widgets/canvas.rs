@@ -4,7 +4,7 @@
 use core::marker::PhantomData;
 use lvgl_rust_sys::*;
 
-use crate::draw::{Area, DrawLabelDscOwned, DrawRectDsc};
+use crate::draw::{Area, DrawArcDsc, DrawLabelDscOwned, DrawLineDsc, DrawRectDsc};
 use crate::draw_buf::DrawBuf;
 use crate::widgets::{AsLvHandle, Obj, WidgetError};
 
@@ -133,6 +133,18 @@ impl<'c> CanvasLayer<'c> {
         let lv_area = lv_area_t::from(area);
         // SAFETY: layer is valid until finish_layer is called in Drop.
         unsafe { lv_draw_rect(&mut self.layer, dsc.as_ptr(), &lv_area) };
+    }
+
+    /// Draw an arc.
+    pub fn draw_arc(&mut self, dsc: &DrawArcDsc) {
+        // SAFETY: layer valid until Drop; lv_draw_arc reads dsc synchronously before returning.
+        unsafe { lv_draw_arc(&mut self.layer, dsc.as_ptr()) };
+    }
+
+    /// Draw a straight line.
+    pub fn draw_line(&mut self, dsc: &DrawLineDsc) {
+        // SAFETY: layer valid until Drop; lv_draw_line reads dsc synchronously before returning.
+        unsafe { lv_draw_line(&mut self.layer, dsc.as_ptr()) };
     }
 
     /// Draw a text label. `text` must fit in 63 bytes; longer strings are truncated.
