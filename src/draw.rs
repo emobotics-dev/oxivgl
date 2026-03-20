@@ -379,6 +379,11 @@ impl DrawRectDsc {
         self.inner.outline_pad = pad;
         self
     }
+
+    /// Raw pointer to the inner descriptor. Used by [`CanvasLayer::draw_rect`].
+    pub(crate) fn as_ptr(&self) -> *const lv_draw_rect_dsc_t {
+        &self.inner
+    }
 }
 
 impl Default for DrawRectDsc {
@@ -435,5 +440,10 @@ impl DrawLabelDscOwned {
             );
         }
         (size.x, size.y)
+    }
+
+    /// Raw pointer to the inner descriptor. Used by [`CanvasLayer::draw_label`].
+    pub(crate) fn as_ptr(&self) -> *const lv_draw_label_dsc_t {
+        &self.inner
     }
 }
