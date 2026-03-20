@@ -19,8 +19,8 @@ use oxivgl::{
     widgets::{
         detach, Align, Arc, AsLvHandle, Bar, Button, Buttonmatrix, Canvas, Checkbox, Child,
         Dropdown, Image, Keyboard, KeyboardMode, Label, Led, Line, Menu, MenuHeaderMode, Msgbox,
-        Obj, Part, Roller, RollerMode, Screen, Slider, Switch, Table, TableCellCtrl, Textarea,
-        ValueLabel, WidgetError, RADIUS_MAX,
+        Obj, Part, Roller, RollerMode, Screen, Slider, Switch, Table, TableCellCtrl, Tabview,
+        Textarea, ValueLabel, WidgetError, RADIUS_MAX,
     },
 };
 
@@ -3574,4 +3574,38 @@ fn table_selected_cell() {
     table.set_selected_cell(1, 0);
     pump();
     assert_eq!(table.get_selected_cell(), Some((1, 0)));
+}
+
+#[test]
+fn tabview_create_and_add_tabs() {
+    let screen = fresh_screen();
+    let tv = Tabview::new(&screen).unwrap();
+    let _tab1 = tv.add_tab("Alpha");
+    let _tab2 = tv.add_tab("Beta");
+    pump();
+    assert_eq!(tv.get_tab_count(), 2);
+    assert_eq!(tv.get_tab_active(), 0);
+}
+
+#[test]
+fn tabview_set_active() {
+    let screen = fresh_screen();
+    let tv = Tabview::new(&screen).unwrap();
+    let _tab1 = tv.add_tab("A");
+    let _tab2 = tv.add_tab("B");
+    let _tab3 = tv.add_tab("C");
+    tv.set_active(2, false);
+    pump();
+    assert_eq!(tv.get_tab_active(), 2);
+}
+
+#[test]
+fn tabview_get_content_and_bar() {
+    let screen = fresh_screen();
+    let tv = Tabview::new(&screen).unwrap();
+    let _tab = tv.add_tab("Only");
+    pump();
+    // Just verify the calls don't panic.
+    let _content = tv.get_content();
+    let _bar = tv.get_tab_bar();
 }

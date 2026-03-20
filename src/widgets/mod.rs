@@ -43,6 +43,7 @@ mod screen;
 mod slider;
 mod switch;
 mod table;
+mod tabview;
 mod textarea;
 mod value_label;
 
@@ -75,6 +76,7 @@ pub use screen::Screen;
 pub use slider::{Slider, SliderMode};
 pub use switch::{Switch, SwitchOrientation};
 pub use table::{Table, TableCellCtrl};
+pub use tabview::Tabview;
 pub use textarea::Textarea;
 pub use value_label::ValueLabel;
 

@@ -933,6 +933,22 @@ click.
 
 ![table_2](screenshots/table_2.png)
 
+## Tabview
+
+### tabview_1 — Simple 3-tab view with default top bar
+
+Three tabs; Tab 1 has long content that becomes scrollable. Tab 3 is scrolled
+into view on creation via `scroll_to_view_recursive`.
+
+![tabview_1](screenshots/tabview_1.png)
+
+### tabview_2 — Left-side bar with 4 tabs
+
+Left-positioned tab bar (width 80 px). Four content tabs with plain text.
+Active tab set programmatically to the second tab on startup.
+
+![tabview_2](screenshots/tabview_2.png)
+
 ## Implementation Coverage
 
 Status of all [LVGL 9.3 examples](https://docs.lvgl.io/9.3/examples.html) in oxivgl.
@@ -975,20 +991,21 @@ Status of all [LVGL 9.3 examples](https://docs.lvgl.io/9.3/examples.html) in oxi
 | textarea | 4 | 4 | 0 | Includes Buttonmatrix + Keyboard wrappers |
 | canvas | 11 | 9 | 2 | canvas_6 (image asset), canvas_8 (vector graphics) |
 | table | 2 | 2 | 0 | |
+| tabview | 2 | 2 | 0 | |
 
 ### Widgets Without Wrappers
 
-animimg, calendar, imagebutton, lottie, span, spinbox, spinner, tabview, tileview, win.
+animimg, calendar, imagebutton, lottie, span, spinbox, spinner, tileview, win.
 
 ### Totals
 
 | | Count |
 |---|---|
 | LVGL examples total | ~184 |
-| oxivgl done | 129 |
+| oxivgl done | 131 |
 | Skipped (intentional) | 3 |
 | Missing (wrapper exists) | 4 |
-| No wrapper | ~53 |
+| No wrapper | ~51 |
 
 ## Running
 
