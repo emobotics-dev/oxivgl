@@ -25,10 +25,14 @@ runner (`example_main!` macro selects host SDL2 or ESP32 fire27 backend).
 - [Widgets — Label](#widgets--label)
 - [Widgets — LED](#widgets--led)
 - [Widgets — Line](#widgets--line)
+- [Widgets — List](#widgets--list)
+- [Widgets — Menu](#widgets--menu)
+- [Widgets — Msgbox](#widgets--msgbox)
 - [Widgets — Roller](#widgets--roller)
 - [Widgets — Scale](#widgets--scale)
 - [Widgets — Slider](#widgets--slider)
 - [Widgets — Switch](#widgets--switch)
+- [Widgets — Textarea](#widgets--textarea)
 - [Implementation Coverage](#implementation-coverage)
 - [Running](#running)
 
@@ -367,6 +371,13 @@ A switch toggles "scroll one" mode.
 
 ![scroll2](screenshots/scroll2.png)
 
+### Scroll 3 — Floating Button in List
+
+A list with initial tracks and a floating "+" button. Clicking the button
+adds a new track and scrolls it into view.
+
+![scroll3](screenshots/scroll3.png)
+
 ### Scroll 4 — Scrollbar Styling
 
 Custom blue rounded scrollbar that widens and becomes fully opaque when
@@ -376,7 +387,6 @@ actively scrolling, with animated transitions.
 
 ### Skipped
 
-- **Scroll 3** — Floating button in list (needs `LV_USE_LIST`, List wrapper)
 - **Scroll 5** — RTL scrolling (needs `LV_FONT_DEJAVU_16_PERSIAN_HEBREW`)
 - **Scroll 6** — Curved scroll (needs `lv_obj_get_coords`, `lv_sqrt`, `lv_map`)
 - **Scroll 7** — Dynamic widget loading (needs `lv_obj_move_to_index`, Checkbox wrapper)
@@ -590,6 +600,65 @@ Blue line through 5 points with 8px width and rounded ends.
 
 ![widget_line1](screenshots/widget_line1.png)
 
+## Widgets — List
+
+### Widget List 1 — File/Connectivity/Exit Sections
+
+A list with text section headers and icon+text buttons. Clicking a button
+identifies it by text via the View event handler.
+
+![widget_list1](screenshots/widget_list1.png)
+
+### Widget List 2 — Reorderable List
+
+Left panel with 15 selectable items. Right panel with Top/Up/Center/Down/Bottom/Shuffle
+control buttons to reorder the selected item.
+
+![widget_list2](screenshots/widget_list2.png)
+
+## Widgets — Menu
+
+### Widget Menu 1 — Simple Menu with Sub-Page
+
+Full-screen menu with a main page containing three items. The third item
+navigates to a sub-page.
+
+![widget_menu1](screenshots/widget_menu1.png)
+
+### Widget Menu 2 — Root Back Button with Msgbox
+
+Like menu1 but with the root back button enabled. Clicking the back button
+at root level shows a message box.
+
+![widget_menu2](screenshots/widget_menu2.png)
+
+### Widget Menu 3 — Custom Back Button Text and Titled Pages
+
+Full-screen menu with a "Back" label on the header back button.
+Three sub-pages with titles, each reachable from the main page.
+
+![widget_menu3](screenshots/widget_menu3.png)
+
+### Widget Menu 4 — Dynamic Menu with Floating Add Button
+
+A menu with one initial item and a floating "+" button. Each click
+adds a new item with a sub-page and scrolls it into view.
+
+![widget_menu4](screenshots/widget_menu4.png)
+
+### Widget Menu 5 — Settings Menu with Sidebar
+
+A full settings UI with sidebar navigation, sections, separators,
+sliders, switches, and a sidebar-toggle switch. Root back button
+shows a message box.
+
+![widget_menu5](screenshots/widget_menu5.png)
+
+## Widgets — Msgbox
+
+Msgbox is used as a supporting widget in menu2 and menu5. No standalone
+msgbox example.
+
 ## Widgets — Roller
 
 ### Widget Roller 1 — Month Roller
@@ -715,6 +784,36 @@ Horizontal switch (default) and vertical switch (pre-checked), using `set_orient
 
 ![widget_switch2](screenshots/widget_switch2.png)
 
+## Widgets — Textarea
+
+### Widget Textarea 1 — Numeric Keypad
+
+One-line textarea with a custom numeric button matrix keypad (Buttonmatrix widget).
+Pressing digits appends; backspace deletes; enter sends READY.
+
+![widget_textarea1](screenshots/widget_textarea1.png)
+
+### Widget Textarea 2 — Password and Text with Keyboard
+
+Password textarea (left) and plain text textarea (right) with an on-screen Keyboard widget.
+Clicking either textarea switches keyboard focus.
+
+![widget_textarea2](screenshots/widget_textarea2.png)
+
+### Widget Textarea 3 — Clock Format Auto-Insert
+
+Textarea restricted to digits and ':', max 5 characters. After two digits, ':' is
+auto-inserted via VALUE_CHANGED event. Numeric keyboard below.
+
+![widget_textarea3](screenshots/widget_textarea3.png)
+
+### Widget Textarea 4 — Cursor Styles
+
+Three one-line textareas with unique cursor styles applied via Part::Cursor + ObjState::FOCUSED:
+simple red bar, underline blue, and block orange/yellow gradient.
+
+![widget_textarea4](screenshots/widget_textarea4.png)
+
 ## Implementation Coverage
 
 Status of all [LVGL 9.3 examples](https://docs.lvgl.io/9.3/examples.html) in oxivgl.
@@ -731,7 +830,7 @@ Status of all [LVGL 9.3 examples](https://docs.lvgl.io/9.3/examples.html) in oxi
 | Events | 5 | 4 (+1 extra trickle) | 1 | event_draw (timer API) |
 | Flex | 6 | 6 | 0 | |
 | Grid | 6 | 6 | 0 | |
-| Scroll | 8 | 3 | 5 | scroll3 (List), scroll5 (font), scroll6–8 (APIs) |
+| Scroll | 8 | 4 | 4 | scroll5 (font), scroll6–8 (APIs) |
 
 ### Widget Examples (wrapper exists)
 
@@ -747,24 +846,28 @@ Status of all [LVGL 9.3 examples](https://docs.lvgl.io/9.3/examples.html) in oxi
 | label | 6 | 3 | 3 | label3 (RTL fonts), label4 (canvas mask), label6 (custom font) |
 | led | 1 | 1 | 0 | |
 | line | 1 | 1 | 0 | |
+| list | 2 | 2 | 0 | |
+| menu | 5 | 5 | 0 | |
+| msgbox | 1 | 0 | 1 | Used via menu2/menu5; no standalone example |
 | roller | 3 | 2 | 1 | roller3 (needs canvas/mask API) |
 | scale | 11 | 11 | 0 | |
 | slider | 4 | 4 | 0 | |
 | switch | 2 | 2 | 0 | |
+| textarea | 4 | 4 | 0 | Includes Buttonmatrix + Keyboard wrappers |
 
 ### Widgets Without Wrappers
 
-animimg, buttonmatrix, calendar, canvas, imagebutton, keyboard, list, lottie, menu, msgbox, span, spinbox, spinner, table, tabview, textarea, tileview, win.
+animimg, calendar, canvas, imagebutton, lottie, span, spinbox, spinner, table, tabview, tileview, win.
 
 ### Totals
 
 | | Count |
 |---|---|
 | LVGL examples total | ~184 |
-| oxivgl done | 100 |
-| Skipped (intentional) | 7 |
-| Missing (wrapper exists) | 5 |
-| No wrapper | ~68 |
+| oxivgl done | 112 |
+| Skipped (intentional) | 6 |
+| Missing (wrapper exists) | 6 |
+| No wrapper | ~56 |
 
 ## Running
 

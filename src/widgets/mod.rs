@@ -20,14 +20,19 @@ pub(crate) fn to_lvgl(v: f32, max: f32) -> i32 {
 mod arc;
 mod bar;
 mod button;
+mod buttonmatrix;
 mod chart;
 mod checkbox;
 mod child;
 mod dropdown;
 mod image;
+mod keyboard;
 mod label;
 mod led;
+mod list;
 mod line;
+mod menu;
+mod msgbox;
 mod obj;
 mod obj_layout;
 mod obj_style;
@@ -36,19 +41,25 @@ mod scale;
 mod screen;
 mod slider;
 mod switch;
+mod textarea;
 mod value_label;
 
 pub use arc::{Arc, ArcMode};
 pub use bar::{Bar, BarMode};
 pub use button::Button;
+pub use buttonmatrix::{Buttonmatrix, ButtonmatrixMap};
 pub use chart::{Chart, ChartAxis, ChartSeries, ChartType};
 pub use checkbox::Checkbox;
 pub use child::{detach, Child};
 pub use dropdown::{DdDir, Dropdown};
 pub use image::{Image, ImageAlign};
+pub use keyboard::{Keyboard, KeyboardMode};
 pub use label::{Label, LabelLongMode};
 pub use led::Led;
 pub use line::Line;
+pub use list::List;
+pub use menu::{Menu, MenuHeaderMode};
+pub use msgbox::Msgbox;
 pub use obj::{
     Align, AsLvHandle, BaseDir, Matrix, Obj, Part, TextAlign,
 };
@@ -60,6 +71,7 @@ pub use scale::{
 pub use screen::Screen;
 pub use slider::{Slider, SliderMode};
 pub use switch::{Switch, SwitchOrientation};
+pub use textarea::Textarea;
 pub use value_label::ValueLabel;
 
 // Re-export raw FFI types used in public widget APIs.

@@ -29,6 +29,13 @@ impl<'p> Deref for Button<'p> {
 }
 
 impl<'p> Button<'p> {
+    /// Wrap a raw LVGL button pointer. `ptr` must be non-null and a valid button.
+    pub(crate) fn from_raw(ptr: *mut lv_obj_t) -> Self {
+        Button {
+            obj: Obj::from_raw(ptr),
+        }
+    }
+
     /// Create a button as a child of `parent`. Returns
     /// [`WidgetError::LvglNullPointer`] on OOM.
     pub fn new(parent: &impl AsLvHandle) -> Result<Self, WidgetError> {

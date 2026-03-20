@@ -50,6 +50,12 @@ impl EventCode {
     pub const SCROLL: Self = Self(lvgl_rust_sys::lv_event_code_t_LV_EVENT_SCROLL);
     /// A draw task has been added (for custom draw hooks).
     pub const DRAW_TASK_ADDED: Self = Self(lvgl_rust_sys::lv_event_code_t_LV_EVENT_DRAW_TASK_ADDED);
+    /// Main drawing phase completed (for custom overlay drawing).
+    pub const DRAW_MAIN_END: Self = Self(lvgl_rust_sys::lv_event_code_t_LV_EVENT_DRAW_MAIN_END);
+    /// Widget gained focus (e.g. textarea clicked).
+    pub const FOCUSED: Self = Self(lvgl_rust_sys::lv_event_code_t_LV_EVENT_FOCUSED);
+    /// Text input ready (Enter pressed on keyboard/textarea).
+    pub const READY: Self = Self(lvgl_rust_sys::lv_event_code_t_LV_EVENT_READY);
 }
 
 /// LVGL object flag. Combine with `|` for multi-flag operations.
@@ -89,6 +95,11 @@ impl ObjFlag {
     pub const SEND_DRAW_TASK_EVENTS: Self = Self(lvgl_rust_sys::lv_obj_flag_t_LV_OBJ_FLAG_SEND_DRAW_TASK_EVENTS);
     /// Use precise (arc-aware) hit testing instead of bounding box.
     pub const ADV_HITTEST: Self = Self(lvgl_rust_sys::lv_obj_flag_t_LV_OBJ_FLAG_ADV_HITTEST);
+    /// Clicking the widget will focus it (gain `LV_STATE_FOCUSED`).
+    pub const CLICK_FOCUSABLE: Self = Self(lvgl_rust_sys::lv_obj_flag_t_LV_OBJ_FLAG_CLICK_FOCUSABLE);
+    /// Start a new flex track after this item.
+    pub const FLEX_IN_NEW_TRACK: Self =
+        Self(lvgl_rust_sys::lv_obj_flag_t_LV_OBJ_FLAG_FLEX_IN_NEW_TRACK);
 }
 
 impl core::ops::BitOr for ObjFlag {

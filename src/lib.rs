@@ -44,6 +44,8 @@ pub mod indev;
 pub mod snapshot;
 /// LVGL math utility wrappers (Bezier, mapping).
 pub mod math;
+/// LVGL built-in icon symbols (Font Awesome subset).
+pub mod symbols;
 
 /// Declare an LVGL image asset compiled by `oxivgl-build`.
 ///
