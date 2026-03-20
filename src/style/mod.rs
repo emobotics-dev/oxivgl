@@ -9,8 +9,8 @@ mod theme;
 
 pub use grad::{GradDsc, GradExtend};
 pub use palette::{
-    GradDir, Palette, color_black, color_brightness, color_darken, color_hsv, color_make, color_white, palette_darken,
-    palette_lighten, palette_main,
+    GradDir, Palette, color_black, color_brightness, color_darken, color_hsv, color_make, color_mix, color_white,
+    palette_darken, palette_lighten, palette_main,
 };
 pub use selector::Selector;
 pub use style::{

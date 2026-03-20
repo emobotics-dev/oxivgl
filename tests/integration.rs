@@ -19,8 +19,8 @@ use oxivgl::{
     widgets::{
         detach, Align, Arc, AsLvHandle, Bar, Button, Buttonmatrix, Canvas, Checkbox, Child,
         Dropdown, Image, Keyboard, KeyboardMode, Label, Led, Line, Menu, MenuHeaderMode, Msgbox,
-        Obj, Part, Roller, RollerMode, Screen, Slider, Switch, Textarea, ValueLabel, WidgetError,
-        RADIUS_MAX,
+        Obj, Part, Roller, RollerMode, Screen, Slider, Switch, Table, TableCellCtrl, Textarea,
+        ValueLabel, WidgetError, RADIUS_MAX,
     },
 };
 
@@ -3516,4 +3516,62 @@ fn canvas_layer_draw_letter() {
             .rotation(0);
         layer.draw_letter(&dsc, 10, 20);
     }
+}
+
+// ── Table ─────────────────────────────────────────────────────────────────────
+
+#[test]
+fn table_create_and_set_cell() {
+    let screen = fresh_screen();
+    let table = Table::new(&screen).unwrap();
+    table.set_cell_value(0, 0, "Hello");
+    pump();
+    assert_eq!(table.get_cell_value(0, 0).as_deref(), Some("Hello"));
+}
+
+#[test]
+fn table_row_col_count() {
+    let screen = fresh_screen();
+    let table = Table::new(&screen).unwrap();
+    table.set_row_count(4).set_column_count(3);
+    pump();
+    assert_eq!(table.get_row_count(), 4);
+    assert_eq!(table.get_column_count(), 3);
+}
+
+#[test]
+fn table_column_width() {
+    let screen = fresh_screen();
+    let table = Table::new(&screen).unwrap();
+    table.set_column_count(2);
+    table.set_column_width(0, 100).set_column_width(1, 80);
+    pump();
+    assert_eq!(table.get_column_width(0), 100);
+    assert_eq!(table.get_column_width(1), 80);
+}
+
+#[test]
+fn table_cell_ctrl() {
+    let screen = fresh_screen();
+    let table = Table::new(&screen).unwrap();
+    table.set_cell_value(0, 0, "Item");
+    table.set_cell_ctrl(0, 0, TableCellCtrl::CUSTOM_1);
+    pump();
+    assert!(table.has_cell_ctrl(0, 0, TableCellCtrl::CUSTOM_1));
+    table.clear_cell_ctrl(0, 0, TableCellCtrl::CUSTOM_1);
+    assert!(!table.has_cell_ctrl(0, 0, TableCellCtrl::CUSTOM_1));
+}
+
+#[test]
+fn table_selected_cell() {
+    let screen = fresh_screen();
+    let table = Table::new(&screen).unwrap();
+    table.set_row_count(3).set_column_count(2);
+    // No cell selected initially.
+    pump();
+    assert_eq!(table.get_selected_cell(), None);
+    // Programmatic selection.
+    table.set_selected_cell(1, 0);
+    pump();
+    assert_eq!(table.get_selected_cell(), Some((1, 0)));
 }
