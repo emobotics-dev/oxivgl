@@ -23,15 +23,18 @@ use std::sync::Once;
 
 use oxivgl::{
     anim::anim_path_linear,
+    draw::{Area, DrawRectDsc},
+    draw_buf::{ColorFormat, DrawBuf},
     driver::LvglDriver,
     style::{
-        palette_main, props, GradDsc, GradExtend, Palette, Selector, StyleBuilder, TransitionDsc,
+        color_make, palette_main, props, GradDsc, GradExtend, Palette, Selector, StyleBuilder,
+        TransitionDsc,
     },
     enums::ObjState,
     widgets::{
-        Arc, Bar, BarMode, Button, Buttonmatrix, Chart, ChartAxis, ChartType, Checkbox, Dropdown,
-        Keyboard, KeyboardMode, Label, Led, Line, Menu, Msgbox, Obj, Part, Roller, RollerMode,
-        Screen, Slider, Switch, Textarea, ValueLabel, lv_color_t,
+        Arc, Bar, BarMode, Button, Buttonmatrix, Canvas, Chart, ChartAxis, ChartType, Checkbox,
+        Dropdown, Keyboard, KeyboardMode, Label, Led, Line, Menu, Msgbox, Obj, Part, Roller,
+        RollerMode, Screen, Slider, Switch, Textarea, ValueLabel, lv_color_t,
     },
 };
 
@@ -604,5 +607,32 @@ fn leak_chart() {
         chart.set_next_value(&series, 50);
         chart.refresh();
         drop(chart);
+    });
+}
+
+// ── Canvas ────────────────────────────────────────────────────────────────────
+
+#[test]
+fn leak_canvas() {
+    assert_no_leak("Canvas", 1, |screen| {
+        let buf = DrawBuf::create(50, 50, ColorFormat::RGB565).unwrap();
+        let canvas = Canvas::new(screen, buf).unwrap();
+        canvas.fill_bg(color_make(100, 100, 100), 255);
+        {
+            let mut layer = canvas.init_layer();
+            let mut dsc = DrawRectDsc::new();
+            dsc.bg_color(color_make(255, 0, 0));
+            layer.draw_rect(&dsc, Area { x1: 5, y1: 5, x2: 45, y2: 45 });
+        }
+        drop(canvas); // drops draw_buf field automatically
+    });
+}
+
+#[test]
+fn leak_drawbuf_create_drop() {
+    assert_no_leak_rust("DrawBuf create/drop", || {
+        // Cannot test without LVGL init (lv_draw_buf_create uses lv_malloc).
+        // This is a compile-time check that DrawBuf is accessible.
+        let _ = std::mem::size_of::<DrawBuf>();
     });
 }

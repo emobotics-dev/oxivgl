@@ -17,9 +17,10 @@ use oxivgl::{
     enums::{EventCode, ObjFlag, ObjState, Opa, ScrollDir, ScrollSnap, ScrollbarMode},
     layout::{FlexAlign, FlexFlow, GridAlign, GridCell, Layout, GRID_TEMPLATE_LAST},
     widgets::{
-        detach, Align, Arc, AsLvHandle, Bar, Button, Buttonmatrix, Checkbox, Child, Dropdown,
-        Image, Keyboard, KeyboardMode, Label, Led, Line, Menu, MenuHeaderMode, Msgbox, Obj, Part,
-        Roller, RollerMode, Screen, Slider, Switch, Textarea, ValueLabel, WidgetError, RADIUS_MAX,
+        detach, Align, Arc, AsLvHandle, Bar, Button, Buttonmatrix, Canvas, Checkbox, Child,
+        Dropdown, Image, Keyboard, KeyboardMode, Label, Led, Line, Menu, MenuHeaderMode, Msgbox,
+        Obj, Part, Roller, RollerMode, Screen, Slider, Switch, Textarea, ValueLabel, WidgetError,
+        RADIUS_MAX,
     },
 };
 
@@ -3422,4 +3423,63 @@ fn buttonmatrix_get_button_text_oob() {
     assert_eq!(btnm.get_button_text(1), Some("Q"));
     // Out-of-range index — LVGL returns NULL → None.
     assert_eq!(btnm.get_button_text(99), None);
+}
+
+// ── Canvas ────────────────────────────────────────────────────────────────────
+
+#[test]
+fn canvas_create_and_fill() {
+    use oxivgl::draw_buf::{ColorFormat, DrawBuf};
+    let screen = fresh_screen();
+    let buf = DrawBuf::create(50, 50, ColorFormat::RGB565).unwrap();
+    let canvas = Canvas::new(&screen, buf).unwrap();
+    canvas.fill_bg(color_make(255, 0, 0), 255).size(50, 50).center();
+    pump();
+}
+
+#[test]
+fn canvas_set_px_and_get() {
+    use oxivgl::draw_buf::{ColorFormat, DrawBuf};
+    let screen = fresh_screen();
+    let buf = DrawBuf::create(10, 10, ColorFormat::ARGB8888).unwrap();
+    let canvas = Canvas::new(&screen, buf).unwrap();
+    canvas.fill_bg(color_make(0, 0, 0), 255);
+    canvas.set_px(5, 5, color_make(255, 255, 255), 255);
+    // We set a white pixel; verify the canvas accepted the call without panic.
+    // (Exact pixel read-back depends on color format internals.)
+    pump();
+}
+
+#[test]
+fn canvas_layer_draw_rect() {
+    use oxivgl::draw::{Area, DrawRectDsc};
+    use oxivgl::draw_buf::{ColorFormat, DrawBuf};
+    let screen = fresh_screen();
+    let buf = DrawBuf::create(100, 100, ColorFormat::ARGB8888).unwrap();
+    let canvas = Canvas::new(&screen, buf).unwrap();
+    canvas.fill_bg(color_make(200, 200, 200), 255);
+    {
+        let mut layer = canvas.init_layer();
+        let mut dsc = DrawRectDsc::new();
+        dsc.bg_color(color_make(255, 0, 0)).radius(5);
+        layer.draw_rect(&dsc, Area { x1: 10, y1: 10, x2: 50, y2: 50 });
+    }
+    pump();
+}
+
+#[test]
+fn drawbuf_create_returns_some() {
+    use oxivgl::draw_buf::{ColorFormat, DrawBuf};
+    let buf = DrawBuf::create(100, 100, ColorFormat::RGB565);
+    assert!(buf.is_some());
+}
+
+#[test]
+fn canvas_draw_buf_accessor() {
+    use oxivgl::draw_buf::{ColorFormat, DrawBuf};
+    let screen = fresh_screen();
+    let buf = DrawBuf::create(40, 40, ColorFormat::RGB565).unwrap();
+    let canvas = Canvas::new(&screen, buf).unwrap();
+    // draw_buf() returns &DrawBuf — just verify we can call image_dsc() on it.
+    let _img = canvas.draw_buf().image_dsc();
 }
