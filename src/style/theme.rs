@@ -1,15 +1,15 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
+use alloc::boxed::Box;
 use core::{marker::PhantomData, pin::Pin, ptr::null_mut};
 
-use alloc::boxed::Box;
 use lvgl_rust_sys::*;
 
 use super::Style;
 use crate::widgets::WidgetError;
 
 unsafe extern "C" {
-    /// LVGL button widget class descriptor. Not emitted by bindgen (extern data);
-    /// declared here for use in the theme apply callback.
+    /// LVGL button widget class descriptor. Not emitted by bindgen (extern
+    /// data); declared here for use in the theme apply callback.
     static lv_button_class: lv_obj_class_t;
 }
 
@@ -27,9 +27,9 @@ unsafe extern "C" fn apply_cb_trampoline(th: *mut lv_theme_t, obj: *mut lv_obj_t
 
 /// Owned LVGL theme extension.
 ///
-/// Extends the active display theme so that every [`Button`](crate::widgets::Button)
-/// created after [`Theme::extend_current`] is called receives the supplied
-/// [`Style`] automatically.
+/// Extends the active display theme so that every
+/// [`Button`](crate::widgets::Button) created after [`Theme::extend_current`]
+/// is called receives the supplied [`Style`] automatically.
 ///
 /// # Lifetime contract
 /// The `Theme` value **must** be kept alive for as long as any widgets styled
@@ -40,7 +40,8 @@ unsafe extern "C" fn apply_cb_trampoline(th: *mut lv_theme_t, obj: *mut lv_obj_t
 /// Passes `NULL` to `lv_display_get_theme` / `lv_display_set_theme`, which
 /// selects the default (first) display.
 pub struct Theme {
-    /// Heap-pinned so the address passed to `lv_display_set_theme` stays stable.
+    /// Heap-pinned so the address passed to `lv_display_set_theme` stays
+    /// stable.
     inner: Pin<Box<lv_theme_t>>,
     /// Keeps the `lv_style_t` pointed to by `inner.user_data` alive.
     _style: Style,
@@ -81,11 +82,7 @@ impl Theme {
             lv_display_set_theme(null_mut(), p);
         }
 
-        Ok(Theme {
-            inner,
-            _style: style,
-            _not_send: PhantomData,
-        })
+        Ok(Theme { inner, _style: style, _not_send: PhantomData })
     }
 }
 
