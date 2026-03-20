@@ -173,10 +173,13 @@ impl<'c> CanvasLayer<'c> {
     }
 
     /// Draw a single Unicode glyph at canvas position `(x, y)`.
-    pub fn draw_letter(&mut self, dsc: &mut DrawLetterDsc, x: i32, y: i32) {
+    pub fn draw_letter(&mut self, dsc: &DrawLetterDsc, x: i32, y: i32) {
         let pt = lv_point_t { x, y };
-        // SAFETY: layer valid; lv_draw_letter reads dsc synchronously.
-        unsafe { lv_draw_letter(&mut self.layer, dsc.as_mut_ptr(), &pt) };
+        // SAFETY: layer valid; lv_draw_letter takes *mut but only writes pivot
+        // as a side-effect (glyph metrics) — the write does not alias any Rust reference.
+        // Casting *const → *mut is sound here.
+        #[allow(clippy::cast_ref_to_mut)]
+        unsafe { lv_draw_letter(&mut self.layer, dsc.as_ptr() as *mut _, &pt) };
     }
 
     /// Draw a text label. `text` must fit in 63 bytes; longer strings are

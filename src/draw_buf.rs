@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
 //! Owned LVGL draw buffer — wraps `lv_draw_buf_t`.
 
+use core::marker::PhantomData;
 use lvgl_rust_sys::*;
 
 /// LVGL pixel color format.
@@ -40,17 +41,28 @@ impl DrawBuf {
         self.ptr
     }
 
-    /// Convert buffer contents to an `lv_image_dsc_t` for use with [`DrawImageDsc`](crate::draw::DrawImageDsc).
+    /// Obtain an image descriptor view into this buffer's pixel data.
     ///
-    /// The returned descriptor borrows from `self`; it is valid only while
-    /// this `DrawBuf` is alive.
-    pub fn image_dsc(&self) -> lv_image_dsc_t {
+    /// The returned [`ImageDsc`] borrows from `self` — the borrow checker
+    /// prevents the `DrawBuf` from being dropped while the descriptor is in use.
+    /// Pass to [`DrawImageDsc::from_image_dsc`](crate::draw::DrawImageDsc::from_image_dsc).
+    pub fn image_dsc(&self) -> ImageDsc<'_> {
         // SAFETY: ptr is a valid lv_draw_buf_t; lv_draw_buf_to_image fills the
         // image descriptor with a pointer into the buffer's pixel data.
-        let mut img = unsafe { core::mem::zeroed::<lv_image_dsc_t>() };
-        unsafe { lv_draw_buf_to_image(self.ptr, &mut img) };
-        img
+        let mut inner = unsafe { core::mem::zeroed::<lv_image_dsc_t>() };
+        unsafe { lv_draw_buf_to_image(self.ptr, &mut inner) };
+        ImageDsc { inner, _buf: PhantomData }
     }
+}
+
+/// Image descriptor view into a [`DrawBuf`]'s pixel data.
+///
+/// Obtained via [`DrawBuf::image_dsc`]. The `'buf` lifetime ensures the
+/// backing pixel buffer remains valid for the duration of this descriptor.
+/// Pass to [`DrawImageDsc::from_image_dsc`](crate::draw::DrawImageDsc::from_image_dsc).
+pub struct ImageDsc<'buf> {
+    pub(crate) inner: lv_image_dsc_t,
+    _buf: PhantomData<&'buf DrawBuf>,
 }
 
 impl Drop for DrawBuf {

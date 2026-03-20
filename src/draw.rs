@@ -678,23 +678,28 @@ impl Default for DrawTriangleDsc {
 /// Descriptor for drawing an image onto a
 /// [`CanvasLayer`](crate::widgets::CanvasLayer).
 ///
-/// The `'i` lifetime ties this descriptor to the `lv_image_dsc_t` source —
-/// the source must remain alive until the [`CanvasLayer`] guard is dropped
-/// (i.e. until `lv_canvas_finish_layer` completes).
+/// The `'i` lifetime ties this descriptor to the [`ImageDsc`](crate::draw_buf::ImageDsc)
+/// source, which in turn borrows from the originating [`DrawBuf`](crate::draw_buf::DrawBuf).
+/// This ensures the pixel data remains valid until `lv_canvas_finish_layer` completes.
 pub struct DrawImageDsc<'i> {
     inner: lv_draw_image_dsc_t,
-    _img_lifetime: core::marker::PhantomData<&'i lv_image_dsc_t>,
+    _img_lifetime: core::marker::PhantomData<&'i ()>,
 }
 
 impl<'i> DrawImageDsc<'i> {
-    /// Create from an image descriptor obtained via
+    /// Create from an [`ImageDsc`](crate::draw_buf::ImageDsc) obtained via
     /// [`DrawBuf::image_dsc`](crate::draw_buf::DrawBuf::image_dsc).
-    pub fn from_image_dsc(img: &'i lv_image_dsc_t) -> Self {
+    ///
+    /// `'i` is bound to the `ImageDsc` borrow, which is bound to the `DrawBuf`
+    /// lifetime — preventing the pixel buffer from being freed while this
+    /// descriptor is in use.
+    pub fn from_image_dsc(img: &'i crate::draw_buf::ImageDsc<'_>) -> Self {
         let mut inner = unsafe { core::mem::zeroed::<lv_draw_image_dsc_t>() };
         unsafe { lv_draw_image_dsc_init(&mut inner) };
-        // SAFETY: img is valid for 'i; src is consumed by lv_canvas_finish_layer
-        // before 'i expires (both CanvasLayer and img live in the same scope).
-        inner.src = img as *const lv_image_dsc_t as *const core::ffi::c_void;
+        // SAFETY: img.inner contains a pointer into a DrawBuf pixel buffer.
+        // 'i ties this descriptor to the ImageDsc borrow, which ties to the
+        // DrawBuf lifetime — the pixel data is valid until 'i expires.
+        inner.src = &img.inner as *const lv_image_dsc_t as *const core::ffi::c_void;
         Self { inner, _img_lifetime: core::marker::PhantomData }
     }
 
@@ -760,8 +765,8 @@ impl DrawLetterDsc {
         self
     }
 
-    pub(crate) fn as_mut_ptr(&mut self) -> *mut lv_draw_letter_dsc_t {
-        &mut self.inner
+    pub(crate) fn as_ptr(&self) -> *const lv_draw_letter_dsc_t {
+        &self.inner
     }
 }
 
