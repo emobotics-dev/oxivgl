@@ -17,9 +17,9 @@ use oxivgl::{
     enums::{EventCode, ObjFlag, ObjState, Opa, ScrollDir, ScrollSnap, ScrollbarMode},
     layout::{FlexAlign, FlexFlow, GridAlign, GridCell, Layout, GRID_TEMPLATE_LAST},
     widgets::{
-        detach, Align, Arc, AsLvHandle, Bar, Button, Checkbox, Child, Dropdown, Image, Label,
-        Led, Line, Obj, Roller, RollerMode, Screen, Slider, Switch, ValueLabel, WidgetError,
-        RADIUS_MAX,
+        detach, Align, Arc, AsLvHandle, Bar, Button, Buttonmatrix, Checkbox, Child, Dropdown,
+        Image, Keyboard, KeyboardMode, Label, Led, Line, Menu, MenuHeaderMode, Msgbox, Obj, Part,
+        Roller, RollerMode, Screen, Slider, Switch, Textarea, ValueLabel, WidgetError, RADIUS_MAX,
     },
 };
 
@@ -2277,5 +2277,436 @@ fn obj_adv_hittest_flag() {
     let screen = fresh_screen();
     let obj = Obj::new(&screen).unwrap();
     obj.add_flag(ObjFlag::ADV_HITTEST);
+    pump();
+}
+
+// ── Textarea ──────────────────────────────────────────────────────────────────
+
+#[test]
+fn textarea_create() {
+    let screen = fresh_screen();
+    let ta = Textarea::new(&screen).unwrap();
+    pump();
+    assert!(ta.get_width() > 0);
+}
+
+#[test]
+fn textarea_set_get_text() {
+    let screen = fresh_screen();
+    let ta = Textarea::new(&screen).unwrap();
+    ta.set_text("Hello");
+    assert_eq!(ta.get_text(), Some("Hello"));
+}
+
+#[test]
+fn textarea_one_line() {
+    let screen = fresh_screen();
+    let ta = Textarea::new(&screen).unwrap();
+    ta.set_one_line(true);
+    ta.set_text("single line");
+    pump();
+    assert_eq!(ta.get_text(), Some("single line"));
+}
+
+#[test]
+fn textarea_password_mode() {
+    let screen = fresh_screen();
+    let ta = Textarea::new(&screen).unwrap();
+    ta.set_password_mode(true);
+    ta.set_text("secret");
+    pump();
+    assert_eq!(ta.get_text(), Some("secret"));
+}
+
+#[test]
+fn textarea_cursor_pos() {
+    let screen = fresh_screen();
+    let ta = Textarea::new(&screen).unwrap();
+    ta.set_text("abc");
+    ta.set_cursor_pos(1);
+    ta.add_text("X");
+    assert_eq!(ta.get_text(), Some("aXbc"));
+}
+
+#[test]
+fn textarea_max_length() {
+    let screen = fresh_screen();
+    let ta = Textarea::new(&screen).unwrap();
+    ta.set_max_length(3);
+    ta.set_text("");
+    ta.add_text("abcdef");
+    let text = ta.get_text().unwrap_or("");
+    assert!(text.len() <= 3, "max_length should limit to 3 chars, got: {text}");
+}
+
+#[test]
+fn textarea_add_delete_char() {
+    let screen = fresh_screen();
+    let ta = Textarea::new(&screen).unwrap();
+    ta.set_text("");
+    ta.add_char('A');
+    ta.add_char('B');
+    assert_eq!(ta.get_text(), Some("AB"));
+    ta.delete_char();
+    assert_eq!(ta.get_text(), Some("A"));
+}
+
+#[test]
+fn textarea_placeholder() {
+    let screen = fresh_screen();
+    let ta = Textarea::new(&screen).unwrap();
+    ta.set_placeholder_text("Enter text...");
+    pump();
+}
+
+#[test]
+fn textarea_accepted_chars() {
+    let screen = fresh_screen();
+    let ta = Textarea::new(&screen).unwrap();
+    ta.set_accepted_chars(c"0123456789");
+    ta.set_text("");
+    ta.add_text("12abc34");
+    let text = ta.get_text().unwrap_or("");
+    assert!(!text.contains('a'), "should filter non-digit chars, got: {text}");
+}
+
+// ── Buttonmatrix ──────────────────────────────────────────────────────────────
+
+#[test]
+fn buttonmatrix_create() {
+    let screen = fresh_screen();
+    let btnm = Buttonmatrix::new(&screen).unwrap();
+    pump();
+    assert!(btnm.get_width() > 0);
+}
+
+#[test]
+fn buttonmatrix_get_selected() {
+    let screen = fresh_screen();
+    let btnm = Buttonmatrix::new(&screen).unwrap();
+    pump();
+    let _sel = btnm.get_selected_button();
+}
+
+// ── Keyboard ──────────────────────────────────────────────────────────────────
+
+#[test]
+fn keyboard_create() {
+    let screen = fresh_screen();
+    let kb = Keyboard::new(&screen).unwrap();
+    pump();
+    assert!(kb.get_width() > 0);
+}
+
+#[test]
+fn keyboard_set_textarea() {
+    let screen = fresh_screen();
+    let ta = Textarea::new(&screen).unwrap();
+    let kb = Keyboard::new(&screen).unwrap();
+    kb.set_textarea(&ta);
+    pump();
+}
+
+#[test]
+fn keyboard_set_mode() {
+    let screen = fresh_screen();
+    let kb = Keyboard::new(&screen).unwrap();
+    kb.set_mode(KeyboardMode::Number);
+    kb.set_mode(KeyboardMode::TextLower);
+    kb.set_mode(KeyboardMode::TextUpper);
+    kb.set_mode(KeyboardMode::SpecialChars);
+    pump();
+}
+
+// ── Part::Cursor ──────────────────────────────────────────────────────────────
+
+#[test]
+fn part_cursor_value() {
+    assert_eq!(Part::Cursor as u32, 0x060000);
+    assert_eq!(Part::from_raw(0x060000), Part::Cursor);
+}
+
+// ── List ──────────────────────────────────────────────────────────────────────
+
+#[test]
+fn list_create() {
+    let screen = fresh_screen();
+    let list = oxivgl::widgets::List::new(&screen).unwrap();
+    pump();
+    assert!(list.get_width() > 0);
+}
+
+#[test]
+fn list_add_text() {
+    let screen = fresh_screen();
+    let list = oxivgl::widgets::List::new(&screen).unwrap();
+    list.add_text("Section");
+    pump();
+    assert!(list.get_child_count() > 0);
+}
+
+#[test]
+fn list_add_button_and_get_text() {
+    let screen = fresh_screen();
+    let list = oxivgl::widgets::List::new(&screen).unwrap();
+    let btn = list.add_button(Some(&oxivgl::symbols::FILE), "Open");
+    pump();
+    let text = list.get_button_text(&*btn);
+    assert_eq!(text, Some("Open"));
+}
+
+#[test]
+fn list_add_button_no_icon() {
+    let screen = fresh_screen();
+    let list = oxivgl::widgets::List::new(&screen).unwrap();
+    let btn = list.add_button(None, "NoIcon");
+    pump();
+    assert_eq!(list.get_button_text(&*btn), Some("NoIcon"));
+}
+
+#[test]
+fn list_multiple_sections() {
+    let screen = fresh_screen();
+    let list = oxivgl::widgets::List::new(&screen).unwrap();
+    list.add_text("A");
+    list.add_button(Some(&oxivgl::symbols::OK), "Item1");
+    list.add_text("B");
+    list.add_button(None, "Item2");
+    pump();
+    // 2 text labels + 2 buttons = 4 children
+    assert_eq!(list.get_child_count(), 4);
+}
+
+// ── Obj::move_to_index / get_index / move_background ─────────────────────────
+
+#[test]
+fn obj_move_to_index_and_get_index() {
+    let screen = fresh_screen();
+    let parent = Obj::new(&screen).unwrap();
+    let c0 = Obj::new(&parent).unwrap();
+    let c1 = Obj::new(&parent).unwrap();
+    let c2 = Obj::new(&parent).unwrap();
+    pump();
+    assert_eq!(c2.get_index(), 2);
+    c2.move_to_index(0);
+    pump();
+    assert_eq!(c2.get_index(), 0);
+    // c0 and c1 shifted
+    assert_eq!(c0.get_index(), 1);
+    assert_eq!(c1.get_index(), 2);
+}
+
+#[test]
+fn obj_move_background() {
+    let screen = fresh_screen();
+    let parent = Obj::new(&screen).unwrap();
+    let _c0 = Obj::new(&parent).unwrap();
+    let c1 = Obj::new(&parent).unwrap();
+    pump();
+    assert_eq!(c1.get_index(), 1);
+    c1.move_background();
+    pump();
+    assert_eq!(c1.get_index(), 0);
+}
+
+#[test]
+fn obj_get_style_pad_right() {
+    let screen = fresh_screen();
+    let obj = Obj::new(&screen).unwrap();
+    obj.pad_right(12);
+    pump();
+    assert_eq!(obj.get_style_pad_right(Part::Main), 12);
+}
+
+#[test]
+fn obj_from_raw_non_owning() {
+    let screen = fresh_screen();
+    let obj = Obj::new(&screen).unwrap();
+    let handle = obj.lv_handle();
+    {
+        let child_ref = Obj::from_raw_non_owning(handle);
+        child_ref.size(77, 33);
+        pump();
+    }
+    // obj still valid after child_ref dropped (non-owning)
+    pump();
+    assert_eq!(obj.get_width(), 77);
+}
+
+// ── Menu ──────────────────────────────────────────────────────────────────────
+
+#[test]
+fn menu_create() {
+    let screen = fresh_screen();
+    let menu = Menu::new(&screen).unwrap();
+    pump();
+    drop(menu);
+    pump();
+}
+
+#[test]
+fn menu_page_create_untitled() {
+    let screen = fresh_screen();
+    let menu = Menu::new(&screen).unwrap();
+    let page = menu.page_create(None);
+    let cont = Menu::cont_create(&page);
+    let lbl = Label::new(&cont).unwrap();
+    lbl.text("Test");
+    menu.set_page(&page);
+    pump();
+}
+
+#[test]
+fn menu_page_create_titled() {
+    let screen = fresh_screen();
+    let menu = Menu::new(&screen).unwrap();
+    let page = menu.page_create(Some("My Page"));
+    menu.set_page(&page);
+    pump();
+}
+
+#[test]
+fn menu_set_load_page_event() {
+    let screen = fresh_screen();
+    let menu = Menu::new(&screen).unwrap();
+    let sub = menu.page_create(None);
+    let cont_sub = Menu::cont_create(&sub);
+    let lbl = Label::new(&cont_sub).unwrap();
+    lbl.text("Sub");
+
+    let main = menu.page_create(None);
+    let cont = Menu::cont_create(&main);
+    let lbl2 = Label::new(&cont).unwrap();
+    lbl2.text("Click me");
+    menu.set_load_page_event(&cont, &sub);
+    menu.set_page(&main);
+    pump();
+}
+
+#[test]
+fn menu_section_and_separator() {
+    let screen = fresh_screen();
+    let menu = Menu::new(&screen).unwrap();
+    let page = menu.page_create(None);
+    Menu::separator_create(&page);
+    let section = Menu::section_create(&page);
+    let cont = Menu::cont_create(&section);
+    let lbl = Label::new(&cont).unwrap();
+    lbl.text("In section");
+    menu.set_page(&page);
+    pump();
+}
+
+#[test]
+fn menu_root_back_button() {
+    let screen = fresh_screen();
+    let menu = Menu::new(&screen).unwrap();
+    menu.set_mode_root_back_button(true);
+    let page = menu.page_create(None);
+    menu.set_page(&page);
+    pump();
+    let back_btn = menu.get_main_header_back_button();
+    // back_button_is_root should work
+    let _is_root = menu.back_button_is_root(&back_btn);
+    pump();
+}
+
+#[test]
+fn menu_header_mode() {
+    let screen = fresh_screen();
+    let menu = Menu::new(&screen).unwrap();
+    menu.set_mode_header(MenuHeaderMode::BottomFixed);
+    pump();
+}
+
+#[test]
+fn menu_sidebar() {
+    let screen = fresh_screen();
+    let menu = Menu::new(&screen).unwrap();
+    menu.size(320, 240);
+    let page = menu.page_create(Some("Root"));
+    let cont = Menu::cont_create(&page);
+    let lbl = Label::new(&cont).unwrap();
+    lbl.text("Item");
+    menu.set_sidebar_page(&page);
+    pump();
+    assert!(menu.get_cur_sidebar_page().is_some());
+    menu.clear_sidebar();
+    pump();
+}
+
+#[test]
+fn menu_clear_history() {
+    let screen = fresh_screen();
+    let menu = Menu::new(&screen).unwrap();
+    let page = menu.page_create(None);
+    menu.set_page(&page);
+    pump();
+    menu.clear_history();
+    pump();
+}
+
+#[test]
+fn menu_get_cur_main_page() {
+    let screen = fresh_screen();
+    let menu = Menu::new(&screen).unwrap();
+    let page = menu.page_create(None);
+    menu.set_page(&page);
+    pump();
+    assert!(menu.get_cur_main_page().is_some());
+}
+
+#[test]
+fn menu_get_main_header() {
+    let screen = fresh_screen();
+    let menu = Menu::new(&screen).unwrap();
+    let _header = menu.get_main_header();
+    pump();
+}
+
+// ── Msgbox ────────────────────────────────────────────────────────────────────
+
+#[test]
+fn msgbox_create_modal() {
+    let screen = fresh_screen();
+    let mbox = Msgbox::new(None::<&Obj<'_>>).unwrap();
+    mbox.add_title("Test Title");
+    mbox.add_text("Test body");
+    mbox.add_close_button();
+    pump();
+    mbox.close();
+    pump();
+    let _ = screen; // keep screen alive
+}
+
+#[test]
+fn msgbox_create_on_parent() {
+    let screen = fresh_screen();
+    let mbox = Msgbox::new(Some(&screen)).unwrap();
+    mbox.add_title("Hello");
+    mbox.add_text("Text");
+    pump();
+}
+
+#[test]
+fn msgbox_footer_button() {
+    let screen = fresh_screen();
+    let mbox = Msgbox::new(None::<&Obj<'_>>).unwrap();
+    mbox.add_title("Confirm");
+    mbox.add_text("Are you sure?");
+    let _btn = mbox.add_footer_button("OK");
+    pump();
+    mbox.close();
+    pump();
+    let _ = screen;
+}
+
+// ── Image::set_src_symbol ─────────────────────────────────────────────────────
+
+#[test]
+fn image_set_src_symbol() {
+    let screen = fresh_screen();
+    let img = Image::new(&screen).unwrap();
+    img.set_src_symbol(&oxivgl::symbols::SETTINGS);
     pump();
 }

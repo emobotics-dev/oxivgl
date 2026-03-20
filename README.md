@@ -137,14 +137,14 @@ These guarantees are verified by [integration tests](#testing) that exercise sty
 
 ## Examples
 
-100 ported LVGL examples covering getting started, styles, animations, events, layouts, scrolling, and individual widgets. Each is a self-contained `View` impl — runs on host SDL2 or ESP32 with zero code changes.
+107 ported LVGL examples covering getting started, styles, animations, events, layouts, scrolling, and individual widgets. Each is a self-contained `View` impl — runs on host SDL2 or ESP32 with zero code changes.
 
 **[Browse the full gallery with screenshots](examples/doc/README.md)**
 
 ```sh
 ./run_host.sh getting_started1      # interactive SDL2 window
 ./run_host.sh -s getting_started1   # headless screenshot
-./run_host.sh -s                    # screenshot all 100 examples
+./run_host.sh -s                    # screenshot all 107 examples
 ./run_fire27.sh event_trickle       # flash to ESP32
 ```
 

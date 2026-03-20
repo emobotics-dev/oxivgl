@@ -76,6 +76,8 @@ pub enum Part {
     Selected = 0x040000,
     /// Repeated sub-elements such as tick marks (`LV_PART_ITEMS = 0x050000`).
     Items = 0x050000,
+    /// Text cursor (e.g. textarea cursor, `LV_PART_CURSOR = 0x060000`).
+    Cursor = 0x060000,
     /// Scrollbar part (`LV_PART_SCROLLBAR = 0x010000`).
     Scrollbar = lvgl_rust_sys::lv_part_t_LV_PART_SCROLLBAR,
 }
@@ -91,6 +93,7 @@ impl Part {
             0x030000 => Part::Knob,
             0x040000 => Part::Selected,
             0x050000 => Part::Items,
+            0x060000 => Part::Cursor,
             _ => Part::Main,
         }
     }
@@ -238,6 +241,14 @@ impl<'p> Obj<'p> {
         } else {
             Ok(Obj::from_raw(handle))
         }
+    }
+
+    /// Create a non-owning reference to an LVGL object from a raw pointer.
+    ///
+    /// The returned `Child<Obj>` will NOT call `lv_obj_delete` on drop.
+    /// Use when you have a raw pointer from an event or stored handle.
+    pub fn from_raw_non_owning(ptr: *mut lv_obj_t) -> super::Child<Self> {
+        super::Child::new(Obj::from_raw(ptr))
     }
 
     /// Wrap a raw LVGL pointer. `ptr` must be non-null and owned by the caller.
@@ -643,5 +654,60 @@ impl<'p> Obj<'p> {
         } else {
             Some(super::Child::new(Obj::from_raw(child_ptr)))
         }
+    }
+
+    /// Move this object to a specific position among its siblings.
+    ///
+    /// Index 0 = background (behind all siblings). Values beyond the child
+    /// count are clamped by LVGL.
+    pub fn move_to_index(&self, index: i32) -> &Self {
+        assert_ne!(self.handle, null_mut());
+        // SAFETY: handle non-null (asserted above).
+        unsafe { lv_obj_move_to_index(self.handle, index) };
+        self
+    }
+
+    /// Get this object's index among its parent's children. Returns -1 if
+    /// the object has no parent.
+    pub fn get_index(&self) -> i32 {
+        assert_ne!(self.handle, null_mut());
+        // SAFETY: handle non-null (asserted above).
+        unsafe { lv_obj_get_index(self.handle) }
+    }
+
+    /// Move this object to the background (behind all siblings).
+    /// Equivalent to `move_to_index(0)`.
+    pub fn move_background(&self) -> &Self {
+        self.move_to_index(0)
+    }
+
+    /// Get the right padding style value for the given part.
+    pub fn get_style_pad_right(&self, part: super::obj::Part) -> i32 {
+        assert_ne!(self.handle, null_mut());
+        // SAFETY: handle non-null (asserted above).
+        unsafe { lv_obj_get_style_pad_right(self.handle, part as u32) }
+    }
+
+    /// Get the left padding style value for the given part.
+    pub fn get_style_pad_left(&self, part: super::obj::Part) -> i32 {
+        assert_ne!(self.handle, null_mut());
+        // SAFETY: handle non-null (asserted above).
+        unsafe { lv_obj_get_style_pad_left(self.handle, part as u32) }
+    }
+
+    /// Get the background color for the given part.
+    pub fn get_style_bg_color(&self, part: super::obj::Part) -> lv_color_t {
+        assert_ne!(self.handle, null_mut());
+        // SAFETY: handle non-null (asserted above).
+        unsafe { lv_obj_get_style_bg_color(self.handle, part as u32) }
+    }
+
+    /// Swap positions of two objects in their parent's child list.
+    pub fn swap(&self, other: &impl AsLvHandle) -> &Self {
+        assert_ne!(self.handle, null_mut());
+        assert_ne!(other.lv_handle(), null_mut());
+        // SAFETY: both handles non-null (asserted above).
+        unsafe { lv_obj_swap(self.handle, other.lv_handle()) };
+        self
     }
 }
