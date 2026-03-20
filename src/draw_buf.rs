@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT OR Apache-2.0
+// SPDX-License-Identifier: GPL-3.0-only
 //! Owned LVGL draw buffer — wraps `lv_draw_buf_t`.
 
 use lvgl_rust_sys::*;
@@ -55,9 +55,9 @@ impl DrawBuf {
 
 impl Drop for DrawBuf {
     fn drop(&mut self) {
-        // SAFETY: ptr was allocated by lv_draw_buf_create and has not been freed.
-        // Canvas::drop (via lv_obj_delete) runs before DrawBuf::drop because
-        // Canvas is declared after DrawBuf in every View struct (reverse field order).
+        // SAFETY: ptr was allocated by lv_draw_buf_create and has not been freed;
+        // Canvas (which owns this DrawBuf as a field) calls lv_obj_delete in its
+        // own Drop before Rust drops the DrawBuf field.
         unsafe { lv_draw_buf_destroy(self.ptr) };
     }
 }
