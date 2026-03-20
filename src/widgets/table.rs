@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
+use alloc::string::String;
 use core::{ffi::c_char, ops::Deref, ptr::null_mut};
 
 use lvgl_rust_sys::*;
@@ -38,6 +39,12 @@ impl core::ops::BitOr for TableCellCtrl {
     type Output = Self;
     fn bitor(self, rhs: Self) -> Self {
         Self(self.0 | rhs.0)
+    }
+}
+
+impl core::ops::BitOrAssign for TableCellCtrl {
+    fn bitor_assign(&mut self, rhs: Self) {
+        self.0 |= rhs.0;
     }
 }
 
@@ -92,7 +99,7 @@ impl<'p> Table<'p> {
     /// Set the text of a cell. LVGL copies the string internally.
     ///
     /// New rows/columns are added automatically if `row`/`col` exceed the
-    /// current count.
+    /// current count. Strings longer than 127 bytes are silently truncated.
     pub fn set_cell_value(&self, row: u32, col: u32, text: &str) -> &Self {
         let bytes = text.as_bytes();
         let len = bytes.len().min(127);
@@ -142,19 +149,25 @@ impl<'p> Table<'p> {
         self
     }
 
-    /// Get the text of a cell. Returns `None` if the cell is empty or
-    /// out of range.
-    pub fn get_cell_value(&self, row: u32, col: u32) -> Option<&str> {
-        // SAFETY: handle non-null; LVGL returns a pointer into its internal
-        // buffer which is valid for the lifetime of the table.
+    /// Get the text of a cell as an owned `String`. Returns `None` if the
+    /// cell is empty or out of range.
+    ///
+    /// An owned value is returned because any subsequent call that modifies
+    /// the table (e.g. [`set_cell_value`](Self::set_cell_value),
+    /// [`set_row_count`](Self::set_row_count)) may reallocate LVGL's internal
+    /// cell buffer, invalidating a borrowed pointer.
+    pub fn get_cell_value(&self, row: u32, col: u32) -> Option<String> {
+        // SAFETY: handle non-null; lv_table_get_cell_value returns a pointer
+        // into LVGL's internal cell buffer. We copy immediately via CStr → String
+        // to avoid holding a raw reference across any mutation.
         let ptr = unsafe { lv_table_get_cell_value(self.lv_handle(), row, col) };
         if ptr.is_null() {
             return None;
         }
         // SAFETY: LVGL guarantees the returned string is valid NUL-terminated
-        // ASCII/UTF-8 text stored inside the table's internal buffer.
+        // text; we copy the bytes before returning.
         let cstr = unsafe { core::ffi::CStr::from_ptr(ptr) };
-        cstr.to_str().ok()
+        cstr.to_str().ok().map(String::from)
     }
 
     /// Get the current number of rows.

@@ -3526,7 +3526,7 @@ fn table_create_and_set_cell() {
     let table = Table::new(&screen).unwrap();
     table.set_cell_value(0, 0, "Hello");
     pump();
-    assert_eq!(table.get_cell_value(0, 0), Some("Hello"));
+    assert_eq!(table.get_cell_value(0, 0).as_deref(), Some("Hello"));
 }
 
 #[test]
@@ -3560,4 +3560,18 @@ fn table_cell_ctrl() {
     assert!(table.has_cell_ctrl(0, 0, TableCellCtrl::CUSTOM_1));
     table.clear_cell_ctrl(0, 0, TableCellCtrl::CUSTOM_1);
     assert!(!table.has_cell_ctrl(0, 0, TableCellCtrl::CUSTOM_1));
+}
+
+#[test]
+fn table_selected_cell() {
+    let screen = fresh_screen();
+    let table = Table::new(&screen).unwrap();
+    table.set_row_count(3).set_column_count(2);
+    // No cell selected initially.
+    pump();
+    assert_eq!(table.get_selected_cell(), None);
+    // Programmatic selection.
+    table.set_selected_cell(1, 0);
+    pump();
+    assert_eq!(table.get_selected_cell(), Some((1, 0)));
 }
