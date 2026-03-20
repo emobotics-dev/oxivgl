@@ -46,6 +46,8 @@ pub mod snapshot;
 pub mod math;
 /// LVGL built-in icon symbols (Font Awesome subset).
 pub mod symbols;
+/// Owned LVGL draw buffer wrapping `lv_draw_buf_t`.
+pub mod draw_buf;
 
 /// Declare an LVGL image asset compiled by `oxivgl-build`.
 ///
