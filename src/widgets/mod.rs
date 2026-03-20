@@ -19,9 +19,9 @@ pub(crate) fn to_lvgl(v: f32, max: f32) -> i32 {
 
 mod arc;
 mod bar;
-mod canvas;
 mod button;
 mod buttonmatrix;
+mod canvas;
 mod chart;
 mod checkbox;
 mod child;
@@ -30,8 +30,8 @@ mod image;
 mod keyboard;
 mod label;
 mod led;
-mod list;
 mod line;
+mod list;
 mod menu;
 mod msgbox;
 mod obj;
@@ -42,17 +42,18 @@ mod scale;
 mod screen;
 mod slider;
 mod switch;
+mod table;
 mod textarea;
 mod value_label;
 
 pub use arc::{Arc, ArcMode};
 pub use bar::{Bar, BarMode};
-pub use canvas::{Canvas, CanvasLayer};
 pub use button::Button;
 pub use buttonmatrix::{Buttonmatrix, ButtonmatrixMap};
+pub use canvas::{Canvas, CanvasLayer};
 pub use chart::{Chart, ChartAxis, ChartSeries, ChartType};
 pub use checkbox::Checkbox;
-pub use child::{detach, Child};
+pub use child::{Child, detach};
 pub use dropdown::{DdDir, Dropdown};
 pub use image::{Image, ImageAlign};
 pub use keyboard::{Keyboard, KeyboardMode};
@@ -60,24 +61,22 @@ pub use label::{Label, LabelLongMode};
 pub use led::Led;
 pub use line::Line;
 pub use list::List;
+// Re-export raw FFI types used in public widget APIs.
+pub use lvgl_rust_sys::{lv_color_t, lv_image_dsc_t, lv_point_precise_t};
 pub use menu::{Menu, MenuHeaderMode};
 pub use msgbox::Msgbox;
-pub use obj::{
-    Align, AsLvHandle, BaseDir, Matrix, Obj, Part, TextAlign,
-};
+pub use obj::{Align, AsLvHandle, BaseDir, Matrix, Obj, Part, TextAlign};
 pub use roller::{Roller, RollerMode};
 pub use scale::{
-    Scale, ScaleBuilder, ScaleLabels, ScaleMode, ScaleSection,
-    SCALE_LABEL_ROTATE_KEEP_UPRIGHT, SCALE_LABEL_ROTATE_MATCH_TICKS,
+    SCALE_LABEL_ROTATE_KEEP_UPRIGHT, SCALE_LABEL_ROTATE_MATCH_TICKS, Scale, ScaleBuilder, ScaleLabels, ScaleMode,
+    ScaleSection,
 };
 pub use screen::Screen;
 pub use slider::{Slider, SliderMode};
 pub use switch::{Switch, SwitchOrientation};
+pub use table::{Table, TableCellCtrl};
 pub use textarea::Textarea;
 pub use value_label::ValueLabel;
-
-// Re-export raw FFI types used in public widget APIs.
-pub use lvgl_rust_sys::{lv_color_t, lv_image_dsc_t, lv_point_precise_t};
 
 /// Maximum corner radius — creates a pill/capsule shape.
 /// Equivalent to LVGL's `LV_RADIUS_CIRCLE` (0x7FFF).
@@ -101,7 +100,7 @@ pub enum WidgetError {
 
 #[cfg(test)]
 mod tests {
-    use super::{to_lvgl, LVGL_SCALE};
+    use super::{LVGL_SCALE, to_lvgl};
 
     #[test]
     fn to_lvgl_zero_value() {
@@ -143,11 +142,7 @@ impl defmt::Format for WidgetError {
             }
             WidgetError::LvglNullPointer => defmt::write!(f, "Got NULL pointer from LVGL"),
             WidgetError::ExtendError(ee) => {
-                defmt::write!(
-                    f,
-                    "Could not extend C string: {:?}",
-                    crate::fmt::Debug2Format(&ee)
-                )
+                defmt::write!(f, "Could not extend C string: {:?}", crate::fmt::Debug2Format(&ee))
             }
         }
     }
