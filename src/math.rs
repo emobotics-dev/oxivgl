@@ -41,3 +41,13 @@ pub fn trigo_sin(angle: i32) -> i32 {
 
 /// Bit shift for LVGL trigonometry results (`LV_TRIGO_SHIFT = 15`).
 pub const TRIGO_SHIFT: i32 = LV_TRIGO_SHIFT as i32;
+
+/// Integer arctangent. Returns angle in tenths of a degree (0–3599).
+///
+/// Note: LVGL binding argument order is `(x, y)` (not the conventional `(y,
+/// x)`).
+pub fn atan2(y: i32, x: i32) -> u16 {
+    // SAFETY: pure computation, no side effects.
+    // Binding signature: lv_atan2(x, y) — pass x first, y second.
+    unsafe { lv_atan2(x, y) }
+}
