@@ -4,8 +4,8 @@ use core::{ops::Deref, ptr::null_mut};
 use lvgl_rust_sys::*;
 
 use super::{
-    obj::{AsLvHandle, Obj},
     WidgetError,
+    obj::{AsLvHandle, Obj},
 };
 
 /// LVGL image widget. Wraps [`Obj`](super::obj::Obj) and `Deref`s to it for
@@ -71,13 +71,7 @@ impl<'p> Image<'p> {
         // SAFETY: parent_ptr non-null (asserted above); lv_init() called via
         // LvglDriver.
         let handle = unsafe { lv_image_create(parent_ptr) };
-        if handle.is_null() {
-            Err(WidgetError::LvglNullPointer)
-        } else {
-            Ok(Image {
-                obj: Obj::from_raw(handle),
-            })
-        }
+        if handle.is_null() { Err(WidgetError::LvglNullPointer) } else { Ok(Image { obj: Obj::from_raw(handle) }) }
     }
 
     /// Set image rotation in 0.1 degree units (e.g. 450 = 45 degrees).
@@ -127,12 +121,7 @@ impl<'p> Image<'p> {
         // SAFETY: handle non-null (from Image::new); dsc is 'static and
         // points to a valid lv_image_dsc_t compiled by oxivgl-build.
         // LVGL stores the pointer (spec §3.1); 'static satisfies this.
-        unsafe {
-            lv_image_set_src(
-                self.obj.handle(),
-                dsc as *const lv_image_dsc_t as *const core::ffi::c_void,
-            )
-        };
+        unsafe { lv_image_set_src(self.obj.handle(), dsc as *const lv_image_dsc_t as *const core::ffi::c_void) };
         self
     }
 
@@ -150,12 +139,7 @@ impl<'p> Image<'p> {
         // SAFETY: handle non-null (from Image::new); symbol.as_ptr() returns
         // a 'static NUL-terminated string. LVGL detects the string source type
         // by inspecting the first byte (lv_image.c:lv_image_src_get_type).
-        unsafe {
-            lv_image_set_src(
-                self.obj.handle(),
-                symbol.as_ptr() as *const core::ffi::c_void,
-            )
-        };
+        unsafe { lv_image_set_src(self.obj.handle(), symbol.as_ptr() as *const core::ffi::c_void) };
         self
     }
 }

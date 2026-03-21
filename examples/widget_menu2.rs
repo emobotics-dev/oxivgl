@@ -13,12 +13,12 @@ use oxivgl::{
     enums::EventCode,
     event::Event,
     view::View,
-    widgets::{Child, Label, Menu, Msgbox, Obj, Screen, WidgetError},
+    widgets::{Label, Menu, Msgbox, Obj, Screen, WidgetError},
 };
 
 struct WidgetMenu2 {
     menu: Menu<'static>,
-    _labels: [Child<Label<'static>>; 4],
+    _labels: [Label<'static>; 4],
 }
 
 impl View for WidgetMenu2 {
@@ -57,10 +57,10 @@ impl View for WidgetMenu2 {
         Ok(Self {
             menu,
             _labels: [
-                Child::new(l0),
-                Child::new(l1),
-                Child::new(l2),
-                Child::new(l3),
+                l0,
+                l1,
+                l2,
+                l3,
             ],
         })
     }

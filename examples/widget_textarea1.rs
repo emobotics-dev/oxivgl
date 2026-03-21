@@ -14,8 +14,7 @@ use oxivgl::{
     enums::{EventCode, ObjFlag, ObjState},
     event::Event,
     view::{register_event_on, View},
-    widgets::{
-        Align, Buttonmatrix, ButtonmatrixMap, Screen, Textarea, WidgetError,
+    widgets::{Align, Buttonmatrix, ButtonmatrixMap, Screen, Textarea, WidgetError,
     },
 };
 

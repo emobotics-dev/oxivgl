@@ -4,8 +4,8 @@ use core::{ops::Deref, ptr::null_mut};
 use lvgl_rust_sys::*;
 
 use super::{
-    obj::{AsLvHandle, Obj},
     WidgetError,
+    obj::{AsLvHandle, Obj},
 };
 
 /// LVGL LED widget. Wraps [`Obj`](super::obj::Obj) and `Deref`s to it for style
@@ -37,13 +37,7 @@ impl<'p> Led<'p> {
         // SAFETY: parent_ptr non-null (asserted above); lv_init() called via
         // LvglDriver.
         let handle = unsafe { lv_led_create(parent_ptr) };
-        if handle.is_null() {
-            Err(WidgetError::LvglNullPointer)
-        } else {
-            Ok(Led {
-                obj: Obj::from_raw(handle),
-            })
-        }
+        if handle.is_null() { Err(WidgetError::LvglNullPointer) } else { Ok(Led { obj: Obj::from_raw(handle) }) }
     }
 
     /// Turn the LED on (full brightness).

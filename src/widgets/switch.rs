@@ -4,8 +4,8 @@ use core::{ops::Deref, ptr::null_mut};
 use lvgl_rust_sys::*;
 
 use super::{
-    obj::{AsLvHandle, Obj},
     WidgetError,
+    obj::{AsLvHandle, Obj},
 };
 
 /// LVGL switch (toggle) widget.
@@ -45,24 +45,13 @@ impl<'p> Switch<'p> {
         let parent_ptr = parent.lv_handle();
         assert_ne!(parent_ptr, null_mut(), "Parent widget cannot be null");
         let handle = unsafe { lv_switch_create(parent_ptr) };
-        if handle.is_null() {
-            Err(WidgetError::LvglNullPointer)
-        } else {
-            Ok(Switch {
-                obj: Obj::from_raw(handle),
-            })
-        }
+        if handle.is_null() { Err(WidgetError::LvglNullPointer) } else { Ok(Switch { obj: Obj::from_raw(handle) }) }
     }
 
     /// Set switch orientation.
     pub fn set_orientation(&self, orientation: SwitchOrientation) -> &Self {
         // SAFETY: handle non-null (from Switch::new).
-        unsafe {
-            lv_switch_set_orientation(
-                self.lv_handle(),
-                orientation as lv_switch_orientation_t,
-            )
-        };
+        unsafe { lv_switch_set_orientation(self.lv_handle(), orientation as lv_switch_orientation_t) };
         self
     }
 }

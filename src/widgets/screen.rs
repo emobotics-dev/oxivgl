@@ -6,9 +6,11 @@ use core::cell::RefCell;
 
 use lvgl_rust_sys::*;
 
-use crate::layout::{FlexAlign, FlexFlow};
-use crate::style::{Selector, Style};
 use super::obj::AsLvHandle;
+use crate::{
+    layout::{FlexAlign, FlexFlow},
+    style::{Selector, Style},
+};
 
 /// Non-owning reference to the active LVGL screen. Does **not** delete it on
 /// drop.
@@ -48,11 +50,7 @@ impl Screen {
         // SAFETY: lv_screen_active() is safe after lv_init(); NULL result is handled
         // below.
         let handle = unsafe { lv_screen_active() };
-        if handle.is_null() {
-            None
-        } else {
-            Some(Screen { handle, _styles: RefCell::new(Vec::new()) })
-        }
+        if handle.is_null() { None } else { Some(Screen { handle, _styles: RefCell::new(Vec::new()) }) }
     }
 
     /// Return the raw `lv_obj_t` pointer for this screen.

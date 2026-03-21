@@ -4,8 +4,8 @@ use core::{ops::Deref, ptr::null_mut};
 use lvgl_rust_sys::*;
 
 use super::{
-    obj::{AsLvHandle, Obj},
     WidgetError,
+    obj::{AsLvHandle, Obj},
 };
 
 /// LVGL slider widget (native range 0–100 by default).
@@ -47,46 +47,29 @@ impl<'p> Slider<'p> {
     pub fn new(parent: &impl AsLvHandle) -> Result<Self, WidgetError> {
         let parent_ptr = parent.lv_handle();
         assert_ne!(parent_ptr, null_mut(), "Parent widget cannot be null");
-        // SAFETY: parent_ptr non-null (asserted above); lv_init() called via LvglDriver.
+        // SAFETY: parent_ptr non-null (asserted above); lv_init() called via
+        // LvglDriver.
         let handle = unsafe { lv_slider_create(parent_ptr) };
-        if handle.is_null() {
-            Err(WidgetError::LvglNullPointer)
-        } else {
-            Ok(Slider {
-                obj: Obj::from_raw(handle),
-            })
-        }
+        if handle.is_null() { Err(WidgetError::LvglNullPointer) } else { Ok(Slider { obj: Obj::from_raw(handle) }) }
     }
 
     /// Returns the current slider value (native LVGL integer range).
     pub fn get_value(&self) -> i32 {
-        assert_ne!(
-            self.obj.handle(),
-            null_mut(),
-            "Slider handle cannot be null"
-        );
+        assert_ne!(self.obj.handle(), null_mut(), "Slider handle cannot be null");
         // SAFETY: handle non-null (asserted above).
         unsafe { lv_slider_get_value(self.obj.handle()) }
     }
 
     /// Sets the slider range (min and max values).
     pub fn set_range(&self, min: i32, max: i32) -> &Self {
-        assert_ne!(
-            self.obj.handle(),
-            null_mut(),
-            "Slider handle cannot be null"
-        );
+        assert_ne!(self.obj.handle(), null_mut(), "Slider handle cannot be null");
         unsafe { lv_slider_set_range(self.obj.handle(), min, max) };
         self
     }
 
     /// Sets the slider value (native LVGL integer range).
     pub fn set_value(&self, val: i32) -> &Self {
-        assert_ne!(
-            self.obj.handle(),
-            null_mut(),
-            "Slider handle cannot be null"
-        );
+        assert_ne!(self.obj.handle(), null_mut(), "Slider handle cannot be null");
         // SAFETY: handle non-null (asserted above).
         unsafe { lv_slider_set_value(self.obj.handle(), val, false) };
         self
@@ -94,11 +77,7 @@ impl<'p> Slider<'p> {
 
     /// Set slider mode (normal, symmetrical, or range).
     pub fn set_mode(&self, mode: SliderMode) -> &Self {
-        assert_ne!(
-            self.obj.handle(),
-            null_mut(),
-            "Slider handle cannot be null"
-        );
+        assert_ne!(self.obj.handle(), null_mut(), "Slider handle cannot be null");
         // SAFETY: handle non-null (asserted above).
         unsafe { lv_slider_set_mode(self.obj.handle(), mode as lv_slider_mode_t) };
         self
@@ -106,11 +85,7 @@ impl<'p> Slider<'p> {
 
     /// Set the start value (left handle in range mode).
     pub fn set_start_value(&self, val: i32) -> &Self {
-        assert_ne!(
-            self.obj.handle(),
-            null_mut(),
-            "Slider handle cannot be null"
-        );
+        assert_ne!(self.obj.handle(), null_mut(), "Slider handle cannot be null");
         // SAFETY: handle non-null (asserted above).
         unsafe { lv_slider_set_start_value(self.obj.handle(), val, false) };
         self
@@ -118,11 +93,7 @@ impl<'p> Slider<'p> {
 
     /// Get the left/start value (range mode).
     pub fn get_left_value(&self) -> i32 {
-        assert_ne!(
-            self.obj.handle(),
-            null_mut(),
-            "Slider handle cannot be null"
-        );
+        assert_ne!(self.obj.handle(), null_mut(), "Slider handle cannot be null");
         // SAFETY: handle non-null (asserted above).
         unsafe { lv_slider_get_left_value(self.obj.handle()) }
     }

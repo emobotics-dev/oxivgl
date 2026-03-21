@@ -33,8 +33,9 @@ use oxivgl::{
     enums::ObjState,
     widgets::{
         Arc, Bar, BarMode, Button, Buttonmatrix, Canvas, Chart, ChartAxis, ChartType, Checkbox,
-        Dropdown, Keyboard, KeyboardMode, Label, Led, Line, Menu, Msgbox, Obj, Part, Roller,
-        RollerMode, Screen, Slider, Switch, Table, Textarea, ValueLabel, lv_color_t,
+        Dropdown, Keyboard, KeyboardMode, Label, Led, Line, Menu, Msgbox, Obj, Part,
+        Roller, RollerMode, Screen, Slider, Switch, Table, Tabview, Textarea, ValueLabel,
+        lv_color_t,
     },
 };
 
@@ -624,7 +625,7 @@ fn leak_canvas() {
             dsc.bg_color(color_make(255, 0, 0));
             layer.draw_rect(&dsc, Area { x1: 5, y1: 5, x2: 45, y2: 45 });
         }
-        drop(canvas); // drops draw_buf field automatically
+        drop(canvas); // LV_EVENT_DELETE callback frees draw_buf
     });
 }
 
@@ -642,5 +643,20 @@ fn leak_table() {
             table.set_cell_value(row, 1, "Value");
         }
         drop(table);
+    });
+}
+
+
+// ── Tabview ───────────────────────────────────────────────────────────────────
+
+#[test]
+fn leak_tabview() {
+    // Tabview creates ~6 internal LVGL objects (bar, content, 2 tab buttons,
+    // 2 tab panes).
+    assert_no_leak("Tabview", 6, |screen| {
+        let tv = Tabview::new(screen).unwrap();
+        let _tab1 = tv.add_tab("Alpha");
+        let _tab2 = tv.add_tab("Beta");
+        drop(tv);
     });
 }

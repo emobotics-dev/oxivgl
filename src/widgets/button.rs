@@ -4,8 +4,8 @@ use core::{ops::Deref, ptr::null_mut};
 use lvgl_rust_sys::*;
 
 use super::{
-    obj::{AsLvHandle, Obj},
     WidgetError,
+    obj::{AsLvHandle, Obj},
 };
 
 /// LVGL button widget. Wraps [`Obj`](super::obj::Obj) and `Deref`s to it for
@@ -29,11 +29,10 @@ impl<'p> Deref for Button<'p> {
 }
 
 impl<'p> Button<'p> {
-    /// Wrap a raw LVGL button pointer. `ptr` must be non-null and a valid button.
+    /// Wrap a raw LVGL button pointer. `ptr` must be non-null and a valid
+    /// button.
     pub(crate) fn from_raw(ptr: *mut lv_obj_t) -> Self {
-        Button {
-            obj: Obj::from_raw(ptr),
-        }
+        Button { obj: Obj::from_raw(ptr) }
     }
 
     /// Create a button as a child of `parent`. Returns
@@ -44,12 +43,6 @@ impl<'p> Button<'p> {
         // SAFETY: parent_ptr non-null (asserted above); lv_init() called via
         // LvglDriver.
         let handle = unsafe { lv_button_create(parent_ptr) };
-        if handle.is_null() {
-            Err(WidgetError::LvglNullPointer)
-        } else {
-            Ok(Button {
-                obj: Obj::from_raw(handle),
-            })
-        }
+        if handle.is_null() { Err(WidgetError::LvglNullPointer) } else { Ok(Button { obj: Obj::from_raw(handle) }) }
     }
 }

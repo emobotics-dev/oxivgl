@@ -240,11 +240,7 @@ impl<'p> Obj<'p> {
     }
 
     /// Set local `bg_grad_color` for the given selector.
-    pub fn style_bg_grad_color(
-        &self,
-        color: lv_color_t,
-        selector: impl Into<crate::style::Selector>,
-    ) -> &Self {
+    pub fn style_bg_grad_color(&self, color: lv_color_t, selector: impl Into<crate::style::Selector>) -> &Self {
         let selector = selector.into().raw();
         assert_ne!(self.handle(), null_mut(), "Obj handle cannot be null");
         // SAFETY: handle non-null (asserted above).
@@ -253,11 +249,7 @@ impl<'p> Obj<'p> {
     }
 
     /// Set local `bg_grad_dir` for the given selector.
-    pub fn style_bg_grad_dir(
-        &self,
-        dir: crate::style::GradDir,
-        selector: impl Into<crate::style::Selector>,
-    ) -> &Self {
+    pub fn style_bg_grad_dir(&self, dir: crate::style::GradDir, selector: impl Into<crate::style::Selector>) -> &Self {
         let selector = selector.into().raw();
         assert_ne!(self.handle(), null_mut(), "Obj handle cannot be null");
         // SAFETY: handle non-null (asserted above).
@@ -266,11 +258,7 @@ impl<'p> Obj<'p> {
     }
 
     /// Set transform rotation in 0.1 degree units for the given selector.
-    pub fn style_transform_rotation(
-        &self,
-        angle: i32,
-        selector: impl Into<crate::style::Selector>,
-    ) -> &Self {
+    pub fn style_transform_rotation(&self, angle: i32, selector: impl Into<crate::style::Selector>) -> &Self {
         let selector = selector.into().raw();
         assert_ne!(self.handle(), null_mut(), "Obj handle cannot be null");
         // SAFETY: handle non-null (asserted above).
@@ -309,11 +297,7 @@ impl<'p> Obj<'p> {
     }
 
     /// Set base text direction for the given selector.
-    pub fn style_base_dir(
-        &self,
-        dir: super::obj::BaseDir,
-        selector: impl Into<crate::style::Selector>,
-    ) -> &Self {
+    pub fn style_base_dir(&self, dir: super::obj::BaseDir, selector: impl Into<crate::style::Selector>) -> &Self {
         let selector = selector.into().raw();
         assert_ne!(self.handle(), null_mut());
         // SAFETY: handle non-null (asserted above).
@@ -330,11 +314,7 @@ impl<'p> Obj<'p> {
     }
 
     /// Set image recolor tint.
-    pub fn style_image_recolor(
-        &self,
-        color: lv_color_t,
-        selector: impl Into<crate::style::Selector>,
-    ) -> &Self {
+    pub fn style_image_recolor(&self, color: lv_color_t, selector: impl Into<crate::style::Selector>) -> &Self {
         let selector = selector.into().raw();
         assert_ne!(self.handle(), null_mut(), "Obj handle cannot be null");
         unsafe { lv_obj_set_style_image_recolor(self.handle(), color, selector) };
@@ -342,11 +322,7 @@ impl<'p> Obj<'p> {
     }
 
     /// Set radial offset for parts on round scales (in pixels).
-    pub fn style_radial_offset(
-        &self,
-        offset: i32,
-        selector: impl Into<crate::style::Selector>,
-    ) -> &Self {
+    pub fn style_radial_offset(&self, offset: i32, selector: impl Into<crate::style::Selector>) -> &Self {
         let selector = selector.into().raw();
         assert_ne!(self.handle(), null_mut(), "Obj handle cannot be null");
         unsafe { lv_obj_set_style_radial_offset(self.handle(), offset, selector) };
@@ -354,11 +330,7 @@ impl<'p> Obj<'p> {
     }
 
     /// Set line opacity for a part (0–255).
-    pub fn style_line_opa(
-        &self,
-        opa: u8,
-        selector: impl Into<crate::style::Selector>,
-    ) -> &Self {
+    pub fn style_line_opa(&self, opa: u8, selector: impl Into<crate::style::Selector>) -> &Self {
         let selector = selector.into().raw();
         assert_ne!(self.handle(), null_mut(), "Obj handle cannot be null");
         unsafe { lv_obj_set_style_line_opa(self.handle(), opa as lv_opa_t, selector) };
@@ -366,11 +338,7 @@ impl<'p> Obj<'p> {
     }
 
     /// Set text color for the given style selector.
-    pub fn style_text_color(
-        &self,
-        color: lv_color_t,
-        selector: impl Into<crate::style::Selector>,
-    ) -> &Self {
+    pub fn style_text_color(&self, color: lv_color_t, selector: impl Into<crate::style::Selector>) -> &Self {
         let selector = selector.into().raw();
         assert_ne!(self.handle(), null_mut(), "Obj handle cannot be null");
         unsafe { lv_obj_set_style_text_color(self.handle(), color, selector) };
@@ -378,11 +346,7 @@ impl<'p> Obj<'p> {
     }
 
     /// Set text font for the given style selector.
-    pub fn style_text_font(
-        &self,
-        font: crate::fonts::Font,
-        selector: impl Into<crate::style::Selector>,
-    ) -> &Self {
+    pub fn style_text_font(&self, font: crate::fonts::Font, selector: impl Into<crate::style::Selector>) -> &Self {
         let selector = selector.into().raw();
         assert_ne!(self.handle(), null_mut(), "Obj handle cannot be null");
         assert_ne!(font.as_ptr(), null_mut(), "Font pointer cannot be null");
@@ -391,11 +355,7 @@ impl<'p> Obj<'p> {
     }
 
     /// Set arc width for the given style selector.
-    pub fn style_arc_width(
-        &self,
-        width: i32,
-        selector: impl Into<crate::style::Selector>,
-    ) -> &Self {
+    pub fn style_arc_width(&self, width: i32, selector: impl Into<crate::style::Selector>) -> &Self {
         let selector = selector.into().raw();
         assert_ne!(self.handle(), null_mut(), "Obj handle cannot be null");
         unsafe { lv_obj_set_style_arc_width(self.handle(), width, selector) };
@@ -403,11 +363,7 @@ impl<'p> Obj<'p> {
     }
 
     /// Set arc color for the given style selector.
-    pub fn style_arc_color(
-        &self,
-        color: lv_color_t,
-        selector: impl Into<crate::style::Selector>,
-    ) -> &Self {
+    pub fn style_arc_color(&self, color: lv_color_t, selector: impl Into<crate::style::Selector>) -> &Self {
         let selector = selector.into().raw();
         assert_ne!(self.handle(), null_mut(), "Obj handle cannot be null");
         unsafe { lv_obj_set_style_arc_color(self.handle(), color, selector) };
@@ -415,11 +371,7 @@ impl<'p> Obj<'p> {
     }
 
     /// Set arc rounded end-caps for the given style selector.
-    pub fn style_arc_rounded(
-        &self,
-        rounded: bool,
-        selector: impl Into<crate::style::Selector>,
-    ) -> &Self {
+    pub fn style_arc_rounded(&self, rounded: bool, selector: impl Into<crate::style::Selector>) -> &Self {
         let selector = selector.into().raw();
         assert_ne!(self.handle(), null_mut(), "Obj handle cannot be null");
         unsafe { lv_obj_set_style_arc_rounded(self.handle(), rounded, selector) };
@@ -427,11 +379,7 @@ impl<'p> Obj<'p> {
     }
 
     /// Set line color for the given style selector.
-    pub fn style_line_color(
-        &self,
-        color: lv_color_t,
-        selector: impl Into<crate::style::Selector>,
-    ) -> &Self {
+    pub fn style_line_color(&self, color: lv_color_t, selector: impl Into<crate::style::Selector>) -> &Self {
         let selector = selector.into().raw();
         assert_ne!(self.handle(), null_mut(), "Obj handle cannot be null");
         unsafe { lv_obj_set_style_line_color(self.handle(), color, selector) };
@@ -441,11 +389,7 @@ impl<'p> Obj<'p> {
     /// Set the `length` property for the given style selector.
     ///
     /// Used for tick length on scale parts (Items=minor, Indicator=major).
-    pub fn style_length(
-        &self,
-        length: i32,
-        selector: impl Into<crate::style::Selector>,
-    ) -> &Self {
+    pub fn style_length(&self, length: i32, selector: impl Into<crate::style::Selector>) -> &Self {
         let selector = selector.into().raw();
         assert_ne!(self.handle(), null_mut(), "Obj handle cannot be null");
         unsafe { lv_obj_set_style_length(self.handle(), length, selector) };
@@ -453,11 +397,7 @@ impl<'p> Obj<'p> {
     }
 
     /// Set line width for the given style selector.
-    pub fn style_line_width(
-        &self,
-        width: i32,
-        selector: impl Into<crate::style::Selector>,
-    ) -> &Self {
+    pub fn style_line_width(&self, width: i32, selector: impl Into<crate::style::Selector>) -> &Self {
         let selector = selector.into().raw();
         assert_ne!(self.handle(), null_mut(), "Obj handle cannot be null");
         unsafe { lv_obj_set_style_line_width(self.handle(), width, selector) };
@@ -468,11 +408,7 @@ impl<'p> Obj<'p> {
     ///
     /// Different from [`Obj::size`] — this sets the style property, useful
     /// for sub-parts like tick marks.
-    pub fn style_width(
-        &self,
-        width: i32,
-        selector: impl Into<crate::style::Selector>,
-    ) -> &Self {
+    pub fn style_width(&self, width: i32, selector: impl Into<crate::style::Selector>) -> &Self {
         let selector = selector.into().raw();
         assert_ne!(self.handle(), null_mut(), "Obj handle cannot be null");
         unsafe { lv_obj_set_style_width(self.handle(), width, selector) };
@@ -480,11 +416,7 @@ impl<'p> Obj<'p> {
     }
 
     /// Set image recolor opacity (0–255).
-    pub fn style_image_recolor_opa(
-        &self,
-        opa: u8,
-        selector: impl Into<crate::style::Selector>,
-    ) -> &Self {
+    pub fn style_image_recolor_opa(&self, opa: u8, selector: impl Into<crate::style::Selector>) -> &Self {
         let selector = selector.into().raw();
         assert_ne!(self.handle(), null_mut(), "Obj handle cannot be null");
         unsafe { lv_obj_set_style_image_recolor_opa(self.handle(), opa as lv_opa_t, selector) };
@@ -532,13 +464,7 @@ impl<'p> Obj<'p> {
         // SAFETY: handle non-null; symbol is a 'static NUL-terminated byte
         // slice. LVGL stores the pointer in the style property map — the
         // static lifetime guarantees it outlives the widget.
-        unsafe {
-            lv_obj_set_style_bg_image_src(
-                self.handle(),
-                symbol.as_ptr() as *const core::ffi::c_void,
-                selector,
-            )
-        };
+        unsafe { lv_obj_set_style_bg_image_src(self.handle(), symbol.as_ptr() as *const core::ffi::c_void, selector) };
         self
     }
 }

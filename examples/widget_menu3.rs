@@ -11,12 +11,12 @@
 
 use oxivgl::{
     view::View,
-    widgets::{Child, Label, Menu, Screen, WidgetError},
+    widgets::{Label, Menu, Screen, WidgetError},
 };
 
 struct WidgetMenu3 {
     _menu: Menu<'static>,
-    _back_label: Child<Label<'static>>,
+    _back_label: Label<'static>,
 }
 
 impl View for WidgetMenu3 {
@@ -36,19 +36,19 @@ impl View for WidgetMenu3 {
         let cont = Menu::cont_create(&sub1);
         let lbl = Label::new(&cont)?;
         lbl.text("Hello, I am hiding here");
-        core::mem::forget(lbl);
+        
 
         let sub2 = menu.page_create(Some("Page 2"));
         let cont = Menu::cont_create(&sub2);
         let lbl = Label::new(&cont)?;
         lbl.text("Hello, I am hiding here");
-        core::mem::forget(lbl);
+        
 
         let sub3 = menu.page_create(Some("Page 3"));
         let cont = Menu::cont_create(&sub3);
         let lbl = Label::new(&cont)?;
         lbl.text("Hello, I am hiding here");
-        core::mem::forget(lbl);
+        
 
         // Main page (untitled)
         let main_page = menu.page_create(None);
@@ -57,25 +57,25 @@ impl View for WidgetMenu3 {
         let lbl = Label::new(&cont1)?;
         lbl.text("Item 1 (Click me!)");
         menu.set_load_page_event(&cont1, &sub1);
-        core::mem::forget(lbl);
+        
 
         let cont2 = Menu::cont_create(&main_page);
         let lbl = Label::new(&cont2)?;
         lbl.text("Item 2 (Click me!)");
         menu.set_load_page_event(&cont2, &sub2);
-        core::mem::forget(lbl);
+        
 
         let cont3 = Menu::cont_create(&main_page);
         let lbl = Label::new(&cont3)?;
         lbl.text("Item 3 (Click me!)");
         menu.set_load_page_event(&cont3, &sub3);
-        core::mem::forget(lbl);
+        
 
         menu.set_page(&main_page);
 
         Ok(Self {
             _menu: menu,
-            _back_label: Child::new(back_label),
+            _back_label: back_label,
         })
     }
 

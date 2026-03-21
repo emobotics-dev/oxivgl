@@ -4,8 +4,9 @@ use core::{cell::Cell, ops::Deref, ptr::null_mut};
 use lvgl_rust_sys::*;
 
 use super::{
+    LVGL_SCALE, WidgetError,
     obj::{AsLvHandle, Obj},
-    to_lvgl, WidgetError, LVGL_SCALE,
+    to_lvgl,
 };
 
 /// LVGL bar mode.
@@ -14,7 +15,8 @@ use super::{
 pub enum BarMode {
     /// Standard bar (indicator from min to value).
     Normal = lvgl_rust_sys::lv_bar_mode_t_LV_BAR_MODE_NORMAL,
-    /// Indicator draws from zero point towards value (needs range with negative min).
+    /// Indicator draws from zero point towards value (needs range with negative
+    /// min).
     Symmetrical = lvgl_rust_sys::lv_bar_mode_t_LV_BAR_MODE_SYMMETRICAL,
     /// Indicator between start value and end value.
     Range = lvgl_rust_sys::lv_bar_mode_t_LV_BAR_MODE_RANGE,
@@ -65,10 +67,7 @@ impl<'p> Bar<'p> {
         if handle.is_null() {
             Err(WidgetError::LvglNullPointer)
         } else {
-            Ok(Bar {
-                obj: Obj::from_raw(handle),
-                max: Cell::new(0.0),
-            })
+            Ok(Bar { obj: Obj::from_raw(handle), max: Cell::new(0.0) })
         }
     }
 

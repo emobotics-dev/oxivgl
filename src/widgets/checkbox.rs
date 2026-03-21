@@ -4,8 +4,8 @@ use core::{ffi::c_char, ops::Deref, ptr::null_mut};
 use lvgl_rust_sys::*;
 
 use super::{
-    obj::{AsLvHandle, Obj},
     WidgetError,
+    obj::{AsLvHandle, Obj},
 };
 
 /// LVGL checkbox widget (label + tick box).
@@ -32,24 +32,15 @@ impl<'p> Checkbox<'p> {
     pub fn new(parent: &impl AsLvHandle) -> Result<Self, WidgetError> {
         let parent_ptr = parent.lv_handle();
         assert_ne!(parent_ptr, null_mut(), "Parent widget cannot be null");
-        // SAFETY: parent_ptr non-null (asserted above); lv_init() called via LvglDriver.
+        // SAFETY: parent_ptr non-null (asserted above); lv_init() called via
+        // LvglDriver.
         let handle = unsafe { lv_checkbox_create(parent_ptr) };
-        if handle.is_null() {
-            Err(WidgetError::LvglNullPointer)
-        } else {
-            Ok(Checkbox {
-                obj: Obj::from_raw(handle),
-            })
-        }
+        if handle.is_null() { Err(WidgetError::LvglNullPointer) } else { Ok(Checkbox { obj: Obj::from_raw(handle) }) }
     }
 
     /// Set checkbox label text. Truncates at 127 bytes.
     pub fn text(&self, s: &str) -> &Self {
-        assert_ne!(
-            self.obj.handle(),
-            null_mut(),
-            "Checkbox handle cannot be null"
-        );
+        assert_ne!(self.obj.handle(), null_mut(), "Checkbox handle cannot be null");
         let bytes = s.as_bytes();
         let len = bytes.len().min(127);
         let mut buf = [0u8; 128];

@@ -15,10 +15,13 @@ use crate::{
 
 /// Off-screen drawing surface backed by a [`DrawBuf`].
 ///
-/// `Canvas` takes ownership of its draw buffer, ensuring the buffer outlives
-/// the LVGL canvas object. Use [`init_layer`](Canvas::init_layer) to batch-draw
-/// onto the canvas; drawing is committed when the returned [`CanvasLayer`] is
-/// dropped.
+/// `Canvas` takes ownership of its draw buffer. The buffer is freed
+/// automatically whenever the LVGL canvas object is deleted — whether via
+/// an explicit `lv_obj_delete` or parent-tree cascade.
+/// No special cleanup call is required from user code.
+///
+/// Use [`init_layer`](Canvas::init_layer) to batch-draw onto the canvas;
+/// drawing is committed when the returned [`CanvasLayer`] is dropped.
 ///
 /// # Example
 ///
@@ -37,16 +40,42 @@ use crate::{
 ///     layer.draw_rect(&rdc, Area { x1: 10, y1: 10, x2: 50, y2: 50 });
 /// } // layer dropped → lv_canvas_finish_layer called
 /// ```
+#[derive(Debug)]
 pub struct Canvas<'p> {
     obj: Obj<'p>,
-    draw_buf: DrawBuf,
+    /// Raw pointer to a `Box<DrawBuf>` allocated in [`Canvas::new`].
+    ///
+    /// Ownership is transferred to the `LV_EVENT_DELETE` callback registered
+    /// on the LVGL canvas object. The callback frees the box when the object
+    /// is deleted (parent cascade or `lv_obj_delete`).
+    /// Never freed by Rust's normal drop path — this raw pointer is just
+    /// stored here so `draw_buf()` can return a reference.
+    draw_buf: *mut DrawBuf,
+}
+
+/// LVGL `LV_EVENT_DELETE` callback registered on every `Canvas` object.
+///
+/// Fires when the LVGL canvas object is deleted by any path (parent cascade,
+/// `lv_obj_delete`). Frees the `Box<DrawBuf>` whose raw pointer was
+/// stored as `user_data` at registration time.
+///
+/// # Safety
+/// `user_data` must be a valid `Box<DrawBuf>` raw pointer allocated in
+/// `Canvas::new` and not freed elsewhere.
+unsafe extern "C" fn canvas_delete_cb(e: *mut lv_event_t) {
+    // SAFETY: user_data is a Box<DrawBuf> raw pointer from Canvas::new.
+    let ptr = unsafe { lv_event_get_user_data(e) } as *mut DrawBuf;
+    if !ptr.is_null() {
+        unsafe { drop(alloc::boxed::Box::from_raw(ptr)) };
+    }
 }
 
 impl<'p> Canvas<'p> {
     /// Create a canvas child of `parent`, backed by `buf`.
     ///
-    /// `Canvas` takes ownership of `buf`, ensuring the draw buffer outlives
-    /// the LVGL canvas object (spec-memory-lifetime §1).
+    /// `Canvas` takes ownership of `buf`. The buffer is freed automatically
+    /// when the LVGL canvas object is deleted (parent cascade or
+    /// explicit deletion); no explicit cleanup is required.
     pub fn new(parent: &impl AsLvHandle, buf: DrawBuf) -> Result<Self, WidgetError> {
         let handle = parent.lv_handle();
         if handle.is_null() {
@@ -57,16 +86,31 @@ impl<'p> Canvas<'p> {
         if obj_ptr.is_null() {
             return Err(WidgetError::LvglNullPointer);
         }
-        // SAFETY: obj_ptr is valid; buf.as_ptr() is stored by LVGL. Canvas owns
-        // buf so the pointer is valid for the canvas object's entire lifetime.
-        unsafe { lv_canvas_set_draw_buf(obj_ptr, buf.as_ptr()) };
-        Ok(Self { obj: Obj::from_raw(obj_ptr), draw_buf: buf })
+        // Heap-allocate buf so we can hand its raw pointer to the DELETE callback.
+        let buf_box = alloc::boxed::Box::new(buf);
+        let buf_ptr = alloc::boxed::Box::into_raw(buf_box);
+        // SAFETY: obj_ptr is valid; buf_ptr is valid for the canvas lifetime.
+        unsafe { lv_canvas_set_draw_buf(obj_ptr, (*buf_ptr).as_ptr()) };
+        // Register a DELETE callback to free buf_ptr when the LVGL object is
+        // deleted by any path (parent cascade, lv_obj_delete).
+        // SAFETY: obj_ptr valid; canvas_delete_cb only reads user_data on DELETE.
+        unsafe {
+            lv_obj_add_event_cb(
+                obj_ptr,
+                Some(canvas_delete_cb),
+                lv_event_code_t_LV_EVENT_DELETE,
+                buf_ptr as *mut core::ffi::c_void,
+            )
+        };
+        Ok(Self { obj: Obj::from_raw(obj_ptr), draw_buf: buf_ptr })
     }
 
     /// Borrow the owned draw buffer (e.g. to obtain an `lv_image_dsc_t` for
     /// canvas-to-canvas drawing via [`DrawBuf::image_dsc`]).
     pub fn draw_buf(&self) -> &DrawBuf {
-        &self.draw_buf
+        // SAFETY: draw_buf is a valid Box<DrawBuf> raw pointer for the lifetime
+        // of this Canvas (freed by canvas_delete_cb on LV_EVENT_DELETE).
+        unsafe { &*self.draw_buf }
     }
 
     /// Fill the entire canvas background with a solid color.
