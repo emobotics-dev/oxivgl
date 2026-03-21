@@ -292,19 +292,40 @@ in the destructor (`lv_obj.c:539-541, 544+`), but these are LVGL-managed and
 do not affect Rust-side cleanup. An integration test SHALL exercise the
 add-style-then-drop-widget path as part of CI.
 
+The `Obj::drop` implementation uses an `lv_obj_is_valid` guard to handle the
+parent-cascade case safely. When a parent is deleted, LVGL cascade-deletes all
+children first; if Rust drops the child wrapper afterwards, `lv_obj_is_valid`
+returns `false` and `lv_obj_delete` is skipped (safe no-op). This makes widget
+constructors return `W` directly (no `ManuallyDrop` wrapper) for widgets stored
+in View structs.
+
+**Tradeoff:** `lv_obj_is_valid` performs an O(N) walk of the full object tree
+on every `Obj::drop`. For large UIs with many widgets being torn down, this is
+observable overhead. It is accepted because: (a) teardown is infrequent,
+(b) the safety guarantee is unconditional, and (c) the common-path delete still
+calls `lv_obj_delete` exactly once.
+
+**Local-variable widgets** (created inside `create()`/`on_event()` but not
+stored in the View struct) still require `core::mem::forget` if they must
+outlive their Rust scope. `lv_obj_is_valid` returns `true` for these (LVGL
+still holds them via parent), so `Obj::drop` would call `lv_obj_delete` and
+remove them from the UI prematurely. This is the correct and intended behavior
+for examples like modal msgboxes and dynamically-added menu items.
+
 The `Obj::drop` SAFETY comment MUST document this reliance with LVGL source
 references:
 
 ```rust
 impl<'p> Drop for Obj<'p> {
     fn drop(&mut self) {
-        if !self.handle.is_null() {
-            // SAFETY: handle non-null; Obj is non-Clone so this is the unique owner.
-            // lv_obj_delete (LVGL v9.3, lv_obj.c) calls lv_obj_remove_style_all
-            // (lv_obj.c:521) and lv_anim_delete(obj, NULL) (lv_obj.c:525) internally,
-            // so all style and animation back-references are cleared before Rust
-            // drops _styles and any live Anim.
-            // Re-verify these call sites when upgrading LVGL.
+        // SAFETY: lv_obj_is_valid returns false for already-deleted objects
+        // (parent cascade), making this a safe no-op in that case.
+        // lv_obj_delete (LVGL v9.3, lv_obj.c) calls lv_obj_remove_style_all
+        // (lv_obj.c:521) and lv_anim_delete(obj, NULL) (lv_obj.c:525) internally,
+        // so all style and animation back-references are cleared before Rust
+        // drops _styles and any live Anim.
+        // Re-verify these call sites when upgrading LVGL.
+        if !self.handle.is_null() && unsafe { lv_obj_is_valid(self.handle) } {
             unsafe { lv_obj_delete(self.handle) };
         }
     }

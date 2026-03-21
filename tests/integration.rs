@@ -996,23 +996,40 @@ fn led_color() {
     pump();
 }
 
-// ── Child / detach ───────────────────────────────────────────────────────────
+// ── Widget ownership ─────────────────────────────────────────────────────────
 
 #[test]
-fn child_wrapper_deref() {
+fn widget_deref_to_obj() {
     let screen = fresh_screen();
     let child = Label::new(&screen).unwrap();
-    child.text("via Child");
+    child.text("via Label");
     pump();
     assert!(child.get_width() > 0);
 }
 
 #[test]
-fn detach_fire_and_forget() {
+fn widget_drop_after_parent_cascade() {
+    // Regression: Obj::drop must be a no-op when LVGL has already cascade-
+    // deleted the object via parent deletion (lv_obj_is_valid guard).
+    let screen = fresh_screen();
+    let parent = Obj::new(&screen).unwrap();
+    let child = Label::new(&parent).unwrap();
+    pump();
+    drop(parent); // LVGL cascade-deletes child
+    pump();
+    drop(child); // must not crash — lv_obj_is_valid returns false
+    pump();
+}
+
+#[test]
+fn widget_fire_and_forget() {
+    // Widgets created as local variables and forgotten persist in LVGL until
+    // their parent is deleted (lv_obj_is_valid returns true, but Rust never
+    // calls lv_obj_delete because mem::forget suppresses Drop).
     let screen = fresh_screen();
     let label = Label::new(&screen).unwrap();
     label.text("ephemeral");
-    // Child<Label> drop is a no-op — LVGL parent owns and cleans up.
+    core::mem::forget(label); // LVGL parent owns and cleans up
     pump();
 }
 

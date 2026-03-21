@@ -10,8 +10,9 @@
 //! Clicking the button dismisses the message box.
 //!
 //! Ownership note: when `parent = None`, LVGL creates a full-screen backdrop
-//! and becomes the owner of the msgbox object. The Rust handle is detached
-//! with `mem::forget` to prevent a double-free on drop.
+//! and becomes the owner of the msgbox object. The Rust handle is forgotten
+//! so that `Obj::drop` does not call `lv_obj_delete` while LVGL still holds
+//! the object (it remains valid until the close button fires).
 
 use oxivgl::{
     view::View,
@@ -31,7 +32,8 @@ impl View for WidgetMsgbox1 {
         mbox.add_text("This is a message box.\nClick Close to dismiss.");
         mbox.add_close_button();
         // LVGL owns the msgbox (its modal backdrop is the parent). Forget the
-        // Rust handle so lv_obj_delete is not called when the function returns.
+        // Rust handle so Obj::drop does not call lv_obj_delete while LVGL
+        // still holds the object.
         core::mem::forget(mbox);
 
         Ok(Self { _screen: screen })
