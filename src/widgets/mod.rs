@@ -21,6 +21,7 @@ mod arc;
 mod bar;
 mod button;
 mod buttonmatrix;
+mod calendar;
 mod canvas;
 mod chart;
 mod checkbox;
@@ -32,6 +33,8 @@ mod label;
 mod led;
 mod line;
 mod list;
+#[cfg(not(target_arch = "xtensa"))]
+mod lottie;
 mod menu;
 mod msgbox;
 mod obj;
@@ -51,6 +54,7 @@ pub use arc::{Arc, ArcMode};
 pub use bar::{Bar, BarMode};
 pub use button::Button;
 pub use buttonmatrix::{Buttonmatrix, ButtonmatrixMap};
+pub use calendar::{Calendar, CalendarDate};
 pub use canvas::{Canvas, CanvasLayer};
 pub use chart::{Chart, ChartAxis, ChartSeries, ChartType};
 pub use checkbox::Checkbox;
@@ -62,6 +66,8 @@ pub use label::{Label, LabelLongMode};
 pub use led::Led;
 pub use line::Line;
 pub use list::List;
+#[cfg(not(target_arch = "xtensa"))]
+pub use lottie::Lottie;
 // Re-export raw FFI types used in public widget APIs.
 pub use lvgl_rust_sys::{lv_color_t, lv_image_dsc_t, lv_point_precise_t};
 pub use menu::{Menu, MenuHeaderMode};

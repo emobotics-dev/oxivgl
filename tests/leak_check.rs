@@ -32,9 +32,9 @@ use oxivgl::{
     },
     enums::ObjState,
     widgets::{
-        Arc, Bar, BarMode, Button, Buttonmatrix, Canvas, Chart, ChartAxis, ChartType, Checkbox,
-        Dropdown, Keyboard, KeyboardMode, Label, Led, Line, Menu, Msgbox, Obj, Part,
-        Roller, RollerMode, Screen, Slider, Switch, Table, Tabview, Textarea, ValueLabel,
+        Arc, Bar, BarMode, Button, Buttonmatrix, Calendar, CalendarDate, Canvas, Chart, ChartAxis,
+        ChartType, Checkbox, Dropdown, Keyboard, KeyboardMode, Label, Led, Line, Lottie, Menu, Msgbox,
+        Obj, Part, Roller, RollerMode, Screen, Slider, Switch, Table, Tabview, Textarea, ValueLabel,
         lv_color_t,
     },
 };
@@ -658,5 +658,36 @@ fn leak_tabview() {
         let _tab1 = tv.add_tab("Alpha");
         let _tab2 = tv.add_tab("Beta");
         drop(tv);
+    });
+}
+
+// ── Lottie ────────────────────────────────────────────────────────────────────
+
+const APPROVE_JSON: &[u8] = include_bytes!(
+    "../thirdparty/lvgl_rust_sys/lvgl/examples/widgets/lottie/lv_example_lottie_approve.json"
+);
+
+#[test]
+fn leak_lottie() {
+    assert_no_leak("Lottie", 6, |screen| {
+        let lottie = Lottie::new(screen).unwrap();
+        lottie.set_buffer(64, 64).set_src_data(APPROVE_JSON);
+        drop(lottie);
+    });
+}
+
+// ── Calendar ──────────────────────────────────────────────────────────────────
+
+#[test]
+fn leak_calendar() {
+    assert_no_leak("Calendar", 6, |screen| {
+        let cal = Calendar::new(screen).unwrap();
+        cal.set_today_date(2024, 3, 22).set_month_shown(2024, 3);
+        cal.set_highlighted_dates(&[
+            CalendarDate::new(2024, 3, 5),
+            CalendarDate::new(2024, 3, 15),
+        ]);
+        let _hdr = cal.add_header_arrow();
+        drop(cal);
     });
 }

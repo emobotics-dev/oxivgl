@@ -61,7 +61,7 @@
     #define LV_DRAW_SW_SUPPORT_RGB888       1
     #define LV_DRAW_SW_SUPPORT_XRGB8888    0
     #define LV_DRAW_SW_SUPPORT_ARGB8888    1
-    #define LV_DRAW_SW_SUPPORT_ARGB8888_PREMULTIPLIED 0
+    #define LV_DRAW_SW_SUPPORT_ARGB8888_PREMULTIPLIED 1
     #define LV_DRAW_SW_SUPPORT_L8          0
     #define LV_DRAW_SW_SUPPORT_AL88        0
     #define LV_DRAW_SW_SUPPORT_A8          0
@@ -240,7 +240,19 @@
 #define LV_USE_BAR        1
 #define LV_USE_BUTTON        1
 #define LV_USE_BUTTONMATRIX  1
-#define LV_USE_CALENDAR   0
+#define LV_USE_CALENDAR   1
+#if LV_USE_CALENDAR
+    #define LV_CALENDAR_WEEK_STARTS_MONDAY 0
+    #if LV_CALENDAR_WEEK_STARTS_MONDAY
+        #define LV_CALENDAR_DEFAULT_DAY_NAMES {"Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"}
+    #else
+        #define LV_CALENDAR_DEFAULT_DAY_NAMES {"Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"}
+    #endif
+    #define LV_CALENDAR_DEFAULT_MONTH_NAMES {"January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"}
+    #define LV_USE_CALENDAR_HEADER_ARROW    1
+    #define LV_USE_CALENDAR_HEADER_DROPDOWN 1
+    #define LV_USE_CALENDAR_CHINESE         0
+#endif
 #define LV_USE_CANVAS     1
 #define LV_USE_CHART      1
 #define LV_USE_CHECKBOX   1
@@ -257,7 +269,11 @@
 #define LV_USE_LED        1
 #define LV_USE_LINE       1
 #define LV_USE_LIST       1
+#ifdef __xtensa__
 #define LV_USE_LOTTIE     0
+#else
+#define LV_USE_LOTTIE     1
+#endif
 #define LV_USE_MENU       1
 #define LV_USE_MSGBOX     1
 #define LV_USE_ROLLER     1
@@ -321,8 +337,13 @@
 #define LV_USE_FREETYPE 0
 #define LV_USE_TINY_TTF 0
 #define LV_USE_RLOTTIE 0
+#ifdef __xtensa__
 #define LV_USE_VECTOR_GRAPHIC  0
 #define LV_USE_THORVG_INTERNAL 0
+#else
+#define LV_USE_VECTOR_GRAPHIC  1
+#define LV_USE_THORVG_INTERNAL 1
+#endif
 #define LV_USE_THORVG_EXTERNAL 0
 #define LV_USE_LZ4_INTERNAL  0
 #define LV_USE_LZ4_EXTERNAL  0

@@ -40,13 +40,16 @@ pub use crate::symbols::Symbol;
 pub use crate::timer::Timer;
 // Widgets
 pub use crate::widgets::{
-    Align, Arc, ArcMode, AsLvHandle, Bar, BarMode, BaseDir, Button, Buttonmatrix, ButtonmatrixMap, Chart, ChartAxis,
-    ChartSeries, ChartType, Checkbox, Child, DdDir, Dropdown, Image, ImageAlign, Keyboard, KeyboardMode, Label,
+    Align, Arc, ArcMode, AsLvHandle, Bar, BarMode, BaseDir, Button, Buttonmatrix, ButtonmatrixMap, Calendar,
+    CalendarDate, Chart, ChartAxis, ChartSeries, ChartType, Checkbox, Child, DdDir, Dropdown, Image, ImageAlign,
+    Keyboard, KeyboardMode, Label,
     LabelLongMode, Led, Line, List, Matrix, Menu, MenuHeaderMode, Msgbox, Obj, Part, RADIUS_MAX, Roller, RollerMode,
     SCALE_LABEL_ROTATE_KEEP_UPRIGHT, SCALE_LABEL_ROTATE_MATCH_TICKS, Scale, ScaleBuilder, ScaleLabels, ScaleMode,
     ScaleSection, Screen, Slider, SliderMode, Switch, SwitchOrientation, Table, TableCellCtrl, Tabview, TextAlign, Textarea,
     ValueLabel, WidgetError,
 };
+#[cfg(not(target_arch = "xtensa"))]
+pub use crate::widgets::Lottie;
 pub use crate::{
     view::View,
     widgets::{Canvas, lv_color_t, lv_image_dsc_t, lv_point_precise_t},
