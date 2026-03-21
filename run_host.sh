@@ -33,6 +33,7 @@ ALL_EXAMPLES=(
     scroll{1,2,3,4,6,7,8}
     widget_obj{1,2,3}
     widget_arc{1,2,3}
+    calendar_1
     image1
     widget_bar{1,2,3,4,5,6,7}
     widget_button{1,2,3}
