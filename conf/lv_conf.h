@@ -269,7 +269,11 @@
 #define LV_USE_LED        1
 #define LV_USE_LINE       1
 #define LV_USE_LIST       1
+#ifdef __xtensa__
+#define LV_USE_LOTTIE     0
+#else
 #define LV_USE_LOTTIE     1
+#endif
 #define LV_USE_MENU       1
 #define LV_USE_MSGBOX     1
 #define LV_USE_ROLLER     1
@@ -333,8 +337,13 @@
 #define LV_USE_FREETYPE 0
 #define LV_USE_TINY_TTF 0
 #define LV_USE_RLOTTIE 0
+#ifdef __xtensa__
+#define LV_USE_VECTOR_GRAPHIC  0
+#define LV_USE_THORVG_INTERNAL 0
+#else
 #define LV_USE_VECTOR_GRAPHIC  1
 #define LV_USE_THORVG_INTERNAL 1
+#endif
 #define LV_USE_THORVG_EXTERNAL 0
 #define LV_USE_LZ4_INTERNAL  0
 #define LV_USE_LZ4_EXTERNAL  0
