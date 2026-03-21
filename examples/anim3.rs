@@ -20,8 +20,7 @@ use oxivgl::{
     math::bezier3,
     style::{Palette, Selector, palette_main},
     view::View,
-    widgets::{
-        Button, Chart, ChartAxis, ChartSeries, ChartType, Label, Obj, Part, Screen,
+    widgets::{Button, Chart, ChartAxis, ChartSeries, ChartType, Label, Obj, Part, Screen,
         Slider, WidgetError,
     },
 };

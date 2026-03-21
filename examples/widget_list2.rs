@@ -18,7 +18,7 @@ use oxivgl::{
     symbols,
     view::{register_event_on, View},
     widgets::{
-        Align, AsLvHandle, Button, Child, List, Obj, Screen, WidgetError, detach,
+        Align, AsLvHandle, Button, Child, List, Obj, Screen, WidgetError,
     },
 };
 
@@ -54,7 +54,6 @@ impl View for WidgetList2 {
             let mut buf = heapless::String::<16>::new();
             let _ = core::fmt::Write::write_fmt(&mut buf, format_args!("Item {}", i));
             lab.text(&buf).center();
-            detach(lab); // label owned by button in LVGL
             let _ = item_btns.push(btn);
         }
 

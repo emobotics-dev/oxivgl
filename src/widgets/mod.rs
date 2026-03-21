@@ -43,6 +43,7 @@ mod screen;
 mod slider;
 mod switch;
 mod table;
+mod tabview;
 mod textarea;
 mod value_label;
 
@@ -53,7 +54,7 @@ pub use buttonmatrix::{Buttonmatrix, ButtonmatrixMap};
 pub use canvas::{Canvas, CanvasLayer};
 pub use chart::{Chart, ChartAxis, ChartSeries, ChartType};
 pub use checkbox::Checkbox;
-pub use child::{Child, detach};
+pub use child::Child;
 pub use dropdown::{DdDir, Dropdown};
 pub use image::{Image, ImageAlign};
 pub use keyboard::{Keyboard, KeyboardMode};
@@ -75,6 +76,7 @@ pub use screen::Screen;
 pub use slider::{Slider, SliderMode};
 pub use switch::{Switch, SwitchOrientation};
 pub use table::{Table, TableCellCtrl};
+pub use tabview::Tabview;
 pub use textarea::Textarea;
 pub use value_label::ValueLabel;
 

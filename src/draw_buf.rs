@@ -67,9 +67,10 @@ pub struct ImageDsc<'buf> {
 
 impl Drop for DrawBuf {
     fn drop(&mut self) {
-        // SAFETY: ptr was allocated by lv_draw_buf_create and has not been freed;
-        // Canvas (which owns this DrawBuf as a field) calls lv_obj_delete in its
-        // own Drop before Rust drops the DrawBuf field.
+        // SAFETY: ptr was allocated by lv_draw_buf_create and has not been freed.
+        // Canvas registers an LV_EVENT_DELETE callback that calls Box::from_raw
+        // on the heap-allocated DrawBuf, triggering this Drop exactly once after
+        // lv_obj_delete has completed (LVGL no longer holds the pointer).
         unsafe { lv_draw_buf_destroy(self.ptr) };
     }
 }

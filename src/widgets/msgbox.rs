@@ -4,9 +4,9 @@ use core::{ffi::c_char, ops::Deref, ptr::null_mut};
 use lvgl_rust_sys::*;
 
 use super::{
+    WidgetError,
     child::Child,
     obj::{AsLvHandle, Obj},
-    WidgetError,
 };
 
 /// LVGL message box widget — a modal dialog with optional title, text,
@@ -65,9 +65,7 @@ impl<'p> Msgbox<'p> {
         if handle.is_null() {
             Err(WidgetError::LvglNullPointer)
         } else {
-            Ok(Msgbox {
-                obj: Obj::from_raw(handle),
-            })
+            Ok(Msgbox { obj: Obj::from_raw(handle) })
         }
     }
 
@@ -122,9 +120,7 @@ impl<'p> Msgbox<'p> {
         let mut buf = [0u8; 128];
         buf[..len].copy_from_slice(&bytes[..len]);
         // SAFETY: handle non-null; buf is NUL-terminated. LVGL copies the text.
-        let btn = unsafe {
-            lv_msgbox_add_footer_button(self.obj.handle(), buf.as_ptr() as *const c_char)
-        };
+        let btn = unsafe { lv_msgbox_add_footer_button(self.obj.handle(), buf.as_ptr() as *const c_char) };
         assert!(!btn.is_null(), "lv_msgbox_add_footer_button returned NULL");
         Child::new(Obj::from_raw(btn))
     }
@@ -132,14 +128,12 @@ impl<'p> Msgbox<'p> {
     /// Close the message box immediately.
     ///
     /// Consumes `self` because `lv_msgbox_close` calls `lv_obj_delete`
-    /// internally — the LVGL object is freed by the call, so `Obj::drop`
-    /// must not run.
+    /// internally — the LVGL object is freed by the call. The `lv_obj_is_valid`
+    /// guard in `Obj::drop` prevents a double-free when `self` is dropped.
     pub fn close(self) {
-        assert_ne!(self.obj.handle(), null_mut(), "Msgbox handle cannot be null");
-        let handle = self.obj.handle();
-        // SAFETY: lv_msgbox_close deletes the LVGL object internally.
-        // mem::forget suppresses Obj::drop to prevent a double-free.
-        core::mem::forget(self);
+        let handle = self.lv_handle();
+        // SAFETY: lv_msgbox_close deletes the LVGL object. The lv_obj_is_valid
+        // guard in Obj::drop prevents double-free when self is dropped after this.
         unsafe { lv_msgbox_close(handle) };
     }
 }

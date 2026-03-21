@@ -4,8 +4,8 @@ use core::{ffi::c_char, ops::Deref, ptr::null_mut};
 use lvgl_rust_sys::*;
 
 use super::{
-    obj::{AsLvHandle, Obj},
     WidgetError,
+    obj::{AsLvHandle, Obj},
 };
 
 /// Static button matrix map.
@@ -96,28 +96,26 @@ impl<'p> Buttonmatrix<'p> {
     pub fn new(parent: &impl AsLvHandle) -> Result<Self, WidgetError> {
         let parent_ptr = parent.lv_handle();
         assert_ne!(parent_ptr, null_mut(), "Parent widget cannot be null");
-        // SAFETY: parent_ptr non-null (asserted above); lv_init() called via LvglDriver.
+        // SAFETY: parent_ptr non-null (asserted above); lv_init() called via
+        // LvglDriver.
         let handle = unsafe { lv_buttonmatrix_create(parent_ptr) };
         if handle.is_null() {
             Err(WidgetError::LvglNullPointer)
         } else {
-            Ok(Buttonmatrix {
-                obj: Obj::from_raw(handle),
-            })
+            Ok(Buttonmatrix { obj: Obj::from_raw(handle) })
         }
     }
 
     /// Set the button map.
     ///
     /// LVGL stores the raw pointer; the map MUST be `'static`
-    /// (spec-memory-lifetime §1/§3). Use [`btnmatrix_map!`](crate::btnmatrix_map).
+    /// (spec-memory-lifetime §1/§3). Use
+    /// [`btnmatrix_map!`](crate::btnmatrix_map).
     pub fn set_map(&self, map: &'static ButtonmatrixMap) -> &Self {
         assert_ne!(self.obj.handle(), null_mut(), "Buttonmatrix handle cannot be null");
         // SAFETY: handle non-null; map is 'static and null-terminated.
         // LVGL stores the pointer; 'static satisfies lifetime (spec §1/§3).
-        unsafe {
-            lv_buttonmatrix_set_map(self.obj.handle(), map.0.as_ptr() as *const *const c_char)
-        };
+        unsafe { lv_buttonmatrix_set_map(self.obj.handle(), map.0.as_ptr() as *const *const c_char) };
         self
     }
 
@@ -133,8 +131,7 @@ impl<'p> Buttonmatrix<'p> {
     pub fn get_button_text(&self, btn_id: u32) -> Option<&str> {
         assert_ne!(self.obj.handle(), null_mut(), "Buttonmatrix handle cannot be null");
         // SAFETY: handle non-null; LVGL returns NULL for invalid btn_id.
-        let ptr =
-            unsafe { lv_buttonmatrix_get_button_text(self.obj.handle(), btn_id) };
+        let ptr = unsafe { lv_buttonmatrix_get_button_text(self.obj.handle(), btn_id) };
         if ptr.is_null() {
             return None;
         }
