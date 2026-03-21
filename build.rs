@@ -76,6 +76,12 @@ fn cmake_lvgl() {
         .define("BUILD_SHARED_LIBS", "OFF")
         .define("CONFIG_LV_USE_THORVG_INTERNAL", "OFF")
         .define("CONFIG_LV_BUILD_EXAMPLES", "OFF")
+        // Disable ThorVG-dependent features for embedded — they require C++ ThorVG
+        // which is not compiled for xtensa. lv_conf.h enables them for host; these
+        // cflags override the macros so the embedded C files don't call tvg_* symbols.
+        .cflag("-DLV_USE_THORVG_INTERNAL=0")
+        .cflag("-DLV_USE_VECTOR_GRAPHIC=0")
+        .cflag("-DLV_USE_LOTTIE=0")
         .define("CONFIG_LV_BUILD_DEMOS", "OFF")
         .define("LV_BUILD_CONF_PATH", format!("{}/lv_conf.h", lv_config_path))
         .cflag(format!("-I{}", lv_config_path))
