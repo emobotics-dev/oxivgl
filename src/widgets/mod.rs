@@ -33,6 +33,7 @@ mod label;
 mod led;
 mod line;
 mod list;
+mod lottie;
 mod menu;
 mod msgbox;
 mod obj;
@@ -64,6 +65,7 @@ pub use label::{Label, LabelLongMode};
 pub use led::Led;
 pub use line::Line;
 pub use list::List;
+pub use lottie::Lottie;
 // Re-export raw FFI types used in public widget APIs.
 pub use lvgl_rust_sys::{lv_color_t, lv_image_dsc_t, lv_point_precise_t};
 pub use menu::{Menu, MenuHeaderMode};

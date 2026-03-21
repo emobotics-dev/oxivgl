@@ -33,7 +33,7 @@ use oxivgl::{
     enums::ObjState,
     widgets::{
         Arc, Bar, BarMode, Button, Buttonmatrix, Calendar, CalendarDate, Canvas, Chart, ChartAxis,
-        ChartType, Checkbox, Dropdown, Keyboard, KeyboardMode, Label, Led, Line, Menu, Msgbox,
+        ChartType, Checkbox, Dropdown, Keyboard, KeyboardMode, Label, Led, Line, Lottie, Menu, Msgbox,
         Obj, Part, Roller, RollerMode, Screen, Slider, Switch, Table, Tabview, Textarea, ValueLabel,
         lv_color_t,
     },
@@ -658,6 +658,21 @@ fn leak_tabview() {
         let _tab1 = tv.add_tab("Alpha");
         let _tab2 = tv.add_tab("Beta");
         drop(tv);
+    });
+}
+
+// ── Lottie ────────────────────────────────────────────────────────────────────
+
+const APPROVE_JSON: &[u8] = include_bytes!(
+    "../thirdparty/lvgl_rust_sys/lvgl/examples/widgets/lottie/lv_example_lottie_approve.json"
+);
+
+#[test]
+fn leak_lottie() {
+    assert_no_leak("Lottie", 6, |screen| {
+        let lottie = Lottie::new(screen).unwrap();
+        lottie.set_buffer(64, 64).set_src_data(APPROVE_JSON);
+        drop(lottie);
     });
 }
 

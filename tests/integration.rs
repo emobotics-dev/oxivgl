@@ -18,7 +18,7 @@ use oxivgl::{
     layout::{FlexAlign, FlexFlow, GridAlign, GridCell, Layout, GRID_TEMPLATE_LAST},
     widgets::{
         Align, Arc, AsLvHandle, Bar, Button, Buttonmatrix, Calendar, CalendarDate, Canvas, Checkbox,
-        Dropdown, Image, Keyboard, KeyboardMode, Label, Led, Line, Menu, MenuHeaderMode, Msgbox,
+        Dropdown, Image, Keyboard, KeyboardMode, Label, Led, Line, Lottie, Menu, MenuHeaderMode, Msgbox,
         Obj, Part, Roller, RollerMode, Screen, Slider, Switch, Table, TableCellCtrl, Tabview,
         Textarea, ValueLabel, WidgetError, RADIUS_MAX,
     },
@@ -3696,5 +3696,30 @@ fn calendar_get_pressed_date_none_initially() {
     pump();
     // No user click → None
     assert!(cal.get_pressed_date().is_none());
+}
+
+// ── Lottie ────────────────────────────────────────────────────────────────────
+
+const APPROVE_JSON: &[u8] = include_bytes!(
+    "../thirdparty/lvgl_rust_sys/lvgl/examples/widgets/lottie/lv_example_lottie_approve.json"
+);
+
+#[test]
+fn lottie_create() {
+    let screen = fresh_screen();
+    let lottie = Lottie::new(&screen).unwrap();
+    lottie.set_buffer(64, 64).set_src_data(APPROVE_JSON);
+    pump();
+    assert!(!lottie.get_anim().is_null());
+}
+
+#[test]
+fn lottie_drop_frees_buffer() {
+    let screen = fresh_screen();
+    let lottie = Lottie::new(&screen).unwrap();
+    lottie.set_buffer(32, 32).set_src_data(APPROVE_JSON);
+    pump();
+    drop(lottie);
+    pump();
 }
 

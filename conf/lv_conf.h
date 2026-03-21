@@ -61,7 +61,7 @@
     #define LV_DRAW_SW_SUPPORT_RGB888       1
     #define LV_DRAW_SW_SUPPORT_XRGB8888    0
     #define LV_DRAW_SW_SUPPORT_ARGB8888    1
-    #define LV_DRAW_SW_SUPPORT_ARGB8888_PREMULTIPLIED 0
+    #define LV_DRAW_SW_SUPPORT_ARGB8888_PREMULTIPLIED 1
     #define LV_DRAW_SW_SUPPORT_L8          0
     #define LV_DRAW_SW_SUPPORT_AL88        0
     #define LV_DRAW_SW_SUPPORT_A8          0
@@ -269,7 +269,7 @@
 #define LV_USE_LED        1
 #define LV_USE_LINE       1
 #define LV_USE_LIST       1
-#define LV_USE_LOTTIE     0
+#define LV_USE_LOTTIE     1
 #define LV_USE_MENU       1
 #define LV_USE_MSGBOX     1
 #define LV_USE_ROLLER     1
@@ -333,8 +333,8 @@
 #define LV_USE_FREETYPE 0
 #define LV_USE_TINY_TTF 0
 #define LV_USE_RLOTTIE 0
-#define LV_USE_VECTOR_GRAPHIC  0
-#define LV_USE_THORVG_INTERNAL 0
+#define LV_USE_VECTOR_GRAPHIC  1
+#define LV_USE_THORVG_INTERNAL 1
 #define LV_USE_THORVG_EXTERNAL 0
 #define LV_USE_LZ4_INTERNAL  0
 #define LV_USE_LZ4_EXTERNAL  0

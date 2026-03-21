@@ -54,6 +54,7 @@ ALL_EXAMPLES=(
     tabview_{1,2}
     widget_textarea{1,2,3,4}
     canvas_{1,2,3,4,5,7,9,10,11}
+    lottie_1
 )
 
 run_example() {
