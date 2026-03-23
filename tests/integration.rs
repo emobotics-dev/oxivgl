@@ -8,19 +8,21 @@ use std::sync::Once;
 
 use oxivgl::{
     anim::{anim_path_linear, anim_set_x, Anim, AnimHandle},
+    draw::{DrawArcDsc, DrawImageDsc, DrawLabelDscOwned, DrawLetterDsc, DrawLineDsc, DrawRectDsc, DrawTriangleDsc},
+    draw_buf::{ColorFormat, DrawBuf},
     fonts::MONTSERRAT_12,
     driver::LvglDriver,
     style::{
-        color_make, palette_main, props, BorderSide, GradDsc, GradExtend, Palette, Selector,
-        StyleBuilder, TextDecor, TransitionDsc,
+        color_make, GradDir, palette_main, props, BorderSide, GradDsc, GradExtend, Palette, Selector,
+        StyleBuilder, TextDecor, TransitionDsc, lv_pct,
     },
     enums::{EventCode, ObjFlag, ObjState, Opa, ScrollDir, ScrollSnap, ScrollbarMode},
     layout::{FlexAlign, FlexFlow, GridAlign, GridCell, Layout, GRID_TEMPLATE_LAST},
     widgets::{
-        Align, Arc, AsLvHandle, Bar, Button, Buttonmatrix, Canvas, Checkbox,
-        Calendar, CalendarDate, Dropdown, Image, Keyboard, KeyboardMode, Label, Led, Line, Menu, MenuHeaderMode, Msgbox,
+        Align, Arc, AsLvHandle, Bar, Button, Buttonmatrix, Calendar, CalendarDate, Canvas, Checkbox,
+        Dropdown, Image, Keyboard, KeyboardMode, Label, Led, Line, Menu, MenuHeaderMode, Msgbox,
         Obj, Part, Roller, RollerMode, Screen, Slider, Spinbox, Spinner, Switch, Table, TableCellCtrl, Tabview,
-        Textarea, ValueLabel, WidgetError, RADIUS_MAX,
+        Textarea, ValueLabel, WidgetError, RADIUS_MAX, lv_color_t,
     },
 };
 
@@ -3698,28 +3700,6 @@ fn calendar_get_pressed_date_none_initially() {
     assert!(cal.get_pressed_date().is_none());
 }
 
-
-// ── Calendar — uncovered methods ─────────────────────────────────────────────
-
-#[test]
-fn calendar_header_dropdown() {
-    let screen = fresh_screen();
-    let cal = Calendar::new(&screen).unwrap();
-    cal.size(185, 230).center();
-    cal.set_today_date(2024, 6, 1).set_month_shown(2024, 6);
-    let _hdr = cal.add_header_dropdown();
-    pump();
-}
-
-#[test]
-fn calendar_get_btnmatrix() {
-    let screen = fresh_screen();
-    let cal = Calendar::new(&screen).unwrap();
-    cal.size(185, 230).center();
-    let _bm = cal.get_btnmatrix();
-    pump();
-}
-
 // ── Spinner ──────────────────────────────────────────────────────────────────
 
 #[test]
@@ -3754,6 +3734,7 @@ fn spinbox_range_and_value() {
     let sb = Spinbox::new(&screen).unwrap();
     sb.set_range(-100, 100).set_value(42);
     assert_eq!(sb.get_value(), 42);
+    // clamped to max
     sb.set_value(200);
     assert_eq!(sb.get_value(), 100);
     pump();
@@ -3787,12 +3768,181 @@ fn spinbox_step_navigation() {
     let sb = Spinbox::new(&screen).unwrap();
     sb.set_step(1);
     assert_eq!(sb.get_step(), 1);
-    sb.step_prev();
+    sb.step_prev(); // step × 10
     assert_eq!(sb.get_step(), 10);
-    sb.step_next();
+    sb.step_next(); // step ÷ 10
     assert_eq!(sb.get_step(), 1);
     pump();
 }
+
+// ── Draw descriptors ─────────────────────────────────────────────────────────
+
+#[test]
+fn draw_arc_dsc_builder() {
+    ensure_init();
+    let mut dsc = DrawArcDsc::new();
+    dsc.center(50, 50).radius(20).angles(0.0, 270.0).width(4).color(color_make(255, 0, 0)).opa(200).rounded(true);
+}
+
+#[test]
+fn draw_line_dsc_builder() {
+    ensure_init();
+    let mut dsc = DrawLineDsc::new();
+    dsc.p1(10.0, 10.0).p2(90.0, 90.0).width(3).color(color_make(0, 255, 0)).opa(255).round_start(true).round_end(true);
+}
+
+#[test]
+fn draw_triangle_dsc_builder() {
+    ensure_init();
+    let mut dsc = DrawTriangleDsc::new();
+    dsc.points([(10.0, 10.0), (50.0, 80.0), (90.0, 10.0)])
+        .color(color_make(0, 0, 255))
+        .opa(128)
+        .grad_stops_count(2)
+        .grad_dir(GradDir::Ver)
+        .grad_stop(0, color_make(255, 0, 0), 0, 255)
+        .grad_stop(1, color_make(0, 0, 255), 255, 255);
+}
+
+#[test]
+fn draw_image_dsc_builder() {
+    ensure_init();
+    if let Some(buf) = DrawBuf::create(10, 10, ColorFormat::RGB565) {
+        let img = buf.image_dsc();
+        let mut dsc = DrawImageDsc::from_image_dsc(&img);
+        dsc.rotation(450).pivot(5, 5).opa(200);
+    }
+}
+
+#[test]
+fn draw_letter_dsc_builder() {
+    ensure_init();
+    let mut dsc = DrawLetterDsc::new();
+    dsc.unicode(b'A' as u32).color(color_make(255, 255, 0)).rotation(0);
+}
+
+#[test]
+fn draw_label_dsc_owned_color() {
+    ensure_init();
+    let mut dsc = DrawLabelDscOwned::default_font();
+    dsc.set_color(color_make(128, 0, 0));
+    let (w, h) = dsc.text_size("Test");
+    assert!(w > 0);
+    assert!(h > 0);
+}
+
+// ── Style builder — uncovered setters ────────────────────────────────────────
+
+#[test]
+fn style_bg_grad_color_hex() {
+    let screen = fresh_screen();
+    let obj = Obj::new(&screen).unwrap();
+    let mut sb = StyleBuilder::new();
+    sb.bg_grad_color_hex(0xFF0000).bg_grad_dir(GradDir::Ver);
+    let style = sb.build();
+    obj.add_style(&style, Selector::DEFAULT);
+    pump();
+}
+
+#[test]
+fn style_transform_width_height() {
+    let screen = fresh_screen();
+    let obj = Obj::new(&screen).unwrap();
+    let mut sb = StyleBuilder::new();
+    sb.transform_width(10).transform_height(20);
+    let style = sb.build();
+    obj.add_style(&style, Selector::DEFAULT);
+    pump();
+}
+
+#[test]
+fn style_lv_pct() {
+    assert!(lv_pct(50) != 50); // lv_pct encodes as a special value
+}
+
+// ── Arc — uncovered methods ──────────────────────────────────────────────────
+
+#[test]
+fn arc_get_value_raw() {
+    let screen = fresh_screen();
+    let arc = Arc::new(&screen).unwrap();
+    arc.size(100, 100).center();
+    arc.set_range_raw(0, 100).set_value_raw(42);
+    assert_eq!(arc.get_value_raw(), 42);
+    pump();
+}
+
+#[test]
+fn arc_align_obj_to_angle() {
+    let screen = fresh_screen();
+    let arc = Arc::new(&screen).unwrap();
+    arc.size(100, 100).center();
+    arc.set_range_raw(0, 360).set_value_raw(90);
+    let label = Label::new(&screen).unwrap();
+    arc.align_obj_to_angle(&label, 10);
+    pump();
+}
+
+#[test]
+fn arc_rotate_obj_to_angle() {
+    let screen = fresh_screen();
+    let arc = Arc::new(&screen).unwrap();
+    arc.size(100, 100).center();
+    arc.set_range_raw(0, 360).set_value_raw(45);
+    let label = Label::new(&screen).unwrap();
+    arc.rotate_obj_to_angle(&label, 0);
+    pump();
+}
+
+// ── Bar — uncovered methods ──────────────────────────────────────────────────
+
+#[test]
+fn bar_get_value_raw() {
+    let screen = fresh_screen();
+    let bar = Bar::new(&screen).unwrap();
+    bar.set_range_raw(0, 100).set_value_raw(75, false);
+    assert_eq!(bar.get_value_raw(), 75);
+    pump();
+}
+
+// ── Calendar — uncovered methods ─────────────────────────────────────────────
+
+#[test]
+fn calendar_header_dropdown() {
+    let screen = fresh_screen();
+    let cal = Calendar::new(&screen).unwrap();
+    cal.size(185, 230).center();
+    cal.set_today_date(2024, 6, 1).set_month_shown(2024, 6);
+    let _hdr = cal.add_header_dropdown();
+    pump();
+}
+
+#[test]
+fn calendar_get_btnmatrix() {
+    let screen = fresh_screen();
+    let cal = Calendar::new(&screen).unwrap();
+    cal.size(185, 230).center();
+    let _bm = cal.get_btnmatrix();
+    pump();
+}
+
+// ── Menu — uncovered methods ─────────────────────────────────────────────────
+
+#[test]
+fn menu_clear_page() {
+    let screen = fresh_screen();
+    let menu = Menu::new(&screen).unwrap();
+    menu.size(200, 200).center();
+    let page = menu.page_create(None);
+    let cont = Menu::cont_create(&page);
+    let _label = Label::new(&cont).unwrap();
+    menu.set_page(&page);
+    pump();
+    menu.clear_page();
+    pump();
+}
+
+// ── Spinbox — uncovered methods ──────────────────────────────────────────────
 
 #[test]
 fn spinbox_rollover() {
@@ -3800,7 +3950,7 @@ fn spinbox_rollover() {
     let sb = Spinbox::new(&screen).unwrap();
     sb.set_range(0, 10).set_value(10).set_step(1).set_rollover(true);
     sb.increment();
-    assert_eq!(sb.get_value(), 0);
+    assert_eq!(sb.get_value(), 0); // wrapped around
     pump();
 }
 
@@ -3811,3 +3961,4 @@ fn spinbox_cursor_pos() {
     sb.set_cursor_pos(2);
     pump();
 }
+
