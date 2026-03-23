@@ -17,6 +17,7 @@ pub(crate) fn to_lvgl(v: f32, max: f32) -> i32 {
     (((v / max) * LVGL_SCALE as f32) as i32).clamp(0, LVGL_SCALE)
 }
 
+mod animimg;
 mod arc;
 mod bar;
 mod button;
@@ -54,6 +55,7 @@ mod tileview;
 mod value_label;
 mod win;
 
+pub use animimg::AnimImg;
 pub use arc::{Arc, ArcMode};
 pub use bar::{Bar, BarMode};
 pub use button::Button;
