@@ -28,6 +28,7 @@ mod checkbox;
 mod child;
 mod dropdown;
 mod image;
+mod imagebutton;
 mod keyboard;
 mod label;
 mod led;
@@ -42,13 +43,16 @@ mod roller;
 mod scale;
 mod screen;
 mod slider;
+mod span;
 mod spinbox;
 mod spinner;
 mod switch;
 mod table;
 mod tabview;
 mod textarea;
+mod tileview;
 mod value_label;
+mod win;
 
 pub use arc::{Arc, ArcMode};
 pub use bar::{Bar, BarMode};
@@ -61,6 +65,7 @@ pub use checkbox::Checkbox;
 pub use child::Child;
 pub use dropdown::{DdDir, Dropdown};
 pub use image::{Image, ImageAlign};
+pub use imagebutton::{Imagebutton, ImagebuttonState};
 pub use keyboard::{Keyboard, KeyboardMode};
 pub use label::{Label, LabelLongMode};
 pub use led::Led;
@@ -78,13 +83,16 @@ pub use scale::{
 };
 pub use screen::Screen;
 pub use slider::{Slider, SliderMode};
+pub use span::{Span, SpanMode, SpanOverflow, Spangroup};
 pub use spinbox::Spinbox;
 pub use spinner::Spinner;
 pub use switch::{Switch, SwitchOrientation};
 pub use table::{Table, TableCellCtrl};
 pub use tabview::Tabview;
 pub use textarea::Textarea;
+pub use tileview::Tileview;
 pub use value_label::ValueLabel;
+pub use win::Win;
 
 /// Maximum corner radius — creates a pill/capsule shape.
 /// Equivalent to LVGL's `LV_RADIUS_CIRCLE` (0x7FFF).

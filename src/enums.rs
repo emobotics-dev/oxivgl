@@ -221,6 +221,14 @@ impl ScrollDir {
     pub const VER: Self = Self(lvgl_rust_sys::lv_dir_t_LV_DIR_VER);
     /// All directions.
     pub const ALL: Self = Self(lvgl_rust_sys::lv_dir_t_LV_DIR_ALL);
+    /// Top only.
+    pub const TOP: Self = Self(lvgl_rust_sys::lv_dir_t_LV_DIR_TOP);
+    /// Bottom only.
+    pub const BOTTOM: Self = Self(lvgl_rust_sys::lv_dir_t_LV_DIR_BOTTOM);
+    /// Left only.
+    pub const LEFT: Self = Self(lvgl_rust_sys::lv_dir_t_LV_DIR_LEFT);
+    /// Right only.
+    pub const RIGHT: Self = Self(lvgl_rust_sys::lv_dir_t_LV_DIR_RIGHT);
 }
 
 impl core::ops::BitOr for ScrollDir {
