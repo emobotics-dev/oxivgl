@@ -35,6 +35,7 @@ runner (`example_main!` macro selects host SDL2 or ESP32 fire27 backend).
 - [Widgets — Textarea](#widgets--textarea)
 - [Widgets — Canvas](#widgets--canvas)
 - [Widgets — Calendar](#calendar)
+- [Widgets — Spinner](#widgets--spinner)
 - [Implementation Coverage](#implementation-coverage)
 - [Running](#running)
 
@@ -944,6 +945,14 @@ label above the calendar updates to show the selected date.
 
 ![calendar_1](screenshots/calendar_1.png)
 
+## Widgets — Spinner
+
+### spinner_1 — Centered loading spinner
+
+100×100 spinner with a 10 s animation cycle and 200° arc.
+
+![spinner_1](screenshots/spinner_1.png)
+
 ## Tabview
 
 ### tabview_1 — Simple 3-tab view with default top bar
@@ -1004,17 +1013,18 @@ Status of all [LVGL 9.3 examples](https://docs.lvgl.io/9.3/examples.html) in oxi
 | canvas | 11 | 9 | 2 | canvas_6 (image asset), canvas_8 (vector graphics) |
 | table | 2 | 2 | 0 | |
 | tabview | 2 | 2 | 0 | |
+| spinner | 1 | 1 | 0 | |
 
 ### Widgets Without Wrappers
 
-animimg, imagebutton, lottie, span, spinbox, spinner, tileview, win.
+animimg, imagebutton, lottie, span, spinbox, tileview, win.
 
 ### Totals
 
 | | Count |
 |---|---|
 | LVGL examples total | ~184 |
-| oxivgl done | 132 |
+| oxivgl done | 133 |
 | Skipped (intentional) | 3 |
 | Missing (wrapper exists) | 4 |
 | No wrapper | ~51 |

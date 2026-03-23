@@ -34,7 +34,7 @@ use oxivgl::{
     widgets::{
         Arc, Bar, BarMode, Button, Buttonmatrix, Calendar, CalendarDate, Canvas, Chart, ChartAxis, ChartType, Checkbox,
         Dropdown, Keyboard, KeyboardMode, Label, Led, Line, Menu, Msgbox, Obj, Part,
-        Roller, RollerMode, Screen, Slider, Switch, Table, Tabview, Textarea, ValueLabel,
+        Roller, RollerMode, Screen, Slider, Spinner, Switch, Table, Tabview, Textarea, ValueLabel,
         lv_color_t,
     },
 };
@@ -673,5 +673,16 @@ fn leak_calendar() {
         ]);
         let _hdr = cal.add_header_arrow();
         drop(cal);
+    });
+}
+
+// ── Spinner ──────────────────────────────────────────────────────────────────
+
+#[test]
+fn leak_spinner() {
+    assert_no_leak("Spinner", 6, |screen| {
+        let spinner = Spinner::new(screen).unwrap();
+        spinner.set_anim_params(1000, 200);
+        drop(spinner);
     });
 }
