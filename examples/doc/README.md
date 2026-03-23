@@ -944,10 +944,22 @@ rainbow colors and sine-wave y-offsets via `DrawLetterDsc`. Animated each frame.
 
 ### canvas_11 — Windstorm text animation
 
+### canvas_6 — Image drawn on canvas
+
+Cogwheel image asset drawn onto a 100×100 ARGB8888 canvas via `DrawImageDsc`.
+
+![canvas_6](screenshots/canvas_6.png)
+
 160×100 RGB565 canvas (black). "windstorm" repeated with sinusoidal y-positions,
 HSV-cycled colors shifting each frame via `DrawLetterDsc`. Animated each frame.
 
 ![canvas_11](screenshots/canvas_11.png)
+
+### canvas_6 — Image drawn on canvas
+
+Cogwheel image asset drawn onto a 100×100 ARGB8888 canvas via `DrawImageDsc`.
+
+![canvas_6](screenshots/canvas_6.png)
 
 ## Table
 
@@ -1090,7 +1102,7 @@ Status of all [LVGL 9.3 examples](https://docs.lvgl.io/9.3/examples.html) in oxi
 | arc | 3 | 3 | 0 | |
 | bar | 7 | 7 | 0 | |
 | button | 3 | 3 | 0 | |
-| calendar | 2 | 1 | 1 | calendar_2 (requires LV_USE_CALENDAR_CHINESE + CJK font) |
+| calendar | 2 | 1 | 1 | calendar_2 (requires lv_calendar_chinese.c in lvgl_rust_sys) |
 | checkbox | 2 | 2 | 0 | |
 | dropdown | 3 | 3 | 0 | |
 | image | 5 | 5 | 0 | |
@@ -1105,7 +1117,7 @@ Status of all [LVGL 9.3 examples](https://docs.lvgl.io/9.3/examples.html) in oxi
 | slider | 4 | 4 | 0 | |
 | switch | 2 | 2 | 0 | |
 | textarea | 4 | 4 | 0 | Includes Buttonmatrix + Keyboard wrappers |
-| canvas | 11 | 9 | 2 | canvas_6 (image asset), canvas_8 (vector graphics) |
+| canvas | 11 | 10 | 1 | canvas_8 (vector graphics — requires ThorVG, abandoned) |
 | table | 2 | 2 | 0 | |
 | tabview | 2 | 2 | 0 | |
 | tileview | 1 | 1 | 0 | |
@@ -1126,7 +1138,7 @@ None — all practical widgets wrapped.
 | | Count |
 |---|---|
 | LVGL examples total | ~184 |
-| oxivgl done | 143 |
+| oxivgl done | 144 |
 | Skipped (intentional) | 4 |
 | Missing (wrapper exists) | 4 |
 | Abandoned (lottie) | 3 |

@@ -54,7 +54,7 @@ ALL_EXAMPLES=(
     table_{1,2}
     tabview_{1,2}
     widget_textarea{1,2,3,4}
-    canvas_{1,2,3,4,5,7,9,10,11}
+    canvas_{1,2,3,4,5,6,7,9,10,11}
     spinner_1
     spinbox_1
     span_1
