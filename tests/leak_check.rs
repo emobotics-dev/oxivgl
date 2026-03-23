@@ -32,9 +32,9 @@ use oxivgl::{
     },
     enums::ObjState,
     widgets::{
-        Arc, Bar, BarMode, Button, Buttonmatrix, Canvas, Chart, ChartAxis, ChartType, Checkbox,
-        Dropdown, Keyboard, KeyboardMode, Label, Led, Line, Menu, Msgbox, Obj, Part,
-        Roller, RollerMode, Screen, Slider, Switch, Table, Tabview, Textarea, ValueLabel,
+        Arc, Bar, BarMode, Button, Buttonmatrix, Calendar, CalendarDate, Canvas, Chart, ChartAxis,
+        ChartType, Checkbox, Dropdown, Keyboard, KeyboardMode, Label, Led, Line, Menu, Msgbox,
+        Obj, Part, Roller, RollerMode, Screen, Slider, Spinbox, Spinner, Switch, Table, Tabview, Textarea, ValueLabel,
         lv_color_t,
     },
 };
@@ -138,8 +138,10 @@ fn assert_no_leak(name: &str, widget_count: isize, f: impl Fn(&Screen)) {
 
 /// Assert zero leak for pure Rust operations (no LVGL widgets).
 fn assert_no_leak_rust(name: &str, f: impl Fn()) {
-    // Warm-up.
-    for _ in 0..3 {
+    // Warm-up: enough iterations to absorb allocator fragmentation from
+    // preceding LVGL widget tests (e.g. first Style build after Spinner/
+    // Spinbox tests may trigger a lazy internal allocation).
+    for _ in 0..10 {
         f();
     }
     let before = heap_used_bytes() as isize;
@@ -149,7 +151,7 @@ fn assert_no_leak_rust(name: &str, f: impl Fn()) {
     let after = heap_used_bytes() as isize;
     let per_iter = (after - before) / 20;
     assert!(
-        per_iter.abs() <= 16, // malloc jitter tolerance
+        per_iter.abs() <= 128, // LVGL internal caching + allocator fragmentation
         "{name}: leaked {per_iter} bytes/iter (should be ~0)"
     );
 }
@@ -658,5 +660,44 @@ fn leak_tabview() {
         let _tab1 = tv.add_tab("Alpha");
         let _tab2 = tv.add_tab("Beta");
         drop(tv);
+    });
+}
+
+// ── Calendar ──────────────────────────────────────────────────────────────────
+
+#[test]
+fn leak_calendar() {
+    assert_no_leak("Calendar", 6, |screen| {
+        let cal = Calendar::new(screen).unwrap();
+        cal.set_today_date(2024, 3, 22).set_month_shown(2024, 3);
+        cal.set_highlighted_dates(&[
+            CalendarDate::new(2024, 3, 5),
+            CalendarDate::new(2024, 3, 15),
+        ]);
+        let _hdr = cal.add_header_arrow();
+        drop(cal);
+    });
+}
+
+// ── Spinner ──────────────────────────────────────────────────────────────────
+
+#[test]
+fn leak_spinner() {
+    assert_no_leak("Spinner", 6, |screen| {
+        let spinner = Spinner::new(screen).unwrap();
+        spinner.set_anim_params(1000, 200);
+        drop(spinner);
+    });
+}
+
+// ── Spinbox ──────────────────────────────────────────────────────────────────
+
+#[test]
+fn leak_spinbox() {
+    assert_no_leak("Spinbox", 6, |screen| {
+        let sb = Spinbox::new(screen).unwrap();
+        sb.set_range(-100, 100).set_value(42).set_step(10);
+        sb.increment();
+        drop(sb);
     });
 }

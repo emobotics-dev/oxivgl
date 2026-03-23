@@ -34,6 +34,10 @@ runner (`example_main!` macro selects host SDL2 or ESP32 fire27 backend).
 - [Widgets — Switch](#widgets--switch)
 - [Widgets — Textarea](#widgets--textarea)
 - [Widgets — Canvas](#widgets--canvas)
+- [Widgets — Calendar](#calendar)
+- [Widgets — Lottie](#widgets--lottie-abandoned)
+- [Widgets — Spinbox](#widgets--spinbox)
+- [Widgets — Spinner](#widgets--spinner)
 - [Implementation Coverage](#implementation-coverage)
 - [Running](#running)
 
@@ -933,6 +937,46 @@ click.
 
 ![table_2](screenshots/table_2.png)
 
+## Calendar
+
+### calendar_1 — Month view with highlighted dates and arrow header
+
+February 2021 with three highlighted days (6, 11, and 22 Feb 2022). Arrow
+buttons navigate between months. Clicking a day fires `VALUE_CHANGED`; the
+label above the calendar updates to show the selected date.
+
+![calendar_1](screenshots/calendar_1.png)
+
+## Widgets — Lottie (abandoned)
+
+Lottie support was investigated and abandoned due to ThorVG binary size impact.
+
+**Problem:** LVGL's Lottie widget depends on ThorVG (C++ vector graphics engine).
+Even when no example uses Lottie, enabling `LV_USE_THORVG_INTERNAL` in `lv_conf.h`
+links ~240 KB of ThorVG code plus libstdc++, libc, and libgcc into every binary.
+The C++ archives bring hundreds of `.gcc_except_table` sections; espflash pads
+each to 64 KB alignment, inflating a ~1 MB firmware to >5 MB — exceeding the
+default 4 MB app partition. `-fno-exceptions`, `--gc-sections`, and LTO cannot
+strip this dead code because `--start-group` (required for cross-archive symbol
+resolution) keeps it alive.
+
+## Widgets — Spinbox
+
+### spinbox_1 — Numeric input with +/− buttons
+
+Spinbox with range −1000..25000, 5 digits and 2 decimal places. Plus and minus
+buttons increment/decrement the value.
+
+![spinbox_1](screenshots/spinbox_1.png)
+
+## Widgets — Spinner
+
+### spinner_1 — Centered loading spinner
+
+100×100 spinner with a 10 s animation cycle and 200° arc.
+
+![spinner_1](screenshots/spinner_1.png)
+
 ## Tabview
 
 ### tabview_1 — Simple 3-tab view with default top bar
@@ -975,6 +1019,7 @@ Status of all [LVGL 9.3 examples](https://docs.lvgl.io/9.3/examples.html) in oxi
 | arc | 3 | 3 | 0 | |
 | bar | 7 | 7 | 0 | |
 | button | 3 | 3 | 0 | |
+| calendar | 2 | 1 | 1 | calendar_2 (requires LV_USE_CALENDAR_CHINESE + CJK font) |
 | checkbox | 2 | 2 | 0 | |
 | dropdown | 3 | 3 | 0 | |
 | image | 5 | 5 | 0 | |
@@ -992,19 +1037,23 @@ Status of all [LVGL 9.3 examples](https://docs.lvgl.io/9.3/examples.html) in oxi
 | canvas | 11 | 9 | 2 | canvas_6 (image asset), canvas_8 (vector graphics) |
 | table | 2 | 2 | 0 | |
 | tabview | 2 | 2 | 0 | |
+| lottie | 3 | 0 | 0 | Abandoned — ThorVG bloats firmware beyond flash limits (see below) |
+| spinner | 1 | 1 | 0 | |
+| spinbox | 1 | 1 | 0 | |
 
 ### Widgets Without Wrappers
 
-animimg, calendar, imagebutton, lottie, span, spinbox, spinner, tileview, win.
+animimg, imagebutton, span, tileview, win.
 
 ### Totals
 
 | | Count |
 |---|---|
 | LVGL examples total | ~184 |
-| oxivgl done | 131 |
-| Skipped (intentional) | 3 |
+| oxivgl done | 134 |
+| Skipped (intentional) | 4 |
 | Missing (wrapper exists) | 4 |
+| Abandoned (lottie) | 3 |
 | No wrapper | ~51 |
 
 ## Running

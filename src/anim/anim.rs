@@ -151,10 +151,12 @@ impl<'w> Anim<'w> {
     ) -> &mut Self {
         // Pack the two pointers into user_data. Since AtomicI32 refs are
         // 'static, the pointers remain valid for the animation lifetime.
-        // We use a leaked Box to hold the pair — LVGL copies user_data by
-        // value (it's a pointer), so both the original and the copy point
-        // to the same allocation. Leak is intentional: the Box is small
-        // (2 pointers) and lives for the process lifetime.
+        // We use a leaked Box to hold the pair because LVGL copies the
+        // animation descriptor (including the user_data pointer) in
+        // lv_anim_start(). Both the original and the LVGL-owned copy must
+        // point to the same stable allocation. Leak is intentional: the
+        // Box is small (2 pointers, 16 bytes on 64-bit) and lives for
+        // the process lifetime — acceptable on embedded.
         let pair = alloc::boxed::Box::into_raw(alloc::boxed::Box::new([
             p1 as *const AtomicI32,
             p2 as *const AtomicI32,

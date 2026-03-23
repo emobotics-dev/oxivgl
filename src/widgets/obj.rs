@@ -190,6 +190,14 @@ pub trait AsLvHandle {
 /// All LVGL widget types wrap an `Obj` and `Deref` to it for style/layout
 /// methods. Style-setter methods return `&Self` to allow chaining.
 ///
+/// # Style ownership
+///
+/// Styles added via `add_style` are Rc-cloned into an internal Vec to keep
+/// the `lv_style_t` alive. Calling `remove_style(None, selector)` removes
+/// styles from LVGL but does **not** remove the Rc clones — they remain
+/// alive until the widget is dropped (benign leak). Use `remove_style_all`
+/// for full cleanup.
+///
 /// # Examples
 ///
 /// ```no_run
