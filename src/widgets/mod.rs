@@ -42,6 +42,7 @@ mod roller;
 mod scale;
 mod screen;
 mod slider;
+mod spinner;
 mod switch;
 mod table;
 mod tabview;
@@ -76,6 +77,7 @@ pub use scale::{
 };
 pub use screen::Screen;
 pub use slider::{Slider, SliderMode};
+pub use spinner::Spinner;
 pub use switch::{Switch, SwitchOrientation};
 pub use table::{Table, TableCellCtrl};
 pub use tabview::Tabview;

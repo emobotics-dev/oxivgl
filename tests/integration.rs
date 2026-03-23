@@ -19,7 +19,7 @@ use oxivgl::{
     widgets::{
         Align, Arc, AsLvHandle, Bar, Button, Buttonmatrix, Canvas, Checkbox,
         Calendar, CalendarDate, Dropdown, Image, Keyboard, KeyboardMode, Label, Led, Line, Menu, MenuHeaderMode, Msgbox,
-        Obj, Part, Roller, RollerMode, Screen, Slider, Switch, Table, TableCellCtrl, Tabview,
+        Obj, Part, Roller, RollerMode, Screen, Slider, Spinner, Switch, Table, TableCellCtrl, Tabview,
         Textarea, ValueLabel, WidgetError, RADIUS_MAX,
     },
 };
@@ -3717,5 +3717,23 @@ fn calendar_get_btnmatrix() {
     let cal = Calendar::new(&screen).unwrap();
     cal.size(185, 230).center();
     let _bm = cal.get_btnmatrix();
+    pump();
+}
+
+// ── Spinner ──────────────────────────────────────────────────────────────────
+
+#[test]
+fn spinner_create() {
+    let screen = fresh_screen();
+    let spinner = Spinner::new(&screen).unwrap();
+    spinner.size(100, 100).center();
+    pump();
+}
+
+#[test]
+fn spinner_set_anim_params() {
+    let screen = fresh_screen();
+    let spinner = Spinner::new(&screen).unwrap();
+    spinner.set_anim_params(2000, 90);
     pump();
 }
