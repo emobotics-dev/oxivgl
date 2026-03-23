@@ -34,6 +34,7 @@ runner (`example_main!` macro selects host SDL2 or ESP32 fire27 backend).
 - [Widgets — Switch](#widgets--switch)
 - [Widgets — Textarea](#widgets--textarea)
 - [Widgets — Canvas](#widgets--canvas)
+- [Widgets — Calendar](#calendar)
 - [Implementation Coverage](#implementation-coverage)
 - [Running](#running)
 
@@ -933,6 +934,16 @@ click.
 
 ![table_2](screenshots/table_2.png)
 
+## Calendar
+
+### calendar_1 — Month view with highlighted dates and arrow header
+
+February 2021 with three highlighted days (6, 11, and 22 Feb 2022). Arrow
+buttons navigate between months. Clicking a day fires `VALUE_CHANGED`; the
+label above the calendar updates to show the selected date.
+
+![calendar_1](screenshots/calendar_1.png)
+
 ## Tabview
 
 ### tabview_1 — Simple 3-tab view with default top bar
@@ -975,6 +986,7 @@ Status of all [LVGL 9.3 examples](https://docs.lvgl.io/9.3/examples.html) in oxi
 | arc | 3 | 3 | 0 | |
 | bar | 7 | 7 | 0 | |
 | button | 3 | 3 | 0 | |
+| calendar | 2 | 1 | 1 | calendar_2 (requires LV_USE_CALENDAR_CHINESE + CJK font) |
 | checkbox | 2 | 2 | 0 | |
 | dropdown | 3 | 3 | 0 | |
 | image | 5 | 5 | 0 | |
@@ -995,14 +1007,14 @@ Status of all [LVGL 9.3 examples](https://docs.lvgl.io/9.3/examples.html) in oxi
 
 ### Widgets Without Wrappers
 
-animimg, calendar, imagebutton, lottie, span, spinbox, spinner, tileview, win.
+animimg, imagebutton, lottie, span, spinbox, spinner, tileview, win.
 
 ### Totals
 
 | | Count |
 |---|---|
 | LVGL examples total | ~184 |
-| oxivgl done | 131 |
+| oxivgl done | 132 |
 | Skipped (intentional) | 3 |
 | Missing (wrapper exists) | 4 |
 | No wrapper | ~51 |
