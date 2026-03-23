@@ -112,6 +112,9 @@ impl<'p> Dropdown<'p> {
     /// LVGL stores the raw pointer (`dropdown->text = txt`,
     /// `lv_dropdown.c:174`). The string must be `'static` (spec §12.5).
     /// Use a `c"..."` literal: `dropdown.set_text(c"Menu")`.
+    ///
+    /// Note: LVGL v9.5 changes text ownership semantics — verify pointer
+    /// storage on upgrade.
     pub fn set_text(&self, text: &'static core::ffi::CStr) -> &Self {
         assert_ne!(self.obj.handle(), null_mut(), "Dropdown handle cannot be null");
         // SAFETY: handle non-null; text is 'static and NUL-terminated.

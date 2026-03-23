@@ -17,6 +17,14 @@ use crate::{
 ///
 /// Obtain via [`Screen::active()`]. Use as a parent for top-level widgets.
 ///
+/// # Style lifetime
+///
+/// Styles added via [`add_style`](Screen::add_style) are kept alive by this
+/// `Screen` reference. If the `Screen` is dropped while child widgets still
+/// reference those styles, the underlying `lv_style_t` memory is freed and
+/// LVGL will read dangling pointers. Ensure the `Screen` outlives all styles
+/// added to it (typically by storing it in the `View` struct).
+///
 /// # Examples
 ///
 /// ```no_run
