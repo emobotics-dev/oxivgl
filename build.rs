@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-only
 use cmake::Config;
+use std::path::PathBuf;
 
 fn main() {
     let target = std::env::var("TARGET").unwrap_or_default();
@@ -7,7 +8,6 @@ fn main() {
         println!("cargo:rustc-link-arg=-Tlinkall.x");
         cmake_lvgl();
     }
-    // On host targets, lvgl_rust_sys's own build.rs compiles LVGL.
 
     // Image assets (all targets)
     let cfg = oxivgl_build::ImageConfig::from_env();

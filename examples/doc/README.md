@@ -35,6 +35,7 @@ runner (`example_main!` macro selects host SDL2 or ESP32 fire27 backend).
 - [Widgets — Textarea](#widgets--textarea)
 - [Widgets — Canvas](#widgets--canvas)
 - [Widgets — Calendar](#calendar)
+- [Widgets — Lottie](#widgets--lottie-abandoned)
 - [Widgets — Spinbox](#widgets--spinbox)
 - [Widgets — Spinner](#widgets--spinner)
 - [Implementation Coverage](#implementation-coverage)
@@ -946,6 +947,19 @@ label above the calendar updates to show the selected date.
 
 ![calendar_1](screenshots/calendar_1.png)
 
+## Widgets — Lottie (abandoned)
+
+Lottie support was investigated and abandoned due to ThorVG binary size impact.
+
+**Problem:** LVGL's Lottie widget depends on ThorVG (C++ vector graphics engine).
+Even when no example uses Lottie, enabling `LV_USE_THORVG_INTERNAL` in `lv_conf.h`
+links ~240 KB of ThorVG code plus libstdc++, libc, and libgcc into every binary.
+The C++ archives bring hundreds of `.gcc_except_table` sections; espflash pads
+each to 64 KB alignment, inflating a ~1 MB firmware to >5 MB — exceeding the
+default 4 MB app partition. `-fno-exceptions`, `--gc-sections`, and LTO cannot
+strip this dead code because `--start-group` (required for cross-archive symbol
+resolution) keeps it alive.
+
 ## Widgets — Spinbox
 
 ### spinbox_1 — Numeric input with +/− buttons
@@ -1023,12 +1037,13 @@ Status of all [LVGL 9.3 examples](https://docs.lvgl.io/9.3/examples.html) in oxi
 | canvas | 11 | 9 | 2 | canvas_6 (image asset), canvas_8 (vector graphics) |
 | table | 2 | 2 | 0 | |
 | tabview | 2 | 2 | 0 | |
+| lottie | 3 | 0 | 0 | Abandoned — ThorVG bloats firmware beyond flash limits (see below) |
 | spinner | 1 | 1 | 0 | |
 | spinbox | 1 | 1 | 0 | |
 
 ### Widgets Without Wrappers
 
-animimg, imagebutton, lottie, span, tileview, win.
+animimg, imagebutton, span, tileview, win.
 
 ### Totals
 
@@ -1036,8 +1051,9 @@ animimg, imagebutton, lottie, span, tileview, win.
 |---|---|
 | LVGL examples total | ~184 |
 | oxivgl done | 134 |
-| Skipped (intentional) | 3 |
+| Skipped (intentional) | 4 |
 | Missing (wrapper exists) | 4 |
+| Abandoned (lottie) | 3 |
 | No wrapper | ~51 |
 
 ## Running
