@@ -4290,3 +4290,80 @@ fn animimg_getters() {
     assert_eq!(animimg.get_src_count(), 2);
     pump();
 }
+
+// ── Label — RTL and CJK fonts ───────────────────────────────────────────────
+
+#[test]
+fn label_bidi_rtl() {
+    use oxivgl::widgets::BaseDir;
+    let screen = fresh_screen();
+    let label = Label::new(&screen).unwrap();
+    label.text("RTL test");
+    label.base_dir(BaseDir::Rtl);
+    label.font(oxivgl::fonts::DEJAVU_16_PERSIAN_HEBREW);
+    pump();
+    assert!(label.get_width() > 0);
+}
+
+#[test]
+fn label_cjk_font() {
+    let screen = fresh_screen();
+    let label = Label::new(&screen).unwrap();
+    label.text("CJK");
+    label.font(oxivgl::fonts::SOURCE_HAN_SANS_SC_16_CJK);
+    pump();
+    assert!(label.get_width() > 0);
+}
+
+#[test]
+fn fixed_width_font_label() {
+    use oxivgl::fonts::{FixedWidthFont, MONTSERRAT_20};
+    static MONO: FixedWidthFont = FixedWidthFont::new();
+    let screen = fresh_screen();
+    let mono_font = MONO.init(MONTSERRAT_20, 20);
+    let label = Label::new(&screen).unwrap();
+    label.text_font(mono_font);
+    label.text("0123.Wabc");
+    pump();
+    assert!(label.get_width() > 0);
+}
+
+
+
+// ── Span — uncovered methods ─────────────────────────────────────────────────
+
+#[test]
+fn spangroup_letter_and_line_space() {
+    let screen = fresh_screen();
+    let sg = Spangroup::new(&screen).unwrap();
+    let span = sg.add_span().unwrap();
+    span.set_text(c"Spacing test");
+    span.set_text_letter_space(2);
+    span.set_text_line_space(4);
+    pump();
+}
+
+#[test]
+fn spangroup_getters() {
+    let screen = fresh_screen();
+    let sg = Spangroup::new(&screen).unwrap();
+    sg.set_overflow(SpanOverflow::Ellipsis);
+    assert_eq!(sg.get_overflow(), 1); // LV_SPAN_OVERFLOW_ELLIPSIS
+    sg.set_mode(SpanMode::Break);
+    assert_eq!(sg.get_mode(), 2); // LV_SPAN_MODE_BREAK
+    let _h = sg.get_max_line_height();
+    sg.size(200, 100);
+    let _w = sg.get_expand_width(200);
+    let _h2 = sg.get_expand_height(200);
+    pump();
+}
+
+#[test]
+fn spangroup_align_text() {
+    let screen = fresh_screen();
+    let sg = Spangroup::new(&screen).unwrap();
+    sg.set_align_text(1); // LV_TEXT_ALIGN_CENTER
+    let span = sg.add_span().unwrap();
+    span.set_text(c"Centered");
+    pump();
+}

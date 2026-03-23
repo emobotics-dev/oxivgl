@@ -620,6 +620,13 @@ Fake shadow via duplicate label offset by 2 px with reduced opacity.
 
 ![widget_label2](screenshots/widget_label2.png)
 
+### Widget Label 3 — Mixed LTR, RTL and CJK
+
+Three labels: English (LTR), Hebrew (RTL with DejaVu font), Chinese (Source Han Sans).
+Demonstrates bidirectional text support.
+
+![widget_label3](screenshots/widget_label3.png)
+
 ### Widget Label 4 — Gradient Text via Canvas Mask
 
 Text rendered through an L8 bitmap mask on a gradient background.
@@ -631,6 +638,13 @@ Text rendered through an L8 bitmap mask on a gradient background.
 Label with scroll-circular long mode — text scrolls in a continuous loop.
 
 ![widget_label5](screenshots/widget_label5.png)
+
+### Widget Label 6 — Fixed-Width Font Override
+
+Two labels: proportional Montserrat 20 and monospaced override via
+`FixedWidthFont` glyph callback.
+
+![widget_label6](screenshots/widget_label6.png)
 
 ## Widgets — LED
 
@@ -1080,7 +1094,7 @@ Status of all [LVGL 9.3 examples](https://docs.lvgl.io/9.3/examples.html) in oxi
 | checkbox | 2 | 2 | 0 | |
 | dropdown | 3 | 3 | 0 | |
 | image | 5 | 5 | 0 | |
-| label | 6 | 4 | 2 | label3 (RTL fonts), label6 (custom font) |
+| label | 6 | 6 | 0 | |
 | led | 1 | 1 | 0 | |
 | line | 1 | 1 | 0 | |
 | list | 2 | 2 | 0 | |
@@ -1112,7 +1126,7 @@ None — all practical widgets wrapped.
 | | Count |
 |---|---|
 | LVGL examples total | ~184 |
-| oxivgl done | 141 |
+| oxivgl done | 143 |
 | Skipped (intentional) | 4 |
 | Missing (wrapper exists) | 4 |
 | Abandoned (lottie) | 3 |
