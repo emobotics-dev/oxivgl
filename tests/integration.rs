@@ -18,7 +18,7 @@ use oxivgl::{
     layout::{FlexAlign, FlexFlow, GridAlign, GridCell, Layout, GRID_TEMPLATE_LAST},
     widgets::{
         Align, Arc, AsLvHandle, Bar, Button, Buttonmatrix, Canvas, Checkbox,
-        Dropdown, Image, Keyboard, KeyboardMode, Label, Led, Line, Menu, MenuHeaderMode, Msgbox,
+        Calendar, CalendarDate, Dropdown, Image, Keyboard, KeyboardMode, Label, Led, Line, Menu, MenuHeaderMode, Msgbox,
         Obj, Part, Roller, RollerMode, Screen, Slider, Switch, Table, TableCellCtrl, Tabview,
         Textarea, ValueLabel, WidgetError, RADIUS_MAX,
     },
@@ -3647,3 +3647,75 @@ fn tabview_set_tab_bar_position_and_size() {
     pump();
 }
 
+// ── Calendar ──────────────────────────────────────────────────────────────────
+
+#[test]
+fn calendar_create() {
+    let screen = fresh_screen();
+    let cal = Calendar::new(&screen).unwrap();
+    cal.size(185, 230).center();
+    cal.set_today_date(2024, 3, 22).set_month_shown(2024, 3);
+    pump();
+}
+
+#[test]
+fn calendar_highlighted_dates() {
+    let screen = fresh_screen();
+    let cal = Calendar::new(&screen).unwrap();
+    cal.set_today_date(2021, 2, 23).set_month_shown(2021, 2);
+    cal.set_highlighted_dates(&[
+        CalendarDate::new(2021, 2, 6),
+        CalendarDate::new(2021, 2, 11),
+    ]);
+    pump();
+    // today and shown dates round-trip correctly
+    let today = cal.get_today_date();
+    assert_eq!(today.year, 2021);
+    assert_eq!(today.month, 2);
+    assert_eq!(today.day, 23);
+    let shown = cal.get_showed_date();
+    assert_eq!(shown.year, 2021);
+    assert_eq!(shown.month, 2);
+}
+
+#[test]
+fn calendar_header_arrow() {
+    let screen = fresh_screen();
+    let cal = Calendar::new(&screen).unwrap();
+    cal.size(185, 230).center();
+    cal.set_today_date(2024, 6, 1).set_month_shown(2024, 6);
+    let _hdr = cal.add_header_arrow();
+    pump();
+}
+
+#[test]
+fn calendar_get_pressed_date_none_initially() {
+    let screen = fresh_screen();
+    let cal = Calendar::new(&screen).unwrap();
+    cal.set_today_date(2024, 1, 1).set_month_shown(2024, 1);
+    pump();
+    // No user click → None
+    assert!(cal.get_pressed_date().is_none());
+}
+
+
+// ── Calendar — uncovered methods ─────────────────────────────────────────────
+
+#[test]
+fn calendar_header_dropdown() {
+    let screen = fresh_screen();
+    let cal = Calendar::new(&screen).unwrap();
+    cal.size(185, 230).center();
+    cal.set_today_date(2024, 6, 1).set_month_shown(2024, 6);
+    let _hdr = cal.add_header_dropdown();
+    pump();
+}
+
+#[test]
+fn calendar_get_btnmatrix() {
+    let screen = fresh_screen();
+    let cal = Calendar::new(&screen).unwrap();
+    cal.size(185, 230).center();
+    let _bm = cal.get_btnmatrix();
+    pump();
+}
