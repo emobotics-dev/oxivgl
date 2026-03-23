@@ -19,7 +19,7 @@ use oxivgl::{
     widgets::{
         Align, Arc, AsLvHandle, Bar, Button, Buttonmatrix, Canvas, Checkbox,
         Calendar, CalendarDate, Dropdown, Image, Keyboard, KeyboardMode, Label, Led, Line, Menu, MenuHeaderMode, Msgbox,
-        Obj, Part, Roller, RollerMode, Screen, Slider, Spinner, Switch, Table, TableCellCtrl, Tabview,
+        Obj, Part, Roller, RollerMode, Screen, Slider, Spinbox, Spinner, Switch, Table, TableCellCtrl, Tabview,
         Textarea, ValueLabel, WidgetError, RADIUS_MAX,
     },
 };
@@ -3735,5 +3735,79 @@ fn spinner_set_anim_params() {
     let screen = fresh_screen();
     let spinner = Spinner::new(&screen).unwrap();
     spinner.set_anim_params(2000, 90);
+    pump();
+}
+
+// ── Spinbox ──────────────────────────────────────────────────────────────────
+
+#[test]
+fn spinbox_create() {
+    let screen = fresh_screen();
+    let sb = Spinbox::new(&screen).unwrap();
+    sb.width(100).center();
+    pump();
+}
+
+#[test]
+fn spinbox_range_and_value() {
+    let screen = fresh_screen();
+    let sb = Spinbox::new(&screen).unwrap();
+    sb.set_range(-100, 100).set_value(42);
+    assert_eq!(sb.get_value(), 42);
+    sb.set_value(200);
+    assert_eq!(sb.get_value(), 100);
+    pump();
+}
+
+#[test]
+fn spinbox_increment_decrement() {
+    let screen = fresh_screen();
+    let sb = Spinbox::new(&screen).unwrap();
+    sb.set_range(0, 100).set_value(50).set_step(10);
+    sb.increment();
+    assert_eq!(sb.get_value(), 60);
+    sb.decrement();
+    assert_eq!(sb.get_value(), 50);
+    pump();
+}
+
+#[test]
+fn spinbox_digit_format() {
+    let screen = fresh_screen();
+    let sb = Spinbox::new(&screen).unwrap();
+    sb.set_digit_format(5, 2).set_range(-1000, 25000);
+    sb.set_value(1234);
+    assert_eq!(sb.get_value(), 1234);
+    pump();
+}
+
+#[test]
+fn spinbox_step_navigation() {
+    let screen = fresh_screen();
+    let sb = Spinbox::new(&screen).unwrap();
+    sb.set_step(1);
+    assert_eq!(sb.get_step(), 1);
+    sb.step_prev();
+    assert_eq!(sb.get_step(), 10);
+    sb.step_next();
+    assert_eq!(sb.get_step(), 1);
+    pump();
+}
+
+#[test]
+fn spinbox_rollover() {
+    let screen = fresh_screen();
+    let sb = Spinbox::new(&screen).unwrap();
+    sb.set_range(0, 10).set_value(10).set_step(1).set_rollover(true);
+    sb.increment();
+    assert_eq!(sb.get_value(), 0);
+    pump();
+}
+
+#[test]
+fn spinbox_cursor_pos() {
+    let screen = fresh_screen();
+    let sb = Spinbox::new(&screen).unwrap();
+    sb.set_cursor_pos(2);
     pump();
 }

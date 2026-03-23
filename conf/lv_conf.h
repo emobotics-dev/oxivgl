@@ -264,7 +264,7 @@
 #define LV_USE_SCALE      1
 #define LV_USE_SLIDER     1
 #define LV_USE_SPAN       0
-#define LV_USE_SPINBOX    0
+#define LV_USE_SPINBOX    1
 #define LV_USE_SPINNER    1
 #define LV_USE_SWITCH     1
 #define LV_USE_TEXTAREA   1

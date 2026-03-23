@@ -35,6 +35,7 @@ runner (`example_main!` macro selects host SDL2 or ESP32 fire27 backend).
 - [Widgets — Textarea](#widgets--textarea)
 - [Widgets — Canvas](#widgets--canvas)
 - [Widgets — Calendar](#calendar)
+- [Widgets — Spinbox](#widgets--spinbox)
 - [Widgets — Spinner](#widgets--spinner)
 - [Implementation Coverage](#implementation-coverage)
 - [Running](#running)
@@ -945,6 +946,15 @@ label above the calendar updates to show the selected date.
 
 ![calendar_1](screenshots/calendar_1.png)
 
+## Widgets — Spinbox
+
+### spinbox_1 — Numeric input with +/− buttons
+
+Spinbox with range −1000..25000, 5 digits and 2 decimal places. Plus and minus
+buttons increment/decrement the value.
+
+![spinbox_1](screenshots/spinbox_1.png)
+
 ## Widgets — Spinner
 
 ### spinner_1 — Centered loading spinner
@@ -1014,17 +1024,18 @@ Status of all [LVGL 9.3 examples](https://docs.lvgl.io/9.3/examples.html) in oxi
 | table | 2 | 2 | 0 | |
 | tabview | 2 | 2 | 0 | |
 | spinner | 1 | 1 | 0 | |
+| spinbox | 1 | 1 | 0 | |
 
 ### Widgets Without Wrappers
 
-animimg, imagebutton, lottie, span, spinbox, tileview, win.
+animimg, imagebutton, lottie, span, tileview, win.
 
 ### Totals
 
 | | Count |
 |---|---|
 | LVGL examples total | ~184 |
-| oxivgl done | 133 |
+| oxivgl done | 134 |
 | Skipped (intentional) | 3 |
 | Missing (wrapper exists) | 4 |
 | No wrapper | ~51 |

@@ -34,7 +34,7 @@ use oxivgl::{
     widgets::{
         Arc, Bar, BarMode, Button, Buttonmatrix, Calendar, CalendarDate, Canvas, Chart, ChartAxis, ChartType, Checkbox,
         Dropdown, Keyboard, KeyboardMode, Label, Led, Line, Menu, Msgbox, Obj, Part,
-        Roller, RollerMode, Screen, Slider, Spinner, Switch, Table, Tabview, Textarea, ValueLabel,
+        Roller, RollerMode, Screen, Slider, Spinbox, Spinner, Switch, Table, Tabview, Textarea, ValueLabel,
         lv_color_t,
     },
 };
@@ -684,5 +684,17 @@ fn leak_spinner() {
         let spinner = Spinner::new(screen).unwrap();
         spinner.set_anim_params(1000, 200);
         drop(spinner);
+    });
+}
+
+// ── Spinbox ──────────────────────────────────────────────────────────────────
+
+#[test]
+fn leak_spinbox() {
+    assert_no_leak("Spinbox", 6, |screen| {
+        let sb = Spinbox::new(screen).unwrap();
+        sb.set_range(-100, 100).set_value(42).set_step(10);
+        sb.increment();
+        drop(sb);
     });
 }

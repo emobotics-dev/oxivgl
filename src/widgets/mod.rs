@@ -42,6 +42,7 @@ mod roller;
 mod scale;
 mod screen;
 mod slider;
+mod spinbox;
 mod spinner;
 mod switch;
 mod table;
@@ -77,6 +78,7 @@ pub use scale::{
 };
 pub use screen::Screen;
 pub use slider::{Slider, SliderMode};
+pub use spinbox::Spinbox;
 pub use spinner::Spinner;
 pub use switch::{Switch, SwitchOrientation};
 pub use table::{Table, TableCellCtrl};
