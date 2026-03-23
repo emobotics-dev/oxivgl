@@ -71,7 +71,9 @@ impl Timer {
 
     /// Returns `true` once per timer period, then resets the flag.
     ///
-    /// Call this in `View::update()` to detect timer ticks.
+    /// Call this in `View::update()` to detect timer ticks. Only the first
+    /// call per update cycle returns `true`; subsequent calls in the same
+    /// cycle return `false`. This is intentional for single-poll usage.
     pub fn triggered(&self) -> bool {
         // SAFETY: flag is heap-allocated and valid for Timer's lifetime.
         let flag = unsafe { &*self.flag };
