@@ -35,6 +35,10 @@ runner (`example_main!` macro selects host SDL2 or ESP32 fire27 backend).
 - [Widgets — Textarea](#widgets--textarea)
 - [Widgets — Canvas](#widgets--canvas)
 - [Widgets — Calendar](#calendar)
+- [Widgets — Span](#widgets--span)
+- [Widgets — Tileview](#widgets--tileview)
+- [Widgets — Imagebutton](#widgets--imagebutton)
+- [Widgets — Win](#widgets--win)
 - [Widgets — Lottie](#widgets--lottie-abandoned)
 - [Widgets — Spinbox](#widgets--spinbox)
 - [Widgets — Spinner](#widgets--spinner)
@@ -947,6 +951,38 @@ label above the calendar updates to show the selected date.
 
 ![calendar_1](screenshots/calendar_1.png)
 
+## Widgets — Span
+
+### span_1 — Rich text with multiple styles
+
+Spangroup with colored, decorated, and differently-sized text spans.
+
+![span_1](screenshots/span_1.png)
+
+## Widgets — Tileview
+
+### tileview_1 — Swipeable tile grid
+
+Three tiles in an L-shaped layout with directional scroll constraints.
+
+![tileview_1](screenshots/tileview_1.png)
+
+## Widgets — Imagebutton
+
+### imagebutton_1 — Stateful image button
+
+Imagebutton with state switching (no visible images without assets).
+
+![imagebutton_1](screenshots/imagebutton_1.png)
+
+## Widgets — Win
+
+### win_1 — Window with header and content
+
+Window with title, close/settings buttons, and scrollable content area.
+
+![win_1](screenshots/win_1.png)
+
 ## Widgets — Lottie (abandoned)
 
 Lottie support was investigated and abandoned due to ThorVG binary size impact.
@@ -1037,24 +1073,28 @@ Status of all [LVGL 9.3 examples](https://docs.lvgl.io/9.3/examples.html) in oxi
 | canvas | 11 | 9 | 2 | canvas_6 (image asset), canvas_8 (vector graphics) |
 | table | 2 | 2 | 0 | |
 | tabview | 2 | 2 | 0 | |
+| tileview | 1 | 1 | 0 | |
+| span | 1 | 1 | 0 | |
+| imagebutton | 1 | 1 | 0 | |
+| win | 1 | 1 | 0 | |
 | lottie | 3 | 0 | 0 | Abandoned — ThorVG bloats firmware beyond flash limits (see below) |
 | spinner | 1 | 1 | 0 | |
 | spinbox | 1 | 1 | 0 | |
 
 ### Widgets Without Wrappers
 
-animimg, imagebutton, span, tileview, win.
+animimg.
 
 ### Totals
 
 | | Count |
 |---|---|
 | LVGL examples total | ~184 |
-| oxivgl done | 134 |
+| oxivgl done | 138 |
 | Skipped (intentional) | 4 |
 | Missing (wrapper exists) | 4 |
 | Abandoned (lottie) | 3 |
-| No wrapper | ~51 |
+| No wrapper | ~47 |
 
 ## Running
 

@@ -258,7 +258,7 @@
 #define LV_USE_CHECKBOX   1
 #define LV_USE_DROPDOWN   1
 #define LV_USE_IMAGE      1
-#define LV_USE_IMAGEBUTTON     0
+#define LV_USE_IMAGEBUTTON     1
 #define LV_USE_KEYBOARD   1
 #define LV_USE_LABEL      1
 #if LV_USE_LABEL
@@ -275,15 +275,15 @@
 #define LV_USE_ROLLER     1
 #define LV_USE_SCALE      1
 #define LV_USE_SLIDER     1
-#define LV_USE_SPAN       0
+#define LV_USE_SPAN       1
 #define LV_USE_SPINBOX    1
 #define LV_USE_SPINNER    1
 #define LV_USE_SWITCH     1
 #define LV_USE_TEXTAREA   1
 #define LV_USE_TABLE      1
 #define LV_USE_TABVIEW    1
-#define LV_USE_TILEVIEW   0
-#define LV_USE_WIN        0
+#define LV_USE_TILEVIEW   1
+#define LV_USE_WIN        1
 
 /*==================
  * THEMES

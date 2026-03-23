@@ -20,9 +20,9 @@ use oxivgl::{
     layout::{FlexAlign, FlexFlow, GridAlign, GridCell, Layout, GRID_TEMPLATE_LAST},
     widgets::{
         Align, Arc, AsLvHandle, Bar, Button, Buttonmatrix, Calendar, CalendarDate, Canvas, Checkbox,
-        Dropdown, Image, Keyboard, KeyboardMode, Label, Led, Line, Menu, MenuHeaderMode, Msgbox,
+        Dropdown, Image, Imagebutton, ImagebuttonState, Keyboard, KeyboardMode, Label, Led, Line, Menu, MenuHeaderMode, Msgbox,
         Obj, Part, Roller, RollerMode, Screen, Slider, Spinbox, Spinner, Switch, Table, TableCellCtrl, Tabview,
-        Textarea, ValueLabel, WidgetError, RADIUS_MAX, lv_color_t,
+        Spangroup, SpanMode, SpanOverflow, Textarea, Tileview, ValueLabel, WidgetError, Win, RADIUS_MAX, lv_color_t,
     },
 };
 
@@ -3961,4 +3961,266 @@ fn spinbox_cursor_pos() {
     sb.set_cursor_pos(2);
     pump();
 }
+
+
+
+
+// ── Spangroup ────────────────────────────────────────────────────────────────
+
+#[test]
+fn span_create() {
+    let screen = fresh_screen();
+    let sg = Spangroup::new(&screen).unwrap();
+    sg.size(200, 100).center();
+    pump();
+}
+
+#[test]
+fn span_add_and_set_text() {
+    let screen = fresh_screen();
+    let sg = Spangroup::new(&screen).unwrap();
+    sg.width(200);
+    let span = sg.add_span().unwrap();
+    span.set_text(c"Hello spans");
+    sg.refresh();
+    assert_eq!(sg.get_span_count(), 1);
+    pump();
+}
+
+#[test]
+fn span_add_multiple() {
+    let screen = fresh_screen();
+    let sg = Spangroup::new(&screen).unwrap();
+    sg.width(200);
+    let _s1 = sg.add_span().unwrap();
+    let _s2 = sg.add_span().unwrap();
+    let _s3 = sg.add_span().unwrap();
+    assert_eq!(sg.get_span_count(), 3);
+    sg.refresh();
+    pump();
+}
+
+#[test]
+fn span_delete() {
+    let screen = fresh_screen();
+    let sg = Spangroup::new(&screen).unwrap();
+    let span = sg.add_span().unwrap();
+    span.set_text(c"temp");
+    assert_eq!(sg.get_span_count(), 1);
+    sg.delete_span(&span);
+    assert_eq!(sg.get_span_count(), 0);
+    sg.refresh();
+    pump();
+}
+
+#[test]
+fn span_overflow_and_indent() {
+    let screen = fresh_screen();
+    let sg = Spangroup::new(&screen).unwrap();
+    sg.width(200);
+    sg.set_overflow(SpanOverflow::Ellipsis);
+    sg.set_indent(20);
+    assert_eq!(sg.get_indent(), 20);
+    let span = sg.add_span().unwrap();
+    span.set_text(c"text");
+    sg.refresh();
+    pump();
+}
+
+#[test]
+fn span_mode() {
+    let screen = fresh_screen();
+    let sg = Spangroup::new(&screen).unwrap();
+    sg.width(200);
+    sg.set_mode(SpanMode::Break);
+    let span = sg.add_span().unwrap();
+    span.set_text(c"break mode");
+    sg.refresh();
+    pump();
+}
+
+#[test]
+fn span_max_lines() {
+    let screen = fresh_screen();
+    let sg = Spangroup::new(&screen).unwrap();
+    sg.width(200);
+    sg.set_max_lines(3);
+    assert_eq!(sg.get_max_lines(), 3);
+    sg.refresh();
+    pump();
+}
+
+#[test]
+fn span_text_color_and_decor() {
+    let screen = fresh_screen();
+    let sg = Spangroup::new(&screen).unwrap();
+    sg.width(200);
+    let span = sg.add_span().unwrap();
+    span.set_text(c"styled")
+        .set_text_color(palette_main(Palette::Red))
+        .set_text_opa(128)
+        .set_text_decor(TextDecor::UNDERLINE);
+    sg.refresh();
+    pump();
+}
+
+#[test]
+fn span_static_text() {
+    let screen = fresh_screen();
+    let sg = Spangroup::new(&screen).unwrap();
+    sg.width(200);
+    let span = sg.add_span().unwrap();
+    span.set_text_static(c"static text");
+    sg.refresh();
+    pump();
+}
+
+
+// ── Tileview ──────────────────────────────────────────────────────────────────
+
+#[test]
+fn tileview_create_and_add_tiles() {
+    let screen = fresh_screen();
+    let tv = Tileview::new(&screen).unwrap();
+    let _tile1 = tv.add_tile(0, 0, ScrollDir::BOTTOM);
+    let _tile2 = tv.add_tile(0, 1, ScrollDir::TOP | ScrollDir::RIGHT);
+    let _tile3 = tv.add_tile(1, 1, ScrollDir::LEFT);
+    pump();
+}
+
+#[test]
+fn tileview_set_tile_by_index() {
+    let screen = fresh_screen();
+    let tv = Tileview::new(&screen).unwrap();
+    let _tile1 = tv.add_tile(0, 0, ScrollDir::BOTTOM);
+    let _tile2 = tv.add_tile(0, 1, ScrollDir::TOP);
+    tv.set_tile_by_index(0, 1, false);
+    pump();
+}
+
+#[test]
+fn tileview_set_tile_by_obj() {
+    let screen = fresh_screen();
+    let tv = Tileview::new(&screen).unwrap();
+    let tile1 = tv.add_tile(0, 0, ScrollDir::BOTTOM);
+    let tile2 = tv.add_tile(0, 1, ScrollDir::TOP);
+    tv.set_tile(&*tile2, false);
+    pump();
+    // Switch back
+    tv.set_tile(&*tile1, false);
+    pump();
+}
+
+#[test]
+fn tileview_get_active_tile() {
+    let screen = fresh_screen();
+    let tv = Tileview::new(&screen).unwrap();
+    let _tile1 = tv.add_tile(0, 0, ScrollDir::BOTTOM);
+    let _tile2 = tv.add_tile(0, 1, ScrollDir::TOP);
+    tv.set_tile_by_index(0, 1, false);
+    pump();
+    let active = tv.get_tile_active();
+    assert!(active.is_some());
+}
+
+
+// ── Win — window widget ──────────────────────────────────────────────────────
+
+#[test]
+fn win_create() {
+    let screen = fresh_screen();
+    let win = Win::new(&screen).unwrap();
+    win.size(300, 200).center();
+    pump();
+}
+
+#[test]
+fn win_add_title() {
+    let screen = fresh_screen();
+    let win = Win::new(&screen).unwrap();
+    let _title = win.add_title("Hello");
+    pump();
+}
+
+#[test]
+fn win_add_button() {
+    let screen = fresh_screen();
+    let win = Win::new(&screen).unwrap();
+    let _btn = win.add_button(&oxivgl::symbols::CLOSE, 40);
+    pump();
+}
+
+#[test]
+fn win_get_header() {
+    let screen = fresh_screen();
+    let win = Win::new(&screen).unwrap();
+    let _hdr = win.get_header();
+    pump();
+}
+
+#[test]
+fn win_get_content() {
+    let screen = fresh_screen();
+    let win = Win::new(&screen).unwrap();
+    let content = win.get_content();
+    let _lbl = Label::new(&content).unwrap();
+    pump();
+}
+
+#[test]
+fn win_full_example() {
+    let screen = fresh_screen();
+    let win = Win::new(&screen).unwrap();
+    let _btn1 = win.add_button(&oxivgl::symbols::LEFT, 40);
+    let _title = win.add_title("Test Win");
+    let _btn2 = win.add_button(&oxivgl::symbols::RIGHT, 40);
+    let _btn3 = win.add_button(&oxivgl::symbols::CLOSE, 60);
+    let content = win.get_content();
+    let lbl = Label::new(&content).unwrap();
+    lbl.text("Content text");
+    pump();
+}
+
+// ── Imagebutton ─────────────────────────────────────────────────────────────
+
+#[test]
+fn imagebutton_create() {
+    let screen = fresh_screen();
+    let btn = Imagebutton::new(&screen).unwrap();
+    btn.size(200, 50).center();
+    pump();
+}
+
+#[test]
+fn imagebutton_set_state() {
+    let screen = fresh_screen();
+    let btn = Imagebutton::new(&screen).unwrap();
+    btn.set_state(ImagebuttonState::Released);
+    btn.set_state(ImagebuttonState::Pressed);
+    btn.set_state(ImagebuttonState::Disabled);
+    btn.set_state(ImagebuttonState::CheckedReleased);
+    btn.set_state(ImagebuttonState::CheckedPressed);
+    btn.set_state(ImagebuttonState::CheckedDisabled);
+    pump();
+}
+
+#[test]
+fn imagebutton_set_src_none() {
+    let screen = fresh_screen();
+    let btn = Imagebutton::new(&screen).unwrap();
+    btn.set_src(ImagebuttonState::Released, None, None, None);
+    pump();
+}
+
+#[test]
+fn imagebutton_with_child_label() {
+    let screen = fresh_screen();
+    let btn = Imagebutton::new(&screen).unwrap();
+    btn.size(200, 50).center();
+    let label = Label::new(&btn).unwrap();
+    label.text("Click me");
+    label.center();
+    pump();
+}
+
 
