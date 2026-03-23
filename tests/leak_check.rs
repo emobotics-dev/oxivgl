@@ -32,7 +32,7 @@ use oxivgl::{
     },
     enums::{ObjState, ScrollDir},
     widgets::{
-        Arc, Bar, BarMode, Button, Buttonmatrix, Calendar, CalendarDate, Canvas, Chart, ChartAxis,
+        AnimImg, Arc, Bar, BarMode, Button, Buttonmatrix, Calendar, CalendarDate, Canvas, Chart, ChartAxis,
         ChartType, Checkbox, Dropdown, Keyboard, KeyboardMode, Label, Led, Line, Menu, Msgbox,
         Obj, Part, Roller, RollerMode, Screen, Slider, Spangroup, Spinbox, Spinner, Switch, Table, Tabview, Textarea, Imagebutton, ImagebuttonState, Tileview, ValueLabel, Win,
         lv_color_t,
@@ -750,5 +750,43 @@ fn leak_tileview() {
         let _t1 = tv.add_tile(0, 0, ScrollDir::HOR);
         let _t2 = tv.add_tile(1, 0, ScrollDir::HOR);
         drop(tv);
+    });
+}
+// ── AnimImg ──────────────────────────────────────────────────────────────────
+
+#[repr(transparent)]
+struct SyncPtr(*const core::ffi::c_void);
+unsafe impl Sync for SyncPtr {}
+
+mod animimg_frames {
+    unsafe extern "C" {
+        #[allow(non_upper_case_globals)]
+        pub static img_cogwheel_argb: oxivgl::widgets::lv_image_dsc_t;
+    }
+    pub static FRAMES: [super::SyncPtr; 2] = [
+        super::SyncPtr(&raw const img_cogwheel_argb as *const core::ffi::c_void),
+        super::SyncPtr(&raw const img_cogwheel_argb as *const core::ffi::c_void),
+    ];
+}
+
+fn animimg_frame_ptrs() -> &'static [*const core::ffi::c_void] {
+    unsafe {
+        core::slice::from_raw_parts(
+            animimg_frames::FRAMES.as_ptr().cast(),
+            animimg_frames::FRAMES.len(),
+        )
+    }
+}
+
+#[test]
+fn leak_animimg() {
+    assert_no_leak("AnimImg", 1, |screen| {
+        let animimg = AnimImg::new(screen).unwrap();
+        animimg
+            .set_src(animimg_frame_ptrs())
+            .set_duration(500)
+            .set_repeat_count(1)
+            .start();
+        drop(animimg);
     });
 }

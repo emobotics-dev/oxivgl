@@ -60,6 +60,9 @@ ALL_EXAMPLES=(
     tileview_1
     imagebutton_1
     win_1
+    animimg_1
+    widget_label4
+    widget_roller3
 )
 
 run_example() {

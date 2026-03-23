@@ -35,6 +35,7 @@ runner (`example_main!` macro selects host SDL2 or ESP32 fire27 backend).
 - [Widgets — Textarea](#widgets--textarea)
 - [Widgets — Canvas](#widgets--canvas)
 - [Widgets — Calendar](#calendar)
+- [Widgets — AnimImg](#widgets--animimg)
 - [Widgets — Span](#widgets--span)
 - [Widgets — Tileview](#widgets--tileview)
 - [Widgets — Imagebutton](#widgets--imagebutton)
@@ -619,6 +620,12 @@ Fake shadow via duplicate label offset by 2 px with reduced opacity.
 
 ![widget_label2](screenshots/widget_label2.png)
 
+### Widget Label 4 — Gradient Text via Canvas Mask
+
+Text rendered through an L8 bitmap mask on a gradient background.
+
+![widget_label4](screenshots/widget_label4.png)
+
 ### Widget Label 5 — Circular Scroll
 
 Label with scroll-circular long mode — text scrolls in a continuous loop.
@@ -718,6 +725,12 @@ Three rollers: left-aligned on green gradient, center-aligned, right-aligned. Sh
 selected-row style with Montserrat 20pt font and pink/red highlight.
 
 ![widget_roller2](screenshots/widget_roller2.png)
+
+### Widget Roller 3 — Roller with Fade Mask
+
+Month roller with vertical gradient mask fading top and bottom rows.
+
+![widget_roller3](screenshots/widget_roller3.png)
 
 ## Widgets — Scale
 
@@ -951,6 +964,14 @@ label above the calendar updates to show the selected date.
 
 ![calendar_1](screenshots/calendar_1.png)
 
+## Widgets — AnimImg
+
+### animimg_1 — Animated image cycling
+
+Cogwheel image in a 2-frame infinite animation.
+
+![animimg_1](screenshots/animimg_1.png)
+
 ## Widgets — Span
 
 ### span_1 — Rich text with multiple styles
@@ -1059,13 +1080,13 @@ Status of all [LVGL 9.3 examples](https://docs.lvgl.io/9.3/examples.html) in oxi
 | checkbox | 2 | 2 | 0 | |
 | dropdown | 3 | 3 | 0 | |
 | image | 5 | 5 | 0 | |
-| label | 6 | 3 | 3 | label3 (RTL fonts), label4 (canvas mask), label6 (custom font) |
+| label | 6 | 4 | 2 | label3 (RTL fonts), label6 (custom font) |
 | led | 1 | 1 | 0 | |
 | line | 1 | 1 | 0 | |
 | list | 2 | 2 | 0 | |
 | menu | 5 | 5 | 0 | |
 | msgbox | 1 | 1 | 0 | |
-| roller | 3 | 2 | 1 | roller3 (needs canvas/mask API) |
+| roller | 3 | 3 | 0 | |
 | scale | 11 | 11 | 0 | |
 | slider | 4 | 4 | 0 | |
 | switch | 2 | 2 | 0 | |
@@ -1076,6 +1097,7 @@ Status of all [LVGL 9.3 examples](https://docs.lvgl.io/9.3/examples.html) in oxi
 | tileview | 1 | 1 | 0 | |
 | span | 1 | 1 | 0 | |
 | imagebutton | 1 | 1 | 0 | |
+| animimg | 1 | 1 | 0 | |
 | win | 1 | 1 | 0 | |
 | lottie | 3 | 0 | 0 | Abandoned — ThorVG bloats firmware beyond flash limits (see below) |
 | spinner | 1 | 1 | 0 | |
@@ -1083,18 +1105,18 @@ Status of all [LVGL 9.3 examples](https://docs.lvgl.io/9.3/examples.html) in oxi
 
 ### Widgets Without Wrappers
 
-animimg.
+None — all practical widgets wrapped.
 
 ### Totals
 
 | | Count |
 |---|---|
 | LVGL examples total | ~184 |
-| oxivgl done | 138 |
+| oxivgl done | 141 |
 | Skipped (intentional) | 4 |
 | Missing (wrapper exists) | 4 |
 | Abandoned (lottie) | 3 |
-| No wrapper | ~47 |
+| No wrapper | ~46 |
 
 ## Running
 
