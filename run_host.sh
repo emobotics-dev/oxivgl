@@ -41,6 +41,7 @@ ALL_EXAMPLES=(
     widget_dropdown{1,2,3}
     widget_image{2,3,4,5}
     widget_label{1,2,5}
+    widget_label{3,6}
     widget_led1
     widget_list{1,2}
     widget_line1
