@@ -4367,3 +4367,22 @@ fn spangroup_align_text() {
     span.set_text(c"Centered");
     pump();
 }
+
+// ── Canvas — draw image from static asset ───────────────────────────────────
+
+#[test]
+fn canvas_layer_draw_image_static() {
+    use oxivgl::draw::DrawImageDsc;
+    use oxivgl::draw_buf::{ColorFormat, DrawBuf};
+    oxivgl::image_declare!(img_cogwheel_argb);
+    let screen = fresh_screen();
+    let buf = DrawBuf::create(100, 100, ColorFormat::ARGB8888).expect("DrawBuf alloc");
+    let canvas = Canvas::new(&screen, buf).unwrap();
+    canvas.center();
+    let mut layer = canvas.init_layer();
+    let mut dsc = DrawImageDsc::from_static_dsc(img_cogwheel_argb());
+    dsc.opa(255);
+    layer.draw_image(&dsc, oxivgl::draw::Area { x1: 0, y1: 0, x2: 99, y2: 99 });
+    drop(layer);
+    pump();
+}

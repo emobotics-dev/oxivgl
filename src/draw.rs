@@ -769,6 +769,19 @@ impl<'i> DrawImageDsc<'i> {
         Self { inner, _img_lifetime: core::marker::PhantomData }
     }
 
+    /// Create from a `&'static lv_image_dsc_t` obtained via
+    /// [`image_declare!`](crate::image_declare).
+    ///
+    /// The `'static` lifetime guarantees the pixel data outlives any drawing
+    /// operation.
+    pub fn from_static_dsc(dsc: &'static lv_image_dsc_t) -> DrawImageDsc<'static> {
+        let mut inner = unsafe { core::mem::zeroed::<lv_draw_image_dsc_t>() };
+        unsafe { lv_draw_image_dsc_init(&mut inner) };
+        // SAFETY: dsc is a 'static lv_image_dsc_t compiled into the binary.
+        inner.src = dsc as *const lv_image_dsc_t as *const core::ffi::c_void;
+        DrawImageDsc { inner, _img_lifetime: core::marker::PhantomData }
+    }
+
     /// Rotation in 0.1-degree units (e.g. `1200` = 120°).
     pub fn rotation(&mut self, r: i32) -> &mut Self {
         self.inner.rotation = r;
