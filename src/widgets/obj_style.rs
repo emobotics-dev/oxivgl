@@ -296,6 +296,14 @@ impl<'p> Obj<'p> {
         self
     }
 
+    /// Set base text direction (selector 0).
+    pub fn base_dir(&self, dir: super::obj::BaseDir) -> &Self {
+        assert_ne!(self.handle(), null_mut(), "Obj handle cannot be null");
+        // SAFETY: handle non-null (asserted above).
+        unsafe { lv_obj_set_style_base_dir(self.handle(), dir as lv_base_dir_t, 0) };
+        self
+    }
+
     /// Set base text direction for the given selector.
     pub fn style_base_dir(&self, dir: super::obj::BaseDir, selector: impl Into<crate::style::Selector>) -> &Self {
         let selector = selector.into().raw();
