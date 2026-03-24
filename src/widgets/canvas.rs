@@ -179,11 +179,20 @@ impl<'p> Canvas<'p> {
         // We do NOT register a delete callback — the DrawBuf is not owned by
         // this temporary canvas.
         unsafe { lv_canvas_set_draw_buf(canvas_ptr, buf.as_ptr()) };
+
+        // Guard ensures the LVGL canvas is deleted even if `f` panics.
+        struct Guard(*mut lv_obj_t);
+        impl Drop for Guard {
+            fn drop(&mut self) {
+                // SAFETY: canvas_ptr is valid; delete removes only the LVGL
+                // object, not the draw buffer (set externally, not owned).
+                unsafe { lv_obj_delete(self.0) };
+            }
+        }
+        let _guard = Guard(canvas_ptr);
+
         let temp = TempCanvas { ptr: canvas_ptr, _life: PhantomData };
         f(&temp);
-        // SAFETY: canvas_ptr is valid; delete removes only the LVGL object,
-        // not the draw buffer (which was set externally, not owned).
-        unsafe { lv_obj_delete(canvas_ptr) };
     }
 }
 

@@ -448,9 +448,13 @@ A base object that follows the pointer when pressed, using indev movement vector
 
 ## Widgets — Animation Image
 
-### Skipped
+### animimg_1 — Animated image cycling through frames
 
-- **Widget AnimImg 1** — Animated image frames (needs `AnimImg` wrapper)
+`AnimImg` widget with a two-frame animation using the cogwheel image asset.
+Both frames use the same image; in a real application each frame would be
+distinct. The animation loops infinitely with a 1-second cycle.
+
+![animimg_1](screenshots/animimg_1.png)
 
 ## Widgets — Arc
 
@@ -922,6 +926,12 @@ and 5 px corner radius, drawn via `CanvasLayer::draw_rect`.
 
 ![canvas_5](screenshots/canvas_5.png)
 
+### canvas_6 — Image drawn on canvas
+
+Cogwheel image asset drawn onto a 100×100 ARGB8888 canvas via `DrawImageDsc`.
+
+![canvas_6](screenshots/canvas_6.png)
+
 ### canvas_7 — Line
 
 50×50 RGB565 canvas. Red line (15,15)→(35,10), width 4, rounded caps.
@@ -944,22 +954,10 @@ rainbow colors and sine-wave y-offsets via `DrawLetterDsc`. Animated each frame.
 
 ### canvas_11 — Windstorm text animation
 
-### canvas_6 — Image drawn on canvas
-
-Cogwheel image asset drawn onto a 100×100 ARGB8888 canvas via `DrawImageDsc`.
-
-![canvas_6](screenshots/canvas_6.png)
-
 160×100 RGB565 canvas (black). "windstorm" repeated with sinusoidal y-positions,
 HSV-cycled colors shifting each frame via `DrawLetterDsc`. Animated each frame.
 
 ![canvas_11](screenshots/canvas_11.png)
-
-### canvas_6 — Image drawn on canvas
-
-Cogwheel image asset drawn onto a 100×100 ARGB8888 canvas via `DrawImageDsc`.
-
-![canvas_6](screenshots/canvas_6.png)
 
 ## Table
 

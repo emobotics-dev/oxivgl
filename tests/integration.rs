@@ -8,7 +8,7 @@ use std::sync::Once;
 
 use oxivgl::{
     anim::{anim_path_linear, anim_set_x, Anim, AnimHandle},
-    draw::{DrawArcDsc, DrawImageDsc, DrawLabelDscOwned, DrawLetterDsc, DrawLineDsc, DrawRectDsc, DrawTriangleDsc},
+    draw::{DrawArcDsc, DrawImageDsc, DrawLabelDscOwned, DrawLetterDsc, DrawLineDsc, DrawTriangleDsc},
     draw_buf::{ColorFormat, DrawBuf},
     fonts::MONTSERRAT_12,
     driver::LvglDriver,
