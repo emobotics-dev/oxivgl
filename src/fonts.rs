@@ -52,6 +52,10 @@ pub static DEJAVU_16_PERSIAN_HEBREW: Font =
     Font(addr_of!(lvgl_rust_sys::lv_font_dejavu_16_persian_hebrew));
 
 
+/// LVGL built-in Source Han Sans SC 14 pt with CJK glyphs.
+pub static SOURCE_HAN_SANS_SC_14_CJK: Font =
+    Font(addr_of!(lvgl_rust_sys::lv_font_source_han_sans_sc_14_cjk));
+
 /// LVGL built-in Source Han Sans SC 16 pt with CJK glyphs.
 pub static SOURCE_HAN_SANS_SC_16_CJK: Font =
     Font(addr_of!(lvgl_rust_sys::lv_font_source_han_sans_sc_16_cjk));
