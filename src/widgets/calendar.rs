@@ -168,6 +168,34 @@ impl<'p> Calendar<'p> {
         Child::new(Obj::from_raw(ptr))
     }
 
+    /// Enable or disable Chinese lunar calendar mode.
+    ///
+    /// When enabled, day cells display Chinese lunar calendar names
+    /// (e.g. "25\n十六"). A CJK font must be provided via `cjk_font` so
+    /// the btnmatrix items can render the Chinese glyphs. The font is
+    /// applied to `Part::Items` of the internal button matrix.
+    ///
+    /// Requires `LV_USE_CALENDAR_CHINESE = 1` in `lv_conf.h`.
+    pub fn set_chinese_mode(&self, en: bool, cjk_font: crate::fonts::Font) -> &Self {
+        assert_ne!(self.obj.handle(), null_mut(), "Calendar handle cannot be null");
+        // SAFETY: handle non-null. Declared locally because lvgl_rust_sys
+        // may not re-export the function across edition boundaries.
+        unsafe extern "C" {
+            fn lv_calendar_set_chinese_mode(obj: *mut lvgl_rust_sys::lv_obj_t, en: bool);
+        }
+        if en {
+            // Set the CJK font BEFORE enabling Chinese mode, because
+            // set_chinese_mode internally calls set_month_shown which
+            // triggers a render pass. The btnmatrix must already have
+            // the CJK font when rendering occurs.
+            let bm = self.get_btnmatrix();
+            bm.font(cjk_font);
+            bm.style_text_font(cjk_font, crate::widgets::obj::Part::Items);
+        }
+        unsafe { lv_calendar_set_chinese_mode(self.obj.handle(), en) };
+        self
+    }
+
     /// Add a dropdown navigation header (month + year dropdowns) to the calendar.
     ///
     /// Returns a non-owning handle to the header object (owned by the calendar).

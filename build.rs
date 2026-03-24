@@ -5,7 +5,8 @@ fn main() {
     if target.starts_with("xtensa-") {
         println!("cargo:rustc-link-arg=-Tlinkall.x");
     }
-    // All targets: lvgl_rust_sys's build.rs (cc crate) compiles LVGL.
+    // All targets: lvgl_rust_sys's build.rs (cc crate) compiles LVGL
+    // (including lv_calendar_chinese.c) via recursive add_c_files().
 
     // Image assets (all targets)
     let cfg = oxivgl_build::ImageConfig::from_env();

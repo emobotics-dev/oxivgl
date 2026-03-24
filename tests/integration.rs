@@ -4348,3 +4348,23 @@ fn canvas_layer_draw_image_static() {
     drop(layer);
     pump();
 }
+
+#[test]
+
+#[test]
+
+// ── Calendar — Chinese mode ─────────────────────────────────────────────────
+
+#[test]
+fn calendar_chinese_mode() {
+    let screen = fresh_screen();
+    let cal = Calendar::new(&screen).unwrap();
+    cal.size(300, 300).center();
+    cal.set_today_date(2024, 6, 1).set_month_shown(2024, 6);
+    cal.set_chinese_mode(true, oxivgl::fonts::SOURCE_HAN_SANS_SC_14_CJK);
+    cal.font(oxivgl::fonts::SOURCE_HAN_SANS_SC_14_CJK);
+    pump();
+    // Works on ESP32 hardware.
+}
+
+// ── Btnmatrix with CJK text ─────────────────────────────────────────────────
