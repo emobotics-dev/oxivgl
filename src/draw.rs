@@ -581,7 +581,7 @@ impl DrawArcDsc {
 
     /// Start and end angles in degrees (0–360, clockwise from 3 o'clock).
     ///
-    /// Angles are `f32` (`lv_value_precise_t`) in LVGL 9.3.
+    /// Angles are `f32` (`lv_value_precise_t`) when `LV_USE_FLOAT=1`.
     pub fn angles(&mut self, start: f32, end: f32) -> &mut Self {
         self.inner.start_angle = start;
         self.inner.end_angle = end;
@@ -642,14 +642,14 @@ impl DrawLineDsc {
         Self { inner }
     }
 
-    /// Start point. Coordinates are `f32` (`lv_point_precise_t`) in LVGL 9.3.
+    /// Start point. Coordinates are `f32` (`lv_point_precise_t`) when `LV_USE_FLOAT=1`.
     pub fn p1(&mut self, x: f32, y: f32) -> &mut Self {
         self.inner.p1.x = x;
         self.inner.p1.y = y;
         self
     }
 
-    /// End point. Coordinates are `f32` (`lv_point_precise_t`) in LVGL 9.3.
+    /// End point. Coordinates are `f32` (`lv_point_precise_t`) when `LV_USE_FLOAT=1`.
     pub fn p2(&mut self, x: f32, y: f32) -> &mut Self {
         self.inner.p2.x = x;
         self.inner.p2.y = y;
