@@ -143,6 +143,77 @@ impl<'p> Canvas<'p> {
     pub fn init_layer(&self) -> CanvasLayer<'_> {
         CanvasLayer::new(self.lv_handle())
     }
+
+    /// Draw into a [`DrawBuf`] using a temporary canvas, then discard the
+    /// canvas.
+    ///
+    /// Creates a throw-away LVGL canvas object on the active screen, sets
+    /// `buf` as its draw buffer, invokes the closure to perform drawing,
+    /// and deletes the canvas. The draw buffer is **not** freed — it
+    /// remains valid for use as a bitmap mask source or image.
+    ///
+    /// # Example
+    ///
+    /// ```no_run
+    /// # use oxivgl::draw_buf::{ColorFormat, DrawBuf};
+    /// # use oxivgl::draw::{Area, DrawRectDsc};
+    /// # use oxivgl::style::color_make;
+    /// # use oxivgl::widgets::Canvas;
+    /// let buf = DrawBuf::create(100, 50, ColorFormat::L8).unwrap();
+    /// Canvas::draw_to_buf(&buf, |canvas| {
+    ///     canvas.fill_bg(color_make(0, 0, 0), 0);
+    ///     let mut layer = canvas.init_layer();
+    ///     let mut rdc = DrawRectDsc::new();
+    ///     rdc.bg_color(color_make(255, 255, 255));
+    ///     layer.draw_rect(&rdc, Area { x1: 0, y1: 0, x2: 99, y2: 49 });
+    /// });
+    /// ```
+    pub fn draw_to_buf(buf: &DrawBuf, f: impl FnOnce(&TempCanvas<'_>)) {
+        // SAFETY: lv_screen_active returns the current active screen.
+        let screen = unsafe { lv_screen_active() };
+        assert!(!screen.is_null(), "no active screen");
+        // SAFETY: screen is valid; lv_canvas_create returns a valid canvas.
+        let canvas_ptr = unsafe { lv_canvas_create(screen) };
+        assert!(!canvas_ptr.is_null(), "canvas creation failed");
+        // SAFETY: canvas_ptr valid; buf.as_ptr() valid for the DrawBuf lifetime.
+        // We do NOT register a delete callback — the DrawBuf is not owned by
+        // this temporary canvas.
+        unsafe { lv_canvas_set_draw_buf(canvas_ptr, buf.as_ptr()) };
+        let temp = TempCanvas { ptr: canvas_ptr, _life: PhantomData };
+        f(&temp);
+        // SAFETY: canvas_ptr is valid; delete removes only the LVGL object,
+        // not the draw buffer (which was set externally, not owned).
+        unsafe { lv_obj_delete(canvas_ptr) };
+    }
+}
+
+/// Temporary canvas handle for [`Canvas::draw_to_buf`].
+///
+/// Provides `fill_bg` and `init_layer` for drawing onto an externally-owned
+/// [`DrawBuf`]. The LVGL canvas object is deleted when `draw_to_buf` returns;
+/// this handle must not escape the closure.
+pub struct TempCanvas<'a> {
+    ptr: *mut lv_obj_t,
+    _life: PhantomData<&'a ()>,
+}
+
+impl<'a> TempCanvas<'a> {
+    /// Fill the entire canvas background with a solid color.
+    pub fn fill_bg(&self, color: lv_color_t, opa: u8) {
+        // SAFETY: ptr is a valid canvas object.
+        unsafe { lv_canvas_fill_bg(self.ptr, color, opa) };
+    }
+
+    /// Set a single pixel on the canvas.
+    pub fn set_px(&self, x: i32, y: i32, color: lv_color_t, opa: u8) {
+        // SAFETY: ptr is a valid canvas object; out-of-bounds clamped by LVGL.
+        unsafe { lv_canvas_set_px(self.ptr, x, y, color, opa) };
+    }
+
+    /// Begin a batch drawing session on this temporary canvas.
+    pub fn init_layer(&self) -> CanvasLayer<'_> {
+        CanvasLayer::new(self.ptr)
+    }
 }
 
 impl<'p> AsLvHandle for Canvas<'p> {
