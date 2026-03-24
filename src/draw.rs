@@ -438,6 +438,30 @@ impl DrawRectDsc {
         self
     }
 
+    /// Set background gradient direction.
+    pub fn bg_grad_dir(&mut self, dir: crate::style::GradDir) -> &mut Self {
+        self.inner.bg_grad.set_dir(dir as lv_grad_dir_t);
+        self
+    }
+
+    /// Configure a background gradient stop (index 0 or 1).
+    ///
+    /// - `frac`: position 0–255 (0 = start, 255 = end).
+    /// - `opa`: opacity 0–255.
+    pub fn bg_grad_stop(&mut self, idx: usize, color: lv_color_t, frac: u8, opa: u8) -> &mut Self {
+        assert!(idx < 2, "gradient stop index must be 0 or 1");
+        self.inner.bg_grad.stops[idx].color = color;
+        self.inner.bg_grad.stops[idx].frac = frac;
+        self.inner.bg_grad.stops[idx].opa = opa;
+        self
+    }
+
+    /// Set background opacity (0 = transparent, 255 = opaque).
+    pub fn bg_opa(&mut self, opa: u8) -> &mut Self {
+        self.inner.bg_opa = opa;
+        self
+    }
+
     /// Raw pointer to the inner descriptor. Used by [`CanvasLayer::draw_rect`].
     pub(crate) fn as_ptr(&self) -> *const lv_draw_rect_dsc_t {
         &self.inner
@@ -475,6 +499,18 @@ impl DrawLabelDscOwned {
     /// Set text color.
     pub fn set_color(&mut self, color: lv_color_t) -> &mut Self {
         self.inner.color = color;
+        self
+    }
+
+    /// Set the font.
+    pub fn set_font(&mut self, font: crate::fonts::Font) -> &mut Self {
+        self.inner.font = font.as_ptr();
+        self
+    }
+
+    /// Set text alignment.
+    pub fn set_align(&mut self, align: crate::widgets::TextAlign) -> &mut Self {
+        self.inner.align = align as lv_text_align_t;
         self
     }
 
@@ -767,19 +803,6 @@ impl<'i> DrawImageDsc<'i> {
         // DrawBuf lifetime — the pixel data is valid until 'i expires.
         inner.src = &img.inner as *const lv_image_dsc_t as *const core::ffi::c_void;
         Self { inner, _img_lifetime: core::marker::PhantomData }
-    }
-
-    /// Create from a `&'static lv_image_dsc_t` obtained via
-    /// [`image_declare!`](crate::image_declare).
-    ///
-    /// The `'static` lifetime guarantees the pixel data outlives any drawing
-    /// operation.
-    pub fn from_static_dsc(dsc: &'static lv_image_dsc_t) -> DrawImageDsc<'static> {
-        let mut inner = unsafe { core::mem::zeroed::<lv_draw_image_dsc_t>() };
-        unsafe { lv_draw_image_dsc_init(&mut inner) };
-        // SAFETY: dsc is a 'static lv_image_dsc_t compiled into the binary.
-        inner.src = dsc as *const lv_image_dsc_t as *const core::ffi::c_void;
-        DrawImageDsc { inner, _img_lifetime: core::marker::PhantomData }
     }
 
     /// Rotation in 0.1-degree units (e.g. `1200` = 120°).
