@@ -1085,12 +1085,12 @@ Status of all [LVGL 9.3 examples](https://docs.lvgl.io/9.3/examples.html) in oxi
 | Category | LVGL | Done | Skip | Notes |
 |---|---|---|---|---|
 | Getting Started | 4 | 4 (+4 extra gradient examples) | 0 | |
-| Styles | 19 | 18 | 1 | style19 (meta/benchmarking) |
+| Styles | 21 | 18 | 3 | style19 (meta/benchmarking), style20 (modal overlay, v9.5), style21 (card grid, v9.5) |
 | Animations | 5 | 5 | 0 | |
 | Events | 5 | 5 (+1 extra trickle) | 0 | |
 | Flex | 6 | 6 | 0 | |
 | Grid | 6 | 6 | 0 | |
-| Scroll | 8 | 7 | 1 | scroll5 (RTL font) |
+| Scroll | 9 | 7 | 2 | scroll5 (RTL font), scroll9 (scroll toggles, v9.5) |
 
 ### Widget Examples (wrapper exists)
 
@@ -1104,18 +1104,18 @@ Status of all [LVGL 9.3 examples](https://docs.lvgl.io/9.3/examples.html) in oxi
 | checkbox | 2 | 2 | 0 | |
 | dropdown | 3 | 3 | 0 | |
 | image | 5 | 5 | 0 | |
-| label | 6 | 6 | 0 | |
+| label | 7 | 6 | 1 | label7 (translation/i18n, v9.5) |
 | led | 1 | 1 | 0 | |
 | line | 1 | 1 | 0 | |
 | list | 2 | 2 | 0 | |
 | menu | 5 | 5 | 0 | |
-| msgbox | 1 | 1 | 0 | |
+| msgbox | 2 | 1 | 1 | msgbox3 (blur effects, v9.5) |
 | roller | 3 | 3 | 0 | |
-| scale | 11 | 11 | 0 | |
+| scale | 12 | 11 | 1 | scale12 (compass, v9.5) |
 | slider | 4 | 4 | 0 | |
 | switch | 2 | 2 | 0 | |
 | textarea | 4 | 4 | 0 | Includes Buttonmatrix + Keyboard wrappers |
-| canvas | 11 | 10 | 1 | canvas_8 (vector graphics — requires ThorVG, abandoned) |
+| canvas | 12 | 10 | 2 | canvas_8 (vector graphics, ThorVG), canvas_12 (curved text, v9.5) |
 | table | 2 | 2 | 0 | |
 | tabview | 2 | 2 | 0 | |
 | tileview | 1 | 1 | 0 | |
@@ -1127,17 +1127,22 @@ Status of all [LVGL 9.3 examples](https://docs.lvgl.io/9.3/examples.html) in oxi
 | spinner | 1 | 1 | 0 | |
 | spinbox | 1 | 1 | 0 | |
 
-### Widgets Without Wrappers
+### Widgets Without Wrappers (new in v9.5)
 
-None — all practical widgets wrapped.
+| Widget | Notes |
+|--------|-------|
+| arclabel | Curved text along arc path (1 example in LVGL) |
+| gif | GIF animation playback (no LVGL examples yet) |
+| ime_pinyin | Chinese Pinyin input method (no LVGL examples yet) |
 
 ### Totals
 
 | | Count |
 |---|---|
-| LVGL examples total | ~184 |
+| LVGL examples total | ~193 |
 | oxivgl done | 144 |
 | Skipped (intentional) | 4 |
+| New in v9.5 (not ported) | ~9 |
 | Missing (wrapper exists) | 4 |
 | Abandoned (lottie) | 3 |
 | No wrapper | ~46 |
