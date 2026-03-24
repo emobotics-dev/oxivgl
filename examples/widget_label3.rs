@@ -12,6 +12,7 @@
 use oxivgl::{
     fonts,
     view::View,
+    style::Selector,
     widgets::{Align, BaseDir, Label, Screen, WidgetError},
 };
 
@@ -45,7 +46,7 @@ impl View for WidgetLabel3 {
              (\u{05D1}\u{05D0}\u{05E0}\u{05D2}\u{05DC}\u{05D9}\u{05EA}: \
              CPU - Central Processing Unit).",
         );
-        rtl_label.base_dir(BaseDir::Rtl);
+        rtl_label.style_base_dir(BaseDir::Rtl, Selector::DEFAULT);
         rtl_label.font(fonts::DEJAVU_16_PERSIAN_HEBREW);
         rtl_label.width(310);
         rtl_label.align(Align::LeftMid, 5, 0);

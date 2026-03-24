@@ -805,6 +805,19 @@ impl<'i> DrawImageDsc<'i> {
         Self { inner, _img_lifetime: core::marker::PhantomData }
     }
 
+    /// Create from a static `lv_image_dsc_t` (e.g. from [`image_declare!`](crate::image_declare)).
+    ///
+    /// # Safety contract
+    /// The image descriptor must point to valid pixel data for the lifetime `'i`.
+    pub fn from_static_dsc(img: &'i lv_image_dsc_t) -> Self {
+        let mut inner = unsafe { core::mem::zeroed::<lv_draw_image_dsc_t>() };
+        unsafe { lv_draw_image_dsc_init(&mut inner) };
+        // SAFETY: img is a static image descriptor whose pixel data is
+        // valid for 'i (typically 'static from image_declare!).
+        inner.src = img as *const lv_image_dsc_t as *const core::ffi::c_void;
+        Self { inner, _img_lifetime: core::marker::PhantomData }
+    }
+
     /// Rotation in 0.1-degree units (e.g. `1200` = 120°).
     pub fn rotation(&mut self, r: i32) -> &mut Self {
         self.inner.rotation = r;
