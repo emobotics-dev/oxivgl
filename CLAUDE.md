@@ -73,10 +73,9 @@ LIBCLANG_PATH=/usr/lib64 RUSTDOCFLAGS="-W missing-docs" cargo +nightly doc --tar
 
 ## Build System
 
-- **Xtensa targets**: `build.rs` compiles LVGL from source via cmake (`thirdparty/lvgl_rust_sys/lvgl`). Requires `DEP_LV_CONFIG_PATH` env var pointing to the dir containing `lv_conf.h` (provided by the consumer crate via `links` metadata).
-- **Host targets**: `lvgl_rust_sys`'s own `build.rs` compiles LVGL; `build.rs` in this crate does nothing.
-- cmake toolchain files: `src/toolchain-esp32.cmake` / `src/toolchain-esp32s3.cmake`
-- `lv_conf.h` lives in `conf/`; cmake `target_include_directories` takes priority over `-I` cflags — don't duplicate the header in the cmake source tree.
+- **All targets**: `lvgl_rust_sys`'s `build.rs` (cc crate) compiles LVGL from source. For Xtensa, `source ~/.clco-env` puts the ESP toolchain in PATH.
+- `lv_conf.h` lives in `conf/`; pointed to by `DEP_LV_CONFIG_PATH` in `.cargo/config.toml`.
+- **CRITICAL — single LVGL source**: LVGL must only be compiled once, by `lvgl_rust_sys`. Never add a second compilation (e.g. cmake) from a different LVGL source tree — struct layouts change between versions, causing silent memory corruption on ESP32 (see issue #55).
 
 ## Specifications
 

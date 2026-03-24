@@ -28,8 +28,6 @@ log-04 = { package = "log", version = "0.4", optional = true }
 png = { version = "0.17", optional = true }
 
 [build-dependencies]
-cmake = "0.1"
-cc = "1.2.38"
 oxivgl-build = { path = "oxivgl-build" }
 
 [workspace]
