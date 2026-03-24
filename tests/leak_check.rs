@@ -30,11 +30,11 @@ use oxivgl::{
         color_make, palette_main, props, GradDsc, GradExtend, Palette, Selector, StyleBuilder,
         TransitionDsc,
     },
-    enums::ObjState,
+    enums::{ObjState, ScrollDir},
     widgets::{
-        Arc, Bar, BarMode, Button, Buttonmatrix, Calendar, CalendarDate, Canvas, Chart, ChartAxis,
+        AnimImg, Arc, Bar, BarMode, Button, Buttonmatrix, Calendar, CalendarDate, Canvas, Chart, ChartAxis,
         ChartType, Checkbox, Dropdown, Keyboard, KeyboardMode, Label, Led, Line, Menu, Msgbox,
-        Obj, Part, Roller, RollerMode, Screen, Slider, Spinbox, Spinner, Switch, Table, Tabview, Textarea, ValueLabel,
+        Obj, Part, Roller, RollerMode, Screen, Slider, Spangroup, Spinbox, Spinner, Switch, Table, Tabview, Textarea, Imagebutton, ImagebuttonState, Tileview, ValueLabel, Win,
         lv_color_t,
     },
 };
@@ -699,5 +699,94 @@ fn leak_spinbox() {
         sb.set_range(-100, 100).set_value(42).set_step(10);
         sb.increment();
         drop(sb);
+    });
+}
+// ── Spangroup ────────────────────────────────────────────────────────────────
+
+#[test]
+fn leak_spangroup() {
+    assert_no_leak("Spangroup", 1, |screen| {
+        let sg = Spangroup::new(screen).unwrap();
+        sg.width(200);
+        let span = sg.add_span().unwrap();
+        span.set_text(c"leak test");
+        sg.refresh();
+        drop(sg);
+    });
+}
+
+// ── Imagebutton ─────────────────────────────────────────────────────────────
+
+#[test]
+fn leak_imagebutton() {
+    assert_no_leak("Imagebutton", 6, |screen| {
+        let btn = Imagebutton::new(screen).unwrap();
+        btn.set_state(ImagebuttonState::Pressed);
+        btn.set_src(ImagebuttonState::Released, None, None, None);
+        drop(btn);
+    });
+}
+
+// ── Win ──────────────────────────────────────────────────────────────────────
+
+#[test]
+fn leak_win() {
+    assert_no_leak("Win", 6, |screen| {
+        let win = Win::new(screen).unwrap();
+        let _btn = win.add_button(&oxivgl::symbols::CLOSE, 40);
+        let _title = win.add_title("Leak test");
+        let content = win.get_content();
+        let _lbl = Label::new(&content).unwrap();
+        drop(win);
+    });
+}
+
+// ── Tileview ──────────────────────────────────────────────────────────────────
+
+#[test]
+fn leak_tileview() {
+    assert_no_leak("Tileview", 6, |screen| {
+        let tv = Tileview::new(screen).unwrap();
+        let _t1 = tv.add_tile(0, 0, ScrollDir::HOR);
+        let _t2 = tv.add_tile(1, 0, ScrollDir::HOR);
+        drop(tv);
+    });
+}
+// ── AnimImg ──────────────────────────────────────────────────────────────────
+
+#[repr(transparent)]
+struct SyncPtr(*const core::ffi::c_void);
+unsafe impl Sync for SyncPtr {}
+
+mod animimg_frames {
+    unsafe extern "C" {
+        #[allow(non_upper_case_globals)]
+        pub static img_cogwheel_argb: oxivgl::widgets::lv_image_dsc_t;
+    }
+    pub static FRAMES: [super::SyncPtr; 2] = [
+        super::SyncPtr(&raw const img_cogwheel_argb as *const core::ffi::c_void),
+        super::SyncPtr(&raw const img_cogwheel_argb as *const core::ffi::c_void),
+    ];
+}
+
+fn animimg_frame_ptrs() -> &'static [*const core::ffi::c_void] {
+    unsafe {
+        core::slice::from_raw_parts(
+            animimg_frames::FRAMES.as_ptr().cast(),
+            animimg_frames::FRAMES.len(),
+        )
+    }
+}
+
+#[test]
+fn leak_animimg() {
+    assert_no_leak("AnimImg", 1, |screen| {
+        let animimg = AnimImg::new(screen).unwrap();
+        animimg
+            .set_src(animimg_frame_ptrs())
+            .set_duration(500)
+            .set_repeat_count(1)
+            .start();
+        drop(animimg);
     });
 }

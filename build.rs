@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-only
 use cmake::Config;
-use std::path::PathBuf;
 
 fn main() {
     let target = std::env::var("TARGET").unwrap_or_default();

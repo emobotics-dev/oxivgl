@@ -26,6 +26,15 @@ impl<'p> Obj<'p> {
         self
     }
 
+    /// Set background opacity for the given selector.
+    pub fn bg_opa_selector(&self, opa: u8, selector: impl Into<crate::style::Selector>) -> &Self {
+        let selector = selector.into().raw();
+        assert_ne!(self.handle(), null_mut(), "Obj handle cannot be null");
+        // SAFETY: handle non-null (asserted above).
+        unsafe { lv_obj_set_style_bg_opa(self.handle(), opa as lv_opa_t, selector) };
+        self
+    }
+
     /// Set border width (selector 0).
     pub fn border_width(&self, w: i32) -> &Self {
         assert_ne!(self.handle(), null_mut(), "Obj handle cannot be null");
@@ -465,6 +474,34 @@ impl<'p> Obj<'p> {
         // slice. LVGL stores the pointer in the style property map — the
         // static lifetime guarantees it outlives the widget.
         unsafe { lv_obj_set_style_bg_image_src(self.handle(), symbol.as_ptr() as *const core::ffi::c_void, selector) };
+        self
+    }
+
+    /// Set a bitmap mask source (L8 draw buffer) for the given selector.
+    ///
+    /// LVGL stores the raw pointer to the `lv_draw_buf_t` — the buffer must
+    /// outlive the widget. The `&DrawBuf` reference is not lifetime-checked
+    /// at this level; callers must ensure the `DrawBuf` lives long enough
+    /// (typically stored in the same View struct as the masked widget).
+    ///
+    /// Requires `LV_DRAW_SW_COMPLEX = 1` in `lv_conf.h`.
+    pub fn style_bitmap_mask_src(
+        &self,
+        mask: &crate::draw_buf::DrawBuf,
+        selector: impl Into<crate::style::Selector>,
+    ) -> &Self {
+        let selector = selector.into().raw();
+        assert_ne!(self.handle(), null_mut(), "Obj handle cannot be null");
+        // SAFETY: handle non-null; mask.as_ptr() is a valid lv_draw_buf_t
+        // pointer. LVGL stores this pointer in the style property map.
+        // Caller must ensure the DrawBuf outlives the widget.
+        unsafe {
+            lv_obj_set_style_bitmap_mask_src(
+                self.handle(),
+                mask.as_ptr() as *const core::ffi::c_void,
+                selector,
+            )
+        };
         self
     }
 }

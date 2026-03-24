@@ -17,6 +17,7 @@ pub(crate) fn to_lvgl(v: f32, max: f32) -> i32 {
     (((v / max) * LVGL_SCALE as f32) as i32).clamp(0, LVGL_SCALE)
 }
 
+mod animimg;
 mod arc;
 mod bar;
 mod button;
@@ -28,6 +29,7 @@ mod checkbox;
 mod child;
 mod dropdown;
 mod image;
+mod imagebutton;
 mod keyboard;
 mod label;
 mod led;
@@ -42,14 +44,18 @@ mod roller;
 mod scale;
 mod screen;
 mod slider;
+mod span;
 mod spinbox;
 mod spinner;
 mod switch;
 mod table;
 mod tabview;
 mod textarea;
+mod tileview;
 mod value_label;
+mod win;
 
+pub use animimg::AnimImg;
 pub use arc::{Arc, ArcMode};
 pub use bar::{Bar, BarMode};
 pub use button::Button;
@@ -61,6 +67,7 @@ pub use checkbox::Checkbox;
 pub use child::Child;
 pub use dropdown::{DdDir, Dropdown};
 pub use image::{Image, ImageAlign};
+pub use imagebutton::{Imagebutton, ImagebuttonState};
 pub use keyboard::{Keyboard, KeyboardMode};
 pub use label::{Label, LabelLongMode};
 pub use led::Led;
@@ -78,13 +85,16 @@ pub use scale::{
 };
 pub use screen::Screen;
 pub use slider::{Slider, SliderMode};
+pub use span::{Span, SpanMode, SpanOverflow, Spangroup};
 pub use spinbox::Spinbox;
 pub use spinner::Spinner;
 pub use switch::{Switch, SwitchOrientation};
 pub use table::{Table, TableCellCtrl};
 pub use tabview::Tabview;
 pub use textarea::Textarea;
+pub use tileview::Tileview;
 pub use value_label::ValueLabel;
+pub use win::Win;
 
 /// Maximum corner radius — creates a pill/capsule shape.
 /// Equivalent to LVGL's `LV_RADIUS_CIRCLE` (0x7FFF).

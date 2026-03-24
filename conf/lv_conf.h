@@ -202,9 +202,9 @@
 #define LV_FONT_MONTSERRAT_48 1
 
 #define LV_FONT_MONTSERRAT_28_COMPRESSED 0
-#define LV_FONT_DEJAVU_16_PERSIAN_HEBREW 0
+#define LV_FONT_DEJAVU_16_PERSIAN_HEBREW 1
 #define LV_FONT_SOURCE_HAN_SANS_SC_14_CJK 0
-#define LV_FONT_SOURCE_HAN_SANS_SC_16_CJK 0
+#define LV_FONT_SOURCE_HAN_SANS_SC_16_CJK 1
 
 #define LV_FONT_UNSCII_8  0
 #define LV_FONT_UNSCII_16 0
@@ -226,7 +226,7 @@
 #define LV_TXT_LINE_BREAK_LONG_PRE_MIN_LEN 3
 #define LV_TXT_LINE_BREAK_LONG_POST_MIN_LEN 3
 
-#define LV_USE_BIDI 0
+#define LV_USE_BIDI 1
 #define LV_USE_ARABIC_PERSIAN_CHARS 0
 
 /*==================
@@ -235,7 +235,7 @@
 
 #define LV_WIDGETS_HAS_DEFAULT_VALUE  1
 
-#define LV_USE_ANIMIMG    0
+#define LV_USE_ANIMIMG    1
 #define LV_USE_ARC        1
 #define LV_USE_BAR        1
 #define LV_USE_BUTTON        1
@@ -258,7 +258,7 @@
 #define LV_USE_CHECKBOX   1
 #define LV_USE_DROPDOWN   1
 #define LV_USE_IMAGE      1
-#define LV_USE_IMAGEBUTTON     0
+#define LV_USE_IMAGEBUTTON     1
 #define LV_USE_KEYBOARD   1
 #define LV_USE_LABEL      1
 #if LV_USE_LABEL
@@ -275,15 +275,15 @@
 #define LV_USE_ROLLER     1
 #define LV_USE_SCALE      1
 #define LV_USE_SLIDER     1
-#define LV_USE_SPAN       0
+#define LV_USE_SPAN       1
 #define LV_USE_SPINBOX    1
 #define LV_USE_SPINNER    1
 #define LV_USE_SWITCH     1
 #define LV_USE_TEXTAREA   1
 #define LV_USE_TABLE      1
 #define LV_USE_TABVIEW    1
-#define LV_USE_TILEVIEW   0
-#define LV_USE_WIN        0
+#define LV_USE_TILEVIEW   1
+#define LV_USE_WIN        1
 
 /*==================
  * THEMES

@@ -15,6 +15,8 @@ impl ColorFormat {
     pub const RGB565: Self = Self(lv_color_format_t_LV_COLOR_FORMAT_RGB565 as u32);
     /// 32-bit ARGB (8-8-8-8), with full alpha.
     pub const ARGB8888: Self = Self(lv_color_format_t_LV_COLOR_FORMAT_ARGB8888 as u32);
+    /// 8-bit luminance (grayscale). Used for bitmap masks.
+    pub const L8: Self = Self(lv_color_format_t_LV_COLOR_FORMAT_L8 as u32);
 }
 
 /// Owned LVGL draw buffer. Allocated by LVGL on [`create`](DrawBuf::create) and freed on `Drop`.
@@ -39,6 +41,18 @@ impl DrawBuf {
     /// Raw LVGL pointer. Valid for the lifetime of this `DrawBuf`.
     pub(crate) fn as_ptr(&self) -> *mut lv_draw_buf_t {
         self.ptr
+    }
+
+    /// Buffer width in pixels.
+    pub fn width(&self) -> i32 {
+        // SAFETY: ptr is a valid lv_draw_buf_t allocated by lv_draw_buf_create.
+        unsafe { (*self.ptr).header.w() as i32 }
+    }
+
+    /// Buffer height in pixels.
+    pub fn height(&self) -> i32 {
+        // SAFETY: ptr is a valid lv_draw_buf_t allocated by lv_draw_buf_create.
+        unsafe { (*self.ptr).header.h() as i32 }
     }
 
     /// Obtain an image descriptor view into this buffer's pixel data.

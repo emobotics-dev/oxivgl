@@ -438,6 +438,30 @@ impl DrawRectDsc {
         self
     }
 
+    /// Set background gradient direction.
+    pub fn bg_grad_dir(&mut self, dir: crate::style::GradDir) -> &mut Self {
+        self.inner.bg_grad.set_dir(dir as lv_grad_dir_t);
+        self
+    }
+
+    /// Configure a background gradient stop (index 0 or 1).
+    ///
+    /// - `frac`: position 0–255 (0 = start, 255 = end).
+    /// - `opa`: opacity 0–255.
+    pub fn bg_grad_stop(&mut self, idx: usize, color: lv_color_t, frac: u8, opa: u8) -> &mut Self {
+        assert!(idx < 2, "gradient stop index must be 0 or 1");
+        self.inner.bg_grad.stops[idx].color = color;
+        self.inner.bg_grad.stops[idx].frac = frac;
+        self.inner.bg_grad.stops[idx].opa = opa;
+        self
+    }
+
+    /// Set background opacity (0 = transparent, 255 = opaque).
+    pub fn bg_opa(&mut self, opa: u8) -> &mut Self {
+        self.inner.bg_opa = opa;
+        self
+    }
+
     /// Raw pointer to the inner descriptor. Used by [`CanvasLayer::draw_rect`].
     pub(crate) fn as_ptr(&self) -> *const lv_draw_rect_dsc_t {
         &self.inner
@@ -475,6 +499,18 @@ impl DrawLabelDscOwned {
     /// Set text color.
     pub fn set_color(&mut self, color: lv_color_t) -> &mut Self {
         self.inner.color = color;
+        self
+    }
+
+    /// Set the font.
+    pub fn set_font(&mut self, font: crate::fonts::Font) -> &mut Self {
+        self.inner.font = font.as_ptr();
+        self
+    }
+
+    /// Set text alignment.
+    pub fn set_align(&mut self, align: crate::widgets::TextAlign) -> &mut Self {
+        self.inner.align = align as lv_text_align_t;
         self
     }
 
@@ -766,6 +802,19 @@ impl<'i> DrawImageDsc<'i> {
         // 'i ties this descriptor to the ImageDsc borrow, which ties to the
         // DrawBuf lifetime — the pixel data is valid until 'i expires.
         inner.src = &img.inner as *const lv_image_dsc_t as *const core::ffi::c_void;
+        Self { inner, _img_lifetime: core::marker::PhantomData }
+    }
+
+    /// Create from a static `lv_image_dsc_t` (e.g. from [`image_declare!`](crate::image_declare)).
+    ///
+    /// # Safety contract
+    /// The image descriptor must point to valid pixel data for the lifetime `'i`.
+    pub fn from_static_dsc(img: &'i lv_image_dsc_t) -> Self {
+        let mut inner = unsafe { core::mem::zeroed::<lv_draw_image_dsc_t>() };
+        unsafe { lv_draw_image_dsc_init(&mut inner) };
+        // SAFETY: img is a static image descriptor whose pixel data is
+        // valid for 'i (typically 'static from image_declare!).
+        inner.src = img as *const lv_image_dsc_t as *const core::ffi::c_void;
         Self { inner, _img_lifetime: core::marker::PhantomData }
     }
 

@@ -19,10 +19,10 @@ use oxivgl::{
     enums::{EventCode, ObjFlag, ObjState, Opa, ScrollDir, ScrollSnap, ScrollbarMode},
     layout::{FlexAlign, FlexFlow, GridAlign, GridCell, Layout, GRID_TEMPLATE_LAST},
     widgets::{
-        Align, Arc, AsLvHandle, Bar, Button, Buttonmatrix, Calendar, CalendarDate, Canvas, Checkbox,
-        Dropdown, Image, Keyboard, KeyboardMode, Label, Led, Line, Menu, MenuHeaderMode, Msgbox,
+        Align, AnimImg, Arc, AsLvHandle, Bar, Button, Buttonmatrix, Calendar, CalendarDate, Canvas, Checkbox,
+        Dropdown, Image, Imagebutton, ImagebuttonState, Keyboard, KeyboardMode, Label, Led, Line, Menu, MenuHeaderMode, Msgbox,
         Obj, Part, Roller, RollerMode, Screen, Slider, Spinbox, Spinner, Switch, Table, TableCellCtrl, Tabview,
-        Textarea, ValueLabel, WidgetError, RADIUS_MAX, lv_color_t,
+        Spangroup, SpanMode, SpanOverflow, Textarea, Tileview, ValueLabel, WidgetError, Win, RADIUS_MAX, lv_color_t,
     },
 };
 
@@ -3962,3 +3962,427 @@ fn spinbox_cursor_pos() {
     pump();
 }
 
+
+
+
+// ── Spangroup ────────────────────────────────────────────────────────────────
+
+#[test]
+fn span_create() {
+    let screen = fresh_screen();
+    let sg = Spangroup::new(&screen).unwrap();
+    sg.size(200, 100).center();
+    pump();
+}
+
+#[test]
+fn span_add_and_set_text() {
+    let screen = fresh_screen();
+    let sg = Spangroup::new(&screen).unwrap();
+    sg.width(200);
+    let span = sg.add_span().unwrap();
+    span.set_text(c"Hello spans");
+    sg.refresh();
+    assert_eq!(sg.get_span_count(), 1);
+    pump();
+}
+
+#[test]
+fn span_add_multiple() {
+    let screen = fresh_screen();
+    let sg = Spangroup::new(&screen).unwrap();
+    sg.width(200);
+    let _s1 = sg.add_span().unwrap();
+    let _s2 = sg.add_span().unwrap();
+    let _s3 = sg.add_span().unwrap();
+    assert_eq!(sg.get_span_count(), 3);
+    sg.refresh();
+    pump();
+}
+
+#[test]
+fn span_delete() {
+    let screen = fresh_screen();
+    let sg = Spangroup::new(&screen).unwrap();
+    let span = sg.add_span().unwrap();
+    span.set_text(c"temp");
+    assert_eq!(sg.get_span_count(), 1);
+    sg.delete_span(&span);
+    assert_eq!(sg.get_span_count(), 0);
+    sg.refresh();
+    pump();
+}
+
+#[test]
+fn span_overflow_and_indent() {
+    let screen = fresh_screen();
+    let sg = Spangroup::new(&screen).unwrap();
+    sg.width(200);
+    sg.set_overflow(SpanOverflow::Ellipsis);
+    sg.set_indent(20);
+    assert_eq!(sg.get_indent(), 20);
+    let span = sg.add_span().unwrap();
+    span.set_text(c"text");
+    sg.refresh();
+    pump();
+}
+
+#[test]
+fn span_mode() {
+    let screen = fresh_screen();
+    let sg = Spangroup::new(&screen).unwrap();
+    sg.width(200);
+    sg.set_mode(SpanMode::Break);
+    let span = sg.add_span().unwrap();
+    span.set_text(c"break mode");
+    sg.refresh();
+    pump();
+}
+
+#[test]
+fn span_max_lines() {
+    let screen = fresh_screen();
+    let sg = Spangroup::new(&screen).unwrap();
+    sg.width(200);
+    sg.set_max_lines(3);
+    assert_eq!(sg.get_max_lines(), 3);
+    sg.refresh();
+    pump();
+}
+
+#[test]
+fn span_text_color_and_decor() {
+    let screen = fresh_screen();
+    let sg = Spangroup::new(&screen).unwrap();
+    sg.width(200);
+    let span = sg.add_span().unwrap();
+    span.set_text(c"styled")
+        .set_text_color(palette_main(Palette::Red))
+        .set_text_opa(128)
+        .set_text_decor(TextDecor::UNDERLINE);
+    sg.refresh();
+    pump();
+}
+
+#[test]
+fn span_static_text() {
+    let screen = fresh_screen();
+    let sg = Spangroup::new(&screen).unwrap();
+    sg.width(200);
+    let span = sg.add_span().unwrap();
+    span.set_text_static(c"static text");
+    sg.refresh();
+    pump();
+}
+
+
+// ── Tileview ──────────────────────────────────────────────────────────────────
+
+#[test]
+fn tileview_create_and_add_tiles() {
+    let screen = fresh_screen();
+    let tv = Tileview::new(&screen).unwrap();
+    let _tile1 = tv.add_tile(0, 0, ScrollDir::BOTTOM);
+    let _tile2 = tv.add_tile(0, 1, ScrollDir::TOP | ScrollDir::RIGHT);
+    let _tile3 = tv.add_tile(1, 1, ScrollDir::LEFT);
+    pump();
+}
+
+#[test]
+fn tileview_set_tile_by_index() {
+    let screen = fresh_screen();
+    let tv = Tileview::new(&screen).unwrap();
+    let _tile1 = tv.add_tile(0, 0, ScrollDir::BOTTOM);
+    let _tile2 = tv.add_tile(0, 1, ScrollDir::TOP);
+    tv.set_tile_by_index(0, 1, false);
+    pump();
+}
+
+#[test]
+fn tileview_set_tile_by_obj() {
+    let screen = fresh_screen();
+    let tv = Tileview::new(&screen).unwrap();
+    let tile1 = tv.add_tile(0, 0, ScrollDir::BOTTOM);
+    let tile2 = tv.add_tile(0, 1, ScrollDir::TOP);
+    tv.set_tile(&*tile2, false);
+    pump();
+    // Switch back
+    tv.set_tile(&*tile1, false);
+    pump();
+}
+
+#[test]
+fn tileview_get_active_tile() {
+    let screen = fresh_screen();
+    let tv = Tileview::new(&screen).unwrap();
+    let _tile1 = tv.add_tile(0, 0, ScrollDir::BOTTOM);
+    let _tile2 = tv.add_tile(0, 1, ScrollDir::TOP);
+    tv.set_tile_by_index(0, 1, false);
+    pump();
+    let active = tv.get_tile_active();
+    assert!(active.is_some());
+}
+
+
+// ── Win — window widget ──────────────────────────────────────────────────────
+
+#[test]
+fn win_create() {
+    let screen = fresh_screen();
+    let win = Win::new(&screen).unwrap();
+    win.size(300, 200).center();
+    pump();
+}
+
+#[test]
+fn win_add_title() {
+    let screen = fresh_screen();
+    let win = Win::new(&screen).unwrap();
+    let _title = win.add_title("Hello");
+    pump();
+}
+
+#[test]
+fn win_add_button() {
+    let screen = fresh_screen();
+    let win = Win::new(&screen).unwrap();
+    let _btn = win.add_button(&oxivgl::symbols::CLOSE, 40);
+    pump();
+}
+
+#[test]
+fn win_get_header() {
+    let screen = fresh_screen();
+    let win = Win::new(&screen).unwrap();
+    let _hdr = win.get_header();
+    pump();
+}
+
+#[test]
+fn win_get_content() {
+    let screen = fresh_screen();
+    let win = Win::new(&screen).unwrap();
+    let content = win.get_content();
+    let _lbl = Label::new(&content).unwrap();
+    pump();
+}
+
+#[test]
+fn win_full_example() {
+    let screen = fresh_screen();
+    let win = Win::new(&screen).unwrap();
+    let _btn1 = win.add_button(&oxivgl::symbols::LEFT, 40);
+    let _title = win.add_title("Test Win");
+    let _btn2 = win.add_button(&oxivgl::symbols::RIGHT, 40);
+    let _btn3 = win.add_button(&oxivgl::symbols::CLOSE, 60);
+    let content = win.get_content();
+    let lbl = Label::new(&content).unwrap();
+    lbl.text("Content text");
+    pump();
+}
+
+// ── Imagebutton ─────────────────────────────────────────────────────────────
+
+#[test]
+fn imagebutton_create() {
+    let screen = fresh_screen();
+    let btn = Imagebutton::new(&screen).unwrap();
+    btn.size(200, 50).center();
+    pump();
+}
+
+#[test]
+fn imagebutton_set_state() {
+    let screen = fresh_screen();
+    let btn = Imagebutton::new(&screen).unwrap();
+    btn.set_state(ImagebuttonState::Released);
+    btn.set_state(ImagebuttonState::Pressed);
+    btn.set_state(ImagebuttonState::Disabled);
+    btn.set_state(ImagebuttonState::CheckedReleased);
+    btn.set_state(ImagebuttonState::CheckedPressed);
+    btn.set_state(ImagebuttonState::CheckedDisabled);
+    pump();
+}
+
+#[test]
+fn imagebutton_set_src_none() {
+    let screen = fresh_screen();
+    let btn = Imagebutton::new(&screen).unwrap();
+    btn.set_src(ImagebuttonState::Released, None, None, None);
+    pump();
+}
+
+#[test]
+fn imagebutton_with_child_label() {
+    let screen = fresh_screen();
+    let btn = Imagebutton::new(&screen).unwrap();
+    btn.size(200, 50).center();
+    let label = Label::new(&btn).unwrap();
+    label.text("Click me");
+    label.center();
+    pump();
+}
+
+
+// ── AnimImg ──────────────────────────────────────────────────────────────────
+
+#[repr(transparent)]
+struct SyncPtr(*const core::ffi::c_void);
+unsafe impl Sync for SyncPtr {}
+
+// Declare extern symbol at module scope so we can take its address in a static.
+// The same symbol is also referenced by the img_cogwheel_argb() function
+// generated by image_declare! above — both refer to the same linker symbol.
+mod animimg_frames {
+    unsafe extern "C" {
+        #[allow(non_upper_case_globals)]
+        pub static img_cogwheel_argb: oxivgl::widgets::lv_image_dsc_t;
+    }
+    pub static FRAMES: [super::SyncPtr; 2] = [
+        super::SyncPtr(&raw const img_cogwheel_argb as *const core::ffi::c_void),
+        super::SyncPtr(&raw const img_cogwheel_argb as *const core::ffi::c_void),
+    ];
+}
+
+fn animimg_frame_ptrs() -> &'static [*const core::ffi::c_void] {
+    // SAFETY: SyncPtr is #[repr(transparent)] over *const c_void.
+    unsafe {
+        core::slice::from_raw_parts(
+            animimg_frames::FRAMES.as_ptr().cast(),
+            animimg_frames::FRAMES.len(),
+        )
+    }
+}
+
+#[test]
+fn animimg_create() {
+    let screen = fresh_screen();
+    let animimg = AnimImg::new(&screen).unwrap();
+    animimg.size(100, 100).center();
+    pump();
+}
+
+#[test]
+fn animimg_set_src_and_start() {
+    let screen = fresh_screen();
+    let animimg = AnimImg::new(&screen).unwrap();
+    animimg.center();
+    animimg
+        .set_src(animimg_frame_ptrs())
+        .set_duration(1000)
+        .set_repeat_count(oxivgl::anim::ANIM_REPEAT_INFINITE)
+        .start();
+    pump();
+    assert_eq!(animimg.get_src_count(), 2);
+    assert_eq!(animimg.get_duration(), 1000);
+}
+
+#[test]
+fn animimg_getters() {
+    let screen = fresh_screen();
+    let animimg = AnimImg::new(&screen).unwrap();
+    animimg
+        .set_src(animimg_frame_ptrs())
+        .set_duration(500)
+        .set_repeat_count(3);
+    assert_eq!(animimg.get_duration(), 500);
+    assert_eq!(animimg.get_repeat_count(), 3);
+    assert_eq!(animimg.get_src_count(), 2);
+    pump();
+}
+
+// ── Label — RTL and CJK fonts ───────────────────────────────────────────────
+
+#[test]
+fn label_bidi_rtl() {
+    use oxivgl::widgets::BaseDir;
+    let screen = fresh_screen();
+    let label = Label::new(&screen).unwrap();
+    label.text("RTL test");
+    label.style_base_dir(BaseDir::Rtl, Selector::DEFAULT);
+    label.font(oxivgl::fonts::DEJAVU_16_PERSIAN_HEBREW);
+    pump();
+    assert!(label.get_width() > 0);
+}
+
+#[test]
+fn label_cjk_font() {
+    let screen = fresh_screen();
+    let label = Label::new(&screen).unwrap();
+    label.text("CJK");
+    label.font(oxivgl::fonts::SOURCE_HAN_SANS_SC_16_CJK);
+    pump();
+    assert!(label.get_width() > 0);
+}
+
+#[test]
+fn fixed_width_font_label() {
+    use oxivgl::fonts::{FixedWidthFont, MONTSERRAT_20};
+    static MONO: FixedWidthFont = FixedWidthFont::new();
+    let screen = fresh_screen();
+    let mono_font = MONO.init(MONTSERRAT_20, 20);
+    let label = Label::new(&screen).unwrap();
+    label.text_font(mono_font);
+    label.text("0123.Wabc");
+    pump();
+    assert!(label.get_width() > 0);
+}
+
+
+
+// ── Span — uncovered methods ─────────────────────────────────────────────────
+
+#[test]
+fn spangroup_letter_and_line_space() {
+    let screen = fresh_screen();
+    let sg = Spangroup::new(&screen).unwrap();
+    let span = sg.add_span().unwrap();
+    span.set_text(c"Spacing test");
+    span.set_text_letter_space(2);
+    span.set_text_line_space(4);
+    pump();
+}
+
+#[test]
+fn spangroup_getters() {
+    let screen = fresh_screen();
+    let sg = Spangroup::new(&screen).unwrap();
+    sg.set_overflow(SpanOverflow::Ellipsis);
+    assert_eq!(sg.get_overflow(), 1); // LV_SPAN_OVERFLOW_ELLIPSIS
+    sg.set_mode(SpanMode::Break);
+    assert_eq!(sg.get_mode(), 2); // LV_SPAN_MODE_BREAK
+    let _h = sg.get_max_line_height();
+    sg.size(200, 100);
+    let _w = sg.get_expand_width(200);
+    let _h2 = sg.get_expand_height(200);
+    pump();
+}
+
+#[test]
+fn spangroup_align_text() {
+    let screen = fresh_screen();
+    let sg = Spangroup::new(&screen).unwrap();
+    sg.set_align_text(1); // LV_TEXT_ALIGN_CENTER
+    let span = sg.add_span().unwrap();
+    span.set_text(c"Centered");
+    pump();
+}
+
+// ── Canvas — draw image from static asset ───────────────────────────────────
+
+#[test]
+fn canvas_layer_draw_image_static() {
+    use oxivgl::draw::DrawImageDsc;
+    use oxivgl::draw_buf::{ColorFormat, DrawBuf};
+    oxivgl::image_declare!(img_cogwheel_argb);
+    let screen = fresh_screen();
+    let buf = DrawBuf::create(100, 100, ColorFormat::ARGB8888).expect("DrawBuf alloc");
+    let canvas = Canvas::new(&screen, buf).unwrap();
+    canvas.center();
+    let mut layer = canvas.init_layer();
+    let mut dsc = DrawImageDsc::from_static_dsc(img_cogwheel_argb());
+    dsc.opa(255);
+    layer.draw_image(&dsc, oxivgl::draw::Area { x1: 0, y1: 0, x2: 99, y2: 99 });
+    drop(layer);
+    pump();
+}
