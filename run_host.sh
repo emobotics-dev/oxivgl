@@ -34,6 +34,7 @@ ALL_EXAMPLES=(
     widget_obj{1,2,3}
     widget_arc{1,2,3}
     calendar_1
+    calendar_2
     image1
     widget_bar{1,2,3,4,5,6,7}
     widget_button{1,2,3}

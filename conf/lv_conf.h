@@ -203,7 +203,7 @@
 
 #define LV_FONT_MONTSERRAT_28_COMPRESSED 0
 #define LV_FONT_DEJAVU_16_PERSIAN_HEBREW 1
-#define LV_FONT_SOURCE_HAN_SANS_SC_14_CJK 0
+#define LV_FONT_SOURCE_HAN_SANS_SC_14_CJK 1
 #define LV_FONT_SOURCE_HAN_SANS_SC_16_CJK 1
 
 #define LV_FONT_UNSCII_8  0
@@ -241,6 +241,7 @@
 #define LV_USE_BUTTON        1
 #define LV_USE_BUTTONMATRIX  1
 #define LV_USE_CALENDAR   1
+#define LV_USE_CALENDAR_CHINESE         1
 #if LV_USE_CALENDAR
     #define LV_CALENDAR_WEEK_STARTS_MONDAY 0
     #if LV_CALENDAR_WEEK_STARTS_MONDAY
@@ -251,7 +252,6 @@
     #define LV_CALENDAR_DEFAULT_MONTH_NAMES {"January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"}
     #define LV_USE_CALENDAR_HEADER_ARROW    1
     #define LV_USE_CALENDAR_HEADER_DROPDOWN 1
-    #define LV_USE_CALENDAR_CHINESE         0
 #endif
 #define LV_USE_CANVAS     1
 #define LV_USE_CHART      1

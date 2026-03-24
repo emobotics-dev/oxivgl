@@ -7,6 +7,8 @@ fn main() {
         println!("cargo:rustc-link-arg=-Tlinkall.x");
         cmake_lvgl();
     }
+    // Host targets: lvgl_rust_sys's build.rs compiles all LVGL C sources
+    // (including lv_calendar_chinese.c) via recursive add_c_files().
 
     // Image assets (all targets)
     let cfg = oxivgl_build::ImageConfig::from_env();
