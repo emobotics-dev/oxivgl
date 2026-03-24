@@ -17,20 +17,17 @@ impl ImageConfig {
     /// Create config from environment.
     ///
     /// - `lv_conf_dir` from `DEP_LV_CONFIG_PATH` env var
-    /// - `lvgl_include_dir` and `converter` from `CARGO_MANIFEST_DIR`
-    ///   (assumes oxivgl workspace layout with `thirdparty/lvgl_rust_sys/lvgl/`)
+    /// - `lvgl_include_dir` and `converter` discovered from the
+    ///   `lvgl_rust_sys` cargo git checkout or thirdparty fallback.
     ///
     /// # Panics
-    /// If `DEP_LV_CONFIG_PATH` is not set.
+    /// If `DEP_LV_CONFIG_PATH` is not set or LVGL source tree not found.
     pub fn from_env() -> Self {
         let lv_conf_dir = PathBuf::from(
             std::env::var("DEP_LV_CONFIG_PATH")
                 .expect("DEP_LV_CONFIG_PATH must be set (points to dir containing lv_conf.h)"),
         );
-        let manifest_dir = PathBuf::from(
-            std::env::var("CARGO_MANIFEST_DIR").expect("CARGO_MANIFEST_DIR not set"),
-        );
-        let lvgl_root = manifest_dir.join("thirdparty/lvgl_rust_sys/lvgl");
+        let lvgl_root = find_lvgl_root();
         ImageConfig {
             lv_conf_dir,
             lvgl_include_dir: lvgl_root.join("src"),
@@ -104,6 +101,46 @@ impl ImageConfig {
 }
 
 /// Read `LV_COLOR_DEPTH` from `lv_conf.h` and return the matching
+/// Locate the LVGL source tree from the `lvgl_rust_sys` cargo git checkout.
+///
+/// Scans `$CARGO_HOME/git/checkouts/lvgl_rust_sys-*/` for an `lvgl/` dir
+/// containing `lv_version.h`. Falls back to `thirdparty/lvgl_rust_sys/lvgl`.
+fn find_lvgl_root() -> PathBuf {
+    let cargo_home = std::env::var("CARGO_HOME")
+        .map(PathBuf::from)
+        .unwrap_or_else(|_| {
+            PathBuf::from(std::env::var("HOME").unwrap_or_default()).join(".cargo")
+        });
+    let checkouts = cargo_home.join("git/checkouts");
+    if let Ok(entries) = std::fs::read_dir(&checkouts) {
+        for entry in entries.flatten() {
+            if entry.file_name().to_string_lossy().starts_with("lvgl_rust_sys-") {
+                if let Ok(revs) = std::fs::read_dir(entry.path()) {
+                    for rev in revs.flatten() {
+                        let candidate = rev.path().join("lvgl");
+                        if candidate.join("lv_version.h").exists() {
+                            return candidate;
+                        }
+                    }
+                }
+            }
+        }
+    }
+    // Fallback: thirdparty submodule (legacy)
+    let manifest_dir = PathBuf::from(
+        std::env::var("CARGO_MANIFEST_DIR").expect("CARGO_MANIFEST_DIR not set"),
+    );
+    let fallback = manifest_dir.join("thirdparty/lvgl_rust_sys/lvgl");
+    if fallback.join("lv_version.h").exists() {
+        return fallback;
+    }
+    panic!(
+        "LVGL source tree not found in {}/git/checkouts/lvgl_rust_sys-*/*/lvgl/ \
+         or thirdparty/lvgl_rust_sys/lvgl/",
+        cargo_home.display()
+    );
+}
+
 /// `LVGLImage.py` `--cf` color format string.
 fn color_format_from_conf(lv_conf_dir: &std::path::Path) -> &'static str {
     let conf_path = lv_conf_dir.join("lv_conf.h");
