@@ -105,8 +105,7 @@ impl DrawTask {
     /// Overwrite the draw area.
     pub fn set_area(&self, area: Area) {
         // SAFETY: ptr valid during callback; area is a plain value field.
-        let task = unsafe { &mut *self.ptr };
-        task.area = area.into();
+        unsafe { (*self.ptr).area = area.into() };
     }
 
     /// Fill draw descriptor, if this task draws a filled rectangle.
@@ -542,6 +541,7 @@ impl DrawLabelDscOwned {
 
     /// Raw pointer to the inner descriptor. Used by
     /// [`CanvasLayer::draw_label`].
+    #[allow(dead_code)]
     pub(crate) fn as_ptr(&self) -> *const lv_draw_label_dsc_t {
         &self.inner
     }
@@ -807,7 +807,7 @@ impl<'i> DrawImageDsc<'i> {
 
     /// Create from a static `lv_image_dsc_t` (e.g. from [`image_declare!`](crate::image_declare)).
     ///
-    /// # Safety contract
+    /// # Lifetime requirement
     /// The image descriptor must point to valid pixel data for the lifetime `'i`.
     pub fn from_static_dsc(img: &'i lv_image_dsc_t) -> Self {
         let mut inner = unsafe { core::mem::zeroed::<lv_draw_image_dsc_t>() };

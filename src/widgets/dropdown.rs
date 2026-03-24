@@ -109,8 +109,7 @@ impl<'p> Dropdown<'p> {
     /// Set a fixed text to display on the button (instead of the selected
     /// option). Useful for menu-style dropdowns.
     ///
-    /// LVGL v9.5 copies the string internally (`lv_strdup`), so the
-    /// `'static` requirement is conservative but safe.
+    /// LVGL stores the raw pointer directly; the string must be `'static`.
     pub fn set_text(&self, text: &'static core::ffi::CStr) -> &Self {
         assert_ne!(self.obj.handle(), null_mut(), "Dropdown handle cannot be null");
         // SAFETY: handle non-null; text is 'static and NUL-terminated.
