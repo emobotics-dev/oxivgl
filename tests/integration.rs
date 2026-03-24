@@ -4299,7 +4299,7 @@ fn label_bidi_rtl() {
     let screen = fresh_screen();
     let label = Label::new(&screen).unwrap();
     label.text("RTL test");
-    label.base_dir(BaseDir::Rtl);
+    label.style_base_dir(BaseDir::Rtl, Selector::DEFAULT);
     label.font(oxivgl::fonts::DEJAVU_16_PERSIAN_HEBREW);
     pump();
     assert!(label.get_width() > 0);
