@@ -41,6 +41,7 @@ ALL_EXAMPLES=(
     widget_dropdown{1,2,3}
     widget_image{2,3,4,5}
     widget_label{1,2,5}
+    widget_label{3,6}
     widget_led1
     widget_list{1,2}
     widget_line1
@@ -53,9 +54,16 @@ ALL_EXAMPLES=(
     table_{1,2}
     tabview_{1,2}
     widget_textarea{1,2,3,4}
-    canvas_{1,2,3,4,5,7,9,10,11}
+    canvas_{1,2,3,4,5,6,7,9,10,11}
     spinner_1
     spinbox_1
+    span_1
+    tileview_1
+    imagebutton_1
+    win_1
+    animimg_1
+    widget_label4
+    widget_roller3
 )
 
 run_example() {

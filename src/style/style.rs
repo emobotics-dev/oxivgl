@@ -7,7 +7,7 @@ use super::GradDir;
 
 /// Text decoration flags. Combine with `|`.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub struct TextDecor(u32);
+pub struct TextDecor(pub(crate) u32);
 
 impl TextDecor {
     /// No decoration.

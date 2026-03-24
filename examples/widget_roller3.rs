@@ -1,0 +1,107 @@
+#![cfg_attr(target_arch = "xtensa", no_std, no_main)]
+#![cfg_attr(
+    target_arch = "xtensa",
+    feature(impl_trait_in_assoc_type, type_alias_impl_trait)
+)]
+// SPDX-License-Identifier: MIT OR Apache-2.0
+//! Widget Roller 3 — Roller with fade mask
+//!
+//! Applies an L8 gradient mask to a roller so that the top and bottom
+//! rows fade to black, producing a 3D cylinder effect.
+
+extern crate alloc;
+
+use oxivgl::{
+    draw::{Area, DrawRectDsc},
+    draw_buf::{ColorFormat, DrawBuf},
+    style::{GradDir, Selector, StyleBuilder, color_black, color_white},
+    view::View,
+    widgets::{Canvas, Part, Roller, RollerMode, Screen, WidgetError},
+};
+
+const MASK_W: u32 = 130;
+const MASK_H: u32 = 150;
+
+/// Generate a vertical fade mask: top half fades black→white,
+/// bottom half fades white→black, with a 20-pixel opaque band in the middle.
+fn generate_mask(buf: &DrawBuf) {
+    let h = buf.height();
+    Canvas::draw_to_buf(buf, |canvas| {
+        canvas.fill_bg(color_white(), 0); // LV_OPA_TRANSP
+
+        let mut layer = canvas.init_layer();
+
+        // Top gradient: black → white
+        let mut rdc = DrawRectDsc::new();
+        rdc.bg_grad_dir(GradDir::Ver)
+            .bg_grad_stop(0, color_black(), 0, 255)
+            .bg_grad_stop(1, color_white(), 255, 255);
+        layer.draw_rect(
+            &rdc,
+            Area { x1: 0, y1: 0, x2: buf.width() - 1, y2: h / 2 - 10 },
+        );
+
+        // Bottom gradient: white → black
+        rdc.bg_grad_stop(0, color_white(), 0, 255)
+            .bg_grad_stop(1, color_black(), 255, 255);
+        layer.draw_rect(
+            &rdc,
+            Area { x1: 0, y1: h / 2 + 10, x2: buf.width() - 1, y2: h - 1 },
+        );
+    });
+}
+
+struct WidgetRoller3 {
+    _mask: alloc::boxed::Box<DrawBuf>,
+    _roller: Roller<'static>,
+}
+
+impl View for WidgetRoller3 {
+    fn create() -> Result<Self, WidgetError> {
+        let screen = Screen::active().ok_or(WidgetError::LvglNullPointer)?;
+        screen.bg_color(0x607D8B); // LV_PALETTE_BLUE_GREY
+
+        let mut sb = StyleBuilder::new();
+        sb.bg_color(color_black())
+            .text_color(color_white())
+            .border_width(0)
+            .radius(0);
+        let style = sb.build();
+
+        let roller = Roller::new(&screen)?;
+        roller.add_style(&style, Selector::DEFAULT);
+        roller.bg_opa_selector(50, Part::Selected);
+        roller.set_options(
+            "January\n\
+             February\n\
+             March\n\
+             April\n\
+             May\n\
+             June\n\
+             July\n\
+             August\n\
+             September\n\
+             October\n\
+             November\n\
+             December",
+            RollerMode::Normal,
+        );
+        roller.center();
+        roller.set_visible_row_count(4);
+
+        let mask = DrawBuf::create(MASK_W, MASK_H, ColorFormat::L8)
+            .ok_or(WidgetError::LvglNullPointer)?;
+        generate_mask(&mask);
+        let mask = alloc::boxed::Box::new(mask);
+
+        roller.style_bitmap_mask_src(&mask, Selector::DEFAULT);
+
+        Ok(Self { _mask: mask, _roller: roller })
+    }
+
+    fn update(&mut self) -> Result<(), WidgetError> {
+        Ok(())
+    }
+}
+
+oxivgl_examples_common::example_main!(WidgetRoller3);

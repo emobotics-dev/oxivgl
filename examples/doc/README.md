@@ -35,6 +35,11 @@ runner (`example_main!` macro selects host SDL2 or ESP32 fire27 backend).
 - [Widgets — Textarea](#widgets--textarea)
 - [Widgets — Canvas](#widgets--canvas)
 - [Widgets — Calendar](#calendar)
+- [Widgets — AnimImg](#widgets--animimg)
+- [Widgets — Span](#widgets--span)
+- [Widgets — Tileview](#widgets--tileview)
+- [Widgets — Imagebutton](#widgets--imagebutton)
+- [Widgets — Win](#widgets--win)
 - [Widgets — Lottie](#widgets--lottie-abandoned)
 - [Widgets — Spinbox](#widgets--spinbox)
 - [Widgets — Spinner](#widgets--spinner)
@@ -615,11 +620,31 @@ Fake shadow via duplicate label offset by 2 px with reduced opacity.
 
 ![widget_label2](screenshots/widget_label2.png)
 
+### Widget Label 3 — Mixed LTR, RTL and CJK
+
+Three labels: English (LTR), Hebrew (RTL with DejaVu font), Chinese (Source Han Sans).
+Demonstrates bidirectional text support.
+
+![widget_label3](screenshots/widget_label3.png)
+
+### Widget Label 4 — Gradient Text via Canvas Mask
+
+Text rendered through an L8 bitmap mask on a gradient background.
+
+![widget_label4](screenshots/widget_label4.png)
+
 ### Widget Label 5 — Circular Scroll
 
 Label with scroll-circular long mode — text scrolls in a continuous loop.
 
 ![widget_label5](screenshots/widget_label5.png)
+
+### Widget Label 6 — Fixed-Width Font Override
+
+Two labels: proportional Montserrat 20 and monospaced override via
+`FixedWidthFont` glyph callback.
+
+![widget_label6](screenshots/widget_label6.png)
 
 ## Widgets — LED
 
@@ -714,6 +739,12 @@ Three rollers: left-aligned on green gradient, center-aligned, right-aligned. Sh
 selected-row style with Montserrat 20pt font and pink/red highlight.
 
 ![widget_roller2](screenshots/widget_roller2.png)
+
+### Widget Roller 3 — Roller with Fade Mask
+
+Month roller with vertical gradient mask fading top and bottom rows.
+
+![widget_roller3](screenshots/widget_roller3.png)
 
 ## Widgets — Scale
 
@@ -913,10 +944,22 @@ rainbow colors and sine-wave y-offsets via `DrawLetterDsc`. Animated each frame.
 
 ### canvas_11 — Windstorm text animation
 
+### canvas_6 — Image drawn on canvas
+
+Cogwheel image asset drawn onto a 100×100 ARGB8888 canvas via `DrawImageDsc`.
+
+![canvas_6](screenshots/canvas_6.png)
+
 160×100 RGB565 canvas (black). "windstorm" repeated with sinusoidal y-positions,
 HSV-cycled colors shifting each frame via `DrawLetterDsc`. Animated each frame.
 
 ![canvas_11](screenshots/canvas_11.png)
+
+### canvas_6 — Image drawn on canvas
+
+Cogwheel image asset drawn onto a 100×100 ARGB8888 canvas via `DrawImageDsc`.
+
+![canvas_6](screenshots/canvas_6.png)
 
 ## Table
 
@@ -946,6 +989,46 @@ buttons navigate between months. Clicking a day fires `VALUE_CHANGED`; the
 label above the calendar updates to show the selected date.
 
 ![calendar_1](screenshots/calendar_1.png)
+
+## Widgets — AnimImg
+
+### animimg_1 — Animated image cycling
+
+Cogwheel image in a 2-frame infinite animation.
+
+![animimg_1](screenshots/animimg_1.png)
+
+## Widgets — Span
+
+### span_1 — Rich text with multiple styles
+
+Spangroup with colored, decorated, and differently-sized text spans.
+
+![span_1](screenshots/span_1.png)
+
+## Widgets — Tileview
+
+### tileview_1 — Swipeable tile grid
+
+Three tiles in an L-shaped layout with directional scroll constraints.
+
+![tileview_1](screenshots/tileview_1.png)
+
+## Widgets — Imagebutton
+
+### imagebutton_1 — Stateful image button
+
+Imagebutton with state switching (no visible images without assets).
+
+![imagebutton_1](screenshots/imagebutton_1.png)
+
+## Widgets — Win
+
+### win_1 — Window with header and content
+
+Window with title, close/settings buttons, and scrollable content area.
+
+![win_1](screenshots/win_1.png)
 
 ## Widgets — Lottie (abandoned)
 
@@ -1019,42 +1102,47 @@ Status of all [LVGL 9.3 examples](https://docs.lvgl.io/9.3/examples.html) in oxi
 | arc | 3 | 3 | 0 | |
 | bar | 7 | 7 | 0 | |
 | button | 3 | 3 | 0 | |
-| calendar | 2 | 1 | 1 | calendar_2 (requires LV_USE_CALENDAR_CHINESE + CJK font) |
+| calendar | 2 | 1 | 1 | calendar_2 (requires lv_calendar_chinese.c in lvgl_rust_sys) |
 | checkbox | 2 | 2 | 0 | |
 | dropdown | 3 | 3 | 0 | |
 | image | 5 | 5 | 0 | |
-| label | 6 | 3 | 3 | label3 (RTL fonts), label4 (canvas mask), label6 (custom font) |
+| label | 6 | 6 | 0 | |
 | led | 1 | 1 | 0 | |
 | line | 1 | 1 | 0 | |
 | list | 2 | 2 | 0 | |
 | menu | 5 | 5 | 0 | |
 | msgbox | 1 | 1 | 0 | |
-| roller | 3 | 2 | 1 | roller3 (needs canvas/mask API) |
+| roller | 3 | 3 | 0 | |
 | scale | 11 | 11 | 0 | |
 | slider | 4 | 4 | 0 | |
 | switch | 2 | 2 | 0 | |
 | textarea | 4 | 4 | 0 | Includes Buttonmatrix + Keyboard wrappers |
-| canvas | 11 | 9 | 2 | canvas_6 (image asset), canvas_8 (vector graphics) |
+| canvas | 11 | 10 | 1 | canvas_8 (vector graphics — requires ThorVG, abandoned) |
 | table | 2 | 2 | 0 | |
 | tabview | 2 | 2 | 0 | |
+| tileview | 1 | 1 | 0 | |
+| span | 1 | 1 | 0 | |
+| imagebutton | 1 | 1 | 0 | |
+| animimg | 1 | 1 | 0 | |
+| win | 1 | 1 | 0 | |
 | lottie | 3 | 0 | 0 | Abandoned — ThorVG bloats firmware beyond flash limits (see below) |
 | spinner | 1 | 1 | 0 | |
 | spinbox | 1 | 1 | 0 | |
 
 ### Widgets Without Wrappers
 
-animimg, imagebutton, span, tileview, win.
+None — all practical widgets wrapped.
 
 ### Totals
 
 | | Count |
 |---|---|
 | LVGL examples total | ~184 |
-| oxivgl done | 134 |
+| oxivgl done | 144 |
 | Skipped (intentional) | 4 |
 | Missing (wrapper exists) | 4 |
 | Abandoned (lottie) | 3 |
-| No wrapper | ~51 |
+| No wrapper | ~46 |
 
 ## Running
 

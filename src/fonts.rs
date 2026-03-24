@@ -1,7 +1,9 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
+use core::cell::UnsafeCell;
+use core::mem::MaybeUninit;
 use core::ptr::addr_of;
 
-use lvgl_rust_sys::lv_font_t;
+use lvgl_rust_sys::{lv_font_glyph_dsc_t, lv_font_get_glyph_dsc_fmt_txt, lv_font_t};
 
 /// Wrapper around an LVGL font pointer.
 #[derive(Copy, Clone, Debug)]
@@ -42,6 +44,100 @@ impl Font {
     /// the font object.
     pub fn as_ptr(self) -> *const lv_font_t {
         self.0
+    }
+}
+
+/// LVGL built-in DejaVu 16 pt with Persian/Hebrew glyphs.
+pub static DEJAVU_16_PERSIAN_HEBREW: Font =
+    Font(addr_of!(lvgl_rust_sys::lv_font_dejavu_16_persian_hebrew));
+
+
+/// LVGL built-in Source Han Sans SC 16 pt with CJK glyphs.
+pub static SOURCE_HAN_SANS_SC_16_CJK: Font =
+    Font(addr_of!(lvgl_rust_sys::lv_font_source_han_sans_sc_16_cjk));
+
+/// Fixed-width font derived from an existing LVGL font.
+///
+/// Clones the source font's `lv_font_t` and overrides the `get_glyph_dsc`
+/// callback so every glyph uses the same advance width, producing a
+/// monospaced appearance from a proportional font.
+///
+/// Must be placed in a `static` because LVGL stores the font pointer.
+///
+/// # Example
+///
+/// ```ignore
+/// use oxivgl::fonts::{FixedWidthFont, MONTSERRAT_20};
+///
+/// static MONO_FONT: FixedWidthFont = FixedWidthFont::new();
+///
+/// // In View::create():
+/// let font = MONO_FONT.init(MONTSERRAT_20, 20);
+/// label.text_font(font);
+/// ```
+pub struct FixedWidthFont {
+    inner: UnsafeCell<MaybeUninit<lv_font_t>>,
+}
+
+// SAFETY: init() must be called from the LVGL task (single-threaded).
+// After init the font data is effectively immutable (read-only by LVGL).
+unsafe impl Send for FixedWidthFont {}
+unsafe impl Sync for FixedWidthFont {}
+
+impl FixedWidthFont {
+    /// Create an uninitialised placeholder. Call [`init`](Self::init) once
+    /// before use.
+    pub const fn new() -> Self {
+        Self {
+            inner: UnsafeCell::new(MaybeUninit::zeroed()),
+        }
+    }
+
+    /// Initialise by cloning `source` and setting a fixed glyph advance
+    /// width of `advance_w` pixels. Returns a [`Font`] handle suitable
+    /// for `text_font()` / `style_text_font()`.
+    ///
+    /// Must be called exactly once, from the LVGL task, before any widget
+    /// references the returned font.
+    pub fn init(&self, source: Font, advance_w: u16) -> Font {
+        // SAFETY: source.as_ptr() points to a valid static lv_font_t.
+        // We copy the entire struct, then override the callback and
+        // store advance_w in user_data.
+        unsafe {
+            let font_ptr = self.inner.get();
+            core::ptr::copy_nonoverlapping(source.as_ptr(), (*font_ptr).as_mut_ptr(), 1);
+            let font = (*font_ptr).as_mut_ptr();
+            (*font).get_glyph_dsc = Some(fixed_width_get_glyph_dsc);
+            (*font).user_data = advance_w as usize as *mut core::ffi::c_void;
+            Font((*font_ptr).as_ptr())
+        }
+    }
+}
+
+/// Custom `get_glyph_dsc` callback that delegates to the original
+/// format-text decoder, then forces a fixed advance width and centres the
+/// glyph horizontally.
+///
+/// # Safety
+/// Called by LVGL internally. `font` must point to a valid cloned
+/// `lv_font_t` whose `user_data` stores the desired advance width.
+unsafe extern "C" fn fixed_width_get_glyph_dsc(
+    font: *const lv_font_t,
+    dsc: *mut lv_font_glyph_dsc_t,
+    letter: u32,
+    letter_next: u32,
+) -> bool {
+    // SAFETY: font points to a valid lv_font_t inside a FixedWidthFont.
+    // lv_font_get_glyph_dsc_fmt_txt is the standard LVGL glyph decoder.
+    unsafe {
+        let ret = lv_font_get_glyph_dsc_fmt_txt(font, dsc, letter, letter_next);
+        if !ret {
+            return false;
+        }
+        let adv = (*font).user_data as usize as u16;
+        (*dsc).adv_w = adv;
+        (*dsc).ofs_x = (adv as i16 - (*dsc).box_w as i16) / 2;
+        true
     }
 }
 
@@ -124,5 +220,12 @@ mod tests {
         let ptr = MONTSERRAT_12.as_ptr() as *const ();
         let f = unsafe { Font::from_extern(ptr) };
         assert_eq!(f.as_ptr(), MONTSERRAT_12.as_ptr());
+    }
+
+    #[test]
+    fn fixed_width_font_new_is_const() {
+        static FW: FixedWidthFont = FixedWidthFont::new();
+        // Just verify it compiles as a const static.
+        let _ = &FW;
     }
 }
