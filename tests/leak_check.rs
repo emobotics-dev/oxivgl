@@ -674,6 +674,25 @@ fn leak_tileview() {
     }));
 }
 
+// ── Translation ──────────────────────────────────────────────────────────────
+
+use oxivgl::translation::{self, StaticCStr as S};
+
+static LEAK_TRANS_LANGS: [S; 3] = [S::from_cstr(c"en"), S::from_cstr(c"de"), S::NULL];
+static LEAK_TRANS_TAGS: [S; 2] = [S::from_cstr(c"hello"), S::NULL];
+static LEAK_TRANS_VALUES: [S; 2] = [S::from_cstr(c"Hello"), S::from_cstr(c"Hallo")];
+
+#[test]
+fn leak_translation() {
+    run_isolated("Translation", || {
+        measure_rust(|| {
+            translation::add_static(&LEAK_TRANS_LANGS, &LEAK_TRANS_TAGS, &LEAK_TRANS_VALUES);
+            translation::set_language(c"en");
+            translation::set_language(c"de");
+        })
+    });
+}
+
 // ── AnimImg ──────────────────────────────────────────────────────────────────
 
 #[repr(transparent)]

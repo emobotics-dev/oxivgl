@@ -74,7 +74,9 @@ impl<'p> Label<'p> {
         let mut buf = [0u8; 128];
         buf[..len].copy_from_slice(&tag.as_bytes()[..len]);
         // SAFETY: handle non-null; buf is NUL-terminated (zero-initialized).
-        // LVGL copies the tag string internally.
+        // LVGL copies the string via lv_strdup (see lv_label_set_translation_tag
+        // in lv_label.c), so passing a stack buffer is safe — no pointer is
+        // retained after this call returns.
         unsafe { lv_label_set_translation_tag(self.obj.handle(), buf.as_ptr() as *const c_char) };
         self
     }

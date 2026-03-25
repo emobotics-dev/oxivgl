@@ -65,7 +65,11 @@ impl<'w> core::fmt::Debug for Anim<'w> {
 impl<'w> Anim<'w> {
     /// Create a new animation descriptor.
     pub fn new() -> Self {
+        // SAFETY: lv_anim_t is a plain C struct with no invalid bit patterns;
+        // zeroing is safe and matches LVGL's own initialisation pattern.
         let mut inner = unsafe { core::mem::zeroed::<lv_anim_t>() };
+        // SAFETY: lv_anim_init writes default field values into the zeroed
+        // struct. No other LVGL state is required.
         unsafe { lv_anim_init(&mut inner) };
         Self { inner, _widget: PhantomData }
     }
@@ -144,6 +148,9 @@ impl<'w> Anim<'w> {
     /// them changes the curve in real-time. Values are in `[0..1024]`.
     /// The atomics must be `'static` because LVGL copies the animation
     /// descriptor and may read the pointers after this `Anim` is dropped.
+    ///
+    /// **Leak:** Each call allocates 16 bytes via `Box::leak` (never reclaimed).
+    /// Acceptable on embedded where animations are long-lived.
     pub fn set_bezier3_path(
         &mut self,
         p1: &'static AtomicI32,
@@ -215,7 +222,7 @@ unsafe extern "C" fn bezier3_path_cb(a: *const lv_anim_t) -> i32 {
     let p1 = unsafe { &**p1_ptr }.load(core::sync::atomic::Ordering::Relaxed);
     let p2 = unsafe { &**p2_ptr }.load(core::sync::atomic::Ordering::Relaxed);
     let t = unsafe { lv_map(a.act_time, 0, a.duration, 0, 1024) };
-    let step = unsafe { lv_bezier3(t, 0, p1 as u32, p2, 1024) };
+    let step = unsafe { lv_bezier3(t, 0, p1 as u32, p2 as i32, 1024) };
     let new_value = (step as i64 * (a.end_value - a.start_value) as i64) >> 10;
     new_value as i32 + a.start_value
 }
@@ -225,6 +232,7 @@ pub const ANIM_REPEAT_INFINITE: u32 = LV_ANIM_REPEAT_INFINITE;
 
 /// Exec callback: `lv_obj_set_style_translate_x(var, v, 0)`.
 pub unsafe extern "C" fn anim_set_translate_x(var: *mut c_void, v: i32) {
+    // SAFETY: var is a valid lv_obj_t pointer (guaranteed by LVGL anim framework).
     unsafe { lv_obj_set_style_translate_x(var as *mut lv_obj_t, v, 0) };
 }
 
@@ -232,16 +240,19 @@ pub unsafe extern "C" fn anim_set_translate_x(var: *mut c_void, v: i32) {
 
 /// Exec callback: `lv_obj_set_x(var, v)`.
 pub unsafe extern "C" fn anim_set_x(var: *mut c_void, v: i32) {
+    // SAFETY: var is a valid lv_obj_t pointer (guaranteed by LVGL anim framework).
     unsafe { lv_obj_set_x(var as *mut lv_obj_t, v) };
 }
 
 /// Exec callback: `lv_obj_set_y(var, v)`.
 pub unsafe extern "C" fn anim_set_y(var: *mut c_void, v: i32) {
+    // SAFETY: var is a valid lv_obj_t pointer (guaranteed by LVGL anim framework).
     unsafe { lv_obj_set_y(var as *mut lv_obj_t, v) };
 }
 
 /// Exec callback: `lv_obj_set_size(var, v, v)` — uniform width+height.
 pub unsafe extern "C" fn anim_set_size(var: *mut c_void, v: i32) {
+    // SAFETY: var is a valid lv_obj_t pointer (guaranteed by LVGL anim framework).
     unsafe { lv_obj_set_size(var as *mut lv_obj_t, v, v) };
 }
 
@@ -249,40 +260,48 @@ pub unsafe extern "C" fn anim_set_size(var: *mut c_void, v: i32) {
 
 /// Custom exec callback: `lv_obj_set_width(anim.var, v)`.
 pub unsafe extern "C" fn anim_set_width(a: *mut lv_anim_t, v: i32) {
+    // SAFETY: a.var is a valid lv_obj_t pointer (guaranteed by LVGL anim framework).
     unsafe { lv_obj_set_width((*a).var as *mut lv_obj_t, v) };
 }
 
 /// Custom exec callback: `lv_obj_set_height(anim.var, v)`.
 pub unsafe extern "C" fn anim_set_height(a: *mut lv_anim_t, v: i32) {
+    // SAFETY: a.var is a valid lv_obj_t pointer (guaranteed by LVGL anim framework).
     unsafe { lv_obj_set_height((*a).var as *mut lv_obj_t, v) };
 }
 
 /// Exec callback: `lv_obj_set_style_pad_row(var, v, 0)`.
 pub unsafe extern "C" fn anim_set_pad_row(var: *mut c_void, v: i32) {
+    // SAFETY: var is a valid lv_obj_t pointer (guaranteed by LVGL anim framework).
     unsafe { lv_obj_set_style_pad_row(var as *mut lv_obj_t, v, 0) };
 }
 
 /// Exec callback: `lv_obj_set_style_pad_column(var, v, 0)`.
 pub unsafe extern "C" fn anim_set_pad_column(var: *mut c_void, v: i32) {
+    // SAFETY: var is a valid lv_obj_t pointer (guaranteed by LVGL anim framework).
     unsafe { lv_obj_set_style_pad_column(var as *mut lv_obj_t, v, 0) };
 }
 
 /// Custom exec callback: `lv_slider_set_value(anim.var, v, false)`.
 pub unsafe extern "C" fn anim_set_slider_value(a: *mut lv_anim_t, v: i32) {
+    // SAFETY: a.var is a valid lv_obj_t pointer (guaranteed by LVGL anim framework).
     unsafe { lv_slider_set_value((*a).var as *mut lv_obj_t, v, false) };
 }
 
 /// Exec callback: `lv_arc_set_value(var, v)`.
 pub unsafe extern "C" fn anim_set_arc_value(var: *mut c_void, v: i32) {
+    // SAFETY: var is a valid lv_obj_t pointer (guaranteed by LVGL anim framework).
     unsafe { lv_arc_set_value(var as *mut lv_obj_t, v) };
 }
 
 /// Exec callback: `lv_bar_set_value(var, v, LV_ANIM_ON)`.
 pub unsafe extern "C" fn anim_set_bar_value(var: *mut c_void, v: i32) {
+    // SAFETY: var is a valid lv_obj_t pointer (guaranteed by LVGL anim framework).
     unsafe { lv_bar_set_value(var as *mut lv_obj_t, v, true) };
 }
 
 /// Exec callback: `lv_scale_set_rotation(var, v)`.
 pub unsafe extern "C" fn anim_set_scale_rotation(var: *mut c_void, v: i32) {
+    // SAFETY: var is a valid lv_obj_t pointer (guaranteed by LVGL anim framework).
     unsafe { lv_scale_set_rotation(var as *mut lv_obj_t, v) };
 }

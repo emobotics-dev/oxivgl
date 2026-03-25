@@ -182,6 +182,8 @@ impl DrawLabelDsc {
     }
 
     /// Current label text, or `None` if the pointer is null.
+    ///
+    /// Returns `None` for non-UTF-8 text (e.g. raw binary font glyphs).
     pub fn text(&self) -> Option<&str> {
         // SAFETY: ptr valid during callback; text pointer valid for callback duration.
         let text_ptr = unsafe { (*self.ptr).text };
@@ -198,6 +200,8 @@ impl DrawLabelDsc {
     /// Handles `lv_free`/`lv_strdup`/`text_local` internally. The previous
     /// text is freed if it was locally allocated. LVGL will free the new
     /// text after the draw operation completes.
+    ///
+    /// **Note:** Text is truncated to 31 bytes (plus NUL terminator).
     pub fn set_text(&self, text: &str) {
         // SAFETY: ptr valid during callback.
         let dsc = unsafe { &mut *self.ptr };
@@ -880,6 +884,12 @@ impl DrawLetterDsc {
     /// On RAM-constrained targets use `rotation(0)` with an `RGB565` canvas.
     pub fn rotation(&mut self, r: i32) -> &mut Self {
         self.inner.rotation = r;
+        self
+    }
+
+    /// Opacity (0 = transparent, 255 = opaque).
+    pub fn opa(&mut self, o: u8) -> &mut Self {
+        self.inner.opa = o;
         self
     }
 
