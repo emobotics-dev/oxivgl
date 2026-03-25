@@ -19,7 +19,8 @@ use oxivgl::{
     enums::{EventCode, ObjFlag, ObjState, Opa, ScrollDir, ScrollSnap, ScrollbarMode},
     layout::{FlexAlign, FlexFlow, GridAlign, GridCell, Layout, GRID_TEMPLATE_LAST},
     widgets::{
-        Align, AnimImg, Arc, ArcLabel, ArcLabelDir, AsLvHandle, Bar, Button, Buttonmatrix, Calendar, CalendarDate, Canvas, Checkbox,
+        Align, AnimImg, Arc, ArcLabel, ArcLabelDir, AsLvHandle, Bar, Button, Buttonmatrix, ButtonmatrixCtrl, ButtonmatrixMap,
+        Calendar, CalendarDate, Canvas, Chart, ChartAxis, ChartType, Checkbox,
         Dropdown, Image, Imagebutton, ImagebuttonState, Keyboard, KeyboardMode, Label, Led, Line, Menu, MenuHeaderMode, Msgbox,
         Obj, Part, Roller, RollerMode, Screen, Slider, Spinbox, Spinner, Switch, Table, TableCellCtrl, Tabview,
         Spangroup, SpanMode, SpanOverflow, Textarea, Tileview, ValueLabel, WidgetError, Win, RADIUS_MAX,
@@ -4619,4 +4620,133 @@ fn blur_style_methods() {
     obj.style_blur_radius(10, Selector::DEFAULT);
     obj.style_blur_backdrop(true, Selector::DEFAULT);
     pump();
+}
+
+// ── Chart (new methods) ─────────────────────────────────────────────────────
+
+#[test]
+fn chart_set_series_value_by_id() {
+    let screen = fresh_screen();
+    let chart = Chart::new(&screen).unwrap();
+    chart.set_point_count(5);
+    let ser = chart.add_series(palette_main(Palette::Red), ChartAxis::PrimaryY);
+    chart.set_series_value_by_id(&ser, 0, 42);
+    chart.set_series_value_by_id(&ser, 4, 99);
+}
+
+#[test]
+fn chart_get_first_point_center_offset() {
+    let screen = fresh_screen();
+    let chart = Chart::new(&screen).unwrap();
+    chart.set_point_count(10);
+    let _ = chart.get_first_point_center_offset();
+}
+
+#[test]
+fn chart_get_point_count() {
+    let screen = fresh_screen();
+    let chart = Chart::new(&screen).unwrap();
+    chart.set_point_count(7);
+    assert_eq!(chart.get_point_count(), 7);
+}
+
+#[test]
+fn chart_set_div_line_count() {
+    let screen = fresh_screen();
+    let chart = Chart::new(&screen).unwrap();
+    chart.set_div_line_count(3, 5);
+}
+
+// ── Buttonmatrix (new methods) ──────────────────────────────────────────────
+
+#[test]
+fn buttonmatrix_set_button_width() {
+    let screen = fresh_screen();
+    let btnm = Buttonmatrix::new(&screen).unwrap();
+    btnm.set_button_width(0, 2);
+}
+
+#[test]
+fn buttonmatrix_set_and_clear_ctrl() {
+    let screen = fresh_screen();
+    let btnm = Buttonmatrix::new(&screen).unwrap();
+    btnm.set_button_ctrl(0, ButtonmatrixCtrl::CHECKABLE);
+    assert!(btnm.has_button_ctrl(0, ButtonmatrixCtrl::CHECKABLE));
+    btnm.clear_button_ctrl(0, ButtonmatrixCtrl::CHECKABLE);
+    assert!(!btnm.has_button_ctrl(0, ButtonmatrixCtrl::CHECKABLE));
+}
+
+#[test]
+fn buttonmatrix_ctrl_bitor() {
+    let combined = ButtonmatrixCtrl::CHECKABLE | ButtonmatrixCtrl::CHECKED;
+    assert_ne!(combined, ButtonmatrixCtrl::NONE);
+}
+
+// ── Keyboard (new methods) ──────────────────────────────────────────────────
+
+#[test]
+fn keyboard_set_mode_user1() {
+    let screen = fresh_screen();
+    let kb = Keyboard::new(&screen).unwrap();
+    kb.set_mode(KeyboardMode::User1);
+}
+
+#[test]
+fn keyboard_set_map_custom() {
+    use oxivgl::btnmatrix_map;
+    static MAP: &ButtonmatrixMap = btnmatrix_map!(c"A", c"B", c"C");
+    static CTRL: &[ButtonmatrixCtrl] = &[
+        ButtonmatrixCtrl::NONE,
+        ButtonmatrixCtrl::NONE,
+        ButtonmatrixCtrl::NONE,
+    ];
+    let screen = fresh_screen();
+    let kb = Keyboard::new(&screen).unwrap();
+    kb.set_map(KeyboardMode::User1, MAP, CTRL);
+    kb.set_mode(KeyboardMode::User1);
+}
+
+// ── Msgbox (new methods) ────────────────────────────────────────────────────
+
+#[test]
+fn msgbox_add_header_button() {
+    let screen = fresh_screen();
+    let mbox = Msgbox::new(Some(&screen)).unwrap();
+    mbox.add_title("Test");
+    let _btn = mbox.add_header_button(&oxivgl::symbols::CLOSE);
+}
+
+#[test]
+fn msgbox_get_content_non_null() {
+    let screen = fresh_screen();
+    let mbox = Msgbox::new(Some(&screen)).unwrap();
+    let content = mbox.get_content();
+    // Content should always exist
+    drop(content);
+}
+
+#[test]
+fn msgbox_get_footer_after_button() {
+    let screen = fresh_screen();
+    let mbox = Msgbox::new(Some(&screen)).unwrap();
+    mbox.add_footer_button("OK");
+    assert!(mbox.get_footer().is_some());
+}
+
+#[test]
+fn msgbox_get_header_after_title() {
+    let screen = fresh_screen();
+    let mbox = Msgbox::new(Some(&screen)).unwrap();
+    mbox.add_title("Test");
+    assert!(mbox.get_header().is_some());
+}
+
+// ── EventCode DEFOCUSED ─────────────────────────────────────────────────────
+
+#[test]
+fn event_code_defocused_value() {
+    assert_eq!(
+        EventCode::DEFOCUSED.0,
+        lvgl_rust_sys::lv_event_code_t_LV_EVENT_DEFOCUSED
+    );
 }

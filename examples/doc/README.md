@@ -29,6 +29,9 @@ runner (`example_main!` macro selects host SDL2 or ESP32 fire27 backend).
 - [Widgets — List](#widgets--list)
 - [Widgets — Menu](#widgets--menu)
 - [Widgets — Msgbox](#widgets--msgbox)
+- [Widgets — Chart](#widgets--chart)
+- [Widgets — Buttonmatrix](#widgets--buttonmatrix)
+- [Widgets — Keyboard](#widgets--keyboard)
 - [Widgets — Roller](#widgets--roller)
 - [Widgets — Scale](#widgets--scale)
 - [Widgets — Slider](#widgets--slider)
@@ -768,6 +771,14 @@ Msgbox is also used as a supporting widget in menu2 and menu5.
 
 ![widget_msgbox1](screenshots/widget_msgbox1.png)
 
+### Widget Msgbox 2 — Settings Dialog
+
+Non-modal message box styled as a settings dialog with minimize and close
+header buttons, brightness and speed sliders in the content area, and
+Apply/Cancel footer buttons with indigo background.
+
+![widget_msgbox2](screenshots/widget_msgbox2.png)
+
 ### Widget Msgbox 3 — Message Box with Backdrop Blur
 
 Modal message box with blur + dimming on layer_top. Background labels show
@@ -776,6 +787,51 @@ host the dimming is visible but blur is a no-op. (Screenshot captures active
 screen only — modal layer_top content not visible in PNG.)
 
 ![widget_msgbox3](screenshots/widget_msgbox3.png)
+
+## Widgets — Chart
+
+### Widget Chart 1 — Basic Line Chart
+
+Two data series (green on primary Y, red on secondary Y), 10 points each.
+Shadow style on data-point items.
+
+![widget_chart1](screenshots/widget_chart1.png)
+
+### Widget Chart 2 — Bar Chart with Two Series
+
+A 200x150 bar chart with 12 monthly data points, division lines, and two colored series.
+
+![widget_chart2](screenshots/widget_chart2.png)
+
+### Widget Chart 3 — Stacked Bar Chart
+
+A 280x180 chart with three stacked series (red, green, blue), 10 points each.
+
+![widget_chart3](screenshots/widget_chart3.png)
+
+## Widgets — Buttonmatrix
+
+### Widget Buttonmatrix 1 — Basic Numpad
+
+A 3-row button matrix: digits 1-5, 6-0, and two action buttons.
+Action1 is 2x wide and checkable; Action2 starts checked.
+
+![widget_buttonmatrix1](screenshots/widget_buttonmatrix1.png)
+
+## Widgets — Keyboard
+
+### Widget Keyboard 1 — Keyboard with Two Textareas
+
+Two textareas at top with placeholder text. A keyboard at the bottom switches
+between them on focus events.
+
+![widget_keyboard1](screenshots/widget_keyboard1.png)
+
+### Widget Keyboard 2 — Custom AZERTY Layout
+
+A keyboard using a custom AZERTY key map assigned to User1 mode.
+
+![widget_keyboard2](screenshots/widget_keyboard2.png)
 
 ## Widgets — Roller
 
@@ -1184,12 +1240,15 @@ Status of all [LVGL 9.5 examples](https://docs.lvgl.io/9.5/examples.html) in oxi
 | line | 1 | 1 | 0 | |
 | list | 2 | 2 | 0 | |
 | menu | 5 | 5 | 0 | |
-| msgbox | 2 | 2 | 0 | msgbox3 uses blur API (no-op on SDL) |
+| msgbox | 2 | 3 | 0 | msgbox3 uses blur API (no-op on SDL) |
+| chart | 3 | 3 | 0 | |
+| buttonmatrix | 1 | 1 | 0 | |
+| keyboard | 2 | 2 | 0 | |
 | roller | 3 | 3 | 0 | |
 | scale | 12 | 12 | 0 | |
 | slider | 4 | 4 | 0 | |
 | switch | 2 | 2 | 0 | |
-| textarea | 4 | 4 | 0 | Includes Buttonmatrix + Keyboard wrappers |
+| textarea | 4 | 4 | 0 | |
 | canvas | 12 | 11 | 1 | canvas_8 (vector graphics, ThorVG) |
 | table | 2 | 2 | 0 | |
 | tabview | 2 | 2 | 0 | |
@@ -1214,8 +1273,8 @@ Status of all [LVGL 9.5 examples](https://docs.lvgl.io/9.5/examples.html) in oxi
 | | Count |
 |---|---|
 | LVGL examples total | ~193 |
-| oxivgl done | 153 |
-| Verified on ESP32 (fire27) | 148/153 |
+| oxivgl done | 160 |
+| Verified on ESP32 (fire27) | 148/160 |
 | Skipped (intentional) | 2 |
 | New in v9.5 (not ported) | 2 |
 | Missing (wrapper exists) | 1 |

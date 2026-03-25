@@ -1,10 +1,11 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
-use core::{ops::Deref, ptr::null_mut};
+use core::{ffi::c_char, ops::Deref, ptr::null_mut};
 
 use lvgl_rust_sys::*;
 
 use super::{
     WidgetError,
+    buttonmatrix::{ButtonmatrixCtrl, ButtonmatrixMap},
     obj::{AsLvHandle, Obj},
 };
 
@@ -20,6 +21,14 @@ pub enum KeyboardMode {
     Special = 2,
     /// Numeric keypad.
     Number = 3,
+    /// User-defined mode 1.
+    User1 = 4,
+    /// User-defined mode 2.
+    User2 = 5,
+    /// User-defined mode 3.
+    User3 = 6,
+    /// User-defined mode 4.
+    User4 = 7,
 }
 
 /// LVGL keyboard widget (on-screen virtual keyboard).
@@ -83,6 +92,31 @@ impl<'p> Keyboard<'p> {
         assert_ne!(self.obj.handle(), null_mut(), "Keyboard handle cannot be null");
         // SAFETY: handle non-null; mode is a valid lv_keyboard_mode_t value.
         unsafe { lv_keyboard_set_mode(self.obj.handle(), mode as lv_keyboard_mode_t) };
+        self
+    }
+
+    /// Set a custom key map and control flags for a keyboard mode.
+    ///
+    /// LVGL stores the raw pointers; both `map` and `ctrl` MUST be `'static`
+    /// (spec-memory-lifetime §1/§3).
+    pub fn set_map(
+        &self,
+        mode: KeyboardMode,
+        map: &'static ButtonmatrixMap,
+        ctrl: &'static [ButtonmatrixCtrl],
+    ) -> &Self {
+        assert_ne!(self.obj.handle(), null_mut(), "Keyboard handle cannot be null");
+        // SAFETY: handle non-null; map and ctrl are 'static. LVGL stores
+        // the pointers; 'static satisfies the lifetime requirement.
+        // ButtonmatrixCtrl is repr(transparent) over lv_buttonmatrix_ctrl_t.
+        unsafe {
+            lv_keyboard_set_map(
+                self.obj.handle(),
+                mode as lv_keyboard_mode_t,
+                map.0.as_ptr() as *const *const c_char,
+                ctrl.as_ptr() as *const lv_buttonmatrix_ctrl_t,
+            )
+        };
         self
     }
 }

@@ -48,7 +48,7 @@ ALL_EXAMPLES=(
     widget_list{1,2}
     widget_line1
     widget_menu{1,2,3,4,5}
-    widget_msgbox{1,3}
+    widget_msgbox{1,2,3}
     widget_roller{1,2}
     widget_scale{1,2,3,4,5,6,7,8,9,10,11,12}
     widget_slider{1,2,3,4}
@@ -67,6 +67,9 @@ ALL_EXAMPLES=(
     widget_label4
     widget_roller3
     widget_scale12
+    widget_chart{1,2,3}
+    widget_buttonmatrix1
+    widget_keyboard{1,2}
 )
 
 run_example() {
