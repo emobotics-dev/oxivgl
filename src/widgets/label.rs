@@ -101,6 +101,28 @@ impl<'p> Label<'p> {
         unsafe { lv_label_set_long_mode(self.obj.handle(), mode as u32) };
         self
     }
+
+    /// Get the label long mode.
+    pub fn get_long_mode(&self) -> LabelLongMode {
+        assert_ne!(self.obj.handle(), null_mut(), "Label handle cannot be null");
+        // SAFETY: handle non-null (asserted above).
+        // lv_label_long_mode_t values 0–4 are all covered by LabelLongMode.
+        unsafe { core::mem::transmute(lv_label_get_long_mode(self.obj.handle())) }
+    }
+
+    /// Get whether recoloring is enabled (inline color codes like `#ff0000 red#`).
+    pub fn get_recolor(&self) -> bool {
+        assert_ne!(self.obj.handle(), null_mut(), "Label handle cannot be null");
+        // SAFETY: handle non-null (asserted above).
+        unsafe { lv_label_get_recolor(self.obj.handle()) }
+    }
+
+    /// Get the start index of the selected text region.
+    pub fn get_text_selection_start(&self) -> u32 {
+        assert_ne!(self.obj.handle(), null_mut(), "Label handle cannot be null");
+        // SAFETY: handle non-null (asserted above).
+        unsafe { lv_label_get_text_selection_start(self.obj.handle()) }
+    }
 }
 
 /// Label long-mode behaviour.

@@ -48,4 +48,16 @@ impl<'p> Line<'p> {
         unsafe { lv_line_set_points(self.lv_handle(), points.as_ptr(), points.len() as u32) };
         self
     }
+
+    /// Get the number of points in the line.
+    pub fn get_point_count(&self) -> u32 {
+        // SAFETY: handle non-null (from Line::new).
+        unsafe { lv_line_get_point_count(self.lv_handle()) }
+    }
+
+    /// Get whether the Y-axis is inverted (origin at bottom-left).
+    pub fn get_y_invert(&self) -> bool {
+        // SAFETY: handle non-null (from Line::new).
+        unsafe { lv_line_get_y_invert(self.lv_handle()) }
+    }
 }

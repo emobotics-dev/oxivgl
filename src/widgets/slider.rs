@@ -97,4 +97,33 @@ impl<'p> Slider<'p> {
         // SAFETY: handle non-null (asserted above).
         unsafe { lv_slider_get_left_value(self.obj.handle()) }
     }
+
+    /// Get the minimum value of the slider range.
+    pub fn get_min_value(&self) -> i32 {
+        // SAFETY: handle non-null (checked in new()).
+        unsafe { lv_slider_get_min_value(self.lv_handle()) }
+    }
+
+    /// Get the maximum value of the slider range.
+    pub fn get_max_value(&self) -> i32 {
+        // SAFETY: handle non-null (checked in new()).
+        unsafe { lv_slider_get_max_value(self.lv_handle()) }
+    }
+
+    /// Get the current slider mode.
+    pub fn get_mode(&self) -> SliderMode {
+        // SAFETY: handle non-null (checked in new()).
+        let raw = unsafe { lv_slider_get_mode(self.lv_handle()) };
+        match raw {
+            x if x == lv_slider_mode_t_LV_SLIDER_MODE_SYMMETRICAL => SliderMode::Symmetrical,
+            x if x == lv_slider_mode_t_LV_SLIDER_MODE_RANGE => SliderMode::Range,
+            _ => SliderMode::Normal,
+        }
+    }
+
+    /// Return `true` if the slider is currently being dragged.
+    pub fn is_dragged(&self) -> bool {
+        // SAFETY: handle non-null (checked in new()).
+        unsafe { lv_slider_is_dragged(self.lv_handle()) }
+    }
 }

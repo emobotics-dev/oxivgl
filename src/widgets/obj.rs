@@ -822,4 +822,66 @@ impl<'p> Obj<'p> {
         // SAFETY: handle non-null (asserted above).
         unsafe { lv_obj_get_style_pad_column(self.handle, part as u32) }
     }
+
+    /// Get the right edge X coordinate of the object.
+    pub fn get_x2(&self) -> i32 {
+        // SAFETY: handle non-null (checked in new/from_raw).
+        unsafe { lv_obj_get_x2(self.handle) }
+    }
+
+    /// Get the bottom edge Y coordinate of the object.
+    pub fn get_y2(&self) -> i32 {
+        // SAFETY: handle non-null (checked in new/from_raw).
+        unsafe { lv_obj_get_y2(self.handle) }
+    }
+
+    /// Get the inner (content) width excluding padding.
+    pub fn get_content_width(&self) -> i32 {
+        // SAFETY: handle non-null (checked in new/from_raw).
+        unsafe { lv_obj_get_content_width(self.handle) }
+    }
+
+    /// Get the inner (content) height excluding padding.
+    pub fn get_content_height(&self) -> i32 {
+        // SAFETY: handle non-null (checked in new/from_raw).
+        unsafe { lv_obj_get_content_height(self.handle) }
+    }
+
+    /// Get the self-reported natural width of the object.
+    pub fn get_self_width(&self) -> i32 {
+        // SAFETY: handle non-null (checked in new/from_raw).
+        unsafe { lv_obj_get_self_width(self.handle) }
+    }
+
+    /// Get the self-reported natural height of the object.
+    pub fn get_self_height(&self) -> i32 {
+        // SAFETY: handle non-null (checked in new/from_raw).
+        unsafe { lv_obj_get_self_height(self.handle) }
+    }
+
+    /// Get the scrollbar display mode.
+    pub fn get_scrollbar_mode(&self) -> crate::enums::ScrollbarMode {
+        // SAFETY: handle non-null (checked in new/from_raw).
+        let raw = unsafe { lv_obj_get_scrollbar_mode(self.handle) };
+        match raw {
+            x if x == lv_scrollbar_mode_t_LV_SCROLLBAR_MODE_OFF => crate::enums::ScrollbarMode::Off,
+            x if x == lv_scrollbar_mode_t_LV_SCROLLBAR_MODE_ON => crate::enums::ScrollbarMode::On,
+            x if x == lv_scrollbar_mode_t_LV_SCROLLBAR_MODE_ACTIVE => crate::enums::ScrollbarMode::Active,
+            _ => crate::enums::ScrollbarMode::Auto,
+        }
+    }
+
+    /// Get the allowed scroll direction(s).
+    pub fn get_scroll_dir(&self) -> crate::enums::ScrollDir {
+        // SAFETY: handle non-null (checked in new/from_raw).
+        let raw = unsafe { lv_obj_get_scroll_dir(self.handle) };
+        crate::enums::ScrollDir(raw)
+    }
+
+    /// Get the current combined object state flags.
+    pub fn get_state(&self) -> crate::enums::ObjState {
+        // SAFETY: handle non-null (checked in new/from_raw).
+        let raw = unsafe { lv_obj_get_state(self.handle) };
+        crate::enums::ObjState(raw)
+    }
 }

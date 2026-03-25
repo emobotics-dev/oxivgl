@@ -132,6 +132,49 @@ impl<'p> Arc<'p> {
         unsafe { lv_arc_get_value(self.obj.handle()) }
     }
 
+    /// Get the indicator arc start angle in degrees.
+    pub fn get_angle_start(&self) -> f32 {
+        // SAFETY: handle non-null (from Arc::new/gauge_ring).
+        unsafe { lv_arc_get_angle_start(self.obj.handle()) }
+    }
+
+    /// Get the indicator arc end angle in degrees.
+    pub fn get_angle_end(&self) -> f32 {
+        // SAFETY: handle non-null (from Arc::new/gauge_ring).
+        unsafe { lv_arc_get_angle_end(self.obj.handle()) }
+    }
+
+    /// Get the background arc start angle in degrees.
+    pub fn get_bg_angle_start(&self) -> f32 {
+        // SAFETY: handle non-null (from Arc::new/gauge_ring).
+        unsafe { lv_arc_get_bg_angle_start(self.obj.handle()) }
+    }
+
+    /// Get the background arc end angle in degrees.
+    pub fn get_bg_angle_end(&self) -> f32 {
+        // SAFETY: handle non-null (from Arc::new/gauge_ring).
+        unsafe { lv_arc_get_bg_angle_end(self.obj.handle()) }
+    }
+
+    /// Get the arc start angle rotation in degrees.
+    pub fn get_rotation(&self) -> i32 {
+        // SAFETY: handle non-null (from Arc::new/gauge_ring).
+        unsafe { lv_arc_get_rotation(self.obj.handle()) }
+    }
+
+    /// Get the arc mode (normal, symmetrical, or reverse).
+    pub fn get_mode(&self) -> ArcMode {
+        // SAFETY: handle non-null (from Arc::new/gauge_ring).
+        // lv_arc_mode_t values 0–2 are all covered by ArcMode.
+        unsafe { core::mem::transmute(lv_arc_get_mode(self.obj.handle())) }
+    }
+
+    /// Get the knob drag rate in degrees per second.
+    pub fn get_change_rate(&self) -> u32 {
+        // SAFETY: handle non-null (from Arc::new/gauge_ring).
+        unsafe { lv_arc_get_change_rate(self.obj.handle()) }
+    }
+
     /// Align a child object to the arc's current indicator end angle.
     ///
     /// Positions `obj` on the arc's edge at `r_offset` pixels from the

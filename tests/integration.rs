@@ -4832,3 +4832,705 @@ fn draw_label_dsc_set_opa_compiles() {
     let _kb = Keyboard::new(&screen).unwrap();
     pump();
 }
+
+// ── Arc getters ──────────────────────────────────────────────────────────────
+
+#[test]
+fn arc_get_angle_start() {
+    let screen = fresh_screen();
+    let arc = Arc::new(&screen).unwrap();
+    arc.set_range_raw(0, 100).set_value_raw(0); // 0% → indicator at start
+    pump();
+    // Just verify the call returns without panic and is in 0–360 range.
+    let start = arc.get_angle_start();
+    assert!(start >= 0.0 && start <= 360.0, "start={start} not in [0,360]");
+}
+
+#[test]
+fn arc_get_angle_end() {
+    let screen = fresh_screen();
+    let arc = Arc::new(&screen).unwrap();
+    arc.set_range_raw(0, 100).set_value_raw(100); // 100% → indicator at end
+    pump();
+    let end = arc.get_angle_end();
+    assert!(end >= 0.0 && end <= 360.0, "end={end} not in [0,360]");
+}
+
+#[test]
+fn arc_get_bg_angle_start() {
+    let screen = fresh_screen();
+    let arc = Arc::new(&screen).unwrap();
+    arc.set_bg_start_angle(30);
+    pump();
+    let start = arc.get_bg_angle_start();
+    assert!((start - 30.0).abs() < 1.0, "expected ~30.0, got {start}");
+}
+
+#[test]
+fn arc_get_bg_angle_end() {
+    let screen = fresh_screen();
+    let arc = Arc::new(&screen).unwrap();
+    arc.set_bg_end_angle(300);
+    pump();
+    let end = arc.get_bg_angle_end();
+    assert!((end - 300.0).abs() < 1.0, "expected ~300.0, got {end}");
+}
+
+#[test]
+fn arc_get_rotation() {
+    let screen = fresh_screen();
+    let arc = Arc::new(&screen).unwrap();
+    arc.set_rotation(90);
+    pump();
+    assert_eq!(arc.get_rotation(), 90);
+}
+
+#[test]
+fn arc_get_mode() {
+    use oxivgl::widgets::ArcMode;
+    let screen = fresh_screen();
+    let arc = Arc::new(&screen).unwrap();
+    arc.set_mode(ArcMode::Symmetrical);
+    pump();
+    assert!(matches!(arc.get_mode(), ArcMode::Symmetrical));
+}
+
+#[test]
+fn arc_get_change_rate() {
+    let screen = fresh_screen();
+    let arc = Arc::new(&screen).unwrap();
+    // change_rate is a read-only property set by LVGL internally; just verify it returns a value
+    let rate = arc.get_change_rate();
+    let _ = rate; // no panic
+}
+
+// ── Bar getters ──────────────────────────────────────────────────────────────
+
+#[test]
+fn bar_get_start_value_raw() {
+    use oxivgl::widgets::BarMode;
+    let screen = fresh_screen();
+    let bar = Bar::new(&screen).unwrap();
+    bar.set_range_raw(0, 100);
+    bar.set_mode(BarMode::Range);
+    bar.set_value_raw(80, false);
+    bar.set_start_value_raw(20, false);
+    assert_eq!(bar.get_start_value_raw(), 20);
+}
+
+#[test]
+fn bar_get_min_value() {
+    let screen = fresh_screen();
+    let bar = Bar::new(&screen).unwrap();
+    bar.set_range_raw(10, 90);
+    assert_eq!(bar.get_min_value(), 10);
+}
+
+#[test]
+fn bar_get_max_value() {
+    let screen = fresh_screen();
+    let bar = Bar::new(&screen).unwrap();
+    bar.set_range_raw(10, 90);
+    assert_eq!(bar.get_max_value(), 90);
+}
+
+#[test]
+fn bar_get_mode() {
+    use oxivgl::widgets::BarMode;
+    let screen = fresh_screen();
+    let bar = Bar::new(&screen).unwrap();
+    bar.set_mode(BarMode::Symmetrical);
+    assert!(matches!(bar.get_mode(), BarMode::Symmetrical));
+}
+
+// ── Image getters ────────────────────────────────────────────────────────────
+
+#[test]
+fn image_get_rotation() {
+    let screen = fresh_screen();
+    let img = Image::new(&screen).unwrap();
+    img.set_rotation(450); // 45.0 degrees
+    pump();
+    assert_eq!(img.get_rotation(), 450);
+}
+
+#[test]
+fn image_get_scale() {
+    let screen = fresh_screen();
+    let img = Image::new(&screen).unwrap();
+    img.set_scale(512); // 2.0x
+    pump();
+    assert_eq!(img.get_scale(), 512);
+}
+
+#[test]
+fn image_get_scale_x() {
+    let screen = fresh_screen();
+    let img = Image::new(&screen).unwrap();
+    // set_scale sets both scale_x and scale_y to the same value
+    img.set_scale(384);
+    pump();
+    assert_eq!(img.get_scale_x(), 384);
+}
+
+#[test]
+fn image_get_offset_x() {
+    let screen = fresh_screen();
+    let img = Image::new(&screen).unwrap();
+    // No set_offset_x in the wrapper; just verify the getter returns a value
+    pump();
+    let _x = img.get_offset_x(); // no panic
+}
+
+#[test]
+fn image_get_offset_y() {
+    let screen = fresh_screen();
+    let img = Image::new(&screen).unwrap();
+    img.set_offset_y(20);
+    pump();
+    assert_eq!(img.get_offset_y(), 20);
+}
+
+#[test]
+fn image_get_inner_align() {
+    use oxivgl::widgets::ImageAlign;
+    let screen = fresh_screen();
+    let img = Image::new(&screen).unwrap();
+    img.set_inner_align(ImageAlign::Center);
+    pump();
+    let align = img.get_inner_align();
+    // ImageAlign::Center is variant 5 in lv_image_align_t
+    assert!(align > 0);
+}
+
+#[test]
+fn image_get_antialias() {
+    let screen = fresh_screen();
+    let img = Image::new(&screen).unwrap();
+    // No set_antialias wrapper; just verify the getter returns without panic.
+    pump();
+    let _aa = img.get_antialias();
+}
+
+#[test]
+fn image_get_src_width_height() {
+    let screen = fresh_screen();
+    let img = Image::new(&screen).unwrap();
+    img.set_src(img_cogwheel_argb());
+    pump();
+    // With a real image loaded, src_width/height should be > 0
+    assert!(img.get_src_width() > 0);
+    assert!(img.get_src_height() > 0);
+}
+
+// ── Label getters ────────────────────────────────────────────────────────────
+
+#[test]
+fn label_get_long_mode() {
+    use oxivgl::widgets::LabelLongMode;
+    let screen = fresh_screen();
+    let lbl = Label::new(&screen).unwrap();
+    lbl.set_long_mode(LabelLongMode::Dots);
+    pump();
+    assert!(matches!(lbl.get_long_mode(), LabelLongMode::Dots));
+}
+
+#[test]
+fn label_get_recolor() {
+    let screen = fresh_screen();
+    let lbl = Label::new(&screen).unwrap();
+    lbl.text("test");
+    pump();
+    // No set_recolor wrapper; just verify the getter returns without panic.
+    let _recolor = lbl.get_recolor();
+}
+
+#[test]
+fn label_get_text_selection_start() {
+    let screen = fresh_screen();
+    let lbl = Label::new(&screen).unwrap();
+    lbl.text("Hello");
+    pump();
+    // No selection initially; LVGL returns LV_DRAW_LABEL_NO_TXT_SEL (0xFFFF) when nothing selected
+    let start = lbl.get_text_selection_start();
+    let _ = start; // just verify no panic
+}
+
+// ── Led getters ──────────────────────────────────────────────────────────────
+
+#[test]
+fn led_get_brightness() {
+    let screen = fresh_screen();
+    let led = Led::new(&screen).unwrap();
+    led.set_brightness(200);
+    pump();
+    assert_eq!(led.get_brightness(), 200);
+}
+
+#[test]
+fn led_get_color() {
+    let screen = fresh_screen();
+    let led = Led::new(&screen).unwrap();
+    led.set_color(color_make(255, 0, 0));
+    pump();
+    let _c = led.get_color(); // just verify no panic
+}
+
+// ── Checkbox getter ──────────────────────────────────────────────────────────
+
+#[test]
+fn checkbox_get_text() {
+    let screen = fresh_screen();
+    let cb = Checkbox::new(&screen).unwrap();
+    cb.text("Accept");
+    pump();
+    assert_eq!(cb.get_text(), Some("Accept"));
+}
+
+// ── Line getters ─────────────────────────────────────────────────────────────
+
+#[test]
+fn line_get_point_count() {
+    use oxivgl::widgets::lv_point_precise_t;
+    let screen = fresh_screen();
+    let line = Line::new(&screen).unwrap();
+    static PTS: [lv_point_precise_t; 3] = [
+        lv_point_precise_t { x: 0.0, y: 0.0 },
+        lv_point_precise_t { x: 50.0, y: 50.0 },
+        lv_point_precise_t { x: 100.0, y: 0.0 },
+    ];
+    line.set_points(&PTS);
+    pump();
+    assert_eq!(line.get_point_count(), 3);
+}
+
+#[test]
+fn line_get_y_invert() {
+    let screen = fresh_screen();
+    let line = Line::new(&screen).unwrap();
+    // No set_y_invert wrapper; default is false
+    pump();
+    assert!(!line.get_y_invert());
+}
+
+// ── Dropdown getters ─────────────────────────────────────────────────────────
+
+#[test]
+fn dropdown_get_option_count() {
+    let screen = fresh_screen();
+    let dd = Dropdown::new(&screen).unwrap();
+    dd.set_options("A\nB\nC\nD");
+    pump();
+    assert_eq!(dd.get_option_count(), 4);
+}
+
+#[test]
+fn dropdown_get_selected_highlight() {
+    let screen = fresh_screen();
+    let dd = Dropdown::new(&screen).unwrap();
+    dd.set_options("X\nY");
+    dd.set_selected_highlight(false);
+    pump();
+    assert!(!dd.get_selected_highlight());
+    dd.set_selected_highlight(true);
+    assert!(dd.get_selected_highlight());
+}
+
+#[test]
+fn dropdown_get_dir() {
+    use oxivgl::widgets::DdDir;
+    let screen = fresh_screen();
+    let dd = Dropdown::new(&screen).unwrap();
+    dd.set_dir(DdDir::Top);
+    pump();
+    let dir = dd.get_dir();
+    assert_eq!(dir, DdDir::Top as u32);
+}
+
+// ── Scale getters ─────────────────────────────────────────────────────────────
+
+#[test]
+fn scale_get_mode() {
+    use oxivgl::widgets::{Scale, ScaleMode};
+    let screen = fresh_screen();
+    let scale = Scale::new(&screen).unwrap();
+    scale.set_mode(ScaleMode::HorizontalBottom);
+    pump();
+    let mode = scale.get_mode();
+    assert_eq!(mode, ScaleMode::HorizontalBottom as u32);
+}
+
+#[test]
+fn scale_get_total_tick_count() {
+    use oxivgl::widgets::Scale;
+    let screen = fresh_screen();
+    let scale = Scale::new(&screen).unwrap();
+    scale.set_total_tick_count(11);
+    pump();
+    assert_eq!(scale.get_total_tick_count(), 11);
+}
+
+#[test]
+fn scale_get_rotation() {
+    use oxivgl::widgets::{Scale, ScaleMode};
+    let screen = fresh_screen();
+    let scale = Scale::new(&screen).unwrap();
+    scale.set_mode(ScaleMode::RoundInner);
+    scale.set_rotation(45);
+    pump();
+    assert_eq!(scale.get_rotation(), 45);
+}
+
+#[test]
+fn scale_get_label_show() {
+    use oxivgl::widgets::Scale;
+    let screen = fresh_screen();
+    let scale = Scale::new(&screen).unwrap();
+    scale.set_label_show(false);
+    pump();
+    assert!(!scale.get_label_show());
+    scale.set_label_show(true);
+    assert!(scale.get_label_show());
+}
+
+#[test]
+fn scale_get_angle_range() {
+    use oxivgl::widgets::{Scale, ScaleMode};
+    let screen = fresh_screen();
+    let scale = Scale::new(&screen).unwrap();
+    scale.set_mode(ScaleMode::RoundInner);
+    scale.set_angle_range(270);
+    pump();
+    assert_eq!(scale.get_angle_range(), 270);
+}
+
+#[test]
+fn scale_get_range_min_max_value() {
+    use oxivgl::widgets::Scale;
+    let screen = fresh_screen();
+    let scale = Scale::new(&screen).unwrap();
+    scale.set_range(-50, 150);
+    pump();
+    assert_eq!(scale.get_range_min_value(), -50);
+    assert_eq!(scale.get_range_max_value(), 150);
+}
+
+// ── Slider getters ───────────────────────────────────────────────────────────
+
+#[test]
+fn slider_get_min_max_value() {
+    let screen = fresh_screen();
+    let slider = Slider::new(&screen).unwrap();
+    slider.set_range(-20, 80);
+    pump();
+    assert_eq!(slider.get_min_value(), -20);
+    assert_eq!(slider.get_max_value(), 80);
+}
+
+#[test]
+fn slider_get_mode() {
+    use oxivgl::widgets::SliderMode;
+    let screen = fresh_screen();
+    let slider = Slider::new(&screen).unwrap();
+    slider.set_mode(SliderMode::Symmetrical);
+    pump();
+    assert!(matches!(slider.get_mode(), SliderMode::Symmetrical));
+}
+
+// ── Spinner getters ──────────────────────────────────────────────────────────
+
+#[test]
+fn spinner_get_anim_duration() {
+    let screen = fresh_screen();
+    let sp = Spinner::new(&screen).unwrap();
+    sp.set_anim_params(2000, 90);
+    pump();
+    assert_eq!(sp.get_anim_duration(), 2000);
+}
+
+#[test]
+fn spinner_get_arc_sweep() {
+    let screen = fresh_screen();
+    let sp = Spinner::new(&screen).unwrap();
+    sp.set_anim_params(1000, 120);
+    pump();
+    assert_eq!(sp.get_arc_sweep(), 120);
+}
+
+// ── Spinbox getters ──────────────────────────────────────────────────────────
+
+#[test]
+fn spinbox_get_digit_count() {
+    let screen = fresh_screen();
+    let sb = Spinbox::new(&screen).unwrap();
+    sb.set_digit_format(5, 2);
+    pump();
+    assert_eq!(sb.get_digit_count(), 5);
+}
+
+#[test]
+fn spinbox_get_dec_point_pos() {
+    let screen = fresh_screen();
+    let sb = Spinbox::new(&screen).unwrap();
+    sb.set_digit_format(5, 2);
+    pump();
+    assert_eq!(sb.get_dec_point_pos(), 2);
+}
+
+#[test]
+fn spinbox_get_min_max_value() {
+    let screen = fresh_screen();
+    let sb = Spinbox::new(&screen).unwrap();
+    sb.set_range(-100, 500);
+    pump();
+    assert_eq!(sb.get_min_value(), -100);
+    assert_eq!(sb.get_max_value(), 500);
+}
+
+// ── Switch getter ────────────────────────────────────────────────────────────
+
+#[test]
+fn switch_get_orientation() {
+    use oxivgl::widgets::SwitchOrientation;
+    let screen = fresh_screen();
+    let sw = Switch::new(&screen).unwrap();
+    sw.set_orientation(SwitchOrientation::Vertical);
+    pump();
+    assert!(matches!(sw.get_orientation(), SwitchOrientation::Vertical));
+}
+
+// ── Textarea getters ─────────────────────────────────────────────────────────
+
+#[test]
+fn textarea_get_cursor_click_pos() {
+    let screen = fresh_screen();
+    let ta = Textarea::new(&screen).unwrap();
+    pump();
+    // No set_cursor_click_pos wrapper; just verify the getter returns without panic.
+    let _click_pos = ta.get_cursor_click_pos();
+}
+
+#[test]
+fn textarea_get_password_mode() {
+    let screen = fresh_screen();
+    let ta = Textarea::new(&screen).unwrap();
+    ta.set_password_mode(true);
+    pump();
+    assert!(ta.get_password_mode());
+}
+
+#[test]
+fn textarea_get_one_line() {
+    let screen = fresh_screen();
+    let ta = Textarea::new(&screen).unwrap();
+    ta.set_one_line(true);
+    pump();
+    assert!(ta.get_one_line());
+}
+
+#[test]
+fn textarea_get_max_length() {
+    let screen = fresh_screen();
+    let ta = Textarea::new(&screen).unwrap();
+    ta.set_max_length(64);
+    pump();
+    assert_eq!(ta.get_max_length(), 64);
+}
+
+#[test]
+fn textarea_get_text_selection() {
+    let screen = fresh_screen();
+    let ta = Textarea::new(&screen).unwrap();
+    pump();
+    // No set_text_selection wrapper; just verify the getter returns without panic.
+    let _sel = ta.get_text_selection();
+}
+
+#[test]
+fn textarea_get_password_show_time() {
+    let screen = fresh_screen();
+    let ta = Textarea::new(&screen).unwrap();
+    pump();
+    // No set_password_show_time wrapper; just verify the getter returns without panic.
+    let _time = ta.get_password_show_time();
+}
+
+// ── Roller getters ───────────────────────────────────────────────────────────
+
+#[test]
+fn roller_get_option_count() {
+    let screen = fresh_screen();
+    let roller = Roller::new(&screen).unwrap();
+    roller.set_options("A\nB\nC\nD\nE", RollerMode::Normal);
+    pump();
+    assert_eq!(roller.get_option_count(), 5);
+}
+
+#[test]
+fn roller_get_selected_str() {
+    let screen = fresh_screen();
+    let roller = Roller::new(&screen).unwrap();
+    roller.set_options("Alpha\nBeta\nGamma", RollerMode::Normal);
+    roller.set_selected(1, false);
+    pump();
+    let mut buf = [0u8; 32];
+    let result = roller.get_selected_str(&mut buf);
+    assert_eq!(result, Some("Beta"));
+}
+
+// ── Keyboard getters ─────────────────────────────────────────────────────────
+
+#[test]
+fn keyboard_get_mode() {
+    let screen = fresh_screen();
+    let kb = Keyboard::new(&screen).unwrap();
+    kb.set_mode(KeyboardMode::Number);
+    pump();
+    assert!(matches!(kb.get_mode(), KeyboardMode::Number));
+}
+
+#[test]
+fn keyboard_get_popovers() {
+    let screen = fresh_screen();
+    let kb = Keyboard::new(&screen).unwrap();
+    pump();
+    // No set_popovers wrapper; just verify the getter returns without panic.
+    let _pop = kb.get_popovers();
+}
+
+// ── Chart getters ────────────────────────────────────────────────────────────
+
+#[test]
+fn chart_get_type() {
+    let screen = fresh_screen();
+    let chart = Chart::new(&screen).unwrap();
+    chart.set_type(ChartType::Bar);
+    pump();
+    assert!(matches!(chart.get_type(), ChartType::Bar));
+}
+
+#[test]
+fn chart_get_update_mode() {
+    let screen = fresh_screen();
+    let chart = Chart::new(&screen).unwrap();
+    chart.set_update_mode(ChartUpdateMode::Circular);
+    pump();
+    assert!(matches!(chart.get_update_mode(), ChartUpdateMode::Circular));
+}
+
+#[test]
+fn chart_get_hor_div_line_count() {
+    let screen = fresh_screen();
+    let chart = Chart::new(&screen).unwrap();
+    chart.set_div_line_count(3, 5);
+    pump();
+    assert_eq!(chart.get_hor_div_line_count(), 3);
+}
+
+#[test]
+fn chart_get_ver_div_line_count() {
+    let screen = fresh_screen();
+    let chart = Chart::new(&screen).unwrap();
+    chart.set_div_line_count(3, 5);
+    pump();
+    assert_eq!(chart.get_ver_div_line_count(), 5);
+}
+
+// ── Tabview getter ───────────────────────────────────────────────────────────
+
+#[test]
+fn tabview_get_tab_bar_position() {
+    use oxivgl::widgets::DdDir;
+    let screen = fresh_screen();
+    let tv = Tabview::new(&screen).unwrap();
+    let _tab = tv.add_tab("A");
+    tv.set_tab_bar_position(DdDir::Bottom);
+    pump();
+    assert!(matches!(tv.get_tab_bar_position(), DdDir::Bottom));
+}
+
+// ── Menu getters ─────────────────────────────────────────────────────────────
+
+#[test]
+fn menu_get_mode_header_explicit() {
+    let screen = fresh_screen();
+    let menu = Menu::new(&screen).unwrap();
+    menu.size(200, 200).center();
+    menu.set_mode_header(MenuHeaderMode::BottomFixed);
+    pump();
+    assert!(matches!(menu.get_mode_header(), MenuHeaderMode::BottomFixed));
+}
+
+#[test]
+fn menu_get_sidebar_header() {
+    let screen = fresh_screen();
+    let menu = Menu::new(&screen).unwrap();
+    menu.size(320, 240);
+    // Set a sidebar page so lv_menu_get_sidebar_header() returns non-null.
+    let page = menu.page_create(Some("SideRoot"));
+    menu.set_sidebar_page(&page);
+    pump();
+    let _hdr = menu.get_sidebar_header(); // just verify no panic
+}
+
+// ── Obj getters ──────────────────────────────────────────────────────────────
+
+#[test]
+fn obj_get_x2_y2() {
+    let screen = fresh_screen();
+    let obj = Obj::new(&screen).unwrap();
+    obj.pos(10, 20).size(40, 30);
+    pump();
+    assert_eq!(obj.get_x2(), 10 + 40);
+    assert_eq!(obj.get_y2(), 20 + 30);
+}
+
+#[test]
+fn obj_get_content_width_height() {
+    let screen = fresh_screen();
+    let obj = Obj::new(&screen).unwrap();
+    obj.size(100, 80).pad(10);
+    pump();
+    // content = size - 2 * padding
+    assert!(obj.get_content_width() >= 0);
+    assert!(obj.get_content_height() >= 0);
+}
+
+#[test]
+fn obj_get_self_width_height() {
+    let screen = fresh_screen();
+    let obj = Obj::new(&screen).unwrap();
+    obj.size(60, 40);
+    pump();
+    assert!(obj.get_self_width() >= 0);
+    assert!(obj.get_self_height() >= 0);
+}
+
+#[test]
+fn obj_get_scrollbar_mode() {
+    let screen = fresh_screen();
+    let obj = Obj::new(&screen).unwrap();
+    obj.set_scrollbar_mode(ScrollbarMode::Off);
+    pump();
+    assert!(matches!(obj.get_scrollbar_mode(), ScrollbarMode::Off));
+}
+
+#[test]
+fn obj_get_scroll_dir() {
+    let screen = fresh_screen();
+    let obj = Obj::new(&screen).unwrap();
+    obj.set_scroll_dir(ScrollDir::HOR);
+    pump();
+    let dir = obj.get_scroll_dir();
+    assert_eq!(dir.0 & ScrollDir::HOR.0, ScrollDir::HOR.0);
+}
+
+#[test]
+fn obj_get_state() {
+    let screen = fresh_screen();
+    let obj = Obj::new(&screen).unwrap();
+    obj.add_state(ObjState::CHECKED);
+    pump();
+    let state = obj.get_state();
+    assert_eq!(state.0 & ObjState::CHECKED.0, ObjState::CHECKED.0);
+}

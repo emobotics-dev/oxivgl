@@ -125,6 +125,64 @@ impl<'p> Image<'p> {
         self
     }
 
+    /// Get image rotation in 0.1 degree units (e.g. 450 = 45 degrees).
+    pub fn get_rotation(&self) -> i32 {
+        // SAFETY: handle non-null (from Image::new).
+        unsafe { lv_image_get_rotation(self.lv_handle()) }
+    }
+
+    /// Get uniform image scale (256 = 1.0x, 512 = 2.0x, 128 = 0.5x).
+    pub fn get_scale(&self) -> i32 {
+        // SAFETY: handle non-null (from Image::new).
+        unsafe { lv_image_get_scale(self.lv_handle()) }
+    }
+
+    /// Get X-axis image scale (256 = 1.0x).
+    pub fn get_scale_x(&self) -> i32 {
+        // SAFETY: handle non-null (from Image::new).
+        unsafe { lv_image_get_scale_x(self.lv_handle()) }
+    }
+
+    /// Get horizontal image offset in pixels.
+    pub fn get_offset_x(&self) -> i32 {
+        // SAFETY: handle non-null (from Image::new).
+        unsafe { lv_image_get_offset_x(self.lv_handle()) }
+    }
+
+    /// Get vertical image offset in pixels.
+    pub fn get_offset_y(&self) -> i32 {
+        // SAFETY: handle non-null (from Image::new).
+        unsafe { lv_image_get_offset_y(self.lv_handle()) }
+    }
+
+    /// Get the inner alignment mode as raw `u32`.
+    ///
+    /// Returns the raw `lv_image_align_t` value because `lv_image_align_t`
+    /// includes an internal `_AUTO_TRANSFORM = 10` variant not covered by
+    /// [`ImageAlign`].
+    pub fn get_inner_align(&self) -> u32 {
+        // SAFETY: handle non-null (from Image::new).
+        unsafe { lv_image_get_inner_align(self.lv_handle()) }
+    }
+
+    /// Get whether anti-aliasing is enabled for this image.
+    pub fn get_antialias(&self) -> bool {
+        // SAFETY: handle non-null (from Image::new).
+        unsafe { lv_image_get_antialias(self.lv_handle()) }
+    }
+
+    /// Get the source image width in pixels (before transform).
+    pub fn get_src_width(&self) -> i32 {
+        // SAFETY: handle non-null (from Image::new).
+        unsafe { lv_image_get_src_width(self.lv_handle()) }
+    }
+
+    /// Get the source image height in pixels (before transform).
+    pub fn get_src_height(&self) -> i32 {
+        // SAFETY: handle non-null (from Image::new).
+        unsafe { lv_image_get_src_height(self.lv_handle()) }
+    }
+
     /// Set the image source to a built-in LVGL symbol.
     ///
     /// LVGL stores the pointer (`lv_image_t.src`); the symbol is `'static`

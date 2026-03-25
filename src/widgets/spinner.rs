@@ -54,4 +54,16 @@ impl<'p> Spinner<'p> {
         unsafe { lv_spinner_set_anim_params(self.obj.handle(), time_ms, arc_length) };
         self
     }
+
+    /// Get the animation cycle duration in milliseconds.
+    pub fn get_anim_duration(&self) -> u32 {
+        // SAFETY: handle non-null (checked in new()).
+        unsafe { lv_spinner_get_anim_duration(self.lv_handle()) }
+    }
+
+    /// Get the visible arc sweep angle in degrees.
+    pub fn get_arc_sweep(&self) -> u32 {
+        // SAFETY: handle non-null (checked in new()).
+        unsafe { lv_spinner_get_arc_sweep(self.lv_handle()) }
+    }
 }
