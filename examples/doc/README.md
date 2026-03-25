@@ -1141,11 +1141,12 @@ Status of all [LVGL 9.3 examples](https://docs.lvgl.io/9.3/examples.html) in oxi
 |---|---|
 | LVGL examples total | ~193 |
 | oxivgl done | 144 |
+| Verified on ESP32 (fire27) | 144/144 |
 | Skipped (intentional) | 4 |
 | New in v9.5 (not ported) | ~9 |
 | Missing (wrapper exists) | 4 |
 | Abandoned (lottie) | 3 |
-| No wrapper | ~46 |
+| No wrapper (v9.5 new widgets) | 3 |
 
 ## Running
 

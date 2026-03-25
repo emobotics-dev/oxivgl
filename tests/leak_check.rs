@@ -139,17 +139,16 @@ fn assert_no_leak(name: &str, widget_count: isize, f: impl Fn(&Screen)) {
 /// Assert zero leak for pure Rust operations (no LVGL widgets).
 fn assert_no_leak_rust(name: &str, f: impl Fn()) {
     // Warm-up: enough iterations to absorb allocator fragmentation from
-    // preceding LVGL widget tests (e.g. first Style build after Spinner/
-    // Spinbox tests may trigger a lazy internal allocation).
-    for _ in 0..10 {
+    // preceding LVGL widget tests and coverage-instrumented lazy allocations.
+    for _ in 0..50 {
         f();
     }
     let before = heap_used_bytes() as isize;
-    for _ in 0..20 {
+    for _ in 0..100 {
         f();
     }
     let after = heap_used_bytes() as isize;
-    let per_iter = (after - before) / 20;
+    let per_iter = (after - before) / 100;
     assert!(
         per_iter.abs() <= 128, // LVGL internal caching + allocator fragmentation
         "{name}: leaked {per_iter} bytes/iter (should be ~0)"
