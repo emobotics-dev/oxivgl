@@ -69,7 +69,8 @@ pub struct ChartCursor {
 }
 
 /// Sentinel value indicating "no point" (e.g., gap in data).
-pub const CHART_POINT_NONE: u32 = lvgl_rust_sys::LV_CHART_POINT_NONE;
+/// Equivalent to LVGL's `LV_CHART_POINT_NONE` (0x7FFFFFFF).
+pub const CHART_POINT_NONE: u32 = 0x7FFF_FFFF;
 
 /// LVGL chart widget — line, bar, or scatter plots.
 #[derive(Debug)]
