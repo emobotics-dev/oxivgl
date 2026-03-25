@@ -4,14 +4,14 @@
 //! Run with: `SDL_VIDEODRIVER=dummy cargo +nightly test --test integration
 //!   --target x86_64-unknown-linux-gnu -- --test-threads=1`
 
-use std::sync::Once;
+mod common;
+use common::{driver, ensure_init, fresh_screen, pump};
 
 use oxivgl::{
     anim::{anim_path_linear, anim_set_x, Anim, AnimHandle},
     draw::{DrawArcDsc, DrawImageDsc, DrawLabelDscOwned, DrawLetterDsc, DrawLineDsc, DrawTriangleDsc},
     draw_buf::{ColorFormat, DrawBuf},
     fonts::MONTSERRAT_12,
-    driver::LvglDriver,
     style::{
         color_make, GradDir, palette_main, props, BorderSide, GradDsc, GradExtend, Palette, Selector,
         StyleBuilder, TextDecor, TransitionDsc, lv_pct,
@@ -26,49 +26,11 @@ use oxivgl::{
     },
 };
 
-static INIT: Once = Once::new();
-static mut DRIVER: Option<LvglDriver> = None;
-
-/// Initialise LVGL once for all tests. Must run single-threaded.
-///
-/// Panics if `SDL_VIDEODRIVER` is not set — without it LVGL's SDL2
-/// backend tries to open a real display and crashes with a double-free.
-/// Run via `./run_tests.sh int` or set `SDL_VIDEODRIVER=dummy` manually.
-fn ensure_init() {
-    INIT.call_once(|| {
-        assert!(
-            std::env::var("SDL_VIDEODRIVER").is_ok(),
-            "SDL_VIDEODRIVER not set — run via: ./run_tests.sh int"
-        );
-        // SAFETY: single-threaded test runner (--test-threads=1).
-        unsafe { DRIVER = Some(LvglDriver::init(320, 240)) };
-    });
-}
-
-/// Get the active screen, creating a fresh one to isolate tests.
-fn fresh_screen() -> Screen {
-    ensure_init();
-    // SAFETY: LVGL initialised; loading a new screen clears the previous one.
-    unsafe {
-        let new = lvgl_rust_sys::lv_obj_create(core::ptr::null_mut());
-        lvgl_rust_sys::lv_screen_load(new);
-    }
-    Screen::active().expect("no active screen after init")
-}
-
-/// Pump LVGL timer and force a full layout + refresh pass.
-/// Mirrors LVGL's own `lv_test_helpers.c` approach.
-fn pump() {
-    let driver = unsafe { (*core::ptr::addr_of!(DRIVER)).as_ref().unwrap() };
-    driver.timer_handler();
-    unsafe { lvgl_rust_sys::lv_refr_now(core::ptr::null_mut()) };
-}
-
 #[test]
 fn timer_handler_callable() {
-    ensure_init();
-    let driver = unsafe { (*core::ptr::addr_of!(DRIVER)).as_ref().unwrap() };
-    let _ms = driver.timer_handler();
+    // pump() calls timer_handler internally — just verify it doesn't panic.
+    let _screen = fresh_screen();
+    pump();
 }
 
 // ── Obj basics ───────────────────────────────────────────────────────────────
@@ -1467,7 +1429,7 @@ fn snapshot_take_returns_some() {
     let screen = fresh_screen();
     let _label = Label::new(&screen).unwrap();
     pump();
-    let driver = unsafe { (*core::ptr::addr_of!(DRIVER)).as_ref().unwrap() };
+    let driver = driver();
     let snap = oxivgl::snapshot::Snapshot::take(driver);
     assert!(snap.is_some(), "Snapshot::take should succeed after init");
     let snap = snap.unwrap();
@@ -1483,7 +1445,7 @@ fn snapshot_write_png() {
     let label = Label::new(&screen).unwrap();
     label.text("PNG test");
     pump();
-    let driver = unsafe { (*core::ptr::addr_of!(DRIVER)).as_ref().unwrap() };
+    let driver = driver();
     let snap = oxivgl::snapshot::Snapshot::take(driver).unwrap();
 
     let dir = std::env::temp_dir().join("oxivgl-test");
