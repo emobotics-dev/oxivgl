@@ -72,6 +72,8 @@ ALL_EXAMPLES=(
     widget_keyboard{1,2}
     widget_chart{6,7,8}
     widget_buttonmatrix3
+    widget_chart4
+    widget_keyboard3
 )
 
 run_example() {

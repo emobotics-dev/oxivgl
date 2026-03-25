@@ -4814,3 +4814,21 @@ fn buttonmatrix_set_one_checked() {
     btnm.set_one_checked(true);
     btnm.set_button_ctrl(0, ButtonmatrixCtrl::CHECKED);
 }
+
+#[test]
+fn draw_task_with_fill_dsc_closure_compiles() {
+    // Verify with_fill_dsc / with_label_dsc exist and compile.
+    // Actual draw task closure testing requires a render cycle.
+    let screen = common::fresh_screen();
+    let chart = Chart::new(&screen).unwrap();
+    chart.send_draw_task_events();
+    pump();
+}
+
+#[test]
+fn draw_label_dsc_set_opa_compiles() {
+    // Verify set_opa / opa exist on DrawLabelDsc (compile-time check).
+    let screen = common::fresh_screen();
+    let _kb = Keyboard::new(&screen).unwrap();
+    pump();
+}

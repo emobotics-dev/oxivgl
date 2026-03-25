@@ -809,6 +809,14 @@ A 280x180 chart with three stacked series (red, green, blue), 10 points each.
 
 ![widget_chart3](screenshots/widget_chart3.png)
 
+### Widget Chart 4 — Bar Chart with Value-Based Coloring
+
+A bar chart where each bar's color is interpolated between red (low) and
+green (high) based on its Y value. Uses `DRAW_TASK_ADDED` events with
+`with_fill_dsc` closure API.
+
+![widget_chart4](screenshots/widget_chart4.png)
+
 ### Widget Chart 6 — Cursor on Clicked Point
 
 A line chart with a cursor crosshair. Clicking a data point moves the cursor
@@ -859,6 +867,13 @@ between them on focus events.
 A keyboard using a custom AZERTY key map assigned to User1 mode.
 
 ![widget_keyboard2](screenshots/widget_keyboard2.png)
+
+### Widget Keyboard 3 — Per-Key Coloring with Star Icon
+
+Each key gets a unique palette color via `DRAW_TASK_ADDED` draw hooks. The
+OK key hides its label and draws a star image in its place.
+
+![widget_keyboard3](screenshots/widget_keyboard3.png)
 
 ## Widgets — Roller
 

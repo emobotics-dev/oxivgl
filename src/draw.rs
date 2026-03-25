@@ -117,6 +117,24 @@ impl DrawTask {
         if dsc.is_null() { None } else { Some(DrawFillDsc { ptr: dsc }) }
     }
 
+    /// Access the fill draw descriptor via a closure.
+    ///
+    /// The closure receives a reference to the descriptor, valid only
+    /// for the duration of the call. Returns `None` if this task is not a
+    /// fill operation, or `Some(R)` with the closure's return value.
+    pub fn with_fill_dsc<R>(&self, f: impl FnOnce(&DrawFillDsc) -> R) -> Option<R> {
+        self.fill_dsc().map(|dsc| f(&dsc))
+    }
+
+    /// Access the label draw descriptor via a closure.
+    ///
+    /// The closure receives a reference to the descriptor, valid only
+    /// for the duration of the call. Returns `None` if this task is not a
+    /// label operation, or `Some(R)` with the closure's return value.
+    pub fn with_label_dsc<R>(&self, f: impl FnOnce(&DrawLabelDsc) -> R) -> Option<R> {
+        self.label_dsc().map(|dsc| f(&dsc))
+    }
+
     /// Raw draw task type discriminant (`lv_draw_task_type_t` cast to `u32`).
     ///
     /// Use the `LV_DRAW_TASK_TYPE_*` constants from `lvgl_rust_sys` to
@@ -227,6 +245,18 @@ impl DrawLabelDsc {
     pub fn set_align(&self, align: crate::widgets::TextAlign) {
         // SAFETY: ptr valid during callback; align is a plain integer field.
         unsafe { (*self.ptr).align = align as lv_text_align_t };
+    }
+
+    /// Current opacity (0 = transparent, 255 = opaque).
+    pub fn opa(&self) -> u8 {
+        // SAFETY: ptr valid during callback.
+        unsafe { (*self.ptr).opa }
+    }
+
+    /// Set the label opacity. Use 0 to hide the label text.
+    pub fn set_opa(&self, opa: u8) {
+        // SAFETY: ptr valid during callback; opa is a plain integer field.
+        unsafe { (*self.ptr).opa = opa };
     }
 
     /// Current font pointer.
@@ -358,6 +388,16 @@ impl Layer {
         unsafe { lv_draw_rect(self.ptr, &dsc.inner, &area_lv) };
     }
 
+    /// Draw an image onto this layer.
+    ///
+    /// `dsc` describes the image source and transform; `area` is the
+    /// destination rectangle.
+    pub fn draw_image(&self, dsc: &DrawImageDsc<'_>, area: Area) {
+        let area_lv: lv_area_t = area.into();
+        // SAFETY: ptr valid during callback; dsc and area are stack values.
+        unsafe { lv_draw_image(self.ptr, dsc.as_ptr(), &area_lv) };
+    }
+
     /// Draw a text label onto this layer.
     ///
     /// `text` must fit in 63 bytes; longer strings are truncated.
@@ -377,6 +417,16 @@ impl Layer {
         // returns.
         unsafe { lv_draw_label(self.ptr, &local_dsc, &area_lv) };
     }
+}
+
+/// Query the size of an image without decoding it.
+///
+/// Returns `Some((width, height))` on success, `None` if the image
+/// cannot be decoded.
+pub fn image_header_info(src: &lv_image_dsc_t) -> Option<(i32, i32)> {
+    let w = src.header.w() as i32;
+    let h = src.header.h() as i32;
+    if w > 0 && h > 0 { Some((w, h)) } else { None }
 }
 
 // ── DrawRectDsc
