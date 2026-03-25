@@ -54,4 +54,15 @@ impl<'p> Switch<'p> {
         unsafe { lv_switch_set_orientation(self.lv_handle(), orientation as lv_switch_orientation_t) };
         self
     }
+
+    /// Get the current switch orientation.
+    pub fn get_orientation(&self) -> SwitchOrientation {
+        // SAFETY: handle non-null (checked in new()).
+        let raw = unsafe { lv_switch_get_orientation(self.lv_handle()) };
+        match raw {
+            x if x == lv_switch_orientation_t_LV_SWITCH_ORIENTATION_HORIZONTAL => SwitchOrientation::Horizontal,
+            x if x == lv_switch_orientation_t_LV_SWITCH_ORIENTATION_VERTICAL => SwitchOrientation::Vertical,
+            _ => SwitchOrientation::Auto,
+        }
+    }
 }

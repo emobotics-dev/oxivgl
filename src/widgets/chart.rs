@@ -244,6 +244,43 @@ impl<'p> Chart<'p> {
         if ptr.is_null() { None } else { Some(ChartSeries { ptr }) }
     }
 
+    /// Get the current chart type.
+    pub fn get_type(&self) -> ChartType {
+        // SAFETY: lv_handle() is non-null (checked in new()).
+        let raw = unsafe { lv_chart_get_type(self.lv_handle()) };
+        match raw {
+            x if x == lv_chart_type_t_LV_CHART_TYPE_LINE => ChartType::Line,
+            x if x == lv_chart_type_t_LV_CHART_TYPE_CURVE => ChartType::Curve,
+            x if x == lv_chart_type_t_LV_CHART_TYPE_BAR => ChartType::Bar,
+            x if x == lv_chart_type_t_LV_CHART_TYPE_STACKED => ChartType::Stacked,
+            x if x == lv_chart_type_t_LV_CHART_TYPE_SCATTER => ChartType::Scatter,
+            _ => ChartType::None,
+        }
+    }
+
+    /// Get the current data update mode.
+    pub fn get_update_mode(&self) -> ChartUpdateMode {
+        // SAFETY: lv_handle() is non-null (checked in new()).
+        let raw = unsafe { lv_chart_get_update_mode(self.lv_handle()) };
+        if raw == lv_chart_update_mode_t_LV_CHART_UPDATE_MODE_CIRCULAR {
+            ChartUpdateMode::Circular
+        } else {
+            ChartUpdateMode::Shift
+        }
+    }
+
+    /// Get the number of horizontal division lines.
+    pub fn get_hor_div_line_count(&self) -> u32 {
+        // SAFETY: lv_handle() is non-null (checked in new()).
+        unsafe { lv_chart_get_hor_div_line_count(self.lv_handle()) }
+    }
+
+    /// Get the number of vertical division lines.
+    pub fn get_ver_div_line_count(&self) -> u32 {
+        // SAFETY: lv_handle() is non-null (checked in new()).
+        unsafe { lv_chart_get_ver_div_line_count(self.lv_handle()) }
+    }
+
     /// Refresh the chart — call after externally modifying series data.
     pub fn refresh(&self) -> &Self {
         // SAFETY: lv_handle() is non-null (checked in new()).

@@ -248,4 +248,23 @@ impl<'p> Menu<'p> {
         unsafe { lv_menu_clear_history(self.obj.handle()) };
         self
     }
+
+    /// Get the current header position mode.
+    pub fn get_mode_header(&self) -> MenuHeaderMode {
+        // SAFETY: handle non-null (checked in new()).
+        let raw = unsafe { lv_menu_get_mode_header(self.lv_handle()) };
+        match raw {
+            x if x == lv_menu_mode_header_t_LV_MENU_HEADER_TOP_UNFIXED => MenuHeaderMode::TopUnfixed,
+            x if x == lv_menu_mode_header_t_LV_MENU_HEADER_BOTTOM_FIXED => MenuHeaderMode::BottomFixed,
+            _ => MenuHeaderMode::TopFixed,
+        }
+    }
+
+    /// Get the sidebar header container.
+    pub fn get_sidebar_header(&self) -> Child<Obj<'_>> {
+        // SAFETY: handle non-null (checked in new()).
+        let ptr = unsafe { lv_menu_get_sidebar_header(self.lv_handle()) };
+        assert!(!ptr.is_null(), "lv_menu_get_sidebar_header returned NULL");
+        Child::new(Obj::from_raw(ptr))
+    }
 }

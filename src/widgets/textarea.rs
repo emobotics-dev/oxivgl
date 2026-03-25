@@ -164,4 +164,46 @@ impl<'p> Textarea<'p> {
         unsafe { lv_textarea_set_max_length(self.obj.handle(), len) };
         self
     }
+
+    /// Get the current cursor position (character index).
+    pub fn get_cursor_pos(&self) -> u32 {
+        // SAFETY: handle non-null (checked in new()).
+        unsafe { lv_textarea_get_cursor_pos(self.lv_handle()) }
+    }
+
+    /// Get whether cursor click-to-position is enabled.
+    pub fn get_cursor_click_pos(&self) -> bool {
+        // SAFETY: handle non-null (checked in new()).
+        unsafe { lv_textarea_get_cursor_click_pos(self.lv_handle()) }
+    }
+
+    /// Get whether password mode is active.
+    pub fn get_password_mode(&self) -> bool {
+        // SAFETY: handle non-null (checked in new()).
+        unsafe { lv_textarea_get_password_mode(self.lv_handle()) }
+    }
+
+    /// Get whether one-line mode is active.
+    pub fn get_one_line(&self) -> bool {
+        // SAFETY: handle non-null (checked in new()).
+        unsafe { lv_textarea_get_one_line(self.lv_handle()) }
+    }
+
+    /// Get the maximum number of characters allowed.
+    pub fn get_max_length(&self) -> u32 {
+        // SAFETY: handle non-null (checked in new()).
+        unsafe { lv_textarea_get_max_length(self.lv_handle()) }
+    }
+
+    /// Get whether text selection is enabled.
+    pub fn get_text_selection(&self) -> bool {
+        // SAFETY: handle non-null (checked in new()).
+        unsafe { lv_textarea_get_text_selection(self.lv_handle()) }
+    }
+
+    /// Get the password character show time in milliseconds.
+    pub fn get_password_show_time(&self) -> u32 {
+        // SAFETY: handle non-null (checked in new()).
+        unsafe { lv_textarea_get_password_show_time(self.lv_handle()) }
+    }
 }
