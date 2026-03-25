@@ -809,6 +809,26 @@ A 280x180 chart with three stacked series (red, green, blue), 10 points each.
 
 ![widget_chart3](screenshots/widget_chart3.png)
 
+### Widget Chart 6 — Cursor on Clicked Point
+
+A line chart with a cursor crosshair. Clicking a data point moves the cursor
+to that location.
+
+![widget_chart6](screenshots/widget_chart6.png)
+
+### Widget Chart 7 — Scatter Chart with Live Data
+
+A scatter plot with 50 data points. A timer adds new random points every 100 ms.
+
+![widget_chart7](screenshots/widget_chart7.png)
+
+### Widget Chart 8 — Circular Line Chart with Gap
+
+A line chart in circular update mode with 80 data points updated every 300 ms.
+Three points ahead of the write cursor are blanked to create a visible gap.
+
+![widget_chart8](screenshots/widget_chart8.png)
+
 ## Widgets — Buttonmatrix
 
 ### Widget Buttonmatrix 1 — Basic Numpad
@@ -817,6 +837,13 @@ A 3-row button matrix: digits 1-5, 6-0, and two action buttons.
 Action1 is 2x wide and checkable; Action2 starts checked.
 
 ![widget_buttonmatrix1](screenshots/widget_buttonmatrix1.png)
+
+### Widget Buttonmatrix 3 — Pagination
+
+A pill-shaped button group with left/right arrows and numbered pages 1-5.
+Only one page number can be checked at a time; arrows navigate between pages.
+
+![widget_buttonmatrix3](screenshots/widget_buttonmatrix3.png)
 
 ## Widgets — Keyboard
 
@@ -1241,8 +1268,8 @@ Status of all [LVGL 9.5 examples](https://docs.lvgl.io/9.5/examples.html) in oxi
 | list | 2 | 2 | 0 | |
 | menu | 5 | 5 | 0 | |
 | msgbox | 2 | 3 | 0 | msgbox3 uses blur API (no-op on SDL) |
-| chart | 3 | 3 | 0 | |
-| buttonmatrix | 1 | 1 | 0 | |
+| chart | 3 | 6 | 0 | chart6/7/8 new |
+| buttonmatrix | 1 | 2 | 0 | btnmatrix3 new |
 | keyboard | 2 | 2 | 0 | |
 | roller | 3 | 3 | 0 | |
 | scale | 12 | 12 | 0 | |
@@ -1273,7 +1300,7 @@ Status of all [LVGL 9.5 examples](https://docs.lvgl.io/9.5/examples.html) in oxi
 | | Count |
 |---|---|
 | LVGL examples total | ~193 |
-| oxivgl done | 160 |
+| oxivgl done | 164 |
 | Verified on ESP32 (fire27) | 148/160 |
 | Skipped (intentional) | 2 |
 | New in v9.5 (not ported) | 2 |

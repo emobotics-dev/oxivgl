@@ -26,6 +26,16 @@ pub enum ChartType {
     Scatter = lv_chart_type_t_LV_CHART_TYPE_SCATTER,
 }
 
+/// Chart data update mode.
+#[repr(u32)]
+#[derive(Clone, Copy, Debug)]
+pub enum ChartUpdateMode {
+    /// Shift old data left, add new at end.
+    Shift = lv_chart_update_mode_t_LV_CHART_UPDATE_MODE_SHIFT,
+    /// Circular — overwrite oldest points.
+    Circular = lv_chart_update_mode_t_LV_CHART_UPDATE_MODE_CIRCULAR,
+}
+
 /// Type-safe wrapper for `lv_chart_axis_t`.
 #[repr(u32)]
 #[derive(Clone, Copy, Debug)]
@@ -48,6 +58,19 @@ pub enum ChartAxis {
 pub struct ChartSeries {
     ptr: *mut lv_chart_series_t,
 }
+
+/// Opaque handle to a chart cursor.
+///
+/// Returned by [`Chart::add_cursor`]. The cursor is owned by LVGL and freed
+/// when the parent chart is deleted.
+#[derive(Debug)]
+pub struct ChartCursor {
+    ptr: *mut lv_chart_cursor_t,
+}
+
+/// Sentinel value indicating "no point" (e.g., gap in data).
+/// Equivalent to LVGL's `LV_CHART_POINT_NONE` (0x7FFFFFFF).
+pub const CHART_POINT_NONE: u32 = 0x7FFF_FFFF;
 
 /// LVGL chart widget — line, bar, or scatter plots.
 #[derive(Debug)]
@@ -165,6 +188,60 @@ impl<'p> Chart<'p> {
         // SAFETY: lv_handle() is non-null (checked in new()).
         unsafe { lv_chart_set_div_line_count(self.lv_handle(), hdiv, vdiv) };
         self
+    }
+
+    /// Set the update mode (shift or circular).
+    pub fn set_update_mode(&self, mode: ChartUpdateMode) -> &Self {
+        // SAFETY: lv_handle() is non-null (checked in new()).
+        unsafe { lv_chart_set_update_mode(self.lv_handle(), mode as lv_chart_update_mode_t) };
+        self
+    }
+
+    /// Get the start-point index for a series (circular mode).
+    pub fn get_x_start_point(&self, series: &ChartSeries) -> u32 {
+        // SAFETY: lv_handle() and series.ptr are non-null.
+        unsafe { lv_chart_get_x_start_point(self.lv_handle(), series.ptr) }
+    }
+
+    /// Add a cursor crosshair to the chart.
+    pub fn add_cursor(&self, color: lv_color_t, dir: u32) -> ChartCursor {
+        // SAFETY: lv_handle() is non-null.
+        let ptr = unsafe { lv_chart_add_cursor(self.lv_handle(), color, dir) };
+        assert!(!ptr.is_null(), "lv_chart_add_cursor returned NULL");
+        ChartCursor { ptr }
+    }
+
+    /// Move a cursor to the given point index.
+    ///
+    /// Pass `series` as `None` to use the first series.
+    pub fn set_cursor_point(&self, cursor: &ChartCursor, series: Option<&ChartSeries>, point_id: u32) -> &Self {
+        let ser_ptr = match series {
+            Some(s) => s.ptr,
+            None => core::ptr::null_mut(),
+        };
+        // SAFETY: lv_handle() and cursor.ptr are non-null.
+        unsafe { lv_chart_set_cursor_point(self.lv_handle(), cursor.ptr, ser_ptr, point_id) };
+        self
+    }
+
+    /// Get the index of the last pressed data point.
+    ///
+    /// Returns `None` if no point is pressed (`LV_CHART_POINT_NONE`).
+    pub fn get_pressed_point(&self) -> Option<u32> {
+        // SAFETY: lv_handle() is non-null.
+        let id = unsafe { lv_chart_get_pressed_point(self.lv_handle()) };
+        if id == CHART_POINT_NONE { None } else { Some(id) }
+    }
+
+    /// Get the next series after `prev`, or the first series if `prev` is `None`.
+    pub fn get_series_next(&self, prev: Option<&ChartSeries>) -> Option<ChartSeries> {
+        let prev_ptr = match prev {
+            Some(s) => s.ptr,
+            None => core::ptr::null_mut(),
+        };
+        // SAFETY: lv_handle() is non-null.
+        let ptr = unsafe { lv_chart_get_series_next(self.lv_handle(), prev_ptr) };
+        if ptr.is_null() { None } else { Some(ChartSeries { ptr }) }
     }
 
     /// Refresh the chart — call after externally modifying series data.
