@@ -416,6 +416,13 @@ actively scrolling, with animated transitions.
 
 ![scroll4](screenshots/scroll4.png)
 
+### Scroll 5 — Right-to-Left Scrolling
+
+A container with RTL base direction containing a wide label with Persian text.
+The text scrolls from right to left using the DejaVu 16 Persian/Hebrew font.
+
+![scroll5](screenshots/scroll5.png)
+
 ### Scroll 6 — Curved Scroll
 
 A circular clipped flex column where items are displaced horizontally based on
@@ -846,6 +853,15 @@ Action1 is 2x wide and checkable; Action2 starts checked.
 
 ![widget_buttonmatrix1](screenshots/widget_buttonmatrix1.png)
 
+### Widget Buttonmatrix 2 — Custom Draw per Button
+
+Default button matrix where three buttons get custom styling via
+`DRAW_TASK_ADDED`. Button 2 is blue with a box shadow and square corners,
+button 3 is red with circular radius and matching shadow, button 4 hides
+its label and shows a star image drawn during the fill pass.
+
+![widget_buttonmatrix2](screenshots/widget_buttonmatrix2.png)
+
 ### Widget Buttonmatrix 3 — Pagination
 
 A pill-shaped button group with left/right arrows and numbered pages 1-5.
@@ -1262,7 +1278,7 @@ Status of all [LVGL 9.5 examples](https://docs.lvgl.io/9.5/examples.html) in oxi
 | Events | 5 | 5 (+1 extra trickle) | 0 | |
 | Flex | 6 | 6 | 0 | |
 | Grid | 6 | 6 | 0 | |
-| Scroll | 9 | 8 | 1 | scroll5 (RTL font) |
+| Scroll | 9 | 9 | 0 | |
 
 ### Widget Examples (wrapper exists)
 
@@ -1284,7 +1300,7 @@ Status of all [LVGL 9.5 examples](https://docs.lvgl.io/9.5/examples.html) in oxi
 | menu | 5 | 5 | 0 | |
 | msgbox | 2 | 3 | 0 | msgbox3 uses blur API (no-op on SDL) |
 | chart | 3 | 6 | 0 | chart6/7/8 new |
-| buttonmatrix | 1 | 2 | 0 | btnmatrix3 new |
+| buttonmatrix | 1 | 3 | 0 | btnmatrix2/3 new |
 | keyboard | 2 | 2 | 0 | |
 | roller | 3 | 3 | 0 | |
 | scale | 12 | 12 | 0 | |
@@ -1315,9 +1331,9 @@ Status of all [LVGL 9.5 examples](https://docs.lvgl.io/9.5/examples.html) in oxi
 | | Count |
 |---|---|
 | LVGL examples total | ~193 |
-| oxivgl done | 164 |
+| oxivgl done | 166 |
 | Verified on ESP32 (fire27) | 148/160 |
-| Skipped (intentional) | 2 |
+| Skipped (intentional) | 1 |
 | New in v9.5 (not ported) | 2 |
 | Missing (wrapper exists) | 1 |
 | Abandoned (lottie) | 3 |
