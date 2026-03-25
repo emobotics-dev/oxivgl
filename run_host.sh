@@ -79,10 +79,19 @@ run_example() {
 }
 
 if [[ $# -eq 0 && "$SCREENSHOT" == 1 ]]; then
-    # Screenshot all examples
-    for ex in "${ALL_EXAMPLES[@]}"; do
-        run_example "$ex"
-    done
+    # Build all examples first
+    cargo +nightly build --examples --target "$TARGET"
+    # Run built binaries directly in parallel (avoids cargo lock contention)
+    BIN_DIR="target/$TARGET/debug/examples"
+    N=${SCREENSHOT_JOBS:-$(nproc 2>/dev/null || echo 4)}
+    export SCREENSHOT_ONLY=1 SDL_VIDEODRIVER=dummy
+    run_one_screenshot() {
+        echo "=== $1 ==="
+        "$BIN_DIR/$1"
+    }
+    export -f run_one_screenshot
+    export BIN_DIR
+    printf '%s\n' "${ALL_EXAMPLES[@]}" | xargs -P"$N" -I{} bash -c 'run_one_screenshot {}'
 elif [[ $# -ge 1 ]]; then
     run_example "$1"
 else
