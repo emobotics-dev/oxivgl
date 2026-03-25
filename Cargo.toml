@@ -15,7 +15,7 @@ log-04 = ["dep:log-04"]
 png = ["dep:png"]
 
 [dependencies]
-lvgl_rust_sys = { git = "https://github.com/emobotics-dev/lvgl_rust_sys.git", rev = "5cb45972e2ea0f5bcc009e64652f0734f8fd57a1", default-features = false }
+lvgl_rust_sys = { git = "https://github.com/emobotics-dev/lvgl_rust_sys.git", branch = "local-9.5.0", default-features = false }
 embassy-sync = "0.7.2"
 embassy-time = "0.5.0"
 heapless = { version = "0.9.1", features = ["nightly"] }
@@ -28,8 +28,6 @@ log-04 = { package = "log", version = "0.4", optional = true }
 png = { version = "0.17", optional = true }
 
 [build-dependencies]
-cmake = "0.1"
-cc = "1.2.38"
 oxivgl-build = { path = "oxivgl-build" }
 
 [workspace]
@@ -37,7 +35,7 @@ exclude = ["examples/common", "oxivgl-build"]
 
 [dev-dependencies]
 oxivgl-examples-common = { path = "examples/common" }
-lvgl_rust_sys = { git = "https://github.com/emobotics-dev/lvgl_rust_sys.git", rev = "5cb45972e2ea0f5bcc009e64652f0734f8fd57a1", default-features = false }
+lvgl_rust_sys = { git = "https://github.com/emobotics-dev/lvgl_rust_sys.git", branch = "local-9.5.0", default-features = false }
 
 # Proc-macro crates needed by fire27_main! attribute/macro expansion on xtensa
 [target.'cfg(target_arch = "xtensa")'.dev-dependencies]

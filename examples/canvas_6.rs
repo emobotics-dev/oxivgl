@@ -3,7 +3,7 @@
     target_arch = "xtensa",
     feature(impl_trait_in_assoc_type, type_alias_impl_trait)
 )]
-// SPDX-License-Identifier: GPL-3.0-only
+// SPDX-License-Identifier: MIT OR Apache-2.0
 //! Canvas 6 — Draw an image onto a canvas
 
 use oxivgl::{
