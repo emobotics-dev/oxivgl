@@ -17,6 +17,7 @@ runner (`example_main!` macro selects host SDL2 or ESP32 fire27 backend).
 - [Widgets — Base Object](#widgets--base-object)
 - [Widgets — Animation Image](#widgets--animation-image)
 - [Widgets — Arc](#widgets--arc)
+- [Widgets — ArcLabel](#widgets--arclabel)
 - [Widgets — Image](#widgets--image)
 - [Widgets — Bar](#widgets--bar)
 - [Widgets — Button](#widgets--button)
@@ -216,6 +217,13 @@ A screen with two buttons ("BG Dim" and "OPA Dim"). A full-screen dark overlay
 is shown on top with a dismiss label.
 
 ![style20](screenshots/style20.png)
+
+### Style 21 — Material-design cards with shadow, rotation & scale transforms
+
+Two card objects with rounded corners and drop shadow. An Arc controls
+rotation transform; a Slider controls scale transform on both cards.
+
+![style21](screenshots/style21.png)
 
 ### Skipped
 
@@ -490,6 +498,15 @@ Full-circle arc animating 0→100 in 1 s (infinite repeat, 500 ms delay). Knob h
 Interactive pie chart with click-to-pop-out animation.
 
 ![widget_arc3](screenshots/widget_arc3.png)
+
+## Widgets — ArcLabel
+
+### Widget ArcLabel 1 — Text curved along circular arcs
+
+Three ArcLabel widgets with different radius, angle, and direction settings
+(clockwise and counter-clockwise).
+
+![widget_arclabel1](screenshots/widget_arclabel1.png)
 
 ## Widgets — Image
 
@@ -1142,7 +1159,7 @@ Status of all [LVGL 9.5 examples](https://docs.lvgl.io/9.5/examples.html) in oxi
 | Category | LVGL | Done | Skip | Notes |
 |---|---|---|---|---|
 | Getting Started | 4 | 4 (+4 extra gradient examples) | 0 | |
-| Styles | 21 | 19 | 2 | style19 (meta/benchmarking), style21 (card grid, v9.5) |
+| Styles | 21 | 20 | 1 | style19 (meta/benchmarking) |
 | Animations | 5 | 5 | 0 | |
 | Events | 5 | 5 (+1 extra trickle) | 0 | |
 | Flex | 6 | 6 | 0 | |
@@ -1155,6 +1172,7 @@ Status of all [LVGL 9.5 examples](https://docs.lvgl.io/9.5/examples.html) in oxi
 |---|---|---|---|---|
 | obj | 3 | 3 | 0 | |
 | arc | 3 | 3 | 0 | |
+| arclabel | 1 | 1 | 0 | v9.5 new widget |
 | bar | 7 | 7 | 0 | |
 | button | 3 | 3 | 0 | |
 | calendar | 2 | 2 | 0 | |
@@ -1188,7 +1206,6 @@ Status of all [LVGL 9.5 examples](https://docs.lvgl.io/9.5/examples.html) in oxi
 
 | Widget | Notes |
 |--------|-------|
-| arclabel | Curved text along arc path (1 example in LVGL) |
 | gif | GIF animation playback (no LVGL examples yet) |
 | ime_pinyin | Chinese Pinyin input method (no LVGL examples yet) |
 
@@ -1197,10 +1214,10 @@ Status of all [LVGL 9.5 examples](https://docs.lvgl.io/9.5/examples.html) in oxi
 | | Count |
 |---|---|
 | LVGL examples total | ~193 |
-| oxivgl done | 151 |
-| Verified on ESP32 (fire27) | 148/151 |
-| Skipped (intentional) | 3 |
-| New in v9.5 (not ported) | 3 |
+| oxivgl done | 153 |
+| Verified on ESP32 (fire27) | 148/153 |
+| Skipped (intentional) | 2 |
+| New in v9.5 (not ported) | 2 |
 | Missing (wrapper exists) | 1 |
 | Abandoned (lottie) | 3 |
 | No wrapper (v9.5 new widgets) | 3 |
