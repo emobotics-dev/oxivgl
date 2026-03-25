@@ -10,6 +10,9 @@
 //! toggle scroll flags: SCROLLABLE, SCROLL_CHAIN, SCROLL_ELASTIC,
 //! SCROLL_MOMENTUM.
 
+extern crate alloc;
+use alloc::vec::Vec;
+
 use oxivgl::{
     enums::ObjFlag,
     view::View,
@@ -27,9 +30,9 @@ const COLORS: [u32; 5] = [0xe74c3c, 0x3498db, 0x2ecc71, 0xf39c12, 0x9b59b6];
 
 struct Scroll9 {
     _panel: Obj<'static>,
-    _switches: [Switch<'static>; 4],
-    _labels: [Label<'static>; 4],
-    _children: [Obj<'static>; 20],
+    _switches: Vec<Switch<'static>>,
+    _labels: Vec<Label<'static>>,
+    _children: Vec<Obj<'static>>,
 }
 
 impl View for Scroll9 {
@@ -43,9 +46,7 @@ impl View for Scroll9 {
         panel.bg_color(0xeeeeee);
 
         // 20 colored children in a grid that exceeds panel bounds
-        let mut children: [core::mem::MaybeUninit<Obj<'static>>; 20] =
-            unsafe { core::mem::MaybeUninit::uninit().assume_init() };
-
+        let mut children = Vec::with_capacity(20);
         for i in 0..20usize {
             let child = Obj::new(&panel)?;
             child.size(CHILD_W, CHILD_H);
@@ -57,17 +58,13 @@ impl View for Scroll9 {
             child.bg_color(COLORS[i % COLORS.len()]);
             child.bg_opa(255);
             child.remove_flag(ObjFlag::SCROLLABLE);
-            children[i] = core::mem::MaybeUninit::new(child);
+            children.push(child);
         }
-
-        let children = unsafe { core::mem::transmute::<_, [Obj<'static>; 20]>(children) };
 
         // Switch labels
         let flag_names = ["Scrollable", "Chain", "Elastic", "Momentum"];
-        let mut switches: [core::mem::MaybeUninit<Switch<'static>>; 4] =
-            unsafe { core::mem::MaybeUninit::uninit().assume_init() };
-        let mut labels: [core::mem::MaybeUninit<Label<'static>>; 4] =
-            unsafe { core::mem::MaybeUninit::uninit().assume_init() };
+        let mut switches = Vec::with_capacity(4);
+        let mut labels = Vec::with_capacity(4);
 
         for (i, name) in flag_names.iter().enumerate() {
             let lbl = Label::new(&screen)?;
@@ -79,14 +76,9 @@ impl View for Scroll9 {
             // All switches initially checked
             sw.add_state(oxivgl::enums::ObjState::CHECKED);
 
-            switches[i] = core::mem::MaybeUninit::new(sw);
-            labels[i] = core::mem::MaybeUninit::new(lbl);
+            switches.push(sw);
+            labels.push(lbl);
         }
-
-        let switches =
-            unsafe { core::mem::transmute::<_, [Switch<'static>; 4]>(switches) };
-        let labels =
-            unsafe { core::mem::transmute::<_, [Label<'static>; 4]>(labels) };
 
         Ok(Self {
             _panel: panel,
