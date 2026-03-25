@@ -100,6 +100,13 @@ impl ObjFlag {
     /// Start a new flex track after this item.
     pub const FLEX_IN_NEW_TRACK: Self =
         Self(lvgl_rust_sys::lv_obj_flag_t_LV_OBJ_FLAG_FLEX_IN_NEW_TRACK);
+    /// Object is hidden (not rendered, not clickable).
+    pub const HIDDEN: Self = Self(lvgl_rust_sys::lv_obj_flag_t_LV_OBJ_FLAG_HIDDEN);
+    /// Scroll momentum (inertial scrolling after release).
+    pub const SCROLL_MOMENTUM: Self =
+        Self(lvgl_rust_sys::lv_obj_flag_t_LV_OBJ_FLAG_SCROLL_MOMENTUM);
+    /// Scroll chain (propagate scroll to parent, both axes).
+    pub const SCROLL_CHAIN: Self = Self(lvgl_rust_sys::lv_obj_flag_t_LV_OBJ_FLAG_SCROLL_CHAIN);
 }
 
 impl core::ops::BitOr for ObjFlag {

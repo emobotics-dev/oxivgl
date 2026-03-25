@@ -708,3 +708,28 @@ fn leak_animimg() {
         drop(a);
     }));
 }
+
+#[test]
+fn leak_scale_rotation_anim() {
+    run_isolated("Scale+rotation anim", || measure_widget(|s| {
+        use oxivgl::anim::{anim_set_scale_rotation, Anim};
+        use oxivgl::widgets::{Scale, ScaleMode};
+        let scale = Scale::new(s).unwrap();
+        scale.set_mode(ScaleMode::RoundInner)
+            .set_range(0, 360)
+            .set_total_tick_count(9)
+            .set_major_tick_every(1)
+            .set_angle_range(360)
+            .set_rotation(0);
+        scale.size(100, 100);
+        let mut a = Anim::new();
+        a.set_var(&scale)
+            .set_values(0, 360)
+            .set_duration(500)
+            .set_exec_cb(Some(anim_set_scale_rotation));
+        let _h = a.start();
+        pump_child();
+        drop(scale);
+        pump_child();
+    }));
+}

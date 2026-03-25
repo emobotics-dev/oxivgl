@@ -281,3 +281,8 @@ pub unsafe extern "C" fn anim_set_arc_value(var: *mut c_void, v: i32) {
 pub unsafe extern "C" fn anim_set_bar_value(var: *mut c_void, v: i32) {
     unsafe { lv_bar_set_value(var as *mut lv_obj_t, v, true) };
 }
+
+/// Exec callback: `lv_scale_set_rotation(var, v)`.
+pub unsafe extern "C" fn anim_set_scale_rotation(var: *mut c_void, v: i32) {
+    unsafe { lv_scale_set_rotation(var as *mut lv_obj_t, v) };
+}

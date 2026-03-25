@@ -867,6 +867,12 @@ impl DrawLetterDsc {
         self
     }
 
+    /// Set the font used to render the glyph.
+    pub fn font(&mut self, f: crate::fonts::Font) -> &mut Self {
+        self.inner.font = f.as_ptr();
+        self
+    }
+
     /// Rotation in 0.1-degree units (e.g. `900` = 90°).
     ///
     /// **Embedded note:** non-zero rotation triggers LVGL's vector-font path,

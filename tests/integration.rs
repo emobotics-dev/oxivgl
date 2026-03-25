@@ -4349,10 +4349,6 @@ fn canvas_layer_draw_image_static() {
     pump();
 }
 
-#[test]
-
-#[test]
-
 // ── Calendar — Chinese mode ─────────────────────────────────────────────────
 
 #[test]
@@ -4368,3 +4364,104 @@ fn calendar_chinese_mode() {
 }
 
 // ── Btnmatrix with CJK text ─────────────────────────────────────────────────
+// ── ObjFlag::HIDDEN ──────────────────────────────────────────────────────────
+
+#[test]
+fn obj_flag_hidden_add_remove() {
+    let screen = fresh_screen();
+    let obj = Obj::new(&screen).unwrap();
+    assert!(!obj.has_flag(ObjFlag::HIDDEN));
+    obj.add_flag(ObjFlag::HIDDEN);
+    assert!(obj.has_flag(ObjFlag::HIDDEN));
+    obj.remove_flag(ObjFlag::HIDDEN);
+    assert!(!obj.has_flag(ObjFlag::HIDDEN));
+}
+
+// ── ObjFlag::SCROLL_MOMENTUM ────────────────────────────────────────────────
+
+#[test]
+fn obj_flag_scroll_momentum_add_remove() {
+    let screen = fresh_screen();
+    let obj = Obj::new(&screen).unwrap();
+    // SCROLL_MOMENTUM is on by default for scrollable objects
+    obj.remove_flag(ObjFlag::SCROLL_MOMENTUM);
+    assert!(!obj.has_flag(ObjFlag::SCROLL_MOMENTUM));
+    obj.add_flag(ObjFlag::SCROLL_MOMENTUM);
+    assert!(obj.has_flag(ObjFlag::SCROLL_MOMENTUM));
+    obj.remove_flag(ObjFlag::SCROLL_MOMENTUM);
+    assert!(!obj.has_flag(ObjFlag::SCROLL_MOMENTUM));
+}
+
+// ── ObjFlag::SCROLL_CHAIN ───────────────────────────────────────────────────
+
+#[test]
+fn obj_flag_scroll_chain_add_remove() {
+    let screen = fresh_screen();
+    let obj = Obj::new(&screen).unwrap();
+    obj.remove_flag(ObjFlag::SCROLL_CHAIN);
+    assert!(!obj.has_flag(ObjFlag::SCROLL_CHAIN));
+    obj.add_flag(ObjFlag::SCROLL_CHAIN);
+    assert!(obj.has_flag(ObjFlag::SCROLL_CHAIN));
+    obj.remove_flag(ObjFlag::SCROLL_CHAIN);
+    assert!(!obj.has_flag(ObjFlag::SCROLL_CHAIN));
+}
+
+// ── Scale::set_rotation ─────────────────────────────────────────────────────
+
+#[test]
+fn scale_set_rotation_no_crash() {
+    use oxivgl::widgets::{Scale, ScaleMode};
+    let screen = fresh_screen();
+    let scale = Scale::new(&screen).unwrap();
+    scale.set_mode(ScaleMode::RoundInner);
+    scale.set_rotation(90);
+    pump();
+}
+
+// ── anim_set_scale_rotation ─────────────────────────────────────────────────
+
+#[test]
+fn anim_set_scale_rotation_no_crash() {
+    use oxivgl::anim::{anim_set_scale_rotation, Anim};
+    use oxivgl::widgets::{Scale, ScaleMode};
+    let screen = fresh_screen();
+    let scale = Scale::new(&screen).unwrap();
+    scale.set_mode(ScaleMode::RoundInner)
+        .set_range(0, 360)
+        .set_total_tick_count(9)
+        .set_major_tick_every(1)
+        .set_angle_range(360)
+        .set_rotation(0);
+    scale.size(200, 200);
+    let mut a = Anim::new();
+    a.set_var(&scale)
+        .set_values(0, 360)
+        .set_duration(1000)
+        .set_exec_cb(Some(anim_set_scale_rotation));
+    let _h = a.start();
+    pump();
+}
+
+// ── DrawLetterDsc::font ─────────────────────────────────────────────────────
+
+#[test]
+fn draw_letter_dsc_font_setter() {
+    use oxivgl::draw::DrawLetterDsc;
+    use oxivgl::draw_buf::{ColorFormat, DrawBuf};
+    use oxivgl::fonts;
+    use oxivgl::style::color_make;
+    let screen = fresh_screen();
+    let buf = DrawBuf::create(100, 100, ColorFormat::RGB565).expect("DrawBuf alloc");
+    let canvas = Canvas::new(&screen, buf).unwrap();
+    canvas.fill_bg(color_make(0, 0, 0), 255);
+    {
+        let mut layer = canvas.init_layer();
+        let mut dsc = DrawLetterDsc::new();
+        dsc.unicode(b'A' as u32)
+            .font(fonts::MONTSERRAT_20)
+            .color(color_make(255, 255, 255))
+            .rotation(0);
+        layer.draw_letter(&dsc, 10, 10);
+    }
+    pump();
+}
