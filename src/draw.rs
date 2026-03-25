@@ -538,13 +538,6 @@ impl DrawLabelDscOwned {
         }
         (size.x, size.y)
     }
-
-    /// Raw pointer to the inner descriptor. Used by
-    /// [`CanvasLayer::draw_label`].
-    #[allow(dead_code)]
-    pub(crate) fn as_ptr(&self) -> *const lv_draw_label_dsc_t {
-        &self.inner
-    }
 }
 
 // ── DrawArcDsc
