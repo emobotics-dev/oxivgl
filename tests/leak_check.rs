@@ -136,7 +136,9 @@ fn run_isolated(name: &str, test_fn: fn() -> isize) {
     );
 }
 
-// ── Test helpers (run inside child) ──────────────────────────────────────────
+// ── Test helpers (run inside forked child) ───────────────────────────────────
+// Note: these do NOT use tests/common — each child has its own fresh LVGL
+// instance created by run_isolated. The helpers are intentionally minimal.
 
 fn screen() -> oxivgl::widgets::Screen {
     oxivgl::widgets::Screen::active().expect("no active screen")
