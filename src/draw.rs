@@ -135,6 +135,18 @@ impl DrawTask {
         self.label_dsc().map(|dsc| f(&dsc))
     }
 
+    /// Box-shadow draw descriptor, if this task draws a box shadow.
+    pub fn box_shadow_dsc(&self) -> Option<DrawBoxShadowDsc> {
+        // SAFETY: ptr valid during callback; returns null if not a shadow task.
+        let dsc = unsafe { lv_draw_task_get_box_shadow_dsc(self.ptr) };
+        if dsc.is_null() { None } else { Some(DrawBoxShadowDsc { ptr: dsc }) }
+    }
+
+    /// Access the box-shadow draw descriptor via a closure.
+    pub fn with_box_shadow_dsc<R>(&self, f: impl FnOnce(&DrawBoxShadowDsc) -> R) -> Option<R> {
+        self.box_shadow_dsc().map(|dsc| f(&dsc))
+    }
+
     /// Raw draw task type discriminant (`lv_draw_task_type_t` cast to `u32`).
     ///
     /// Use the `LV_DRAW_TASK_TYPE_*` constants from `lvgl_rust_sys` to
@@ -329,6 +341,58 @@ impl DrawFillDsc {
         // SAFETY: ptr valid during callback; opa is a plain integer field.
         unsafe { (*self.ptr).opa = opa };
     }
+
+    /// Current corner radius.
+    pub fn radius(&self) -> i32 {
+        // SAFETY: ptr valid during callback.
+        unsafe { (*self.ptr).radius }
+    }
+
+    /// Set the corner radius.
+    pub fn set_radius(&self, radius: i32) {
+        // SAFETY: ptr valid during callback; radius is a plain value field.
+        unsafe { (*self.ptr).radius = radius };
+    }
+}
+
+/// Mutable handle to a box shadow draw descriptor.
+///
+/// Valid only during the `DRAW_TASK_ADDED` callback. Modifications take
+/// effect on the current draw operation.
+pub struct DrawBoxShadowDsc {
+    ptr: *mut lv_draw_box_shadow_dsc_t,
+}
+
+impl core::fmt::Debug for DrawBoxShadowDsc {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        f.debug_struct("DrawBoxShadowDsc").finish_non_exhaustive()
+    }
+}
+
+impl DrawBoxShadowDsc {
+    /// Set the shadow width (spread distance in pixels).
+    pub fn set_width(&self, width: i32) {
+        // SAFETY: ptr valid during callback; width is a plain value field.
+        unsafe { (*self.ptr).width = width };
+    }
+
+    /// Set the shadow X offset.
+    pub fn set_ofs_x(&self, x: i32) {
+        // SAFETY: ptr valid during callback.
+        unsafe { (*self.ptr).ofs_x = x };
+    }
+
+    /// Set the shadow Y offset.
+    pub fn set_ofs_y(&self, y: i32) {
+        // SAFETY: ptr valid during callback.
+        unsafe { (*self.ptr).ofs_y = y };
+    }
+
+    /// Set the shadow corner radius.
+    pub fn set_radius(&self, radius: i32) {
+        // SAFETY: ptr valid during callback.
+        unsafe { (*self.ptr).radius = radius };
+    }
 }
 
 // ── Area utilities
@@ -356,6 +420,10 @@ impl Area {
 /// Maximum radius constant — produces a circle or fully-rounded corners.
 /// Equivalent to `LV_RADIUS_CIRCLE` (0x7FFF).
 pub const RADIUS_CIRCLE: i32 = 0x7FFF;
+
+/// Draw task type: fill rectangle.
+/// Equivalent to `LV_DRAW_TASK_TYPE_FILL` (1).
+pub const DRAW_TASK_TYPE_FILL: u32 = 1;
 
 // ── Layer ─────────────────────────────────────────────────────────────────────
 
