@@ -1,624 +1,585 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
 //! Memory leak detection tests.
 //!
-//! Uses glibc's `mallinfo2()` to measure **global** heap usage — this captures
-//! both Rust allocations (which go through libc malloc via the System allocator)
-//! and LVGL's C-side `lv_malloc`/`lv_free` (which use libc malloc directly via
-//! `LV_STDLIB_CLIB`). This gives a single, unified view of memory across the
-//! FFI boundary.
+//! Each test forks a child process with a fresh LVGL instance and counting
+//! global allocator. This gives perfect isolation — no cross-test cache
+//! contamination, no warmup needed.
 //!
-//! # LVGL baseline leak
-//!
-//! LVGL v9.3 on the SDL2 dummy backend leaks ~600-800 bytes per widget
-//! create/delete cycle and ~800 bytes per render pass. This appears to be
-//! draw-layer / event-cleanup overhead in LVGL's C code, not a Rust wrapper
-//! issue. The tests use a per-widget baseline tolerance derived from empirical
-//! measurement. Wrapper-specific leaks (e.g. Rc not dropping, Style not
-//! calling lv_style_reset) would show as excess ABOVE this baseline.
+//! The counting allocator tracks ALL malloc/free calls (Rust + LVGL C).
+//! After N create/destroy iterations, net allocation must be zero.
 //!
 //! Run with: `SDL_VIDEODRIVER=dummy cargo +nightly test --test leak_check
 //!   --target x86_64-unknown-linux-gnu -- --test-threads=1`
 
-use std::sync::Once;
+use std::alloc::{GlobalAlloc, Layout, System};
+use std::sync::atomic::{AtomicIsize, Ordering};
+
+// ── Counting allocator ───────────────────────────────────────────────────────
+
+/// Counting allocator — only tracks when TRACKING_ENABLED is true.
+/// This allows the child process to enable tracking only during the
+/// measurement window, excluding test harness overhead.
+struct CountingAlloc;
+static ALLOC_BALANCE: AtomicIsize = AtomicIsize::new(0);
+static TRACKING_ENABLED: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+
+unsafe impl GlobalAlloc for CountingAlloc {
+    unsafe fn alloc(&self, layout: Layout) -> *mut u8 {
+        let ptr = unsafe { System.alloc(layout) };
+        if !ptr.is_null() && TRACKING_ENABLED.load(Ordering::Relaxed) {
+            ALLOC_BALANCE.fetch_add(layout.size() as isize, Ordering::Relaxed);
+        }
+        ptr
+    }
+    unsafe fn dealloc(&self, ptr: *mut u8, layout: Layout) {
+        if TRACKING_ENABLED.load(Ordering::Relaxed) {
+            ALLOC_BALANCE.fetch_sub(layout.size() as isize, Ordering::Relaxed);
+        }
+        unsafe { System.dealloc(ptr, layout) };
+    }
+    unsafe fn realloc(&self, ptr: *mut u8, layout: Layout, new_size: usize) -> *mut u8 {
+        let new_ptr = unsafe { System.realloc(ptr, layout, new_size) };
+        if !new_ptr.is_null() && TRACKING_ENABLED.load(Ordering::Relaxed) {
+            ALLOC_BALANCE.fetch_add(new_size as isize - layout.size() as isize, Ordering::Relaxed);
+        }
+        new_ptr
+    }
+}
+
+#[global_allocator]
+static ALLOC: CountingAlloc = CountingAlloc;
+
+fn total_alloc_bytes() -> isize {
+    ALLOC_BALANCE.load(Ordering::Relaxed)
+}
+
+fn start_tracking() {
+    ALLOC_BALANCE.store(0, Ordering::Relaxed);
+    TRACKING_ENABLED.store(true, Ordering::Relaxed);
+}
+
+fn stop_tracking() {
+    TRACKING_ENABLED.store(false, Ordering::Relaxed);
+}
+
+// ── Forked test runner ───────────────────────────────────────────────────────
+
+const MEASURE: isize = 100;
+const NOISE_FLOOR: isize = 32;
+
+/// Fork a child process, run `test_fn` in a fresh LVGL instance.
+/// Uses libc fork() directly — child inherits the counting allocator
+/// but gets a completely fresh LVGL via LvglDriver::init.
+fn run_isolated(name: &str, test_fn: fn() -> isize) {
+    use std::io::Read;
+    use std::os::unix::io::FromRawFd;
+
+    unsafe extern "C" {
+        fn pipe(fds: *mut i32) -> i32;
+        fn fork() -> i32;
+        fn _exit(status: i32) -> !;
+        fn close(fd: i32) -> i32;
+        fn write(fd: i32, buf: *const u8, count: usize) -> isize;
+        fn waitpid(pid: i32, status: *mut i32, options: i32) -> i32;
+    }
+
+    let mut fds = [0i32; 2];
+    assert_eq!(unsafe { pipe(fds.as_mut_ptr()) }, 0);
+    let (read_fd, write_fd) = (fds[0], fds[1]);
+
+    let pid = unsafe { fork() };
+    assert!(pid >= 0, "fork failed");
+
+    if pid == 0 {
+        // ── Child: fresh LVGL, run test, write result, exit ──
+        unsafe { close(read_fd) };
+
+        // Silence child output to avoid confusing the test harness
+        unsafe extern "C" { fn open(path: *const u8, flags: i32) -> i32; fn dup2(old: i32, new: i32) -> i32; }
+        let devnull = unsafe { open(b"/dev/null\0".as_ptr(), 2) }; // O_RDWR=2
+        if devnull >= 0 {
+            unsafe { dup2(devnull, 1); dup2(devnull, 2); close(devnull); }
+        }
+
+        // Init LVGL with tracking disabled — don't count init allocations
+        let _driver = oxivgl::driver::LvglDriver::init(320, 240);
+
+        let per_iter = test_fn();
+
+        let bytes = per_iter.to_le_bytes();
+        unsafe { write(write_fd, bytes.as_ptr(), bytes.len()) };
+        unsafe { close(write_fd) };
+        unsafe { _exit(0) };
+    }
+
+    // ── Parent: read result, assert ──
+    unsafe { close(write_fd) };
+
+    let mut status = 0i32;
+    unsafe { waitpid(pid, &mut status, 0) };
+    // Check WIFEXITED && WEXITSTATUS == 0
+    let exited_normally = (status & 0x7f) == 0;
+    let exit_code = (status >> 8) & 0xff;
+    assert!(
+        exited_normally && exit_code == 0,
+        "{name}: child crashed or failed (raw status {status:#x})"
+    );
+
+    let mut buf = [0u8; 8];
+    let mut file = unsafe { std::fs::File::from_raw_fd(read_fd) };
+    file.read_exact(&mut buf).expect("failed to read from child");
+    let per_iter = isize::from_le_bytes(buf);
+
+    assert!(
+        per_iter.abs() <= NOISE_FLOOR,
+        "{name}: leaked {per_iter} bytes/iter (noise floor ±{NOISE_FLOOR})"
+    );
+}
+
+// ── Test helpers (run inside forked child) ───────────────────────────────────
+// Note: these do NOT use tests/common — each child has its own fresh LVGL
+// instance created by run_isolated. The helpers are intentionally minimal.
+
+fn screen() -> oxivgl::widgets::Screen {
+    oxivgl::widgets::Screen::active().expect("no active screen")
+}
+
+fn pump_child() {
+    unsafe { lvgl_rust_sys::lv_refr_now(core::ptr::null_mut()) };
+}
+
+/// Measure per-iteration leak for a widget test closure.
+fn measure_widget(f: impl Fn(&oxivgl::widgets::Screen)) -> isize {
+    let screen = screen();
+    pump_child();
+    start_tracking();
+    let before = total_alloc_bytes();
+    for _ in 0..MEASURE {
+        f(&screen);
+        pump_child();
+    }
+    let after = total_alloc_bytes();
+    stop_tracking();
+    (after - before) / MEASURE
+}
+
+/// Measure per-iteration leak for a pure Rust closure (no widgets).
+fn measure_rust(f: impl Fn()) -> isize {
+    start_tracking();
+    let before = total_alloc_bytes();
+    for _ in 0..MEASURE {
+        f();
+    }
+    let after = total_alloc_bytes();
+    stop_tracking();
+    (after - before) / MEASURE
+}
+
+// ── Imports for test closures ────────────────────────────────────────────────
 
 use oxivgl::{
     anim::anim_path_linear,
     draw::{Area, DrawRectDsc},
     draw_buf::{ColorFormat, DrawBuf},
-    driver::LvglDriver,
     style::{
         color_make, palette_main, props, GradDsc, GradExtend, Palette, Selector, StyleBuilder,
         TransitionDsc,
     },
     enums::{ObjState, ScrollDir},
     widgets::{
-        AnimImg, Arc, Bar, BarMode, Button, Buttonmatrix, Calendar, CalendarDate, Canvas, Chart, ChartAxis,
-        ChartType, Checkbox, Dropdown, Keyboard, KeyboardMode, Label, Led, Line, Menu, Msgbox,
-        Obj, Part, Roller, RollerMode, Screen, Slider, Spangroup, Spinbox, Spinner, Switch, Table, Tabview, Textarea, Imagebutton, ImagebuttonState, Tileview, ValueLabel, Win,
+        AnimImg, Arc, Bar, BarMode, Button, Buttonmatrix, Calendar, CalendarDate, Canvas, Chart,
+        ChartAxis, ChartType, Checkbox, Dropdown, Imagebutton, ImagebuttonState, Keyboard,
+        KeyboardMode, Label, Led, Line, Menu, Msgbox, Obj, Part, Roller, RollerMode, Slider,
+        Spangroup, Spinbox, Spinner, Switch, Table, Tabview, Textarea, Tileview, ValueLabel, Win,
         lv_color_t,
     },
 };
 
-// ── glibc mallinfo2 ──────────────────────────────────────────────────────────
+// ── LVGL C baseline ──────────────────────────────────────────────────────────
 
-#[repr(C)]
-struct Mallinfo2 {
-    arena: usize,
-    ordblks: usize,
-    smblks: usize,
-    hblks: usize,
-    hblkhd: usize,
-    usmblks: usize,
-    fsmblks: usize,
-    uordblks: usize,
-    fordblks: usize,
-    keepcost: usize,
-}
-
-unsafe extern "C" {
-    fn mallinfo2() -> Mallinfo2;
-}
-
-/// Total bytes currently in use across the entire process heap.
-fn heap_used_bytes() -> usize {
-    // SAFETY: mallinfo2 is thread-safe in glibc.
-    let info = unsafe { mallinfo2() };
-    info.uordblks + info.hblkhd
-}
-
-// ── LVGL init ────────────────────────────────────────────────────────────────
-
-static INIT: Once = Once::new();
-static mut DRIVER: Option<LvglDriver> = None;
-
-fn ensure_init() {
-    INIT.call_once(|| {
-        assert!(
-            std::env::var("SDL_VIDEODRIVER").is_ok(),
-            "SDL_VIDEODRIVER not set — run via: ./run_tests.sh int"
-        );
-        // SAFETY: single-threaded test runner (--test-threads=1).
-        unsafe { DRIVER = Some(LvglDriver::init(320, 240)) };
+#[test]
+fn leak_aa_lvgl_baseline() {
+    run_isolated("LVGL C baseline", || {
+        let screen_ptr = unsafe { lvgl_rust_sys::lv_screen_active() };
+        start_tracking();
+        let before = total_alloc_bytes();
+        for _ in 0..MEASURE {
+            unsafe {
+                let obj = lvgl_rust_sys::lv_obj_create(screen_ptr);
+                lvgl_rust_sys::lv_obj_set_size(obj, 100, 50);
+                lvgl_rust_sys::lv_obj_delete(obj);
+                lvgl_rust_sys::lv_refr_now(core::ptr::null_mut());
+            }
+        }
+        let after = total_alloc_bytes();
+        stop_tracking();
+        (after - before) / MEASURE
     });
 }
 
-fn fresh_screen() -> Screen {
-    ensure_init();
-    // SAFETY: LVGL initialised; loading a new screen clears the previous one.
-    unsafe {
-        let new = lvgl_rust_sys::lv_obj_create(core::ptr::null_mut());
-        lvgl_rust_sys::lv_screen_load(new);
-    }
-    Screen::active().expect("no active screen after init")
-}
+// ── Pure Rust leak tests ─────────────────────────────────────────────────────
 
-fn pump() {
-    let driver = unsafe { (*core::ptr::addr_of!(DRIVER)).as_ref().unwrap() };
-    driver.timer_handler();
-    unsafe { lvgl_rust_sys::lv_refr_now(core::ptr::null_mut()) };
-}
-
-// ── Leak check helper ────────────────────────────────────────────────────────
-
-/// Empirically measured LVGL per-widget-cycle baseline leak (bytes/iter).
-/// LVGL v9.3 SDL2 dummy backend leaks ~1500 bytes per widget create +
-/// render + destroy cycle. We allow this baseline plus a small margin.
-const LVGL_BASELINE_PER_WIDGET: isize = 2000;
-
-/// Run `f` repeatedly and verify heap growth stays within the expected
-/// LVGL baseline. `widget_count` is the number of widgets created per
-/// iteration (used to scale the baseline tolerance).
-fn assert_no_leak(name: &str, widget_count: isize, f: impl Fn(&Screen)) {
-    let screen = fresh_screen();
-    pump();
-
-    // Warm-up: 3 cycles to stabilise lazy allocations.
-    for _ in 0..3 {
-        f(&screen);
-        pump();
-    }
-
-    const N: isize = 20;
-    let before = heap_used_bytes() as isize;
-    for _ in 0..N {
-        f(&screen);
-        pump();
-    }
-    let after = heap_used_bytes() as isize;
-
-    let total_leaked = after - before;
-    let per_iter = total_leaked / N;
-    let tolerance = widget_count * LVGL_BASELINE_PER_WIDGET;
-    assert!(
-        per_iter <= tolerance,
-        "{name}: leaked {per_iter} bytes/iter (tolerance {tolerance}/iter = \
-         {widget_count} widgets × {LVGL_BASELINE_PER_WIDGET} baseline)"
-    );
-}
-
-/// Assert zero leak for pure Rust operations (no LVGL widgets).
-fn assert_no_leak_rust(name: &str, f: impl Fn()) {
-    // Warm-up: enough iterations to absorb allocator fragmentation from
-    // preceding LVGL widget tests and coverage-instrumented lazy allocations.
-    for _ in 0..50 {
-        f();
-    }
-    let before = heap_used_bytes() as isize;
-    for _ in 0..100 {
-        f();
-    }
-    let after = heap_used_bytes() as isize;
-    let per_iter = (after - before) / 100;
-    assert!(
-        per_iter.abs() <= 128, // LVGL internal caching + allocator fragmentation
-        "{name}: leaked {per_iter} bytes/iter (should be ~0)"
-    );
-}
-
-// ── Pure Rust leak tests (zero tolerance) ────────────────────────────────────
+static TRANS_PROPS: [props::lv_style_prop_t; 3] = [props::BG_COLOR, props::BG_OPA, props::LAST];
 
 #[test]
 fn leak_style_build_drop() {
-    assert_no_leak_rust("Style build/drop", || {
-        let mut sb = StyleBuilder::new();
-        sb.bg_color_hex(0xFF0000)
-            .bg_opa(255)
-            .radius(5)
-            .border_width(2)
-            .border_color_hex(0x00FF00);
-        let style = sb.build();
-        drop(style);
+    run_isolated("Style build/drop", || {
+        measure_rust(|| {
+            let mut sb = StyleBuilder::new();
+            sb.bg_color_hex(0xFF0000).bg_opa(255).radius(5).border_width(2).border_color_hex(0x00FF00);
+            drop(sb.build());
+        })
     });
 }
 
 #[test]
 fn leak_style_with_grad_no_widget() {
-    assert_no_leak_rust("Style+GradDsc (no widget)", || {
-        let mut grad = GradDsc::new();
-        grad.init_stops(
-            &[palette_main(Palette::Blue), palette_main(Palette::Red)],
-            &[255, 255],
-            &[0, 255],
-        )
-        .linear(0, 0, 100, 0, GradExtend::Pad);
-
-        let mut sb = StyleBuilder::new();
-        sb.bg_opa(255).bg_grad(grad);
-        let style = sb.build();
-        drop(style);
+    run_isolated("Style+GradDsc (no widget)", || {
+        measure_rust(|| {
+            let mut grad = GradDsc::new();
+            grad.init_stops(
+                &[palette_main(Palette::Blue), palette_main(Palette::Red)],
+                &[255, 255], &[0, 255],
+            ).linear(0, 0, 100, 0, GradExtend::Pad);
+            let mut sb = StyleBuilder::new();
+            sb.bg_opa(255).bg_grad(grad);
+            drop(sb.build());
+        })
     });
 }
 
 #[test]
 fn leak_style_with_transition_no_widget() {
-    assert_no_leak_rust("Style+TransitionDsc (no widget)", || {
-        let trans = TransitionDsc::new(&TRANS_PROPS, Some(anim_path_linear), 200, 0);
-        let mut sb = StyleBuilder::new();
-        sb.bg_color_hex(0xFF0000).bg_opa(255).transition(trans);
-        let style = sb.build();
-        drop(style);
+    run_isolated("Style+TransitionDsc (no widget)", || {
+        measure_rust(|| {
+            let trans = TransitionDsc::new(&TRANS_PROPS, Some(anim_path_linear), 200, 0);
+            let mut sb = StyleBuilder::new();
+            sb.bg_color_hex(0xFF0000).bg_opa(255).transition(trans);
+            drop(sb.build());
+        })
     });
 }
 
-static TRANS_PROPS: [props::lv_style_prop_t; 3] = [props::BG_COLOR, props::BG_OPA, props::LAST];
-
-// ── Widget leak tests (LVGL baseline tolerance) ──────────────────────────────
+// ── Widget leak tests ────────────────────────────────────────────────────────
 
 #[test]
 fn leak_obj_create_destroy() {
-    assert_no_leak("Obj", 1, |screen| {
-        let obj = Obj::new(screen).unwrap();
-        obj.size(100, 50);
-        drop(obj);
-    });
+    run_isolated("Obj", || measure_widget(|s| { drop(Obj::new(s).unwrap()); }));
 }
 
 #[test]
 fn leak_label() {
-    assert_no_leak("Label", 1, |screen| {
-        let label = Label::new(screen).unwrap();
-        label.text("hello world");
-        drop(label);
-    });
+    run_isolated("Label", || measure_widget(|s| {
+        let l = Label::new(s).unwrap(); l.text("hello world"); drop(l);
+    }));
 }
 
 #[test]
 fn leak_button_with_label() {
-    assert_no_leak("Button+Label", 2, |screen| {
-        let btn = Button::new(screen).unwrap();
+    run_isolated("Button+Label", || measure_widget(|s| {
+        let btn = Button::new(s).unwrap();
         let lbl = Label::new(&btn).unwrap();
-        lbl.text("Click me");
-        drop(lbl);
-        drop(btn);
-    });
+        lbl.text("Click me"); drop(lbl); drop(btn);
+    }));
 }
 
 #[test]
 fn leak_style_add_remove() {
-    assert_no_leak("Style add/remove", 1, |screen| {
+    run_isolated("Style add/remove", || measure_widget(|s| {
         let mut sb = StyleBuilder::new();
         sb.bg_color_hex(0x0000FF).bg_opa(200);
         let style = sb.build();
-        let obj = Obj::new(screen).unwrap();
+        let obj = Obj::new(s).unwrap();
         obj.add_style(&style, Selector::DEFAULT);
-        obj.remove_style_all();
-        drop(obj);
-        drop(style);
-    });
+        obj.remove_style_all(); drop(obj); drop(style);
+    }));
 }
 
 #[test]
 fn leak_style_shared() {
-    assert_no_leak("Style shared", 2, |screen| {
+    run_isolated("Style shared", || measure_widget(|s| {
         let mut sb = StyleBuilder::new();
         sb.bg_color_hex(0x123456).bg_opa(255);
         let style = sb.build();
-        let obj1 = Obj::new(screen).unwrap();
-        let obj2 = Obj::new(screen).unwrap();
-        obj1.add_style(&style, Selector::DEFAULT);
-        obj2.add_style(&style, Selector::DEFAULT);
-        drop(obj1);
-        drop(obj2);
-        drop(style);
-    });
+        let o1 = Obj::new(s).unwrap(); let o2 = Obj::new(s).unwrap();
+        o1.add_style(&style, Selector::DEFAULT);
+        o2.add_style(&style, Selector::DEFAULT);
+        drop(o1); drop(o2); drop(style);
+    }));
 }
 
 #[test]
 fn leak_style_with_grad() {
-    assert_no_leak("Style+GradDsc", 1, |screen| {
+    run_isolated("Style+GradDsc", || measure_widget(|s| {
         let mut grad = GradDsc::new();
         grad.init_stops(
             &[palette_main(Palette::Blue), palette_main(Palette::Red)],
-            &[255, 255],
-            &[0, 255],
-        )
-        .linear(0, 0, 100, 0, GradExtend::Pad);
+            &[255, 255], &[0, 255],
+        ).linear(0, 0, 100, 0, GradExtend::Pad);
         let mut sb = StyleBuilder::new();
         sb.bg_opa(255).bg_grad(grad);
         let style = sb.build();
-        let obj = Obj::new(screen).unwrap();
-        obj.add_style(&style, Selector::DEFAULT);
-        obj.size(80, 40);
-        drop(obj);
-        drop(style);
-    });
+        let obj = Obj::new(s).unwrap();
+        obj.add_style(&style, Selector::DEFAULT); obj.size(80, 40);
+        drop(obj); drop(style);
+    }));
 }
 
 #[test]
 fn leak_style_with_transition() {
-    assert_no_leak("Style+TransitionDsc", 1, |screen| {
+    run_isolated("Style+TransitionDsc", || measure_widget(|s| {
         let trans = TransitionDsc::new(&TRANS_PROPS, Some(anim_path_linear), 200, 0);
         let mut sb = StyleBuilder::new();
         sb.bg_color_hex(0xFF0000).bg_opa(255).transition(trans);
         let style = sb.build();
-        let obj = Obj::new(screen).unwrap();
+        let obj = Obj::new(s).unwrap();
         obj.add_style(&style, Selector::DEFAULT);
-        drop(obj);
-        drop(style);
-    });
+        drop(obj); drop(style);
+    }));
 }
 
 #[test]
 fn leak_style_drop_before_widget() {
-    assert_no_leak("Style dropped before widget", 1, |screen| {
+    run_isolated("Style dropped before widget", || measure_widget(|s| {
         let mut sb = StyleBuilder::new();
         sb.bg_color_hex(0xFF00FF).bg_opa(255).radius(10);
         let style = sb.build();
-        let obj = Obj::new(screen).unwrap();
+        let obj = Obj::new(s).unwrap();
         obj.add_style(&style, Selector::DEFAULT);
-        drop(style);
-        drop(obj);
-    });
+        drop(style); drop(obj);
+    }));
 }
 
 #[test]
 fn leak_nested_widgets() {
-    assert_no_leak("Nested widgets", 3, |screen| {
-        let container = Obj::new(screen).unwrap();
-        container.size(200, 200);
-        let btn = Button::new(&container).unwrap();
+    run_isolated("Nested widgets", || measure_widget(|s| {
+        let c = Obj::new(s).unwrap(); c.size(200, 200);
+        let btn = Button::new(&c).unwrap();
         let lbl = Label::new(&btn).unwrap();
-        lbl.text("Nested");
-        drop(lbl);
-        drop(btn);
-        drop(container);
-    });
+        lbl.text("Nested"); drop(lbl); drop(btn); drop(c);
+    }));
 }
 
 #[test]
 fn leak_arc() {
-    assert_no_leak("Arc", 1, |screen| {
-        let arc = Arc::new(screen).unwrap();
-        arc.set_range(100.0);
-        arc.set_value(50.0);
+    run_isolated("Arc", || measure_widget(|s| {
+        let arc = Arc::new(s).unwrap();
+        arc.set_range(100.0); arc.set_value(50.0);
         arc.set_rotation(135).set_bg_angles(0, 270);
         drop(arc);
-    });
+    }));
 }
 
 #[test]
 fn leak_bar() {
-    assert_no_leak("Bar", 1, |screen| {
-        let bar = Bar::new(screen).unwrap();
-        bar.set_range_raw(0, 100);
-        bar.set_mode(BarMode::Range);
-        bar.set_value_raw(80, false);
-        bar.set_start_value_raw(20, false);
+    run_isolated("Bar", || measure_widget(|s| {
+        let bar = Bar::new(s).unwrap();
+        bar.set_range_raw(0, 100); bar.set_mode(BarMode::Range);
+        bar.set_value_raw(80, false); bar.set_start_value_raw(20, false);
         drop(bar);
-    });
+    }));
 }
 
 #[test]
 fn leak_slider() {
-    assert_no_leak("Slider", 1, |screen| {
-        let slider = Slider::new(screen).unwrap();
-        slider.set_range(-20, 80);
-        slider.set_value(30);
-        drop(slider);
-    });
+    run_isolated("Slider", || measure_widget(|s| {
+        let sl = Slider::new(s).unwrap();
+        sl.set_range(-20, 80); sl.set_value(30); drop(sl);
+    }));
 }
 
 #[test]
 fn leak_dropdown() {
-    // Dropdown creates internal child objects (list, label).
-    assert_no_leak("Dropdown", 3, |screen| {
-        let dd = Dropdown::new(screen).unwrap();
-        dd.set_options("Apple\nBanana\nOrange");
-        dd.set_selected(1);
-        drop(dd);
-    });
+    run_isolated("Dropdown", || measure_widget(|s| {
+        let dd = Dropdown::new(s).unwrap();
+        dd.set_options("Apple\nBanana\nOrange"); dd.set_selected(1); drop(dd);
+    }));
 }
 
 #[test]
 fn leak_checkbox() {
-    assert_no_leak("Checkbox", 1, |screen| {
-        let cb = Checkbox::new(screen).unwrap();
-        cb.text("Accept");
-        cb.add_state(ObjState::CHECKED);
-        drop(cb);
-    });
+    run_isolated("Checkbox", || measure_widget(|s| {
+        let cb = Checkbox::new(s).unwrap();
+        cb.text("Accept"); cb.add_state(ObjState::CHECKED); drop(cb);
+    }));
 }
 
 #[test]
 fn leak_roller() {
-    assert_no_leak("Roller", 2, |screen| {
-        let roller = Roller::new(screen).unwrap();
-        roller.set_options("A\nB\nC\nD", RollerMode::Normal);
-        roller.set_visible_row_count(3);
-        roller.set_selected(2, false);
-        drop(roller);
-    });
+    run_isolated("Roller", || measure_widget(|s| {
+        let r = Roller::new(s).unwrap();
+        r.set_options("A\nB\nC\nD", RollerMode::Normal);
+        r.set_visible_row_count(3); r.set_selected(2, false); drop(r);
+    }));
 }
 
 #[test]
 fn leak_switch() {
-    assert_no_leak("Switch", 1, |screen| {
-        let sw = Switch::new(screen).unwrap();
-        sw.add_state(ObjState::CHECKED);
-        drop(sw);
-    });
+    run_isolated("Switch", || measure_widget(|s| {
+        let sw = Switch::new(s).unwrap();
+        sw.add_state(ObjState::CHECKED); drop(sw);
+    }));
 }
 
 #[test]
 fn leak_led() {
-    assert_no_leak("Led", 1, |screen| {
-        let led = Led::new(screen).unwrap();
-        led.on();
-        led.set_brightness(128);
-        drop(led);
-    });
+    run_isolated("Led", || measure_widget(|s| {
+        let led = Led::new(s).unwrap();
+        led.on(); led.set_brightness(128); drop(led);
+    }));
 }
 
 static LINE_POINTS: [oxivgl::widgets::lv_point_precise_t; 3] = [
     oxivgl::widgets::lv_point_precise_t { x: 0.0, y: 0.0 },
     oxivgl::widgets::lv_point_precise_t { x: 50.0, y: 30.0 },
-    oxivgl::widgets::lv_point_precise_t {
-        x: 100.0,
-        y: 0.0,
-    },
+    oxivgl::widgets::lv_point_precise_t { x: 100.0, y: 0.0 },
 ];
 
 #[test]
 fn leak_line() {
-    assert_no_leak("Line", 1, |screen| {
-        let line = Line::new(screen).unwrap();
-        line.set_points(&LINE_POINTS);
-        drop(line);
-    });
+    run_isolated("Line", || measure_widget(|s| {
+        let l = Line::new(s).unwrap(); l.set_points(&LINE_POINTS); drop(l);
+    }));
 }
 
 oxivgl::image_declare!(img_cogwheel_argb);
 
 #[test]
 fn leak_image() {
-    use oxivgl::widgets::Image;
-    assert_no_leak("Image", 1, |screen| {
-        let img = Image::new(screen).unwrap();
-        img.set_src(img_cogwheel_argb());
-        drop(img);
-    });
+    run_isolated("Image", || measure_widget(|s| {
+        use oxivgl::widgets::Image;
+        let img = Image::new(s).unwrap();
+        img.set_src(img_cogwheel_argb()); drop(img);
+    }));
 }
 
 #[test]
 fn leak_value_label() {
-    assert_no_leak("ValueLabel", 2, |screen| {
-        let mut vl = ValueLabel::new(screen, "V").unwrap();
-        vl.set_value(14.2).unwrap();
-        drop(vl);
-    });
+    run_isolated("ValueLabel", || measure_widget(|s| {
+        let mut vl = ValueLabel::new(s, "V").unwrap();
+        vl.set_value(14.2).unwrap(); drop(vl);
+    }));
 }
 
 #[test]
 fn leak_style_on_part() {
-    assert_no_leak("Style on Part::Indicator", 1, |screen| {
+    run_isolated("Style on Part::Indicator", || measure_widget(|s| {
         let mut sb = StyleBuilder::new();
         sb.bg_color_hex(0x00FF00).bg_opa(200);
         let style = sb.build();
-        let bar = Bar::new(screen).unwrap();
-        bar.set_range_raw(0, 100);
-        bar.set_value_raw(50, false);
+        let bar = Bar::new(s).unwrap();
+        bar.set_range_raw(0, 100); bar.set_value_raw(50, false);
         bar.add_style(&style, Part::Indicator);
-        drop(bar);
-        drop(style);
-    });
+        drop(bar); drop(style);
+    }));
 }
 
 #[test]
 fn leak_complex_ui() {
-    assert_no_leak("Complex UI", 6, |screen| {
+    run_isolated("Complex UI", || measure_widget(|s| {
         let mut sb = StyleBuilder::new();
-        sb.bg_color_hex(0x111111)
-            .bg_opa(255)
-            .radius(8)
-            .border_width(2)
-            .border_color_hex(0x00FF00)
-            .pad_all(10);
+        sb.bg_color_hex(0x111111).bg_opa(255).radius(8)
+            .border_width(2).border_color_hex(0x00FF00).pad_all(10);
         let style = sb.build();
-
-        let container = Obj::new(screen).unwrap();
-        container.add_style(&style, Selector::DEFAULT);
-        container.size(300, 220);
-
-        let bar = Bar::new(&container).unwrap();
-        bar.set_range(100.0);
-        bar.set_value(75.0);
-
-        let label = Label::new(&container).unwrap();
-        label.text("Status: OK");
-
-        let btn = Button::new(&container).unwrap();
-        let btn_label = Label::new(&btn).unwrap();
-        btn_label.text("Reset");
-
-        let arc = Arc::new(&container).unwrap();
-        arc.set_range(100.0);
-        arc.set_value(33.0);
-
-        drop(btn_label);
-        drop(btn);
-        drop(arc);
-        drop(bar);
-        drop(label);
-        drop(container);
-        drop(style);
-    });
+        let c = Obj::new(s).unwrap();
+        c.add_style(&style, Selector::DEFAULT); c.size(300, 220);
+        let bar = Bar::new(&c).unwrap(); bar.set_range(100.0); bar.set_value(75.0);
+        let lbl = Label::new(&c).unwrap(); lbl.text("Status: OK");
+        let btn = Button::new(&c).unwrap();
+        let bl = Label::new(&btn).unwrap(); bl.text("Reset");
+        let arc = Arc::new(&c).unwrap(); arc.set_range(100.0); arc.set_value(33.0);
+        drop(bl); drop(btn); drop(arc); drop(bar); drop(lbl); drop(c); drop(style);
+    }));
 }
 
 #[test]
 fn leak_zz_anim_start_widget_delete() {
-    use oxivgl::anim::{anim_set_x, Anim};
-    assert_no_leak("Anim start+widget delete", 1, |screen| {
-        let obj = Obj::new(screen).unwrap();
-        obj.size(100, 50);
+    run_isolated("Anim start+widget delete", || measure_widget(|s| {
+        use oxivgl::anim::{anim_set_x, Anim};
+        let obj = Obj::new(s).unwrap(); obj.size(100, 50);
         let mut a = Anim::new();
-        a.set_var(&obj)
-            .set_values(0, 100)
-            .set_duration(500)
+        a.set_var(&obj).set_values(0, 100).set_duration(500)
             .set_exec_cb(Some(anim_set_x));
-        let _handle = a.start();
-        pump();
-        drop(obj); // LVGL cancels animation on widget delete
-        pump(); // flush animation cleanup
-    });
+        let _h = a.start();
+        pump_child();
+        drop(obj);
+        pump_child();
+    }));
 }
 
 #[test]
 fn leak_textarea() {
-    // Textarea creates internal child objects (text label, placeholder label, cursor).
-    assert_no_leak("Textarea", 4, |screen| {
-        let ta = Textarea::new(screen).unwrap();
-        ta.set_one_line(true);
-        ta.set_text("test");
-        ta.add_text(" more");
-        drop(ta);
-    });
+    run_isolated("Textarea", || measure_widget(|s| {
+        let ta = Textarea::new(s).unwrap();
+        ta.set_one_line(true); ta.set_text("test"); ta.add_text(" more"); drop(ta);
+    }));
 }
 
 #[test]
 fn leak_buttonmatrix() {
-    assert_no_leak("Buttonmatrix", 1, |screen| {
-        let btnm = Buttonmatrix::new(screen).unwrap();
-        drop(btnm);
-    });
+    run_isolated("Buttonmatrix", || measure_widget(|s| {
+        drop(Buttonmatrix::new(s).unwrap());
+    }));
 }
 
 #[test]
 fn leak_keyboard() {
-    // Keyboard creates internal buttonmatrix + label children.
-    assert_no_leak("Keyboard", 3, |screen| {
-        let kb = Keyboard::new(screen).unwrap();
-        kb.set_mode(KeyboardMode::Number);
-        drop(kb);
-    });
+    run_isolated("Keyboard", || measure_widget(|s| {
+        let kb = Keyboard::new(s).unwrap();
+        kb.set_mode(KeyboardMode::Number); drop(kb);
+    }));
 }
 
 #[test]
 fn leak_list() {
-    use oxivgl::widgets::List;
-    // List + 1 text label + 2 buttons (each button has icon+label children) = ~7 widgets
-    assert_no_leak("List", 7, |screen| {
-        let list = List::new(screen).unwrap();
+    run_isolated("List", || measure_widget(|s| {
+        use oxivgl::widgets::List;
+        let list = List::new(s).unwrap();
         list.add_text("Section");
         list.add_button(Some(&oxivgl::symbols::FILE), "Open");
         list.add_button(None, "Close");
         drop(list);
-    });
+    }));
 }
 
 #[test]
 fn leak_menu() {
-    // Menu creates internal header, back button, and main content area children.
-    assert_no_leak("Menu", 10, |screen| {
-        let menu = Menu::new(screen).unwrap();
+    run_isolated("Menu", || measure_widget(|s| {
+        let menu = Menu::new(s).unwrap();
         let page = menu.page_create(None);
         let cont = Menu::cont_create(&page);
-        let lbl = Label::new(&cont).unwrap();
-        lbl.text("Item");
+        let lbl = Label::new(&cont).unwrap(); lbl.text("Item");
         menu.set_page(&page);
-        drop(lbl);
-        // page and cont are Child<Obj> — Child<W> suppresses Drop, so LVGL
-        // (not Rust) will free them when menu is deleted. Explicit drops here
-        // clarify intent; order doesn't affect safety.
-        drop(cont);
-        drop(page);
-        drop(menu);
-    });
+        drop(lbl); drop(cont); drop(page); drop(menu);
+    }));
 }
 
 #[test]
 fn leak_msgbox() {
-    // Msgbox creates header + title label + content + close button children.
-    assert_no_leak("Msgbox", 8, |screen| {
-        let mbox = Msgbox::new(Some(screen)).unwrap();
-        mbox.add_title("Test");
-        mbox.add_text("Body");
-        mbox.add_close_button();
+    run_isolated("Msgbox", || measure_widget(|s| {
+        let mbox = Msgbox::new(Some(s)).unwrap();
+        mbox.add_title("Test"); mbox.add_text("Body"); mbox.add_close_button();
         drop(mbox);
-    });
+    }));
 }
 
 #[test]
 fn leak_chart() {
-    assert_no_leak("Chart", 1, |screen| {
-        let chart = Chart::new(screen).unwrap();
-        chart.set_type(ChartType::Line);
-        chart.set_point_count(5);
+    run_isolated("Chart", || measure_widget(|s| {
+        let chart = Chart::new(s).unwrap();
+        chart.set_type(ChartType::Line); chart.set_point_count(5);
         chart.set_axis_range(ChartAxis::PrimaryY, 0, 100);
         let color = lv_color_t { blue: 0, green: 0, red: 255 };
         let series = chart.add_series(color, ChartAxis::PrimaryY);
-        chart.set_next_value(&series, 50);
-        chart.refresh();
-        drop(chart);
-    });
+        chart.set_next_value(&series, 50); chart.refresh(); drop(chart);
+    }));
 }
-
-// ── Canvas ────────────────────────────────────────────────────────────────────
 
 #[test]
 fn leak_canvas() {
-    assert_no_leak("Canvas", 1, |screen| {
+    run_isolated("Canvas", || measure_widget(|s| {
         let buf = DrawBuf::create(50, 50, ColorFormat::RGB565).unwrap();
-        let canvas = Canvas::new(screen, buf).unwrap();
+        let canvas = Canvas::new(s, buf).unwrap();
         canvas.fill_bg(color_make(100, 100, 100), 255);
         {
             let mut layer = canvas.init_layer();
@@ -626,131 +587,93 @@ fn leak_canvas() {
             dsc.bg_color(color_make(255, 0, 0));
             layer.draw_rect(&dsc, Area { x1: 5, y1: 5, x2: 45, y2: 45 });
         }
-        drop(canvas); // LV_EVENT_DELETE callback frees draw_buf
-    });
+        drop(canvas);
+    }));
 }
-
-
-// ── Table ─────────────────────────────────────────────────────────────────────
 
 #[test]
 fn leak_table() {
-    assert_no_leak("Table", 1, |screen| {
-        let table = Table::new(screen).unwrap();
-        table.set_row_count(5);
-        table.set_column_count(2);
-        for row in 0..5u32 {
-            table.set_cell_value(row, 0, "Name");
-            table.set_cell_value(row, 1, "Value");
-        }
-        drop(table);
-    });
+    run_isolated("Table", || measure_widget(|s| {
+        let t = Table::new(s).unwrap();
+        t.set_row_count(5); t.set_column_count(2);
+        for row in 0..5u32 { t.set_cell_value(row, 0, "Name"); t.set_cell_value(row, 1, "Val"); }
+        drop(t);
+    }));
 }
-
-
-// ── Tabview ───────────────────────────────────────────────────────────────────
 
 #[test]
 fn leak_tabview() {
-    // Tabview creates ~6 internal LVGL objects (bar, content, 2 tab buttons,
-    // 2 tab panes).
-    assert_no_leak("Tabview", 6, |screen| {
-        let tv = Tabview::new(screen).unwrap();
-        let _tab1 = tv.add_tab("Alpha");
-        let _tab2 = tv.add_tab("Beta");
-        drop(tv);
-    });
+    run_isolated("Tabview", || measure_widget(|s| {
+        let tv = Tabview::new(s).unwrap();
+        let _t1 = tv.add_tab("Alpha"); let _t2 = tv.add_tab("Beta"); drop(tv);
+    }));
 }
-
-// ── Calendar ──────────────────────────────────────────────────────────────────
 
 #[test]
 fn leak_calendar() {
-    assert_no_leak("Calendar", 6, |screen| {
-        let cal = Calendar::new(screen).unwrap();
+    run_isolated("Calendar", || measure_widget(|s| {
+        let cal = Calendar::new(s).unwrap();
         cal.set_today_date(2024, 3, 22).set_month_shown(2024, 3);
-        cal.set_highlighted_dates(&[
-            CalendarDate::new(2024, 3, 5),
-            CalendarDate::new(2024, 3, 15),
-        ]);
-        let _hdr = cal.add_header_arrow();
-        drop(cal);
-    });
+        cal.set_highlighted_dates(&[CalendarDate::new(2024, 3, 5), CalendarDate::new(2024, 3, 15)]);
+        let _hdr = cal.add_header_arrow(); drop(cal);
+    }));
 }
-
-// ── Spinner ──────────────────────────────────────────────────────────────────
 
 #[test]
 fn leak_spinner() {
-    assert_no_leak("Spinner", 6, |screen| {
-        let spinner = Spinner::new(screen).unwrap();
-        spinner.set_anim_params(1000, 200);
-        drop(spinner);
-    });
+    run_isolated("Spinner", || measure_widget(|s| {
+        let sp = Spinner::new(s).unwrap(); sp.set_anim_params(1000, 200); drop(sp);
+    }));
 }
-
-// ── Spinbox ──────────────────────────────────────────────────────────────────
 
 #[test]
 fn leak_spinbox() {
-    assert_no_leak("Spinbox", 6, |screen| {
-        let sb = Spinbox::new(screen).unwrap();
-        sb.set_range(-100, 100).set_value(42).set_step(10);
-        sb.increment();
-        drop(sb);
-    });
+    run_isolated("Spinbox", || measure_widget(|s| {
+        let sb = Spinbox::new(s).unwrap();
+        sb.set_range(-100, 100).set_value(42).set_step(10); sb.increment(); drop(sb);
+    }));
 }
-// ── Spangroup ────────────────────────────────────────────────────────────────
 
 #[test]
 fn leak_spangroup() {
-    assert_no_leak("Spangroup", 1, |screen| {
-        let sg = Spangroup::new(screen).unwrap();
-        sg.width(200);
-        let span = sg.add_span().unwrap();
-        span.set_text(c"leak test");
-        sg.refresh();
-        drop(sg);
-    });
+    run_isolated("Spangroup", || measure_widget(|s| {
+        let sg = Spangroup::new(s).unwrap(); sg.width(200);
+        let span = sg.add_span().unwrap(); span.set_text(c"leak test");
+        sg.refresh(); drop(sg);
+    }));
 }
-
-// ── Imagebutton ─────────────────────────────────────────────────────────────
 
 #[test]
 fn leak_imagebutton() {
-    assert_no_leak("Imagebutton", 6, |screen| {
-        let btn = Imagebutton::new(screen).unwrap();
+    run_isolated("Imagebutton", || measure_widget(|s| {
+        let btn = Imagebutton::new(s).unwrap();
         btn.set_state(ImagebuttonState::Pressed);
-        btn.set_src(ImagebuttonState::Released, None, None, None);
-        drop(btn);
-    });
+        btn.set_src(ImagebuttonState::Released, None, None, None); drop(btn);
+    }));
 }
-
-// ── Win ──────────────────────────────────────────────────────────────────────
 
 #[test]
 fn leak_win() {
-    assert_no_leak("Win", 6, |screen| {
-        let win = Win::new(screen).unwrap();
-        let _btn = win.add_button(&oxivgl::symbols::CLOSE, 40);
-        let _title = win.add_title("Leak test");
-        let content = win.get_content();
-        let _lbl = Label::new(&content).unwrap();
+    run_isolated("Win", || measure_widget(|s| {
+        let win = Win::new(s).unwrap();
+        let _b = win.add_button(&oxivgl::symbols::CLOSE, 40);
+        let _t = win.add_title("Leak test");
+        let c = win.get_content();
+        let _l = Label::new(&c).unwrap();
         drop(win);
-    });
+    }));
 }
-
-// ── Tileview ──────────────────────────────────────────────────────────────────
 
 #[test]
 fn leak_tileview() {
-    assert_no_leak("Tileview", 6, |screen| {
-        let tv = Tileview::new(screen).unwrap();
+    run_isolated("Tileview", || measure_widget(|s| {
+        let tv = Tileview::new(s).unwrap();
         let _t1 = tv.add_tile(0, 0, ScrollDir::HOR);
         let _t2 = tv.add_tile(1, 0, ScrollDir::HOR);
         drop(tv);
-    });
+    }));
 }
+
 // ── AnimImg ──────────────────────────────────────────────────────────────────
 
 #[repr(transparent)]
@@ -779,13 +702,9 @@ fn animimg_frame_ptrs() -> &'static [*const core::ffi::c_void] {
 
 #[test]
 fn leak_animimg() {
-    assert_no_leak("AnimImg", 1, |screen| {
-        let animimg = AnimImg::new(screen).unwrap();
-        animimg
-            .set_src(animimg_frame_ptrs())
-            .set_duration(500)
-            .set_repeat_count(1)
-            .start();
-        drop(animimg);
-    });
+    run_isolated("AnimImg", || measure_widget(|s| {
+        let a = AnimImg::new(s).unwrap();
+        a.set_src(animimg_frame_ptrs()).set_duration(500).set_repeat_count(1).start();
+        drop(a);
+    }));
 }

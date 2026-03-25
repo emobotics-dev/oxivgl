@@ -74,7 +74,7 @@ jobs:
           SDL_VIDEODRIVER=dummy cargo +nightly llvm-cov \
             --target x86_64-unknown-linux-gnu \
             --json --output-path coverage.json \
-            -- --test-threads=1
+            -- --test-threads=1 --nocapture
           # Extract line coverage percentage
           PCT=$(python3 -c "
           import json, sys
