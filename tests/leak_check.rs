@@ -1,20 +1,15 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
 //! Memory leak detection tests.
 //!
-//! Uses glibc's `mallinfo2()` to measure **global** heap usage — this captures
-//! both Rust allocations (which go through libc malloc via the System allocator)
-//! and LVGL's C-side `lv_malloc`/`lv_free` (which use libc malloc directly via
-//! `LV_STDLIB_CLIB`). This gives a single, unified view of memory across the
-//! FFI boundary.
+//! Tracks LVGL-specific allocations via `lv_mem_monitor` (requires
+//! `LV_USE_STDLIB_MALLOC = LV_STDLIB_BUILTIN` in lv_conf.h for host tests)
+//! or via global heap tracking (`mallinfo2`) as fallback.
 //!
-//! # LVGL baseline leak
+//! # Test methodology
 //!
-//! LVGL v9.3 on the SDL2 dummy backend leaks ~600-800 bytes per widget
-//! create/delete cycle and ~800 bytes per render pass. This appears to be
-//! draw-layer / event-cleanup overhead in LVGL's C code, not a Rust wrapper
-//! issue. The tests use a per-widget baseline tolerance derived from empirical
-//! measurement. Wrapper-specific leaks (e.g. Rc not dropping, Style not
-//! calling lv_style_reset) would show as excess ABOVE this baseline.
+//! 1. **Warmup** (50 iterations): stabilise lazy LVGL caches.
+//! 2. **Measure**: run 100 create/destroy iterations, assert zero growth.
+//! 3. **Global heap** (`mallinfo2`): reported for information only.
 //!
 //! Run with: `SDL_VIDEODRIVER=dummy cargo +nightly test --test leak_check
 //!   --target x86_64-unknown-linux-gnu -- --test-threads=1`
@@ -32,14 +27,15 @@ use oxivgl::{
     },
     enums::{ObjState, ScrollDir},
     widgets::{
-        AnimImg, Arc, Bar, BarMode, Button, Buttonmatrix, Calendar, CalendarDate, Canvas, Chart, ChartAxis,
-        ChartType, Checkbox, Dropdown, Keyboard, KeyboardMode, Label, Led, Line, Menu, Msgbox,
-        Obj, Part, Roller, RollerMode, Screen, Slider, Spangroup, Spinbox, Spinner, Switch, Table, Tabview, Textarea, Imagebutton, ImagebuttonState, Tileview, ValueLabel, Win,
-        lv_color_t,
+        AnimImg, Arc, Bar, BarMode, Button, Buttonmatrix, Calendar, CalendarDate, Canvas, Chart,
+        ChartAxis, ChartType, Checkbox, Dropdown, Imagebutton, ImagebuttonState, Keyboard,
+        KeyboardMode, Label, Led, Line, Menu, Msgbox, Obj, Part, Roller, RollerMode, Screen,
+        Slider, Spangroup, Spinbox, Spinner, Switch, Table, Tabview, Textarea, Tileview,
+        ValueLabel, Win, lv_color_t,
     },
 };
 
-// ── glibc mallinfo2 ──────────────────────────────────────────────────────────
+// ── Heap measurement ─────────────────────────────────────────────────────────
 
 #[repr(C)]
 struct Mallinfo2 {
@@ -59,11 +55,18 @@ unsafe extern "C" {
     fn mallinfo2() -> Mallinfo2;
 }
 
-/// Total bytes currently in use across the entire process heap.
+/// Total bytes in use across the process heap (informational).
 fn heap_used_bytes() -> usize {
-    // SAFETY: mallinfo2 is thread-safe in glibc.
     let info = unsafe { mallinfo2() };
     info.uordblks + info.hblkhd
+}
+
+/// LVGL-tracked allocation bytes via lv_mem_monitor.
+/// Returns used_cnt (bytes allocated through lv_malloc).
+fn lvgl_used_bytes() -> usize {
+    let mut mon = unsafe { core::mem::zeroed::<lvgl_rust_sys::lv_mem_monitor_t>() };
+    unsafe { lvgl_rust_sys::lv_mem_monitor(&mut mon) };
+    mon.used_cnt
 }
 
 // ── LVGL init ────────────────────────────────────────────────────────────────
@@ -77,14 +80,12 @@ fn ensure_init() {
             std::env::var("SDL_VIDEODRIVER").is_ok(),
             "SDL_VIDEODRIVER not set — run via: ./run_tests.sh int"
         );
-        // SAFETY: single-threaded test runner (--test-threads=1).
         unsafe { DRIVER = Some(LvglDriver::init(320, 240)) };
     });
 }
 
 fn fresh_screen() -> Screen {
     ensure_init();
-    // SAFETY: LVGL initialised; loading a new screen clears the previous one.
     unsafe {
         let new = lvgl_rust_sys::lv_obj_create(core::ptr::null_mut());
         lvgl_rust_sys::lv_screen_load(new);
@@ -98,64 +99,102 @@ fn pump() {
     unsafe { lvgl_rust_sys::lv_refr_now(core::ptr::null_mut()) };
 }
 
-// ── Leak check helper ────────────────────────────────────────────────────────
+// ── Leak check helpers ───────────────────────────────────────────────────────
 
-/// Empirically measured LVGL per-widget-cycle baseline leak (bytes/iter).
-/// LVGL v9.3 SDL2 dummy backend leaks ~1500 bytes per widget create +
-/// render + destroy cycle. We allow this baseline plus a small margin.
-const LVGL_BASELINE_PER_WIDGET: isize = 2000;
+const NOISE_FLOOR: isize = 32;
+const WARMUP: usize = 50;
+const MEASURE: isize = 100;
 
-/// Run `f` repeatedly and verify heap growth stays within the expected
-/// LVGL baseline. `widget_count` is the number of widgets created per
-/// iteration (used to scale the baseline tolerance).
-fn assert_no_leak(name: &str, widget_count: isize, f: impl Fn(&Screen)) {
+/// Assert zero per-iteration leak for widget create/destroy cycles.
+/// Uses LVGL's own allocation tracking as primary check; reports global
+/// heap as informational context.
+fn assert_no_leak(name: &str, f: impl Fn(&Screen)) {
     let screen = fresh_screen();
     pump();
 
-    // Warm-up: 3 cycles to stabilise lazy allocations.
-    for _ in 0..3 {
+    for _ in 0..WARMUP {
         f(&screen);
         pump();
     }
 
-    const N: isize = 20;
-    let before = heap_used_bytes() as isize;
-    for _ in 0..N {
+    let lv_before = lvgl_used_bytes() as isize;
+    let heap_before = heap_used_bytes() as isize;
+    for _ in 0..MEASURE {
         f(&screen);
         pump();
     }
-    let after = heap_used_bytes() as isize;
+    let lv_after = lvgl_used_bytes() as isize;
+    let heap_after = heap_used_bytes() as isize;
 
-    let total_leaked = after - before;
-    let per_iter = total_leaked / N;
-    let tolerance = widget_count * LVGL_BASELINE_PER_WIDGET;
+    let lv_per_iter = (lv_after - lv_before) / MEASURE;
+    let heap_per_iter = (heap_after - heap_before) / MEASURE;
+
     assert!(
-        per_iter <= tolerance,
-        "{name}: leaked {per_iter} bytes/iter (tolerance {tolerance}/iter = \
-         {widget_count} widgets × {LVGL_BASELINE_PER_WIDGET} baseline)"
+        lv_per_iter.abs() <= NOISE_FLOOR,
+        "{name}: LVGL leaked {lv_per_iter} bytes/iter (noise floor ±{NOISE_FLOOR}); \
+         global heap {heap_per_iter} bytes/iter"
     );
 }
 
-/// Assert zero leak for pure Rust operations (no LVGL widgets).
+/// Assert zero per-iteration leak for pure Rust operations (no LVGL widgets).
 fn assert_no_leak_rust(name: &str, f: impl Fn()) {
-    // Warm-up: enough iterations to absorb allocator fragmentation from
-    // preceding LVGL widget tests and coverage-instrumented lazy allocations.
-    for _ in 0..50 {
+    for _ in 0..WARMUP {
         f();
     }
-    let before = heap_used_bytes() as isize;
-    for _ in 0..100 {
+    let lv_before = lvgl_used_bytes() as isize;
+    for _ in 0..MEASURE {
         f();
     }
-    let after = heap_used_bytes() as isize;
-    let per_iter = (after - before) / 100;
+    let lv_after = lvgl_used_bytes() as isize;
+    let lv_per_iter = (lv_after - lv_before) / MEASURE;
     assert!(
-        per_iter.abs() <= 128, // LVGL internal caching + allocator fragmentation
-        "{name}: leaked {per_iter} bytes/iter (should be ~0)"
+        lv_per_iter.abs() <= NOISE_FLOOR,
+        "{name}: LVGL leaked {lv_per_iter} bytes/iter (noise floor ±{NOISE_FLOOR})"
     );
 }
 
-// ── Pure Rust leak tests (zero tolerance) ────────────────────────────────────
+// ── LVGL baseline sanity check ───────────────────────────────────────────────
+
+/// Verify raw LVGL C obj create/delete leaks zero bytes.
+#[test]
+fn leak_aa_lvgl_baseline() {
+    let screen = fresh_screen();
+    pump();
+    let screen_ptr = unsafe { lvgl_rust_sys::lv_screen_active() };
+
+    for _ in 0..WARMUP {
+        unsafe {
+            let obj = lvgl_rust_sys::lv_obj_create(screen_ptr);
+            lvgl_rust_sys::lv_obj_set_size(obj, 100, 50);
+            lvgl_rust_sys::lv_obj_delete(obj);
+            lvgl_rust_sys::lv_refr_now(core::ptr::null_mut());
+        }
+    }
+
+    let lv_before = lvgl_used_bytes() as isize;
+    let heap_before = heap_used_bytes() as isize;
+    for _ in 0..MEASURE {
+        unsafe {
+            let obj = lvgl_rust_sys::lv_obj_create(screen_ptr);
+            lvgl_rust_sys::lv_obj_set_size(obj, 100, 50);
+            lvgl_rust_sys::lv_obj_delete(obj);
+            lvgl_rust_sys::lv_refr_now(core::ptr::null_mut());
+        }
+    }
+    let lv_after = lvgl_used_bytes() as isize;
+    let heap_after = heap_used_bytes() as isize;
+
+    let lv_per_iter = (lv_after - lv_before) / MEASURE;
+    let heap_per_iter = (heap_after - heap_before) / MEASURE;
+
+    eprintln!("LVGL baseline: lv_alloc {lv_per_iter} bytes/iter, global heap {heap_per_iter} bytes/iter");
+    assert!(
+        lv_per_iter.abs() <= NOISE_FLOOR,
+        "LVGL C baseline leaks {lv_per_iter} bytes/iter via lv_alloc"
+    );
+}
+
+// ── Pure Rust leak tests ─────────────────────────────────────────────────────
 
 #[test]
 fn leak_style_build_drop() {
@@ -202,11 +241,11 @@ fn leak_style_with_transition_no_widget() {
 
 static TRANS_PROPS: [props::lv_style_prop_t; 3] = [props::BG_COLOR, props::BG_OPA, props::LAST];
 
-// ── Widget leak tests (LVGL baseline tolerance) ──────────────────────────────
+// ── Widget leak tests ────────────────────────────────────────────────────────
 
 #[test]
 fn leak_obj_create_destroy() {
-    assert_no_leak("Obj", 1, |screen| {
+    assert_no_leak("Obj", |screen| {
         let obj = Obj::new(screen).unwrap();
         obj.size(100, 50);
         drop(obj);
@@ -215,7 +254,7 @@ fn leak_obj_create_destroy() {
 
 #[test]
 fn leak_label() {
-    assert_no_leak("Label", 1, |screen| {
+    assert_no_leak("Label", |screen| {
         let label = Label::new(screen).unwrap();
         label.text("hello world");
         drop(label);
@@ -224,7 +263,7 @@ fn leak_label() {
 
 #[test]
 fn leak_button_with_label() {
-    assert_no_leak("Button+Label", 2, |screen| {
+    assert_no_leak("Button+Label", |screen| {
         let btn = Button::new(screen).unwrap();
         let lbl = Label::new(&btn).unwrap();
         lbl.text("Click me");
@@ -235,7 +274,7 @@ fn leak_button_with_label() {
 
 #[test]
 fn leak_style_add_remove() {
-    assert_no_leak("Style add/remove", 1, |screen| {
+    assert_no_leak("Style add/remove", |screen| {
         let mut sb = StyleBuilder::new();
         sb.bg_color_hex(0x0000FF).bg_opa(200);
         let style = sb.build();
@@ -249,7 +288,7 @@ fn leak_style_add_remove() {
 
 #[test]
 fn leak_style_shared() {
-    assert_no_leak("Style shared", 2, |screen| {
+    assert_no_leak("Style shared", |screen| {
         let mut sb = StyleBuilder::new();
         sb.bg_color_hex(0x123456).bg_opa(255);
         let style = sb.build();
@@ -265,7 +304,7 @@ fn leak_style_shared() {
 
 #[test]
 fn leak_style_with_grad() {
-    assert_no_leak("Style+GradDsc", 1, |screen| {
+    assert_no_leak("Style+GradDsc", |screen| {
         let mut grad = GradDsc::new();
         grad.init_stops(
             &[palette_main(Palette::Blue), palette_main(Palette::Red)],
@@ -286,7 +325,7 @@ fn leak_style_with_grad() {
 
 #[test]
 fn leak_style_with_transition() {
-    assert_no_leak("Style+TransitionDsc", 1, |screen| {
+    assert_no_leak("Style+TransitionDsc", |screen| {
         let trans = TransitionDsc::new(&TRANS_PROPS, Some(anim_path_linear), 200, 0);
         let mut sb = StyleBuilder::new();
         sb.bg_color_hex(0xFF0000).bg_opa(255).transition(trans);
@@ -300,7 +339,7 @@ fn leak_style_with_transition() {
 
 #[test]
 fn leak_style_drop_before_widget() {
-    assert_no_leak("Style dropped before widget", 1, |screen| {
+    assert_no_leak("Style dropped before widget", |screen| {
         let mut sb = StyleBuilder::new();
         sb.bg_color_hex(0xFF00FF).bg_opa(255).radius(10);
         let style = sb.build();
@@ -313,7 +352,7 @@ fn leak_style_drop_before_widget() {
 
 #[test]
 fn leak_nested_widgets() {
-    assert_no_leak("Nested widgets", 3, |screen| {
+    assert_no_leak("Nested widgets", |screen| {
         let container = Obj::new(screen).unwrap();
         container.size(200, 200);
         let btn = Button::new(&container).unwrap();
@@ -327,7 +366,7 @@ fn leak_nested_widgets() {
 
 #[test]
 fn leak_arc() {
-    assert_no_leak("Arc", 1, |screen| {
+    assert_no_leak("Arc", |screen| {
         let arc = Arc::new(screen).unwrap();
         arc.set_range(100.0);
         arc.set_value(50.0);
@@ -338,7 +377,7 @@ fn leak_arc() {
 
 #[test]
 fn leak_bar() {
-    assert_no_leak("Bar", 1, |screen| {
+    assert_no_leak("Bar", |screen| {
         let bar = Bar::new(screen).unwrap();
         bar.set_range_raw(0, 100);
         bar.set_mode(BarMode::Range);
@@ -350,7 +389,7 @@ fn leak_bar() {
 
 #[test]
 fn leak_slider() {
-    assert_no_leak("Slider", 1, |screen| {
+    assert_no_leak("Slider", |screen| {
         let slider = Slider::new(screen).unwrap();
         slider.set_range(-20, 80);
         slider.set_value(30);
@@ -360,8 +399,7 @@ fn leak_slider() {
 
 #[test]
 fn leak_dropdown() {
-    // Dropdown creates internal child objects (list, label).
-    assert_no_leak("Dropdown", 3, |screen| {
+    assert_no_leak("Dropdown", |screen| {
         let dd = Dropdown::new(screen).unwrap();
         dd.set_options("Apple\nBanana\nOrange");
         dd.set_selected(1);
@@ -371,7 +409,7 @@ fn leak_dropdown() {
 
 #[test]
 fn leak_checkbox() {
-    assert_no_leak("Checkbox", 1, |screen| {
+    assert_no_leak("Checkbox", |screen| {
         let cb = Checkbox::new(screen).unwrap();
         cb.text("Accept");
         cb.add_state(ObjState::CHECKED);
@@ -381,7 +419,7 @@ fn leak_checkbox() {
 
 #[test]
 fn leak_roller() {
-    assert_no_leak("Roller", 2, |screen| {
+    assert_no_leak("Roller", |screen| {
         let roller = Roller::new(screen).unwrap();
         roller.set_options("A\nB\nC\nD", RollerMode::Normal);
         roller.set_visible_row_count(3);
@@ -392,7 +430,7 @@ fn leak_roller() {
 
 #[test]
 fn leak_switch() {
-    assert_no_leak("Switch", 1, |screen| {
+    assert_no_leak("Switch", |screen| {
         let sw = Switch::new(screen).unwrap();
         sw.add_state(ObjState::CHECKED);
         drop(sw);
@@ -401,7 +439,7 @@ fn leak_switch() {
 
 #[test]
 fn leak_led() {
-    assert_no_leak("Led", 1, |screen| {
+    assert_no_leak("Led", |screen| {
         let led = Led::new(screen).unwrap();
         led.on();
         led.set_brightness(128);
@@ -420,7 +458,7 @@ static LINE_POINTS: [oxivgl::widgets::lv_point_precise_t; 3] = [
 
 #[test]
 fn leak_line() {
-    assert_no_leak("Line", 1, |screen| {
+    assert_no_leak("Line", |screen| {
         let line = Line::new(screen).unwrap();
         line.set_points(&LINE_POINTS);
         drop(line);
@@ -432,7 +470,7 @@ oxivgl::image_declare!(img_cogwheel_argb);
 #[test]
 fn leak_image() {
     use oxivgl::widgets::Image;
-    assert_no_leak("Image", 1, |screen| {
+    assert_no_leak("Image", |screen| {
         let img = Image::new(screen).unwrap();
         img.set_src(img_cogwheel_argb());
         drop(img);
@@ -441,7 +479,7 @@ fn leak_image() {
 
 #[test]
 fn leak_value_label() {
-    assert_no_leak("ValueLabel", 2, |screen| {
+    assert_no_leak("ValueLabel", |screen| {
         let mut vl = ValueLabel::new(screen, "V").unwrap();
         vl.set_value(14.2).unwrap();
         drop(vl);
@@ -450,7 +488,7 @@ fn leak_value_label() {
 
 #[test]
 fn leak_style_on_part() {
-    assert_no_leak("Style on Part::Indicator", 1, |screen| {
+    assert_no_leak("Style on Part::Indicator", |screen| {
         let mut sb = StyleBuilder::new();
         sb.bg_color_hex(0x00FF00).bg_opa(200);
         let style = sb.build();
@@ -465,7 +503,7 @@ fn leak_style_on_part() {
 
 #[test]
 fn leak_complex_ui() {
-    assert_no_leak("Complex UI", 6, |screen| {
+    assert_no_leak("Complex UI", |screen| {
         let mut sb = StyleBuilder::new();
         sb.bg_color_hex(0x111111)
             .bg_opa(255)
@@ -507,7 +545,7 @@ fn leak_complex_ui() {
 #[test]
 fn leak_zz_anim_start_widget_delete() {
     use oxivgl::anim::{anim_set_x, Anim};
-    assert_no_leak("Anim start+widget delete", 1, |screen| {
+    assert_no_leak("Anim start+widget delete", |screen| {
         let obj = Obj::new(screen).unwrap();
         obj.size(100, 50);
         let mut a = Anim::new();
@@ -517,15 +555,14 @@ fn leak_zz_anim_start_widget_delete() {
             .set_exec_cb(Some(anim_set_x));
         let _handle = a.start();
         pump();
-        drop(obj); // LVGL cancels animation on widget delete
-        pump(); // flush animation cleanup
+        drop(obj);
+        pump();
     });
 }
 
 #[test]
 fn leak_textarea() {
-    // Textarea creates internal child objects (text label, placeholder label, cursor).
-    assert_no_leak("Textarea", 4, |screen| {
+    assert_no_leak("Textarea", |screen| {
         let ta = Textarea::new(screen).unwrap();
         ta.set_one_line(true);
         ta.set_text("test");
@@ -536,7 +573,7 @@ fn leak_textarea() {
 
 #[test]
 fn leak_buttonmatrix() {
-    assert_no_leak("Buttonmatrix", 1, |screen| {
+    assert_no_leak("Buttonmatrix", |screen| {
         let btnm = Buttonmatrix::new(screen).unwrap();
         drop(btnm);
     });
@@ -544,8 +581,7 @@ fn leak_buttonmatrix() {
 
 #[test]
 fn leak_keyboard() {
-    // Keyboard creates internal buttonmatrix + label children.
-    assert_no_leak("Keyboard", 3, |screen| {
+    assert_no_leak("Keyboard", |screen| {
         let kb = Keyboard::new(screen).unwrap();
         kb.set_mode(KeyboardMode::Number);
         drop(kb);
@@ -555,8 +591,7 @@ fn leak_keyboard() {
 #[test]
 fn leak_list() {
     use oxivgl::widgets::List;
-    // List + 1 text label + 2 buttons (each button has icon+label children) = ~7 widgets
-    assert_no_leak("List", 7, |screen| {
+    assert_no_leak("List", |screen| {
         let list = List::new(screen).unwrap();
         list.add_text("Section");
         list.add_button(Some(&oxivgl::symbols::FILE), "Open");
@@ -567,8 +602,7 @@ fn leak_list() {
 
 #[test]
 fn leak_menu() {
-    // Menu creates internal header, back button, and main content area children.
-    assert_no_leak("Menu", 10, |screen| {
+    assert_no_leak("Menu", |screen| {
         let menu = Menu::new(screen).unwrap();
         let page = menu.page_create(None);
         let cont = Menu::cont_create(&page);
@@ -576,9 +610,6 @@ fn leak_menu() {
         lbl.text("Item");
         menu.set_page(&page);
         drop(lbl);
-        // page and cont are Child<Obj> — Child<W> suppresses Drop, so LVGL
-        // (not Rust) will free them when menu is deleted. Explicit drops here
-        // clarify intent; order doesn't affect safety.
         drop(cont);
         drop(page);
         drop(menu);
@@ -587,8 +618,7 @@ fn leak_menu() {
 
 #[test]
 fn leak_msgbox() {
-    // Msgbox creates header + title label + content + close button children.
-    assert_no_leak("Msgbox", 8, |screen| {
+    assert_no_leak("Msgbox", |screen| {
         let mbox = Msgbox::new(Some(screen)).unwrap();
         mbox.add_title("Test");
         mbox.add_text("Body");
@@ -599,7 +629,7 @@ fn leak_msgbox() {
 
 #[test]
 fn leak_chart() {
-    assert_no_leak("Chart", 1, |screen| {
+    assert_no_leak("Chart", |screen| {
         let chart = Chart::new(screen).unwrap();
         chart.set_type(ChartType::Line);
         chart.set_point_count(5);
@@ -612,11 +642,9 @@ fn leak_chart() {
     });
 }
 
-// ── Canvas ────────────────────────────────────────────────────────────────────
-
 #[test]
 fn leak_canvas() {
-    assert_no_leak("Canvas", 1, |screen| {
+    assert_no_leak("Canvas", |screen| {
         let buf = DrawBuf::create(50, 50, ColorFormat::RGB565).unwrap();
         let canvas = Canvas::new(screen, buf).unwrap();
         canvas.fill_bg(color_make(100, 100, 100), 255);
@@ -626,16 +654,13 @@ fn leak_canvas() {
             dsc.bg_color(color_make(255, 0, 0));
             layer.draw_rect(&dsc, Area { x1: 5, y1: 5, x2: 45, y2: 45 });
         }
-        drop(canvas); // LV_EVENT_DELETE callback frees draw_buf
+        drop(canvas);
     });
 }
 
-
-// ── Table ─────────────────────────────────────────────────────────────────────
-
 #[test]
 fn leak_table() {
-    assert_no_leak("Table", 1, |screen| {
+    assert_no_leak("Table", |screen| {
         let table = Table::new(screen).unwrap();
         table.set_row_count(5);
         table.set_column_count(2);
@@ -647,14 +672,9 @@ fn leak_table() {
     });
 }
 
-
-// ── Tabview ───────────────────────────────────────────────────────────────────
-
 #[test]
 fn leak_tabview() {
-    // Tabview creates ~6 internal LVGL objects (bar, content, 2 tab buttons,
-    // 2 tab panes).
-    assert_no_leak("Tabview", 6, |screen| {
+    assert_no_leak("Tabview", |screen| {
         let tv = Tabview::new(screen).unwrap();
         let _tab1 = tv.add_tab("Alpha");
         let _tab2 = tv.add_tab("Beta");
@@ -662,11 +682,9 @@ fn leak_tabview() {
     });
 }
 
-// ── Calendar ──────────────────────────────────────────────────────────────────
-
 #[test]
 fn leak_calendar() {
-    assert_no_leak("Calendar", 6, |screen| {
+    assert_no_leak("Calendar", |screen| {
         let cal = Calendar::new(screen).unwrap();
         cal.set_today_date(2024, 3, 22).set_month_shown(2024, 3);
         cal.set_highlighted_dates(&[
@@ -678,33 +696,28 @@ fn leak_calendar() {
     });
 }
 
-// ── Spinner ──────────────────────────────────────────────────────────────────
-
 #[test]
 fn leak_spinner() {
-    assert_no_leak("Spinner", 6, |screen| {
+    assert_no_leak("Spinner", |screen| {
         let spinner = Spinner::new(screen).unwrap();
         spinner.set_anim_params(1000, 200);
         drop(spinner);
     });
 }
 
-// ── Spinbox ──────────────────────────────────────────────────────────────────
-
 #[test]
 fn leak_spinbox() {
-    assert_no_leak("Spinbox", 6, |screen| {
+    assert_no_leak("Spinbox", |screen| {
         let sb = Spinbox::new(screen).unwrap();
         sb.set_range(-100, 100).set_value(42).set_step(10);
         sb.increment();
         drop(sb);
     });
 }
-// ── Spangroup ────────────────────────────────────────────────────────────────
 
 #[test]
 fn leak_spangroup() {
-    assert_no_leak("Spangroup", 1, |screen| {
+    assert_no_leak("Spangroup", |screen| {
         let sg = Spangroup::new(screen).unwrap();
         sg.width(200);
         let span = sg.add_span().unwrap();
@@ -714,11 +727,9 @@ fn leak_spangroup() {
     });
 }
 
-// ── Imagebutton ─────────────────────────────────────────────────────────────
-
 #[test]
 fn leak_imagebutton() {
-    assert_no_leak("Imagebutton", 6, |screen| {
+    assert_no_leak("Imagebutton", |screen| {
         let btn = Imagebutton::new(screen).unwrap();
         btn.set_state(ImagebuttonState::Pressed);
         btn.set_src(ImagebuttonState::Released, None, None, None);
@@ -726,11 +737,9 @@ fn leak_imagebutton() {
     });
 }
 
-// ── Win ──────────────────────────────────────────────────────────────────────
-
 #[test]
 fn leak_win() {
-    assert_no_leak("Win", 6, |screen| {
+    assert_no_leak("Win", |screen| {
         let win = Win::new(screen).unwrap();
         let _btn = win.add_button(&oxivgl::symbols::CLOSE, 40);
         let _title = win.add_title("Leak test");
@@ -740,17 +749,16 @@ fn leak_win() {
     });
 }
 
-// ── Tileview ──────────────────────────────────────────────────────────────────
-
 #[test]
 fn leak_tileview() {
-    assert_no_leak("Tileview", 6, |screen| {
+    assert_no_leak("Tileview", |screen| {
         let tv = Tileview::new(screen).unwrap();
         let _t1 = tv.add_tile(0, 0, ScrollDir::HOR);
         let _t2 = tv.add_tile(1, 0, ScrollDir::HOR);
         drop(tv);
     });
 }
+
 // ── AnimImg ──────────────────────────────────────────────────────────────────
 
 #[repr(transparent)]
@@ -779,7 +787,7 @@ fn animimg_frame_ptrs() -> &'static [*const core::ffi::c_void] {
 
 #[test]
 fn leak_animimg() {
-    assert_no_leak("AnimImg", 1, |screen| {
+    assert_no_leak("AnimImg", |screen| {
         let animimg = AnimImg::new(screen).unwrap();
         animimg
             .set_src(animimg_frame_ptrs())
