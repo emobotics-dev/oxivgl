@@ -1,7 +1,7 @@
-[![CI](https://github.com/emobotics-dev/oxivgl/actions/workflows/ci.yml/badge.svg)](https://github.com/emobotics-dev/oxivgl/actions/workflows/ci.yml)
+[![CI](https://github.com/emobotics-dev/oxivgl/actions/workflows/ci.yml/badge.svg?branch=master)](https://github.com/emobotics-dev/oxivgl/actions/workflows/ci.yml)
 [![Coverage](https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/hsteinhaus/f92c7e4991559affa2788d3a66364bcc/raw/oxivgl-coverage.json)](https://github.com/emobotics-dev/oxivgl/actions/workflows/ci.yml)
 [![License: MIT OR Apache-2.0](https://img.shields.io/badge/license-MIT%2FApache--2.0-blue)](LICENSE)
-![LVGL v9.3](https://img.shields.io/badge/LVGL-v9.3-brightgreen)
+![LVGL v9.5](https://img.shields.io/badge/LVGL-v9.5-brightgreen)
 ![Rust nightly](https://img.shields.io/badge/Rust-nightly-orange)
 
 # oxivgl
@@ -62,8 +62,17 @@ context they need to contribute effectively.
 | `Screen` | `widgets` | Active screen handle (`Screen::active()`) |
 | `Label`, `Button`, `Arc`, `Bar`, `Slider` | `widgets` | Common widget wrappers |
 | `Switch`, `Checkbox`, `Led`, `Dropdown`, `Roller` | `widgets` | Input/indicator widgets |
-| `Image`, `Line`, `Scale` | `widgets` | Visual/gauge widgets |
+| `Image`, `Imagebutton`, `Line`, `Scale` | `widgets` | Visual/gauge widgets |
 | `Chart` | `widgets` | Chart widget (line, bar, scatter) |
+| `Calendar` | `widgets` | Date picker calendar |
+| `Table` | `widgets` | Row/column data table |
+| `Tabview` | `widgets` | Tabbed page container |
+| `Tileview` | `widgets` | Swipeable tile container |
+| `Span` | `widgets` | Rich text with mixed styles |
+| `Spinbox` | `widgets` | Numeric input with increment/decrement |
+| `Spinner` | `widgets` | Spinning loading indicator |
+| `AnimImg` | `widgets` | Animated image (frame sequence) |
+| `Win` | `widgets` | Window with header and content area |
 | `Textarea` | `widgets` | Single/multi-line text input |
 | `Buttonmatrix` | `widgets` | Matrix of buttons |
 | `Keyboard` | `widgets` | On-screen virtual keyboard (linked to `Textarea`) |
@@ -161,14 +170,14 @@ These guarantees are verified by [integration tests](#testing) that exercise sty
 
 ## Examples
 
-145 ported LVGL examples covering getting started, styles, animations, events, layouts, scrolling, and individual widgets (including canvas). Each is a self-contained `View` impl — runs on host SDL2 or ESP32 with zero code changes.
+148+ ported LVGL examples covering getting started, styles, animations, events, layouts, scrolling, and individual widgets (including canvas). Each is a self-contained `View` impl — runs on host SDL2 or ESP32 with zero code changes.
 
 **[Browse the full gallery with screenshots](examples/doc/README.md)**
 
 ```sh
 ./run_host.sh getting_started1      # interactive SDL2 window
 ./run_host.sh -s getting_started1   # headless screenshot
-./run_host.sh -s                    # screenshot all 145 examples
+./run_host.sh -s                    # screenshot all 148+ examples
 ./run_fire27.sh event_trickle       # flash to ESP32
 ```
 
@@ -185,14 +194,15 @@ LVGL's widget tree, layout engine, and style system are pure C — platform-inde
 
 ## Testing
 
-326 automated tests across three tiers — all run on host without hardware:
+467 automated tests across four tiers — all run on host without hardware:
 
 | Tier | Count | What it covers |
 |------|-------|----------------|
 | **Unit** | 52 | Pure logic — enums, value mapping, style bitflags, grid helpers |
-| **Integration** | 332 | Full LVGL instance — widget lifecycle, style add/remove/drop ordering, layout, events, every widget type incl. Canvas |
-| **Leak detection** | 44 | Global heap tracking via `mallinfo2()` — catches leaks in both Rust and LVGL's C code across the FFI boundary |
-| **Visual** | 145 | Screenshot capture for all ported examples |
+| **Doc** | 33 | Doctests embedded in API documentation |
+| **Integration** | 336 | Full LVGL instance — widget lifecycle, style add/remove/drop ordering, layout, events, every widget type incl. Canvas |
+| **Leak detection** | 46 | Global heap tracking via `mallinfo2()` — catches leaks in both Rust and LVGL's C code across the FFI boundary |
+| **Visual** | 148+ | Screenshot capture for all ported examples |
 
 ```sh
 ./run_tests.sh all          # unit + integration + leak (< 5 seconds)
@@ -249,7 +259,7 @@ LIBCLANG_PATH=/usr/lib64 cargo +nightly test --target x86_64-unknown-linux-gnu
 cargo +esp -Zbuild-std=alloc,core check --features esp-hal,log-04
 ```
 
-`build.rs` compiles LVGL from source via cmake. Expects `DEP_LV_CONFIG_PATH` pointing to `lv_conf.h`.
+`build.rs` compiles LVGL from source via the `cc` crate (`lvgl_rust_sys`). Expects `DEP_LV_CONFIG_PATH` pointing to `lv_conf.h`.
 
 ## License
 

@@ -100,6 +100,13 @@ impl ObjFlag {
     /// Start a new flex track after this item.
     pub const FLEX_IN_NEW_TRACK: Self =
         Self(lvgl_rust_sys::lv_obj_flag_t_LV_OBJ_FLAG_FLEX_IN_NEW_TRACK);
+    /// Object is hidden (not rendered, not clickable).
+    pub const HIDDEN: Self = Self(lvgl_rust_sys::lv_obj_flag_t_LV_OBJ_FLAG_HIDDEN);
+    /// Scroll momentum (inertial scrolling after release).
+    pub const SCROLL_MOMENTUM: Self =
+        Self(lvgl_rust_sys::lv_obj_flag_t_LV_OBJ_FLAG_SCROLL_MOMENTUM);
+    /// Scroll chain (propagate scroll to parent, both axes).
+    pub const SCROLL_CHAIN: Self = Self(lvgl_rust_sys::lv_obj_flag_t_LV_OBJ_FLAG_SCROLL_CHAIN);
 }
 
 impl core::ops::BitOr for ObjFlag {
@@ -400,6 +407,32 @@ mod tests {
     #[test]
     fn opa_cover_is_255() {
         assert_eq!(Opa::COVER.0, 255);
+    }
+
+    // -- ObjFlag (new constants) -------------------------------------------
+
+    #[test]
+    fn obj_flag_hidden_matches_binding() {
+        assert_eq!(
+            ObjFlag::HIDDEN.0,
+            lvgl_rust_sys::lv_obj_flag_t_LV_OBJ_FLAG_HIDDEN
+        );
+    }
+
+    #[test]
+    fn obj_flag_scroll_momentum_matches_binding() {
+        assert_eq!(
+            ObjFlag::SCROLL_MOMENTUM.0,
+            lvgl_rust_sys::lv_obj_flag_t_LV_OBJ_FLAG_SCROLL_MOMENTUM
+        );
+    }
+
+    #[test]
+    fn obj_flag_scroll_chain_matches_binding() {
+        assert_eq!(
+            ObjFlag::SCROLL_CHAIN.0,
+            lvgl_rust_sys::lv_obj_flag_t_LV_OBJ_FLAG_SCROLL_CHAIN
+        );
     }
 
     #[test]

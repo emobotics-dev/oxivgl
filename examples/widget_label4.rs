@@ -86,8 +86,9 @@ impl View for WidgetLabel4 {
         grad.border_width(0);
         grad.style_bg_color(color_make(0xff, 0, 0), Selector::DEFAULT)
             .style_bg_grad_color(color_make(0, 0, 0xff), Selector::DEFAULT)
-            .style_bg_grad_dir(GradDir::Hor, Selector::DEFAULT)
-            .style_bitmap_mask_src(&mask, Selector::DEFAULT);
+            .style_bg_grad_dir(GradDir::Hor, Selector::DEFAULT);
+        // SAFETY: mask is stored in Self._mask (Box) and outlives the grad widget.
+        unsafe { grad.style_bitmap_mask_src(&mask, Selector::DEFAULT) };
 
         Ok(Self { _mask: mask, _grad: grad })
     }

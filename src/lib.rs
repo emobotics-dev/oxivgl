@@ -48,6 +48,8 @@ pub mod math;
 pub mod symbols;
 /// Owned LVGL draw buffer wrapping `lv_draw_buf_t`.
 pub mod draw_buf;
+/// LVGL translation/i18n support (`LV_USE_TRANSLATION`).
+pub mod translation;
 
 /// Declare an LVGL image asset compiled by `oxivgl-build`.
 ///

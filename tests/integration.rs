@@ -19,9 +19,9 @@ use oxivgl::{
     enums::{EventCode, ObjFlag, ObjState, Opa, ScrollDir, ScrollSnap, ScrollbarMode},
     layout::{FlexAlign, FlexFlow, GridAlign, GridCell, Layout, GRID_TEMPLATE_LAST},
     widgets::{
-        Align, AnimImg, Arc, AsLvHandle, Bar, Button, Buttonmatrix, Calendar, CalendarDate, Canvas, Checkbox,
+        Align, AnimImg, Arc, ArcLabel, ArcLabelDir, AsLvHandle, Bar, Button, Buttonmatrix, Calendar, CalendarDate, Canvas, Checkbox,
         Dropdown, Image, Imagebutton, ImagebuttonState, Keyboard, KeyboardMode, Label, Led, Line, Menu, MenuHeaderMode, Msgbox,
-        Obj, Part, Roller, RollerMode, Slider, Spinbox, Spinner, Switch, Table, TableCellCtrl, Tabview,
+        Obj, Part, Roller, RollerMode, Screen, Slider, Spinbox, Spinner, Switch, Table, TableCellCtrl, Tabview,
         Spangroup, SpanMode, SpanOverflow, Textarea, Tileview, ValueLabel, WidgetError, Win, RADIUS_MAX,
     },
 };
@@ -4349,10 +4349,6 @@ fn canvas_layer_draw_image_static() {
     pump();
 }
 
-#[test]
-
-#[test]
-
 // ── Calendar — Chinese mode ─────────────────────────────────────────────────
 
 #[test]
@@ -4368,3 +4364,259 @@ fn calendar_chinese_mode() {
 }
 
 // ── Btnmatrix with CJK text ─────────────────────────────────────────────────
+// ── ObjFlag::HIDDEN ──────────────────────────────────────────────────────────
+
+#[test]
+fn obj_flag_hidden_add_remove() {
+    let screen = fresh_screen();
+    let obj = Obj::new(&screen).unwrap();
+    assert!(!obj.has_flag(ObjFlag::HIDDEN));
+    obj.add_flag(ObjFlag::HIDDEN);
+    assert!(obj.has_flag(ObjFlag::HIDDEN));
+    obj.remove_flag(ObjFlag::HIDDEN);
+    assert!(!obj.has_flag(ObjFlag::HIDDEN));
+}
+
+// ── ObjFlag::SCROLL_MOMENTUM ────────────────────────────────────────────────
+
+#[test]
+fn obj_flag_scroll_momentum_add_remove() {
+    let screen = fresh_screen();
+    let obj = Obj::new(&screen).unwrap();
+    // SCROLL_MOMENTUM is on by default for scrollable objects
+    obj.remove_flag(ObjFlag::SCROLL_MOMENTUM);
+    assert!(!obj.has_flag(ObjFlag::SCROLL_MOMENTUM));
+    obj.add_flag(ObjFlag::SCROLL_MOMENTUM);
+    assert!(obj.has_flag(ObjFlag::SCROLL_MOMENTUM));
+    obj.remove_flag(ObjFlag::SCROLL_MOMENTUM);
+    assert!(!obj.has_flag(ObjFlag::SCROLL_MOMENTUM));
+}
+
+// ── ObjFlag::SCROLL_CHAIN ───────────────────────────────────────────────────
+
+#[test]
+fn obj_flag_scroll_chain_add_remove() {
+    let screen = fresh_screen();
+    let obj = Obj::new(&screen).unwrap();
+    obj.remove_flag(ObjFlag::SCROLL_CHAIN);
+    assert!(!obj.has_flag(ObjFlag::SCROLL_CHAIN));
+    obj.add_flag(ObjFlag::SCROLL_CHAIN);
+    assert!(obj.has_flag(ObjFlag::SCROLL_CHAIN));
+    obj.remove_flag(ObjFlag::SCROLL_CHAIN);
+    assert!(!obj.has_flag(ObjFlag::SCROLL_CHAIN));
+}
+
+// ── Scale::set_rotation ─────────────────────────────────────────────────────
+
+#[test]
+fn scale_set_rotation_no_crash() {
+    use oxivgl::widgets::{Scale, ScaleMode};
+    let screen = fresh_screen();
+    let scale = Scale::new(&screen).unwrap();
+    scale.set_mode(ScaleMode::RoundInner);
+    scale.set_rotation(90);
+    pump();
+}
+
+// ── anim_set_scale_rotation ─────────────────────────────────────────────────
+
+#[test]
+fn anim_set_scale_rotation_no_crash() {
+    use oxivgl::anim::{anim_set_scale_rotation, Anim};
+    use oxivgl::widgets::{Scale, ScaleMode};
+    let screen = fresh_screen();
+    let scale = Scale::new(&screen).unwrap();
+    scale.set_mode(ScaleMode::RoundInner)
+        .set_range(0, 360)
+        .set_total_tick_count(9)
+        .set_major_tick_every(1)
+        .set_angle_range(360)
+        .set_rotation(0);
+    scale.size(200, 200);
+    let mut a = Anim::new();
+    a.set_var(&scale)
+        .set_values(0, 360)
+        .set_duration(1000)
+        .set_exec_cb(Some(anim_set_scale_rotation));
+    let _h = a.start();
+    pump();
+}
+
+// ── DrawLetterDsc::font ─────────────────────────────────────────────────────
+
+#[test]
+fn draw_letter_dsc_font_setter() {
+    use oxivgl::draw::DrawLetterDsc;
+    use oxivgl::draw_buf::{ColorFormat, DrawBuf};
+    use oxivgl::fonts;
+    use oxivgl::style::color_make;
+    let screen = fresh_screen();
+    let buf = DrawBuf::create(100, 100, ColorFormat::RGB565).expect("DrawBuf alloc");
+    let canvas = Canvas::new(&screen, buf).unwrap();
+    canvas.fill_bg(color_make(0, 0, 0), 255);
+    {
+        let mut layer = canvas.init_layer();
+        let mut dsc = DrawLetterDsc::new();
+        dsc.unicode(b'A' as u32)
+            .font(fonts::MONTSERRAT_20)
+            .color(color_make(255, 255, 255))
+            .rotation(0);
+        layer.draw_letter(&dsc, 10, 10);
+    }
+    pump();
+}
+
+// ── Shadow style methods ────────────────────────────────────────────────────
+
+#[test]
+fn shadow_style_methods() {
+    let screen = fresh_screen();
+    let obj = Obj::new(&screen).unwrap();
+    obj.size(100, 80);
+    obj.style_shadow_width(20, Selector::DEFAULT);
+    obj.style_shadow_color(color_make(255, 0, 0), Selector::DEFAULT);
+    obj.style_shadow_offset_x(5, Selector::DEFAULT);
+    obj.style_shadow_offset_y(5, Selector::DEFAULT);
+    obj.style_shadow_spread(10, Selector::DEFAULT);
+    obj.style_shadow_opa(200, Selector::DEFAULT);
+    pump();
+}
+
+// ── Transform scale_x / scale_y ─────────────────────────────────────────────
+
+#[test]
+fn transform_scale_xy() {
+    let screen = fresh_screen();
+    let obj = Obj::new(&screen).unwrap();
+    obj.size(60, 60);
+    obj.style_transform_scale_x(256, Selector::DEFAULT);
+    obj.style_transform_scale_y(128, Selector::DEFAULT);
+    pump();
+}
+
+// ── Text letter space ───────────────────────────────────────────────────────
+
+#[test]
+fn text_letter_space() {
+    let screen = fresh_screen();
+    let lbl = Label::new(&screen).unwrap();
+    lbl.text("Spaced");
+    lbl.style_text_letter_space(5, Selector::DEFAULT);
+    pump();
+}
+
+// ── ArcLabel create ─────────────────────────────────────────────────────────
+
+#[test]
+fn arclabel_create() {
+    let screen = fresh_screen();
+    let al = ArcLabel::new(&screen).unwrap();
+    al.set_text_static(c"Test");
+    al.set_radius(50);
+    al.set_angle_start(0.0);
+    al.set_angle_size(180.0);
+    pump();
+}
+
+// ── ArcLabel direction ──────────────────────────────────────────────────────
+
+#[test]
+fn arclabel_direction() {
+    let screen = fresh_screen();
+    let al = ArcLabel::new(&screen).unwrap();
+    al.set_text_static(c"CCW");
+    al.set_dir(ArcLabelDir::CounterClockwise);
+    pump();
+}
+
+// ── Screen::layer_top ───────────────────────────────────────────────────────
+
+#[test]
+fn screen_layer_top() {
+    let _screen = fresh_screen();
+    let top = Screen::layer_top();
+    assert!(!top.handle().is_null());
+}
+
+// ── Translation ─────────────────────────────────────────────────────────────
+
+use oxivgl::translation::{self, StaticCStr as S};
+
+static TRANS_LANGS: [S; 3] = [S::from_cstr(c"en"), S::from_cstr(c"de"), S::NULL];
+static TRANS_TAGS: [S; 2] = [S::from_cstr(c"hello"), S::NULL];
+static TRANS_VALUES: [S; 2] = [S::from_cstr(c"Hello"), S::from_cstr(c"Hallo")];
+
+#[test]
+fn translation_add_and_set_language() {
+    let _screen = fresh_screen();
+    translation::add_static(&TRANS_LANGS, &TRANS_TAGS, &TRANS_VALUES);
+    translation::set_language(c"en");
+    let lang = translation::get_language();
+    assert_eq!(lang, Some(c"en".as_ref()));
+}
+
+#[test]
+fn translation_tag_on_label() {
+    let screen = fresh_screen();
+    translation::add_static(&TRANS_LANGS, &TRANS_TAGS, &TRANS_VALUES);
+    translation::set_language(c"en");
+    let lbl = Label::new(&screen).unwrap();
+    lbl.set_translation_tag("hello");
+    pump();
+}
+
+// ── ArcLabel methods ────────────────────────────────────────────────────────
+
+#[test]
+fn arclabel_set_text_static() {
+    let screen = fresh_screen();
+    let al = ArcLabel::new(&screen).unwrap();
+    al.set_text_static(c"Static text");
+    pump();
+}
+
+#[test]
+fn arclabel_set_radius() {
+    let screen = fresh_screen();
+    let al = ArcLabel::new(&screen).unwrap();
+    al.set_radius(80);
+    pump();
+}
+
+#[test]
+fn arclabel_set_angle_start() {
+    let screen = fresh_screen();
+    let al = ArcLabel::new(&screen).unwrap();
+    al.set_angle_start(45.0);
+    pump();
+}
+
+#[test]
+fn arclabel_set_angle_size() {
+    let screen = fresh_screen();
+    let al = ArcLabel::new(&screen).unwrap();
+    al.set_angle_size(270.0);
+    pump();
+}
+
+// ── Label set_translation_tag ───────────────────────────────────────────────
+
+#[test]
+fn label_set_translation_tag_no_crash() {
+    let screen = fresh_screen();
+    let lbl = Label::new(&screen).unwrap();
+    lbl.set_translation_tag("test");
+    pump();
+}
+
+// ── Blur style ──────────────────────────────────────────────────────────────
+
+#[test]
+fn blur_style_methods() {
+    let screen = fresh_screen();
+    let obj = Obj::new(&screen).unwrap();
+    obj.size(100, 100);
+    obj.style_blur_radius(10, Selector::DEFAULT);
+    obj.style_blur_backdrop(true, Selector::DEFAULT);
+    pump();
+}
