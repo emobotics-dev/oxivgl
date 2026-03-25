@@ -105,6 +105,7 @@ impl<'p> Chart<'p> {
     pub fn add_series(&self, color: lv_color_t, axis: ChartAxis) -> ChartSeries {
         // SAFETY: lv_handle() is non-null (checked in new()).
         let ptr = unsafe { lv_chart_add_series(self.lv_handle(), color, axis as lv_chart_axis_t) };
+        assert!(!ptr.is_null(), "lv_chart_add_series returned NULL");
         ChartSeries { ptr }
     }
 
@@ -126,6 +127,43 @@ impl<'p> Chart<'p> {
     pub fn set_next_value2(&self, series: &ChartSeries, x: i32, y: i32) -> &Self {
         // SAFETY: lv_handle() and series.ptr are non-null (created by LVGL).
         unsafe { lv_chart_set_next_value2(self.lv_handle(), series.ptr, x, y) };
+        self
+    }
+
+    /// Set a specific point's Y value by index.
+    pub fn set_series_value_by_id(&self, series: &ChartSeries, id: u32, value: i32) -> &Self {
+        // SAFETY: lv_handle() and series.ptr are non-null (created by LVGL).
+        unsafe { lv_chart_set_series_value_by_id(self.lv_handle(), series.ptr, id, value) };
+        self
+    }
+
+    /// Get a mutable pointer to the Y data array for a series.
+    ///
+    /// # Safety
+    /// The returned pointer is valid for `get_point_count()` elements. The
+    /// caller must not write beyond the array bounds or use the pointer after
+    /// the chart or series is freed.
+    pub unsafe fn get_series_y_array(&self, series: &ChartSeries) -> *mut i32 {
+        // SAFETY: lv_handle() and series.ptr are non-null (created by LVGL).
+        unsafe { lv_chart_get_series_y_array(self.lv_handle(), series.ptr) }
+    }
+
+    /// Get the pixel offset of the first data point from the chart edge.
+    pub fn get_first_point_center_offset(&self) -> i32 {
+        // SAFETY: lv_handle() is non-null (checked in new()).
+        unsafe { lv_chart_get_first_point_center_offset(self.lv_handle()) }
+    }
+
+    /// Get the current number of data points per series.
+    pub fn get_point_count(&self) -> u32 {
+        // SAFETY: lv_handle() is non-null (checked in new()).
+        unsafe { lv_chart_get_point_count(self.lv_handle()) }
+    }
+
+    /// Set the number of horizontal and vertical division lines.
+    pub fn set_div_line_count(&self, hdiv: u32, vdiv: u32) -> &Self {
+        // SAFETY: lv_handle() is non-null (checked in new()).
+        unsafe { lv_chart_set_div_line_count(self.lv_handle(), hdiv, vdiv) };
         self
     }
 

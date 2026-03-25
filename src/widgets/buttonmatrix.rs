@@ -56,6 +56,43 @@ macro_rules! btnmatrix_map {
     };
 }
 
+/// Button control flags for buttonmatrix buttons.
+#[repr(transparent)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct ButtonmatrixCtrl(pub lv_buttonmatrix_ctrl_t);
+
+impl ButtonmatrixCtrl {
+    /// No flags.
+    pub const NONE: Self = Self(lv_buttonmatrix_ctrl_t_LV_BUTTONMATRIX_CTRL_NONE);
+    /// Hidden button.
+    pub const HIDDEN: Self = Self(lv_buttonmatrix_ctrl_t_LV_BUTTONMATRIX_CTRL_HIDDEN);
+    /// No repeat on long press.
+    pub const NO_REPEAT: Self = Self(lv_buttonmatrix_ctrl_t_LV_BUTTONMATRIX_CTRL_NO_REPEAT);
+    /// Disabled (greyed out).
+    pub const DISABLED: Self = Self(lv_buttonmatrix_ctrl_t_LV_BUTTONMATRIX_CTRL_DISABLED);
+    /// Can be toggled (checked/unchecked).
+    pub const CHECKABLE: Self = Self(lv_buttonmatrix_ctrl_t_LV_BUTTONMATRIX_CTRL_CHECKABLE);
+    /// Currently checked.
+    pub const CHECKED: Self = Self(lv_buttonmatrix_ctrl_t_LV_BUTTONMATRIX_CTRL_CHECKED);
+    /// Send click event on release (vs press).
+    pub const CLICK_TRIG: Self = Self(lv_buttonmatrix_ctrl_t_LV_BUTTONMATRIX_CTRL_CLICK_TRIG);
+    /// Show popover on press.
+    pub const POPOVER: Self = Self(lv_buttonmatrix_ctrl_t_LV_BUTTONMATRIX_CTRL_POPOVER);
+    /// Enable recolor syntax in button text.
+    pub const RECOLOR: Self = Self(lv_buttonmatrix_ctrl_t_LV_BUTTONMATRIX_CTRL_RECOLOR);
+    /// Custom flag 1.
+    pub const CUSTOM_1: Self = Self(lv_buttonmatrix_ctrl_t_LV_BUTTONMATRIX_CTRL_CUSTOM_1);
+    /// Custom flag 2.
+    pub const CUSTOM_2: Self = Self(lv_buttonmatrix_ctrl_t_LV_BUTTONMATRIX_CTRL_CUSTOM_2);
+}
+
+impl core::ops::BitOr for ButtonmatrixCtrl {
+    type Output = Self;
+    fn bitor(self, rhs: Self) -> Self {
+        Self(self.0 | rhs.0)
+    }
+}
+
 /// LVGL button matrix widget.
 ///
 /// Requires `LV_USE_BUTTONMATRIX = 1` in `lv_conf.h`.
@@ -124,6 +161,37 @@ impl<'p> Buttonmatrix<'p> {
         assert_ne!(self.obj.handle(), null_mut(), "Buttonmatrix handle cannot be null");
         // SAFETY: handle non-null.
         unsafe { lv_buttonmatrix_get_selected_button(self.obj.handle()) }
+    }
+
+    /// Set the relative width of a button.
+    pub fn set_button_width(&self, btn_id: u32, width: u32) -> &Self {
+        assert_ne!(self.obj.handle(), null_mut(), "Buttonmatrix handle cannot be null");
+        // SAFETY: handle non-null (asserted above).
+        unsafe { lv_buttonmatrix_set_button_width(self.obj.handle(), btn_id, width) };
+        self
+    }
+
+    /// Set control flags on a button.
+    pub fn set_button_ctrl(&self, btn_id: u32, ctrl: ButtonmatrixCtrl) -> &Self {
+        assert_ne!(self.obj.handle(), null_mut(), "Buttonmatrix handle cannot be null");
+        // SAFETY: handle non-null (asserted above).
+        unsafe { lv_buttonmatrix_set_button_ctrl(self.obj.handle(), btn_id, ctrl.0) };
+        self
+    }
+
+    /// Clear control flags on a button.
+    pub fn clear_button_ctrl(&self, btn_id: u32, ctrl: ButtonmatrixCtrl) -> &Self {
+        assert_ne!(self.obj.handle(), null_mut(), "Buttonmatrix handle cannot be null");
+        // SAFETY: handle non-null (asserted above).
+        unsafe { lv_buttonmatrix_clear_button_ctrl(self.obj.handle(), btn_id, ctrl.0) };
+        self
+    }
+
+    /// Check if a button has a specific control flag.
+    pub fn has_button_ctrl(&self, btn_id: u32, ctrl: ButtonmatrixCtrl) -> bool {
+        assert_ne!(self.obj.handle(), null_mut(), "Buttonmatrix handle cannot be null");
+        // SAFETY: handle non-null (asserted above).
+        unsafe { lv_buttonmatrix_has_button_ctrl(self.obj.handle(), btn_id, ctrl.0) }
     }
 
     /// Get the text of a button by index. Returns `None` if the index is
