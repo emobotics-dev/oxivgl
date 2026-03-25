@@ -161,14 +161,14 @@ These guarantees are verified by [integration tests](#testing) that exercise sty
 
 ## Examples
 
-144 ported LVGL examples covering getting started, styles, animations, events, layouts, scrolling, and individual widgets (including canvas). Each is a self-contained `View` impl — runs on host SDL2 or ESP32 with zero code changes.
+145 ported LVGL examples covering getting started, styles, animations, events, layouts, scrolling, and individual widgets (including canvas). Each is a self-contained `View` impl — runs on host SDL2 or ESP32 with zero code changes.
 
 **[Browse the full gallery with screenshots](examples/doc/README.md)**
 
 ```sh
 ./run_host.sh getting_started1      # interactive SDL2 window
 ./run_host.sh -s getting_started1   # headless screenshot
-./run_host.sh -s                    # screenshot all 144 examples
+./run_host.sh -s                    # screenshot all 145 examples
 ./run_fire27.sh event_trickle       # flash to ESP32
 ```
 
@@ -190,9 +190,9 @@ LVGL's widget tree, layout engine, and style system are pure C — platform-inde
 | Tier | Count | What it covers |
 |------|-------|----------------|
 | **Unit** | 52 | Pure logic — enums, value mapping, style bitflags, grid helpers |
-| **Integration** | 329 | Full LVGL instance — widget lifecycle, style add/remove/drop ordering, layout, events, every widget type incl. Canvas |
+| **Integration** | 332 | Full LVGL instance — widget lifecycle, style add/remove/drop ordering, layout, events, every widget type incl. Canvas |
 | **Leak detection** | 44 | Global heap tracking via `mallinfo2()` — catches leaks in both Rust and LVGL's C code across the FFI boundary |
-| **Visual** | 144 | Screenshot capture for all ported examples |
+| **Visual** | 145 | Screenshot capture for all ported examples |
 
 ```sh
 ./run_tests.sh all          # unit + integration + leak (< 5 seconds)

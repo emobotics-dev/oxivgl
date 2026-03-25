@@ -1058,6 +1058,17 @@ buttons increment/decrement the value.
 
 ![spinner_1](screenshots/spinner_1.png)
 
+### calendar_2 — Chinese calendar with dropdown header (host only)
+
+March 2024 with Chinese lunar day names. Dropdown header for month/year
+selection. Requires `LV_USE_CALENDAR_CHINESE` and CJK font.
+
+Note: Chinese day names render on host SDL2 only. On ESP32, LVGL's btnmatrix
+widget ignores Part::Items font styles, falling back to the default font
+which lacks CJK glyphs. This is an upstream LVGL limitation.
+
+![calendar_2](screenshots/calendar_2.png)
+
 ## Tabview
 
 ### tabview_1 — Simple 3-tab view with default top bar
@@ -1100,7 +1111,7 @@ Status of all [LVGL 9.3 examples](https://docs.lvgl.io/9.3/examples.html) in oxi
 | arc | 3 | 3 | 0 | |
 | bar | 7 | 7 | 0 | |
 | button | 3 | 3 | 0 | |
-| calendar | 2 | 1 | 1 | calendar_2 (requires lv_calendar_chinese.c in lvgl_rust_sys) |
+| calendar | 2 | 2 | 0 | |
 | checkbox | 2 | 2 | 0 | |
 | dropdown | 3 | 3 | 0 | |
 | image | 5 | 5 | 0 | |
@@ -1140,7 +1151,7 @@ Status of all [LVGL 9.3 examples](https://docs.lvgl.io/9.3/examples.html) in oxi
 | | Count |
 |---|---|
 | LVGL examples total | ~193 |
-| oxivgl done | 144 |
+| oxivgl done | 145 |
 | Verified on ESP32 (fire27) | 144/144 |
 | Skipped (intentional) | 4 |
 | New in v9.5 (not ported) | ~9 |
