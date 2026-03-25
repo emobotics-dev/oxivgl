@@ -4538,6 +4538,77 @@ fn screen_layer_top() {
     assert!(!top.handle().is_null());
 }
 
+// ── Translation ─────────────────────────────────────────────────────────────
+
+use oxivgl::translation::{self, StaticCStr as S};
+
+static TRANS_LANGS: [S; 3] = [S::from_cstr(c"en"), S::from_cstr(c"de"), S::NULL];
+static TRANS_TAGS: [S; 2] = [S::from_cstr(c"hello"), S::NULL];
+static TRANS_VALUES: [S; 2] = [S::from_cstr(c"Hello"), S::from_cstr(c"Hallo")];
+
+#[test]
+fn translation_add_and_set_language() {
+    let _screen = fresh_screen();
+    translation::add_static(&TRANS_LANGS, &TRANS_TAGS, &TRANS_VALUES);
+    translation::set_language(c"en");
+    let lang = translation::get_language();
+    assert_eq!(lang, Some(c"en".as_ref()));
+}
+
+#[test]
+fn translation_tag_on_label() {
+    let screen = fresh_screen();
+    translation::add_static(&TRANS_LANGS, &TRANS_TAGS, &TRANS_VALUES);
+    translation::set_language(c"en");
+    let lbl = Label::new(&screen).unwrap();
+    lbl.set_translation_tag("hello");
+    pump();
+}
+
+// ── ArcLabel methods ────────────────────────────────────────────────────────
+
+#[test]
+fn arclabel_set_text_static() {
+    let screen = fresh_screen();
+    let al = ArcLabel::new(&screen).unwrap();
+    al.set_text_static(c"Static text");
+    pump();
+}
+
+#[test]
+fn arclabel_set_radius() {
+    let screen = fresh_screen();
+    let al = ArcLabel::new(&screen).unwrap();
+    al.set_radius(80);
+    pump();
+}
+
+#[test]
+fn arclabel_set_angle_start() {
+    let screen = fresh_screen();
+    let al = ArcLabel::new(&screen).unwrap();
+    al.set_angle_start(45.0);
+    pump();
+}
+
+#[test]
+fn arclabel_set_angle_size() {
+    let screen = fresh_screen();
+    let al = ArcLabel::new(&screen).unwrap();
+    al.set_angle_size(270.0);
+    pump();
+}
+
+// ── Label set_translation_tag ───────────────────────────────────────────────
+
+#[test]
+fn label_set_translation_tag_no_crash() {
+    let screen = fresh_screen();
+    let lbl = Label::new(&screen).unwrap();
+    lbl.set_translation_tag("test");
+    pump();
+}
+
 // ── Blur style ──────────────────────────────────────────────────────────────
 
 #[test]

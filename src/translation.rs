@@ -29,7 +29,7 @@ use lvgl_rust_sys::*;
 /// compile-time string literal (`c"..."` or `&'static CStr`).
 #[repr(transparent)]
 #[derive(Clone, Copy)]
-pub struct StaticCStr(pub *const c_char);
+pub struct StaticCStr(*const c_char);
 
 // SAFETY: the pointer targets compile-time string literals which are
 // inherently immutable and 'static — safe to share across threads.
@@ -73,7 +73,9 @@ pub fn add_static(
 ///
 /// `lang` must match one of the registered language strings (e.g. `c"en"`).
 pub fn set_language(lang: &CStr) {
-    // SAFETY: lang is a valid NUL-terminated CStr.
+    // SAFETY: lang is a valid NUL-terminated CStr. LVGL copies the string
+    // internally via lv_strdup (see lv_translation_set_language in
+    // lv_translation.c), so no lifetime requirement on the caller.
     unsafe { lv_translation_set_language(lang.as_ptr()) };
 }
 

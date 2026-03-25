@@ -94,7 +94,8 @@ impl View for WidgetRoller3 {
         generate_mask(&mask);
         let mask = alloc::boxed::Box::new(mask);
 
-        roller.style_bitmap_mask_src(&mask, Selector::DEFAULT);
+        // SAFETY: mask is stored in Self._mask (Box) and outlives the roller.
+        unsafe { roller.style_bitmap_mask_src(&mask, Selector::DEFAULT) };
 
         Ok(Self { _mask: mask, _roller: roller })
     }

@@ -409,6 +409,32 @@ mod tests {
         assert_eq!(Opa::COVER.0, 255);
     }
 
+    // -- ObjFlag (new constants) -------------------------------------------
+
+    #[test]
+    fn obj_flag_hidden_matches_binding() {
+        assert_eq!(
+            ObjFlag::HIDDEN.0,
+            lvgl_rust_sys::lv_obj_flag_t_LV_OBJ_FLAG_HIDDEN
+        );
+    }
+
+    #[test]
+    fn obj_flag_scroll_momentum_matches_binding() {
+        assert_eq!(
+            ObjFlag::SCROLL_MOMENTUM.0,
+            lvgl_rust_sys::lv_obj_flag_t_LV_OBJ_FLAG_SCROLL_MOMENTUM
+        );
+    }
+
+    #[test]
+    fn obj_flag_scroll_chain_matches_binding() {
+        assert_eq!(
+            ObjFlag::SCROLL_CHAIN.0,
+            lvgl_rust_sys::lv_obj_flag_t_LV_OBJ_FLAG_SCROLL_CHAIN
+        );
+    }
+
     #[test]
     fn opa_monotonic() {
         assert!(Opa::OPA_10.0 < Opa::OPA_20.0);
