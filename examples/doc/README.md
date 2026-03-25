@@ -210,6 +210,13 @@ Four buttons: simple horizontal, simple vertical, complex linear, complex radial
 
 ![style18](screenshots/style18.png)
 
+### Style 20 — Modal Overlay Dimming
+
+A screen with two buttons ("BG Dim" and "OPA Dim"). A full-screen dark overlay
+is shown on top with a dismiss label.
+
+![style20](screenshots/style20.png)
+
 ### Skipped
 
 - **Style 19** — Modal overlay (meta-example, benchmarking)
@@ -421,6 +428,13 @@ when the list reaches either end, the last/first item is moved to the opposite
 end and the scroll position is adjusted.
 
 ![scroll8](screenshots/scroll8.png)
+
+### Scroll 9 — Scroll Property Toggles
+
+A scrollable panel with colored child objects and 4 switches that toggle
+scroll flags (SCROLLABLE, CHAIN, ELASTIC, MOMENTUM).
+
+![scroll9](screenshots/scroll9.png)
 
 ### Skipped
 
@@ -820,6 +834,13 @@ highlighted cardinal hour labels (06/12/18/24 white, rest grey).
 
 ![widget_scale11](screenshots/widget_scale11.png)
 
+### Widget Scale 12 — Compass Gauge with Rotation
+
+Round scale with 8 compass direction labels (N/NE/E/SE/S/SW/W/NW), a red
+needle, and continuous rotation animation.
+
+![widget_scale12](screenshots/widget_scale12.png)
+
 ## Widgets — Slider
 
 ### Widget Slider 1 — Slider with Value Label
@@ -958,6 +979,14 @@ rainbow colors and sine-wave y-offsets via `DrawLetterDsc`. Animated each frame.
 HSV-cycled colors shifting each frame via `DrawLetterDsc`. Animated each frame.
 
 ![canvas_11](screenshots/canvas_11.png)
+
+### canvas_12 — Curved text along circular path
+
+240×240 ARGB8888 canvas with "HELLO LVGL 9.5" rendered character-by-character
+along a circular arc, each letter rotated tangent to the circle with rainbow
+colors. The text orbits continuously.
+
+![canvas_12](screenshots/canvas_12.png)
 
 ## Table
 
