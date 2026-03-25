@@ -308,7 +308,7 @@ impl<'p> Obj<'p> {
     /// Set base text direction for the given selector.
     pub fn style_base_dir(&self, dir: super::obj::BaseDir, selector: impl Into<crate::style::Selector>) -> &Self {
         let selector = selector.into().raw();
-        assert_ne!(self.handle(), null_mut());
+        assert_ne!(self.handle(), null_mut(), "Obj handle cannot be null");
         // SAFETY: handle non-null (asserted above).
         unsafe { lv_obj_set_style_base_dir(self.handle(), dir as lv_base_dir_t, selector) };
         self
@@ -483,6 +483,12 @@ impl<'p> Obj<'p> {
     /// outlive the widget. The `&DrawBuf` reference is not lifetime-checked
     /// at this level; callers must ensure the `DrawBuf` lives long enough
     /// (typically stored in the same View struct as the masked widget).
+    ///
+    /// # Safety
+    ///
+    /// The `DrawBuf` must outlive the widget. LVGL stores the raw pointer
+    /// directly in the style property map; if the buffer is freed while still
+    /// referenced, LVGL will dereference a dangling pointer.
     ///
     /// Requires `LV_DRAW_SW_COMPLEX = 1` in `lv_conf.h`.
     pub fn style_bitmap_mask_src(

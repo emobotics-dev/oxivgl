@@ -105,8 +105,7 @@ impl DrawTask {
     /// Overwrite the draw area.
     pub fn set_area(&self, area: Area) {
         // SAFETY: ptr valid during callback; area is a plain value field.
-        let task = unsafe { &mut *self.ptr };
-        task.area = area.into();
+        unsafe { (*self.ptr).area = area.into() };
     }
 
     /// Fill draw descriptor, if this task draws a filled rectangle.
@@ -542,6 +541,7 @@ impl DrawLabelDscOwned {
 
     /// Raw pointer to the inner descriptor. Used by
     /// [`CanvasLayer::draw_label`].
+    #[allow(dead_code)]
     pub(crate) fn as_ptr(&self) -> *const lv_draw_label_dsc_t {
         &self.inner
     }
@@ -581,7 +581,7 @@ impl DrawArcDsc {
 
     /// Start and end angles in degrees (0–360, clockwise from 3 o'clock).
     ///
-    /// Angles are `f32` (`lv_value_precise_t`) in LVGL 9.3.
+    /// Angles are `f32` (`lv_value_precise_t`) when `LV_USE_FLOAT=1`.
     pub fn angles(&mut self, start: f32, end: f32) -> &mut Self {
         self.inner.start_angle = start;
         self.inner.end_angle = end;
@@ -642,14 +642,14 @@ impl DrawLineDsc {
         Self { inner }
     }
 
-    /// Start point. Coordinates are `f32` (`lv_point_precise_t`) in LVGL 9.3.
+    /// Start point. Coordinates are `f32` (`lv_point_precise_t`) when `LV_USE_FLOAT=1`.
     pub fn p1(&mut self, x: f32, y: f32) -> &mut Self {
         self.inner.p1.x = x;
         self.inner.p1.y = y;
         self
     }
 
-    /// End point. Coordinates are `f32` (`lv_point_precise_t`) in LVGL 9.3.
+    /// End point. Coordinates are `f32` (`lv_point_precise_t`) when `LV_USE_FLOAT=1`.
     pub fn p2(&mut self, x: f32, y: f32) -> &mut Self {
         self.inner.p2.x = x;
         self.inner.p2.y = y;
@@ -807,7 +807,7 @@ impl<'i> DrawImageDsc<'i> {
 
     /// Create from a static `lv_image_dsc_t` (e.g. from [`image_declare!`](crate::image_declare)).
     ///
-    /// # Safety contract
+    /// # Lifetime requirement
     /// The image descriptor must point to valid pixel data for the lifetime `'i`.
     pub fn from_static_dsc(img: &'i lv_image_dsc_t) -> Self {
         let mut inner = unsafe { core::mem::zeroed::<lv_draw_image_dsc_t>() };

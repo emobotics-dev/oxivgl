@@ -1,7 +1,7 @@
 # Memory and Lifetime Specification
 
 **Status**: Draft
-**LVGL version**: v9.3 (all source references below)
+**LVGL version**: v9.5 (upgraded from v9.3; key invariants re-verified)
 
 All safety invariants in this document are normative. The implementation SHALL
 conform to this specification. Where LVGL behavior is cited, the exact source
@@ -286,9 +286,9 @@ animation references before Rust drops `_styles`.
 
 **Invariant**: LVGL releases pointers before Rust frees allocations.
 
-**Version pinning**: this invariant is specific to LVGL v9.3. Both call sites
-MUST be re-verified on any LVGL upgrade. v9.3 also frees `name` and `matrix`
-in the destructor (`lv_obj.c:539-541, 544+`), but these are LVGL-managed and
+**Version pinning**: verified for LVGL v9.3 and v9.5 (same behavior in both).
+Both call sites MUST be re-verified on any LVGL upgrade. LVGL also frees
+`name` and `matrix` in the destructor, but these are LVGL-managed and
 do not affect Rust-side cleanup. An integration test SHALL exercise the
 add-style-then-drop-widget path as part of CI.
 
