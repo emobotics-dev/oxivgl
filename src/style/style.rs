@@ -115,6 +115,8 @@ impl BorderSide {
     pub const RIGHT: Self = Self(0x08);
     /// All four sides.
     pub const FULL: Self = Self(0x0F);
+    /// Draw borders between buttons (internal borders only).
+    pub const INTERNAL: Self = Self(0x10);
 }
 
 impl core::ops::BitOr for BorderSide {

@@ -20,8 +20,8 @@ use oxivgl::{
     layout::{FlexAlign, FlexFlow, GridAlign, GridCell, Layout, GRID_TEMPLATE_LAST},
     widgets::{
         Align, AnimImg, Arc, ArcLabel, ArcLabelDir, AsLvHandle, Bar, Button, Buttonmatrix, ButtonmatrixCtrl, ButtonmatrixMap,
-        Calendar, CalendarDate, Canvas, Chart, ChartAxis, ChartType, Checkbox,
-        Dropdown, Image, Imagebutton, ImagebuttonState, Keyboard, KeyboardMode, Label, Led, Line, Menu, MenuHeaderMode, Msgbox,
+        Calendar, CalendarDate, Canvas, Chart, ChartAxis, ChartCursor, ChartSeries, ChartType, ChartUpdateMode, CHART_POINT_NONE,
+        Checkbox, Dropdown, Image, Imagebutton, ImagebuttonState, Keyboard, KeyboardMode, Label, Led, Line, Menu, MenuHeaderMode, Msgbox,
         Obj, Part, Roller, RollerMode, Screen, Slider, Spinbox, Spinner, Switch, Table, TableCellCtrl, Tabview,
         Spangroup, SpanMode, SpanOverflow, Textarea, Tileview, ValueLabel, WidgetError, Win, RADIUS_MAX,
     },
@@ -4749,4 +4749,68 @@ fn event_code_defocused_value() {
         EventCode::DEFOCUSED.0,
         lvgl_rust_sys::lv_event_code_t_LV_EVENT_DEFOCUSED
     );
+}
+
+// ── Chart new APIs ───────────────────────────────────────────────────────────
+
+#[test]
+fn chart_set_update_mode() {
+    let screen = common::fresh_screen();
+    let chart = Chart::new(&screen).unwrap();
+    chart.set_update_mode(ChartUpdateMode::Circular);
+}
+
+#[test]
+fn chart_add_cursor_and_set_point() {
+    let screen = common::fresh_screen();
+    let chart = Chart::new(&screen).unwrap();
+    let ser = chart.add_series(palette_main(Palette::Red), ChartAxis::PrimaryY);
+    for i in 0..10 { chart.set_next_value(&ser, i * 10); }
+    let color = palette_main(Palette::Blue);
+    let cursor = chart.add_cursor(color, 0x01 | 0x08);
+    chart.set_cursor_point(&cursor, Some(&ser), 5);
+}
+
+#[test]
+fn chart_get_pressed_point_none() {
+    let screen = common::fresh_screen();
+    let chart = Chart::new(&screen).unwrap();
+    assert!(chart.get_pressed_point().is_none());
+}
+
+#[test]
+fn chart_get_series_next() {
+    let screen = common::fresh_screen();
+    let chart = Chart::new(&screen).unwrap();
+    let _ser = chart.add_series(palette_main(Palette::Red), ChartAxis::PrimaryY);
+    let first = chart.get_series_next(None);
+    assert!(first.is_some());
+    let second = chart.get_series_next(first.as_ref());
+    assert!(second.is_none());
+}
+
+#[test]
+fn chart_get_x_start_point() {
+    let screen = common::fresh_screen();
+    let chart = Chart::new(&screen).unwrap();
+    chart.set_update_mode(ChartUpdateMode::Circular);
+    let ser = chart.add_series(palette_main(Palette::Red), ChartAxis::PrimaryY);
+    let _ = chart.get_x_start_point(&ser);
+}
+
+#[test]
+fn buttonmatrix_set_button_ctrl_all() {
+    let screen = common::fresh_screen();
+    let btnm = Buttonmatrix::new(&screen).unwrap();
+    btnm.set_button_ctrl_all(ButtonmatrixCtrl::CHECKABLE);
+    assert!(btnm.has_button_ctrl(0, ButtonmatrixCtrl::CHECKABLE));
+}
+
+#[test]
+fn buttonmatrix_set_one_checked() {
+    let screen = common::fresh_screen();
+    let btnm = Buttonmatrix::new(&screen).unwrap();
+    btnm.set_button_ctrl_all(ButtonmatrixCtrl::CHECKABLE);
+    btnm.set_one_checked(true);
+    btnm.set_button_ctrl(0, ButtonmatrixCtrl::CHECKED);
 }
