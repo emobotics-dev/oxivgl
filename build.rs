@@ -12,4 +12,5 @@ fn main() {
     let cfg = oxivgl_build::ImageConfig::from_env();
     cfg.image_asset("img_cogwheel_argb", "examples/assets/img_cogwheel_argb.png");
     cfg.image_asset("img_skew_strip", "examples/assets/img_skew_strip.png");
+    cfg.image_asset("img_star", "examples/assets/img_star.png");
 }
