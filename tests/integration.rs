@@ -22,7 +22,7 @@ use oxivgl::{
         Align, AnimImg, Arc, ArcLabel, ArcLabelDir, AsLvHandle, Bar, Button, Buttonmatrix, ButtonmatrixCtrl, ButtonmatrixMap,
         Calendar, CalendarDate, Canvas, Chart, ChartAxis, ChartCursor, ChartSeries, ChartType, ChartUpdateMode, CHART_POINT_NONE,
         Checkbox, Dropdown, Image, Imagebutton, ImagebuttonState, Keyboard, KeyboardMode, Label, Led, Line, Menu, MenuHeaderMode, Msgbox,
-        Obj, Part, Roller, RollerMode, Screen, Slider, Spinbox, Spinner, Switch, Table, TableCellCtrl, Tabview,
+        BarOrientation, Obj, Part, Roller, RollerMode, Screen, Slider, SliderOrientation, Spinbox, Spinner, Switch, Table, TableCellCtrl, Tabview,
         Spangroup, SpanMode, SpanOverflow, Textarea, Tileview, ValueLabel, WidgetError, Win, RADIUS_MAX,
     },
 };
@@ -4943,6 +4943,17 @@ fn bar_get_mode() {
     assert!(matches!(bar.get_mode(), BarMode::Symmetrical));
 }
 
+#[test]
+fn bar_set_get_orientation() {
+    let screen = common::fresh_screen();
+    let bar = Bar::new(&screen).unwrap();
+    assert!(matches!(bar.get_orientation(), BarOrientation::Auto));
+    bar.set_orientation(BarOrientation::Vertical);
+    assert!(matches!(bar.get_orientation(), BarOrientation::Vertical));
+    bar.set_orientation(BarOrientation::Horizontal);
+    assert!(matches!(bar.get_orientation(), BarOrientation::Horizontal));
+}
+
 // ── Image getters ────────────────────────────────────────────────────────────
 
 #[test]
@@ -5235,6 +5246,15 @@ fn slider_get_mode() {
     slider.set_mode(SliderMode::Symmetrical);
     pump();
     assert!(matches!(slider.get_mode(), SliderMode::Symmetrical));
+}
+
+#[test]
+fn slider_set_get_orientation() {
+    let screen = common::fresh_screen();
+    let slider = Slider::new(&screen).unwrap();
+    assert!(matches!(slider.get_orientation(), SliderOrientation::Auto));
+    slider.set_orientation(SliderOrientation::Vertical);
+    assert!(matches!(slider.get_orientation(), SliderOrientation::Vertical));
 }
 
 // ── Spinner getters ──────────────────────────────────────────────────────────

@@ -59,7 +59,7 @@ mod win;
 pub use animimg::AnimImg;
 pub use arc::{Arc, ArcMode};
 pub use arclabel::{ArcLabel, ArcLabelDir};
-pub use bar::{Bar, BarMode};
+pub use bar::{Bar, BarMode, BarOrientation};
 pub use button::Button;
 pub use calendar::{Calendar, CalendarDate};
 pub use buttonmatrix::{Buttonmatrix, ButtonmatrixCtrl, ButtonmatrixMap};
@@ -86,7 +86,7 @@ pub use scale::{
     ScaleSection,
 };
 pub use screen::Screen;
-pub use slider::{Slider, SliderMode};
+pub use slider::{Slider, SliderMode, SliderOrientation};
 pub use span::{Span, SpanMode, SpanOverflow, Spangroup};
 pub use spinbox::Spinbox;
 pub use spinner::Spinner;
