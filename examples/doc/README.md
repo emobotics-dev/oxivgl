@@ -1,6 +1,6 @@
 # oxivgl — Examples
 
-LVGL example screens ported from the [LVGL docs](https://docs.lvgl.io/9.3/examples.html).
+LVGL example screens ported from the [LVGL docs](https://docs.lvgl.io/9.5/examples.html).
 
 Each example is a self-contained file with a `View` impl and a cfg-gated
 runner (`example_main!` macro selects host SDL2 or ESP32 fire27 backend).
@@ -664,6 +664,14 @@ Two labels: proportional Montserrat 20 and monospaced override via
 
 ![widget_label6](screenshots/widget_label6.png)
 
+### Widget Label 7 — Manual Language Switching
+
+Dropdown selects English/Deutsch/Espanol; four labels update text from
+static translation tables. Simplified from LVGL's `lv_translation_*` API
+(not enabled in current bindings).
+
+![widget_label7](screenshots/widget_label7.png)
+
 ## Widgets — LED
 
 ### Widget LED 1 — Brightness and Color
@@ -742,6 +750,15 @@ A modal message box with a title, body text, and a close button.
 Msgbox is also used as a supporting widget in menu2 and menu5.
 
 ![widget_msgbox1](screenshots/widget_msgbox1.png)
+
+### Widget Msgbox 3 — Message Box with Backdrop Blur
+
+Modal message box with blur + dimming on layer_top. Background labels show
+through the blurred backdrop. Blur requires GPU-accelerated backend; on SDL
+host the dimming is visible but blur is a no-op. (Screenshot captures active
+screen only — modal layer_top content not visible in PNG.)
+
+![widget_msgbox3](screenshots/widget_msgbox3.png)
 
 ## Widgets — Roller
 
@@ -1116,7 +1133,7 @@ Active tab set programmatically to the second tab on startup.
 
 ## Implementation Coverage
 
-Status of all [LVGL 9.3 examples](https://docs.lvgl.io/9.3/examples.html) in oxivgl.
+Status of all [LVGL 9.5 examples](https://docs.lvgl.io/9.5/examples.html) in oxivgl.
 
 **Legend:** Done = ported, Skip = intentionally skipped (reason noted), Missing = has wrapper but no example yet, No wrapper = widget not yet wrapped.
 
@@ -1125,12 +1142,12 @@ Status of all [LVGL 9.3 examples](https://docs.lvgl.io/9.3/examples.html) in oxi
 | Category | LVGL | Done | Skip | Notes |
 |---|---|---|---|---|
 | Getting Started | 4 | 4 (+4 extra gradient examples) | 0 | |
-| Styles | 21 | 18 | 3 | style19 (meta/benchmarking), style20 (modal overlay, v9.5), style21 (card grid, v9.5) |
+| Styles | 21 | 19 | 2 | style19 (meta/benchmarking), style21 (card grid, v9.5) |
 | Animations | 5 | 5 | 0 | |
 | Events | 5 | 5 (+1 extra trickle) | 0 | |
 | Flex | 6 | 6 | 0 | |
 | Grid | 6 | 6 | 0 | |
-| Scroll | 9 | 7 | 2 | scroll5 (RTL font), scroll9 (scroll toggles, v9.5) |
+| Scroll | 9 | 8 | 1 | scroll5 (RTL font) |
 
 ### Widget Examples (wrapper exists)
 
@@ -1144,18 +1161,18 @@ Status of all [LVGL 9.3 examples](https://docs.lvgl.io/9.3/examples.html) in oxi
 | checkbox | 2 | 2 | 0 | |
 | dropdown | 3 | 3 | 0 | |
 | image | 5 | 5 | 0 | |
-| label | 7 | 6 | 1 | label7 (translation/i18n, v9.5) |
+| label | 7 | 7 | 0 | label7 simplified (no `lv_translation_*` in bindings) |
 | led | 1 | 1 | 0 | |
 | line | 1 | 1 | 0 | |
 | list | 2 | 2 | 0 | |
 | menu | 5 | 5 | 0 | |
-| msgbox | 2 | 1 | 1 | msgbox3 (blur effects, v9.5) |
+| msgbox | 2 | 2 | 0 | msgbox3 uses blur API (no-op on SDL) |
 | roller | 3 | 3 | 0 | |
-| scale | 12 | 11 | 1 | scale12 (compass, v9.5) |
+| scale | 12 | 12 | 0 | |
 | slider | 4 | 4 | 0 | |
 | switch | 2 | 2 | 0 | |
 | textarea | 4 | 4 | 0 | Includes Buttonmatrix + Keyboard wrappers |
-| canvas | 12 | 10 | 2 | canvas_8 (vector graphics, ThorVG), canvas_12 (curved text, v9.5) |
+| canvas | 12 | 11 | 1 | canvas_8 (vector graphics, ThorVG) |
 | table | 2 | 2 | 0 | |
 | tabview | 2 | 2 | 0 | |
 | tileview | 1 | 1 | 0 | |
@@ -1180,11 +1197,11 @@ Status of all [LVGL 9.3 examples](https://docs.lvgl.io/9.3/examples.html) in oxi
 | | Count |
 |---|---|
 | LVGL examples total | ~193 |
-| oxivgl done | 145 |
-| Verified on ESP32 (fire27) | 144/144 |
-| Skipped (intentional) | 4 |
-| New in v9.5 (not ported) | ~9 |
-| Missing (wrapper exists) | 4 |
+| oxivgl done | 151 |
+| Verified on ESP32 (fire27) | 148/151 |
+| Skipped (intentional) | 3 |
+| New in v9.5 (not ported) | 3 |
+| Missing (wrapper exists) | 1 |
 | Abandoned (lottie) | 3 |
 | No wrapper (v9.5 new widgets) | 3 |
 

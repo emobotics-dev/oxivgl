@@ -64,6 +64,21 @@ impl<'p> Label<'p> {
         self
     }
 
+    /// Set translation tag — the label text will auto-update when the
+    /// language changes via [`translation::set_language`](crate::translation::set_language).
+    ///
+    /// Requires `LV_USE_TRANSLATION = 1` in `lv_conf.h`.
+    pub fn set_translation_tag(&self, tag: &str) -> &Self {
+        assert_ne!(self.obj.handle(), null_mut(), "Label handle cannot be null");
+        let len = tag.len().min(127);
+        let mut buf = [0u8; 128];
+        buf[..len].copy_from_slice(&tag.as_bytes()[..len]);
+        // SAFETY: handle non-null; buf is NUL-terminated (zero-initialized).
+        // LVGL copies the tag string internally.
+        unsafe { lv_label_set_translation_tag(self.obj.handle(), buf.as_ptr() as *const c_char) };
+        self
+    }
+
     /// Set label text without the 127-byte limit. Heap-allocates a
     /// NUL-terminated copy. Use [`text`](Self::text) for short UI labels.
     pub fn text_long(&self, s: &str) -> &Self {
