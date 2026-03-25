@@ -38,6 +38,21 @@ impl<'p> Checkbox<'p> {
         if handle.is_null() { Err(WidgetError::LvglNullPointer) } else { Ok(Checkbox { obj: Obj::from_raw(handle) }) }
     }
 
+    /// Get the checkbox label text. Returns `None` if the pointer is null or
+    /// the text is not valid UTF-8.
+    pub fn get_text(&self) -> Option<&str> {
+        assert_ne!(self.obj.handle(), null_mut(), "Checkbox handle cannot be null");
+        // SAFETY: handle non-null (asserted above); lv_checkbox_get_text returns
+        // a pointer to LVGL-managed memory valid for the widget's lifetime.
+        let ptr = unsafe { lv_checkbox_get_text(self.obj.handle()) };
+        if ptr.is_null() {
+            return None;
+        }
+        // SAFETY: ptr is non-null and NUL-terminated (guaranteed by LVGL).
+        let cstr = unsafe { core::ffi::CStr::from_ptr(ptr) };
+        cstr.to_str().ok()
+    }
+
     /// Set checkbox label text. Truncates at 127 bytes.
     pub fn text(&self, s: &str) -> &Self {
         assert_ne!(self.obj.handle(), null_mut(), "Checkbox handle cannot be null");

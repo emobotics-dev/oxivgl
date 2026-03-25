@@ -94,4 +94,28 @@ impl<'p> Roller<'p> {
         // SAFETY: handle non-null (asserted above).
         unsafe { lv_roller_get_selected(self.obj.handle()) }
     }
+
+    /// Get the number of options in the roller.
+    pub fn get_option_count(&self) -> u32 {
+        // SAFETY: handle non-null (checked in new()).
+        unsafe { lv_roller_get_option_count(self.lv_handle()) }
+    }
+
+    /// Copy the selected option text into `buf`. Returns `None` if `buf` is
+    /// empty or the text is not valid UTF-8.
+    pub fn get_selected_str<'b>(&self, buf: &'b mut [u8]) -> Option<&'b str> {
+        if buf.is_empty() {
+            return None;
+        }
+        // SAFETY: handle non-null (checked in new()); buf is valid writable memory.
+        unsafe {
+            lv_roller_get_selected_str(
+                self.lv_handle(),
+                buf.as_mut_ptr() as *mut c_char,
+                buf.len() as u32,
+            );
+        }
+        let len = buf.iter().position(|&b| b == 0).unwrap_or(buf.len());
+        core::str::from_utf8(&buf[..len]).ok()
+    }
 }
