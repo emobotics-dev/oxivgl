@@ -62,7 +62,7 @@ pub use arclabel::{ArcLabel, ArcLabelDir};
 pub use bar::{Bar, BarMode};
 pub use button::Button;
 pub use calendar::{Calendar, CalendarDate};
-pub use buttonmatrix::{Buttonmatrix, ButtonmatrixMap};
+pub use buttonmatrix::{Buttonmatrix, ButtonmatrixCtrl, ButtonmatrixMap};
 pub use canvas::{Canvas, CanvasLayer};
 pub use chart::{Chart, ChartAxis, ChartSeries, ChartType};
 pub use checkbox::Checkbox;

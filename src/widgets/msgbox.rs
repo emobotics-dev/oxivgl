@@ -125,6 +125,45 @@ impl<'p> Msgbox<'p> {
         Child::new(Obj::from_raw(btn))
     }
 
+    /// Add a button to the header with the given icon symbol.
+    ///
+    /// Returns the button object as a non-owning `Child<Obj>`.
+    pub fn add_header_button(&self, icon: &crate::symbols::Symbol) -> Child<Obj<'_>> {
+        assert_ne!(self.obj.handle(), null_mut(), "Msgbox handle cannot be null");
+        // SAFETY: handle non-null; icon.as_ptr() is a valid 'static C string.
+        // LVGL stores the icon pointer as an image source.
+        let btn = unsafe {
+            lv_msgbox_add_header_button(self.obj.handle(), icon.as_ptr() as *const core::ffi::c_void)
+        };
+        assert!(!btn.is_null(), "lv_msgbox_add_header_button returned NULL");
+        Child::new(Obj::from_raw(btn))
+    }
+
+    /// Get the content area of the message box (for adding custom widgets).
+    pub fn get_content(&self) -> Child<Obj<'_>> {
+        assert_ne!(self.obj.handle(), null_mut(), "Msgbox handle cannot be null");
+        // SAFETY: handle non-null; returns the internal content container.
+        let content = unsafe { lv_msgbox_get_content(self.obj.handle()) };
+        assert!(!content.is_null(), "lv_msgbox_get_content returned NULL");
+        Child::new(Obj::from_raw(content))
+    }
+
+    /// Get the footer area of the message box, if one exists.
+    pub fn get_footer(&self) -> Option<Child<Obj<'_>>> {
+        assert_ne!(self.obj.handle(), null_mut(), "Msgbox handle cannot be null");
+        // SAFETY: handle non-null; returns the internal footer or NULL.
+        let footer = unsafe { lv_msgbox_get_footer(self.obj.handle()) };
+        if footer.is_null() { None } else { Some(Child::new(Obj::from_raw(footer))) }
+    }
+
+    /// Get the header area of the message box, if one exists.
+    pub fn get_header(&self) -> Option<Child<Obj<'_>>> {
+        assert_ne!(self.obj.handle(), null_mut(), "Msgbox handle cannot be null");
+        // SAFETY: handle non-null; returns the internal header or NULL.
+        let header = unsafe { lv_msgbox_get_header(self.obj.handle()) };
+        if header.is_null() { None } else { Some(Child::new(Obj::from_raw(header))) }
+    }
+
     /// Close the message box immediately.
     ///
     /// Consumes `self` because `lv_msgbox_close` calls `lv_obj_delete`

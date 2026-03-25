@@ -54,6 +54,8 @@ impl EventCode {
     pub const DRAW_MAIN_END: Self = Self(lvgl_rust_sys::lv_event_code_t_LV_EVENT_DRAW_MAIN_END);
     /// Widget gained focus (e.g. textarea clicked).
     pub const FOCUSED: Self = Self(lvgl_rust_sys::lv_event_code_t_LV_EVENT_FOCUSED);
+    /// Widget lost focus (e.g. another widget was clicked).
+    pub const DEFOCUSED: Self = Self(lvgl_rust_sys::lv_event_code_t_LV_EVENT_DEFOCUSED);
     /// Text input ready (Enter pressed on keyboard/textarea).
     pub const READY: Self = Self(lvgl_rust_sys::lv_event_code_t_LV_EVENT_READY);
 }
@@ -259,6 +261,10 @@ mod tests {
         assert_eq!(EventCode::LONG_PRESSED_REPEAT.0, 9);
         assert_eq!(EventCode::CLICKED.0, 10);
         assert_eq!(EventCode::VALUE_CHANGED.0, 35);
+        assert_eq!(
+            EventCode::DEFOCUSED.0,
+            lvgl_rust_sys::lv_event_code_t_LV_EVENT_DEFOCUSED
+        );
     }
 
     #[test]
