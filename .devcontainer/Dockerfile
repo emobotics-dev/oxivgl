@@ -58,7 +58,10 @@ RUN bash -c '\
     ELF_BIN=$(dirname "$(which xtensa-esp32-elf-gcc)"); \
     echo "$ELF_BIN"               > "$HOME/.espup/esp_elf_bin_path"; \
     cat "$EXPORT_SH" >> "$HOME/.bashrc"; \
-    cat "$EXPORT_SH" >> "$HOME/.clco-env"'
+    cat "$EXPORT_SH" >> "$HOME/.clco-env"; \
+    echo "export BINDGEN_EXTRA_CLANG_ARGS_xtensa_esp32_none_elf=\"--sysroot=$SYSROOT\"" >> "$HOME/.clco-env"; \
+    echo "export BINDGEN_EXTRA_CLANG_ARGS_xtensa_esp32s2_none_elf=\"--sysroot=$SYSROOT\"" >> "$HOME/.clco-env"; \
+    echo "export BINDGEN_EXTRA_CLANG_ARGS_xtensa_esp32s3_none_elf=\"--sysroot=$SYSROOT\"" >> "$HOME/.clco-env"'
 
 # ── Host LIBCLANG_PATH (default) ────────────────────────────────────────────
 # For host builds, override the ESP libclang with the system one.
