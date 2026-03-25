@@ -187,7 +187,7 @@ use oxivgl::{
     },
     enums::{ObjState, ScrollDir},
     widgets::{
-        AnimImg, Arc, Bar, BarMode, Button, Buttonmatrix, Calendar, CalendarDate, Canvas, Chart,
+        AnimImg, Arc, ArcLabel, Bar, BarMode, Button, Buttonmatrix, Calendar, CalendarDate, Canvas, Chart,
         ChartAxis, ChartType, Checkbox, Dropdown, Imagebutton, ImagebuttonState, Keyboard,
         KeyboardMode, Label, Led, Line, Menu, Msgbox, Obj, Part, Roller, RollerMode, Slider,
         Spangroup, Spinbox, Spinner, Switch, Table, Tabview, Textarea, Tileview, ValueLabel, Win,
@@ -731,5 +731,15 @@ fn leak_scale_rotation_anim() {
         pump_child();
         drop(scale);
         pump_child();
+    }));
+}
+
+#[test]
+fn leak_arclabel() {
+    run_isolated("ArcLabel", || measure_widget(|s| {
+        let al = ArcLabel::new(s).unwrap();
+        al.set_text_static(c"Leak test");
+        al.set_radius(40);
+        drop(al);
     }));
 }

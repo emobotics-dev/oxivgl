@@ -61,6 +61,21 @@ impl Screen {
         if handle.is_null() { None } else { Some(Screen { handle, _styles: RefCell::new(Vec::new()) }) }
     }
 
+    /// Return the top layer object.
+    ///
+    /// The top layer sits above all screens and is useful for overlays,
+    /// dimming backdrops, and modal dialogs.
+    /// Get the top layer — a global overlay above all screens.
+    ///
+    /// Returns a non-owning handle. The top layer is owned by LVGL and
+    /// must never be deleted.
+    pub fn layer_top() -> super::child::Child<super::obj::Obj<'static>> {
+        // SAFETY: lv_layer_top() returns a valid global object after lv_init().
+        let handle = unsafe { lv_layer_top() };
+        assert!(!handle.is_null(), "lv_layer_top returned NULL");
+        super::child::Child::new(super::obj::Obj::from_raw(handle))
+    }
+
     /// Return the raw `lv_obj_t` pointer for this screen.
     pub fn handle(&self) -> *mut lv_obj_t {
         self.handle

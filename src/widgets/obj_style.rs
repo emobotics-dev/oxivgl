@@ -477,6 +477,111 @@ impl<'p> Obj<'p> {
         self
     }
 
+    /// Set shadow width for the given selector.
+    pub fn style_shadow_width(&self, w: i32, selector: impl Into<crate::style::Selector>) -> &Self {
+        let selector = selector.into().raw();
+        assert_ne!(self.handle(), null_mut(), "Obj handle cannot be null");
+        // SAFETY: handle non-null (asserted above).
+        unsafe { lv_obj_set_style_shadow_width(self.handle(), w, selector) };
+        self
+    }
+
+    /// Set shadow color for the given selector.
+    pub fn style_shadow_color(&self, color: lv_color_t, selector: impl Into<crate::style::Selector>) -> &Self {
+        let selector = selector.into().raw();
+        assert_ne!(self.handle(), null_mut(), "Obj handle cannot be null");
+        // SAFETY: handle non-null (asserted above).
+        unsafe { lv_obj_set_style_shadow_color(self.handle(), color, selector) };
+        self
+    }
+
+    /// Set shadow X offset for the given selector.
+    pub fn style_shadow_offset_x(&self, x: i32, selector: impl Into<crate::style::Selector>) -> &Self {
+        let selector = selector.into().raw();
+        assert_ne!(self.handle(), null_mut(), "Obj handle cannot be null");
+        // SAFETY: handle non-null (asserted above).
+        unsafe { lv_obj_set_style_shadow_offset_x(self.handle(), x, selector) };
+        self
+    }
+
+    /// Set shadow Y offset for the given selector.
+    pub fn style_shadow_offset_y(&self, y: i32, selector: impl Into<crate::style::Selector>) -> &Self {
+        let selector = selector.into().raw();
+        assert_ne!(self.handle(), null_mut(), "Obj handle cannot be null");
+        // SAFETY: handle non-null (asserted above).
+        unsafe { lv_obj_set_style_shadow_offset_y(self.handle(), y, selector) };
+        self
+    }
+
+    /// Set shadow spread for the given selector.
+    pub fn style_shadow_spread(&self, s: i32, selector: impl Into<crate::style::Selector>) -> &Self {
+        let selector = selector.into().raw();
+        assert_ne!(self.handle(), null_mut(), "Obj handle cannot be null");
+        // SAFETY: handle non-null (asserted above).
+        unsafe { lv_obj_set_style_shadow_spread(self.handle(), s, selector) };
+        self
+    }
+
+    /// Set shadow opacity (0–255) for the given selector.
+    pub fn style_shadow_opa(&self, opa: u8, selector: impl Into<crate::style::Selector>) -> &Self {
+        let selector = selector.into().raw();
+        assert_ne!(self.handle(), null_mut(), "Obj handle cannot be null");
+        // SAFETY: handle non-null (asserted above).
+        unsafe { lv_obj_set_style_shadow_opa(self.handle(), opa as lv_opa_t, selector) };
+        self
+    }
+
+    /// Set transform scale X (256 = 1.0x) for the given selector.
+    pub fn style_transform_scale_x(&self, scale: i32, selector: impl Into<crate::style::Selector>) -> &Self {
+        let selector = selector.into().raw();
+        assert_ne!(self.handle(), null_mut(), "Obj handle cannot be null");
+        // SAFETY: handle non-null (asserted above).
+        unsafe { lv_obj_set_style_transform_scale_x(self.handle(), scale, selector) };
+        self
+    }
+
+    /// Set transform scale Y (256 = 1.0x) for the given selector.
+    pub fn style_transform_scale_y(&self, scale: i32, selector: impl Into<crate::style::Selector>) -> &Self {
+        let selector = selector.into().raw();
+        assert_ne!(self.handle(), null_mut(), "Obj handle cannot be null");
+        // SAFETY: handle non-null (asserted above).
+        unsafe { lv_obj_set_style_transform_scale_y(self.handle(), scale, selector) };
+        self
+    }
+
+    /// Set text letter spacing for the given selector.
+    pub fn style_text_letter_space(&self, space: i32, selector: impl Into<crate::style::Selector>) -> &Self {
+        let selector = selector.into().raw();
+        assert_ne!(self.handle(), null_mut(), "Obj handle cannot be null");
+        // SAFETY: handle non-null (asserted above).
+        unsafe { lv_obj_set_style_text_letter_space(self.handle(), space, selector) };
+        self
+    }
+
+    /// Set blur radius for the given selector.
+    ///
+    /// Requires GPU-accelerated backend for visible effect; may be a no-op on
+    /// SDL host.
+    pub fn style_blur_radius(&self, r: i32, selector: impl Into<crate::style::Selector>) -> &Self {
+        let selector = selector.into().raw();
+        assert_ne!(self.handle(), null_mut(), "Obj handle cannot be null");
+        // SAFETY: handle non-null (asserted above).
+        unsafe { lv_obj_set_style_blur_radius(self.handle(), r, selector) };
+        self
+    }
+
+    /// Enable/disable backdrop blur for the given selector.
+    ///
+    /// When enabled, the area behind the object is blurred (requires
+    /// [`style_blur_radius`](Self::style_blur_radius) > 0).
+    pub fn style_blur_backdrop(&self, en: bool, selector: impl Into<crate::style::Selector>) -> &Self {
+        let selector = selector.into().raw();
+        assert_ne!(self.handle(), null_mut(), "Obj handle cannot be null");
+        // SAFETY: handle non-null (asserted above).
+        unsafe { lv_obj_set_style_blur_backdrop(self.handle(), en, selector) };
+        self
+    }
+
     /// Set a bitmap mask source (L8 draw buffer) for the given selector.
     ///
     /// LVGL stores the raw pointer to the `lv_draw_buf_t` — the buffer must

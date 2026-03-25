@@ -40,7 +40,7 @@ pub use crate::symbols::Symbol;
 pub use crate::timer::Timer;
 // Widgets
 pub use crate::widgets::{
-    Align, AnimImg, Arc, ArcMode, AsLvHandle, Bar, BarMode, BaseDir, Button, Buttonmatrix, ButtonmatrixMap, Calendar,
+    Align, AnimImg, Arc, ArcLabel, ArcLabelDir, ArcMode, AsLvHandle, Bar, BarMode, BaseDir, Button, Buttonmatrix, ButtonmatrixMap, Calendar,
     CalendarDate, Chart, ChartAxis,
     ChartSeries, ChartType, Checkbox, Child, DdDir, Dropdown, Image, ImageAlign, Imagebutton, ImagebuttonState,
     Keyboard, KeyboardMode, Label,

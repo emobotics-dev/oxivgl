@@ -19,6 +19,7 @@ pub(crate) fn to_lvgl(v: f32, max: f32) -> i32 {
 
 mod animimg;
 mod arc;
+mod arclabel;
 mod bar;
 mod button;
 mod calendar;
@@ -57,6 +58,7 @@ mod win;
 
 pub use animimg::AnimImg;
 pub use arc::{Arc, ArcMode};
+pub use arclabel::{ArcLabel, ArcLabelDir};
 pub use bar::{Bar, BarMode};
 pub use button::Button;
 pub use calendar::{Calendar, CalendarDate};
