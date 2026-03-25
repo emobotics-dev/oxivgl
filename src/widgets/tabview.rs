@@ -127,6 +127,18 @@ impl<'p> Tabview<'p> {
         assert!(!ptr.is_null(), "lv_tabview_get_tab_bar returned NULL");
         Child::new(Obj::from_raw(ptr))
     }
+
+    /// Get the current tab bar position.
+    pub fn get_tab_bar_position(&self) -> DdDir {
+        // SAFETY: handle non-null (checked in new()).
+        let raw = unsafe { lv_tabview_get_tab_bar_position(self.lv_handle()) };
+        match raw {
+            x if x == lv_dir_t_LV_DIR_TOP => DdDir::Top,
+            x if x == lv_dir_t_LV_DIR_BOTTOM => DdDir::Bottom,
+            x if x == lv_dir_t_LV_DIR_LEFT => DdDir::Left,
+            _ => DdDir::Right,
+        }
+    }
 }
 
 #[cfg(test)]

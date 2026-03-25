@@ -95,6 +95,28 @@ impl<'p> Keyboard<'p> {
         self
     }
 
+    /// Get the current keyboard mode.
+    pub fn get_mode(&self) -> KeyboardMode {
+        // SAFETY: handle non-null (checked in new()).
+        let raw = unsafe { lv_keyboard_get_mode(self.lv_handle()) };
+        match raw {
+            1 => KeyboardMode::TextUpper,
+            2 => KeyboardMode::Special,
+            3 => KeyboardMode::Number,
+            4 => KeyboardMode::User1,
+            5 => KeyboardMode::User2,
+            6 => KeyboardMode::User3,
+            7 => KeyboardMode::User4,
+            _ => KeyboardMode::TextLower,
+        }
+    }
+
+    /// Get whether popovers (key press previews) are enabled.
+    pub fn get_popovers(&self) -> bool {
+        // SAFETY: handle non-null (checked in new()).
+        unsafe { lv_keyboard_get_popovers(self.lv_handle()) }
+    }
+
     /// Set a custom key map and control flags for a keyboard mode.
     ///
     /// LVGL stores the raw pointers; both `map` and `ctrl` MUST be `'static`

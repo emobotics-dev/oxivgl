@@ -128,6 +128,35 @@ impl<'p> Bar<'p> {
         self
     }
 
+    /// Get raw LVGL start value (range mode only, bypasses f32 normalization).
+    pub fn get_start_value_raw(&self) -> i32 {
+        assert_ne!(self.obj.handle(), null_mut(), "Bar handle cannot be null");
+        // SAFETY: handle non-null (asserted above).
+        unsafe { lv_bar_get_start_value(self.obj.handle()) }
+    }
+
+    /// Get the raw LVGL minimum value.
+    pub fn get_min_value(&self) -> i32 {
+        assert_ne!(self.obj.handle(), null_mut(), "Bar handle cannot be null");
+        // SAFETY: handle non-null (asserted above).
+        unsafe { lv_bar_get_min_value(self.obj.handle()) }
+    }
+
+    /// Get the raw LVGL maximum value.
+    pub fn get_max_value(&self) -> i32 {
+        assert_ne!(self.obj.handle(), null_mut(), "Bar handle cannot be null");
+        // SAFETY: handle non-null (asserted above).
+        unsafe { lv_bar_get_max_value(self.obj.handle()) }
+    }
+
+    /// Get the bar mode (normal, symmetrical, or range).
+    pub fn get_mode(&self) -> BarMode {
+        assert_ne!(self.obj.handle(), null_mut(), "Bar handle cannot be null");
+        // SAFETY: handle non-null (asserted above).
+        // lv_bar_mode_t values 0–2 are all covered by BarMode.
+        unsafe { core::mem::transmute(lv_bar_get_mode(self.obj.handle())) }
+    }
+
     /// Get current value in physical units.
     pub fn get_value(&self) -> f32 {
         assert_ne!(self.obj.handle(), null_mut(), "Bar handle cannot be null");

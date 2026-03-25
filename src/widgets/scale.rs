@@ -122,9 +122,55 @@ impl<'p> Scale<'p> {
         self
     }
 
+    /// Get the scale mode as raw `u32`.
+    ///
+    /// Returns the raw `lv_scale_mode_t` value. Use [`ScaleMode`] constants
+    /// to compare. The raw type is returned because LVGL defines a sentinel
+    /// `_LAST` value not covered by [`ScaleMode`].
+    pub fn get_mode(&self) -> u32 {
+        // SAFETY: handle non-null (from Scale::new/tick_ring).
+        unsafe { lv_scale_get_mode(self.lv_handle()) }
+    }
+
+    /// Get the total number of tick marks.
+    pub fn get_total_tick_count(&self) -> i32 {
+        // SAFETY: handle non-null (from Scale::new/tick_ring).
+        unsafe { lv_scale_get_total_tick_count(self.lv_handle()) }
+    }
+
     /// Get the major tick interval.
     pub fn get_major_tick_every(&self) -> i32 {
         unsafe { lv_scale_get_major_tick_every(self.lv_handle()) }
+    }
+
+    /// Get the start angle rotation in degrees.
+    pub fn get_rotation(&self) -> i32 {
+        // SAFETY: handle non-null (from Scale::new/tick_ring).
+        unsafe { lv_scale_get_rotation(self.lv_handle()) }
+    }
+
+    /// Get whether numeric labels are shown on major ticks.
+    pub fn get_label_show(&self) -> bool {
+        // SAFETY: handle non-null (from Scale::new/tick_ring).
+        unsafe { lv_scale_get_label_show(self.lv_handle()) }
+    }
+
+    /// Get the angular extent in degrees.
+    pub fn get_angle_range(&self) -> u32 {
+        // SAFETY: handle non-null (from Scale::new/tick_ring).
+        unsafe { lv_scale_get_angle_range(self.lv_handle()) }
+    }
+
+    /// Get the range minimum value.
+    pub fn get_range_min_value(&self) -> i32 {
+        // SAFETY: handle non-null (from Scale::new/tick_ring).
+        unsafe { lv_scale_get_range_min_value(self.lv_handle()) }
+    }
+
+    /// Get the range maximum value.
+    pub fn get_range_max_value(&self) -> i32 {
+        // SAFETY: handle non-null (from Scale::new/tick_ring).
+        unsafe { lv_scale_get_range_max_value(self.lv_handle()) }
     }
 
     /// Add a styled section to the scale. Returns a handle for further

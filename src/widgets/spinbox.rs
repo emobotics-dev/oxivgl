@@ -127,4 +127,34 @@ impl<'p> Spinbox<'p> {
         unsafe { lv_spinbox_set_cursor_pos(self.obj.handle(), pos) };
         self
     }
+
+    /// Get whether rollover (wrap-around) is enabled.
+    pub fn get_rollover(&self) -> bool {
+        // SAFETY: handle non-null (checked in new()).
+        unsafe { lv_spinbox_get_rollover(self.lv_handle()) }
+    }
+
+    /// Get the total digit count.
+    pub fn get_digit_count(&self) -> u32 {
+        // SAFETY: handle non-null (checked in new()).
+        unsafe { lv_spinbox_get_digit_count(self.lv_handle()) }
+    }
+
+    /// Get the decimal point position.
+    pub fn get_dec_point_pos(&self) -> u32 {
+        // SAFETY: handle non-null (checked in new()).
+        unsafe { lv_spinbox_get_dec_point_pos(self.lv_handle()) }
+    }
+
+    /// Get the minimum allowed value.
+    pub fn get_min_value(&self) -> i32 {
+        // SAFETY: handle non-null (checked in new()).
+        unsafe { lv_spinbox_get_min_value(self.lv_handle()) }
+    }
+
+    /// Get the maximum allowed value.
+    pub fn get_max_value(&self) -> i32 {
+        // SAFETY: handle non-null (checked in new()).
+        unsafe { lv_spinbox_get_max_value(self.lv_handle()) }
+    }
 }

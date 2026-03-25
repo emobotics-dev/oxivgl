@@ -67,4 +67,16 @@ impl<'p> Led<'p> {
         unsafe { lv_led_set_color(self.obj.handle(), color) };
         self
     }
+
+    /// Get the LED brightness (0–255).
+    pub fn get_brightness(&self) -> u8 {
+        // SAFETY: handle non-null (constructor guarantees).
+        unsafe { lv_led_get_brightness(self.obj.handle()) }
+    }
+
+    /// Get the LED color.
+    pub fn get_color(&self) -> lv_color_t {
+        // SAFETY: handle non-null (constructor guarantees).
+        unsafe { lv_led_get_color(self.obj.handle()) }
+    }
 }

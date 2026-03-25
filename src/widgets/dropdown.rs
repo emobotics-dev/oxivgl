@@ -127,6 +127,30 @@ impl<'p> Dropdown<'p> {
         self
     }
 
+    /// Get the number of options in the dropdown list.
+    pub fn get_option_count(&self) -> u32 {
+        assert_ne!(self.obj.handle(), null_mut(), "Dropdown handle cannot be null");
+        // SAFETY: handle non-null (asserted above).
+        unsafe { lv_dropdown_get_option_count(self.obj.handle()) }
+    }
+
+    /// Get whether the selected item is highlighted in the list.
+    pub fn get_selected_highlight(&self) -> bool {
+        assert_ne!(self.obj.handle(), null_mut(), "Dropdown handle cannot be null");
+        // SAFETY: handle non-null (asserted above).
+        unsafe { lv_dropdown_get_selected_highlight(self.obj.handle()) }
+    }
+
+    /// Get the open direction as raw `u32`.
+    ///
+    /// Returns the raw `lv_dir_t` value because `lv_dir_t` includes combined
+    /// direction values (HOR, VER, ALL) not covered by [`DdDir`].
+    pub fn get_dir(&self) -> u32 {
+        assert_ne!(self.obj.handle(), null_mut(), "Dropdown handle cannot be null");
+        // SAFETY: handle non-null (asserted above).
+        unsafe { lv_dropdown_get_dir(self.obj.handle()) }
+    }
+
     /// Get the currently selected item index.
     pub fn get_selected(&self) -> u32 {
         assert_ne!(self.obj.handle(), null_mut(), "Dropdown handle cannot be null");
