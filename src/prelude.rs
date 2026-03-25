@@ -10,7 +10,7 @@
 pub use crate::anim::{
     ANIM_REPEAT_INFINITE, ANIM_TIMELINE_PROGRESS_MAX, Anim, AnimTimeline, anim_path_bounce, anim_path_ease_in,
     anim_path_ease_in_out, anim_path_ease_out, anim_path_linear, anim_path_overshoot, anim_set_arc_value,
-    anim_set_bar_value, anim_set_height, anim_set_pad_column, anim_set_pad_row, anim_set_size, anim_set_slider_value,
+    anim_set_bar_value, anim_set_height, anim_set_pad_column, anim_set_pad_row, anim_set_scale_rotation, anim_set_size, anim_set_slider_value,
     anim_set_width, anim_set_x, anim_set_y,
 };
 // Draw primitives (needed in DRAW_TASK_ADDED / DRAW_MAIN_END handlers)
@@ -40,7 +40,7 @@ pub use crate::symbols::Symbol;
 pub use crate::timer::Timer;
 // Widgets
 pub use crate::widgets::{
-    Align, AnimImg, Arc, ArcMode, AsLvHandle, Bar, BarMode, BaseDir, Button, Buttonmatrix, ButtonmatrixMap, Calendar,
+    Align, AnimImg, Arc, ArcLabel, ArcLabelDir, ArcMode, AsLvHandle, Bar, BarMode, BaseDir, Button, Buttonmatrix, ButtonmatrixMap, Calendar,
     CalendarDate, Chart, ChartAxis,
     ChartSeries, ChartType, Checkbox, Child, DdDir, Dropdown, Image, ImageAlign, Imagebutton, ImagebuttonState,
     Keyboard, KeyboardMode, Label,

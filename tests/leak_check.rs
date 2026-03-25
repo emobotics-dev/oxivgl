@@ -187,7 +187,7 @@ use oxivgl::{
     },
     enums::{ObjState, ScrollDir},
     widgets::{
-        AnimImg, Arc, Bar, BarMode, Button, Buttonmatrix, Calendar, CalendarDate, Canvas, Chart,
+        AnimImg, Arc, ArcLabel, Bar, BarMode, Button, Buttonmatrix, Calendar, CalendarDate, Canvas, Chart,
         ChartAxis, ChartType, Checkbox, Dropdown, Imagebutton, ImagebuttonState, Keyboard,
         KeyboardMode, Label, Led, Line, Menu, Msgbox, Obj, Part, Roller, RollerMode, Slider,
         Spangroup, Spinbox, Spinner, Switch, Table, Tabview, Textarea, Tileview, ValueLabel, Win,
@@ -674,6 +674,25 @@ fn leak_tileview() {
     }));
 }
 
+// ── Translation ──────────────────────────────────────────────────────────────
+
+use oxivgl::translation::{self, StaticCStr as S};
+
+static LEAK_TRANS_LANGS: [S; 3] = [S::from_cstr(c"en"), S::from_cstr(c"de"), S::NULL];
+static LEAK_TRANS_TAGS: [S; 2] = [S::from_cstr(c"hello"), S::NULL];
+static LEAK_TRANS_VALUES: [S; 2] = [S::from_cstr(c"Hello"), S::from_cstr(c"Hallo")];
+
+#[test]
+fn leak_translation() {
+    run_isolated("Translation", || {
+        measure_rust(|| {
+            translation::add_static(&LEAK_TRANS_LANGS, &LEAK_TRANS_TAGS, &LEAK_TRANS_VALUES);
+            translation::set_language(c"en");
+            translation::set_language(c"de");
+        })
+    });
+}
+
 // ── AnimImg ──────────────────────────────────────────────────────────────────
 
 #[repr(transparent)]
@@ -706,5 +725,40 @@ fn leak_animimg() {
         let a = AnimImg::new(s).unwrap();
         a.set_src(animimg_frame_ptrs()).set_duration(500).set_repeat_count(1).start();
         drop(a);
+    }));
+}
+
+#[test]
+fn leak_scale_rotation_anim() {
+    run_isolated("Scale+rotation anim", || measure_widget(|s| {
+        use oxivgl::anim::{anim_set_scale_rotation, Anim};
+        use oxivgl::widgets::{Scale, ScaleMode};
+        let scale = Scale::new(s).unwrap();
+        scale.set_mode(ScaleMode::RoundInner)
+            .set_range(0, 360)
+            .set_total_tick_count(9)
+            .set_major_tick_every(1)
+            .set_angle_range(360)
+            .set_rotation(0);
+        scale.size(100, 100);
+        let mut a = Anim::new();
+        a.set_var(&scale)
+            .set_values(0, 360)
+            .set_duration(500)
+            .set_exec_cb(Some(anim_set_scale_rotation));
+        let _h = a.start();
+        pump_child();
+        drop(scale);
+        pump_child();
+    }));
+}
+
+#[test]
+fn leak_arclabel() {
+    run_isolated("ArcLabel", || measure_widget(|s| {
+        let al = ArcLabel::new(s).unwrap();
+        al.set_text_static(c"Leak test");
+        al.set_radius(40);
+        drop(al);
     }));
 }
