@@ -22,6 +22,18 @@ pub enum BarMode {
     Range = lvgl_rust_sys::lv_bar_mode_t_LV_BAR_MODE_RANGE,
 }
 
+/// Bar widget orientation.
+#[repr(u32)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum BarOrientation {
+    /// Automatic based on dimensions.
+    Auto = lv_bar_orientation_t_LV_BAR_ORIENTATION_AUTO,
+    /// Force horizontal.
+    Horizontal = lv_bar_orientation_t_LV_BAR_ORIENTATION_HORIZONTAL,
+    /// Force vertical.
+    Vertical = lv_bar_orientation_t_LV_BAR_ORIENTATION_VERTICAL,
+}
+
 /// LVGL bar (progress bar) widget with normalized f32 value API.
 ///
 /// Call [`set_range`](Bar::set_range) to set the physical maximum, then
@@ -155,6 +167,24 @@ impl<'p> Bar<'p> {
         // SAFETY: handle non-null (asserted above).
         // lv_bar_mode_t values 0–2 are all covered by BarMode.
         unsafe { core::mem::transmute(lv_bar_get_mode(self.obj.handle())) }
+    }
+
+    /// Set the bar orientation.
+    pub fn set_orientation(&self, orientation: BarOrientation) -> &Self {
+        // SAFETY: lv_handle() is non-null (checked in new()).
+        unsafe { lv_bar_set_orientation(self.lv_handle(), orientation as lv_bar_orientation_t) };
+        self
+    }
+
+    /// Get the bar orientation.
+    pub fn get_orientation(&self) -> BarOrientation {
+        // SAFETY: lv_handle() is non-null (checked in new()).
+        let raw = unsafe { lv_bar_get_orientation(self.lv_handle()) };
+        match raw {
+            x if x == lv_bar_orientation_t_LV_BAR_ORIENTATION_HORIZONTAL => BarOrientation::Horizontal,
+            x if x == lv_bar_orientation_t_LV_BAR_ORIENTATION_VERTICAL => BarOrientation::Vertical,
+            _ => BarOrientation::Auto,
+        }
     }
 
     /// Get current value in physical units.
