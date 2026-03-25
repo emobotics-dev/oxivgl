@@ -30,6 +30,18 @@ impl<'p> Deref for Slider<'p> {
     }
 }
 
+/// Slider widget orientation.
+#[repr(u32)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum SliderOrientation {
+    /// Automatic based on dimensions.
+    Auto = lv_slider_orientation_t_LV_SLIDER_ORIENTATION_AUTO,
+    /// Force horizontal.
+    Horizontal = lv_slider_orientation_t_LV_SLIDER_ORIENTATION_HORIZONTAL,
+    /// Force vertical.
+    Vertical = lv_slider_orientation_t_LV_SLIDER_ORIENTATION_VERTICAL,
+}
+
 /// Slider operating mode.
 #[repr(u32)]
 #[derive(Clone, Copy, Debug)]
@@ -118,6 +130,24 @@ impl<'p> Slider<'p> {
             x if x == lv_slider_mode_t_LV_SLIDER_MODE_SYMMETRICAL => SliderMode::Symmetrical,
             x if x == lv_slider_mode_t_LV_SLIDER_MODE_RANGE => SliderMode::Range,
             _ => SliderMode::Normal,
+        }
+    }
+
+    /// Set the slider orientation.
+    pub fn set_orientation(&self, orientation: SliderOrientation) -> &Self {
+        // SAFETY: lv_handle() is non-null (checked in new()).
+        unsafe { lv_slider_set_orientation(self.lv_handle(), orientation as lv_slider_orientation_t) };
+        self
+    }
+
+    /// Get the slider orientation.
+    pub fn get_orientation(&self) -> SliderOrientation {
+        // SAFETY: lv_handle() is non-null (checked in new()).
+        let raw = unsafe { lv_slider_get_orientation(self.lv_handle()) };
+        match raw {
+            x if x == lv_slider_orientation_t_LV_SLIDER_ORIENTATION_HORIZONTAL => SliderOrientation::Horizontal,
+            x if x == lv_slider_orientation_t_LV_SLIDER_ORIENTATION_VERTICAL => SliderOrientation::Vertical,
+            _ => SliderOrientation::Auto,
         }
     }
 
