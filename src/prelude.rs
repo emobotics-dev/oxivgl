@@ -16,7 +16,7 @@ pub use crate::anim::{
 // Draw primitives (needed in DRAW_TASK_ADDED / DRAW_MAIN_END handlers)
 pub use crate::draw::{
     DrawArcDsc, DrawFillDsc, DrawImageDsc, DrawLabelDsc, DrawLabelDscOwned, DrawLetterDsc, DrawLineDsc, DrawRectDsc,
-    DrawTask, DrawTriangleDsc, Layer,
+    DrawTask, DrawTriangleDsc, Layer, image_header_info,
 };
 // Canvas
 pub use crate::draw_buf::{ColorFormat, DrawBuf, ImageDsc};
