@@ -64,7 +64,7 @@ pub use button::Button;
 pub use calendar::{Calendar, CalendarDate};
 pub use buttonmatrix::{Buttonmatrix, ButtonmatrixCtrl, ButtonmatrixMap};
 pub use canvas::{Canvas, CanvasLayer};
-pub use chart::{Chart, ChartAxis, ChartSeries, ChartType};
+pub use chart::{Chart, ChartAxis, ChartCursor, ChartSeries, ChartType, ChartUpdateMode, CHART_POINT_NONE};
 pub use checkbox::Checkbox;
 pub use child::Child;
 pub use dropdown::{DdDir, Dropdown};

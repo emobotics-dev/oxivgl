@@ -187,6 +187,30 @@ impl<'p> Buttonmatrix<'p> {
         self
     }
 
+    /// Set control flags on all buttons.
+    pub fn set_button_ctrl_all(&self, ctrl: ButtonmatrixCtrl) -> &Self {
+        assert_ne!(self.obj.handle(), null_mut(), "Buttonmatrix handle cannot be null");
+        // SAFETY: handle non-null (asserted above).
+        unsafe { lv_buttonmatrix_set_button_ctrl_all(self.obj.handle(), ctrl.0) };
+        self
+    }
+
+    /// Clear control flags from all buttons.
+    pub fn clear_button_ctrl_all(&self, ctrl: ButtonmatrixCtrl) -> &Self {
+        assert_ne!(self.obj.handle(), null_mut(), "Buttonmatrix handle cannot be null");
+        // SAFETY: handle non-null (asserted above).
+        unsafe { lv_buttonmatrix_clear_button_ctrl_all(self.obj.handle(), ctrl.0) };
+        self
+    }
+
+    /// Enable one-checked mode (only one button can be checked at a time).
+    pub fn set_one_checked(&self, en: bool) -> &Self {
+        assert_ne!(self.obj.handle(), null_mut(), "Buttonmatrix handle cannot be null");
+        // SAFETY: handle non-null (asserted above).
+        unsafe { lv_buttonmatrix_set_one_checked(self.obj.handle(), en) };
+        self
+    }
+
     /// Check if a button has a specific control flag.
     pub fn has_button_ctrl(&self, btn_id: u32, ctrl: ButtonmatrixCtrl) -> bool {
         assert_ne!(self.obj.handle(), null_mut(), "Buttonmatrix handle cannot be null");

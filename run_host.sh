@@ -70,6 +70,8 @@ ALL_EXAMPLES=(
     widget_chart{1,2,3}
     widget_buttonmatrix1
     widget_keyboard{1,2}
+    widget_chart{6,7,8}
+    widget_buttonmatrix3
 )
 
 run_example() {
