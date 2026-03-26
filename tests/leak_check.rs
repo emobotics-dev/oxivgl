@@ -177,6 +177,7 @@ fn measure_rust(f: impl Fn()) -> isize {
 
 // ── Imports for test closures ────────────────────────────────────────────────
 
+use oxivgl::snapshot::Snapshot;
 use oxivgl::{
     anim::anim_path_linear,
     draw::{Area, DrawRectDsc},
@@ -850,5 +851,36 @@ fn leak_subject_bind_text_map() {
         subject.set_int(1);
         drop(label);
         drop(subject);
+    }));
+}
+
+// ── Snapshot leak tests ───────────────────────────────────────────────────────
+
+#[test]
+fn leak_snapshot() {
+    run_isolated("Snapshot", || measure_widget(|s| {
+        let obj = Obj::new(s).unwrap();
+        obj.size(100, 100).center().bg_color(0xff0000).bg_opa(255);
+        let _snap = Snapshot::take_widget(&obj).expect("snapshot allocation");
+        pump_child();
+        drop(_snap);
+        drop(obj);
+    }));
+}
+
+#[test]
+fn leak_snapshot_with_image() {
+    run_isolated("Snapshot+Image", || measure_widget(|s| {
+        use oxivgl::widgets::Image;
+        let obj = Obj::new(s).unwrap();
+        obj.size(100, 100).center().bg_color(0xff0000).bg_opa(255);
+        let snap = Snapshot::take_widget(&obj).expect("snapshot allocation");
+        let img = Image::new(s).unwrap();
+        img.set_src_snapshot(&snap);
+        pump_child();
+        // img drops before snap — correct order
+        drop(img);
+        drop(snap);
+        drop(obj);
     }));
 }
