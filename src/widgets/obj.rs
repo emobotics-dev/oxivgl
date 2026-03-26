@@ -223,7 +223,7 @@ impl<'p> Drop for Obj<'p> {
     fn drop(&mut self) {
         // SAFETY: handle non-null; lv_obj_is_valid returns false for already-deleted
         // objects (parent cascade), making this a safe no-op in that case.
-        // lv_obj_delete (LVGL v9.3+, lv_obj.c) calls lv_obj_remove_style_all
+        // lv_obj_delete (LVGL v9.5, lv_obj.c) calls lv_obj_remove_style_all
         // and lv_anim_delete(obj, NULL) internally,
         // so all style and animation back-references are cleared before Rust
         // drops _styles and any live Anim.
