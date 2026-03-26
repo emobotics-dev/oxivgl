@@ -190,7 +190,7 @@ use oxivgl::{
         AnimImg, Arc, ArcLabel, Bar, BarMode, Button, Buttonmatrix, Calendar, CalendarDate, Canvas, Chart,
         ChartAxis, ChartType, Checkbox, Dropdown, Imagebutton, ImagebuttonState, Keyboard,
         KeyboardMode, Label, Led, Line, Menu, Msgbox, Obj, Part, Roller, RollerMode, Slider,
-        Spangroup, Spinbox, Spinner, Switch, Table, Tabview, Textarea, Tileview, ValueLabel, Win,
+        Spangroup, Spinbox, Spinner, Subject, Switch, Table, Tabview, Textarea, Tileview, ValueLabel, Win,
         lv_color_t,
     },
 };
@@ -760,5 +760,47 @@ fn leak_arclabel() {
         al.set_text_static(c"Leak test");
         al.set_radius(40);
         drop(al);
+    }));
+}
+
+// ── Subject leak tests ────────────────────────────────────────────────────────
+
+#[test]
+fn leak_subject_int() {
+    run_isolated("Subject::new_int", || {
+        measure_rust(|| {
+            let subject = Subject::new_int(42);
+            drop(subject);
+        })
+    });
+}
+
+#[test]
+fn leak_subject_group() {
+    run_isolated("Subject group (3 int + 1 group)", || {
+        measure_rust(|| {
+            let s0 = Subject::new_int(1);
+            let s1 = Subject::new_int(2);
+            let s2 = Subject::new_int(3);
+            let group = Subject::new_group(&[&s0, &s1, &s2]);
+            drop(group);
+            drop(s2);
+            drop(s1);
+            drop(s0);
+        })
+    });
+}
+
+#[test]
+fn leak_subject_with_bound_widgets() {
+    run_isolated("Subject + bound Slider + Label", || measure_widget(|s| {
+        let subject = Subject::new_int(50);
+        let slider = Slider::new(s).unwrap();
+        slider.bind_value(&subject);
+        let label = Label::new(s).unwrap();
+        label.bind_text(&subject, c"%d");
+        drop(label);
+        drop(slider);
+        drop(subject);
     }));
 }
