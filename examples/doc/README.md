@@ -47,6 +47,7 @@ runner (`example_main!` macro selects host SDL2 or ESP32 fire27 backend).
 - [Widgets — Lottie](#widgets--lottie-abandoned)
 - [Widgets — Spinbox](#widgets--spinbox)
 - [Widgets — Spinner](#widgets--spinner)
+- [Observer](#observer)
 - [Implementation Coverage](#implementation-coverage)
 - [Running](#running)
 
@@ -1261,6 +1262,16 @@ Left-positioned tab bar (width 80 px). Four content tabs with plain text.
 Active tab set programmatically to the second tab on startup.
 
 ![tabview_2](screenshots/tabview_2.png)
+
+## Observer
+
+### observer1 — Slider bound to a temperature label
+
+Integer subject initialised to 28. Slider centered on screen; label 30 px
+below center shows the current value formatted as `"%d °C"`. Moving the
+slider updates both the subject and the label automatically.
+
+![observer1](screenshots/observer1.png)
 
 ## Implementation Coverage
 

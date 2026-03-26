@@ -5,8 +5,9 @@ use core::{ffi::c_char, ops::Deref, ptr::null_mut};
 use lvgl_rust_sys::*;
 
 use super::{
-    WidgetError,
     obj::{AsLvHandle, Obj},
+    subject::Subject,
+    WidgetError,
 };
 
 /// LVGL roller (scroll-wheel picker) widget.
@@ -58,23 +59,43 @@ impl<'p> Roller<'p> {
         // SAFETY: parent_ptr non-null (asserted above); lv_init() called via
         // LvglDriver.
         let handle = unsafe { lv_roller_create(parent_ptr) };
-        if handle.is_null() { Err(WidgetError::LvglNullPointer) } else { Ok(Roller { obj: Obj::from_raw(handle) }) }
+        if handle.is_null() {
+            Err(WidgetError::LvglNullPointer)
+        } else {
+            Ok(Roller {
+                obj: Obj::from_raw(handle),
+            })
+        }
     }
 
     /// Set roller options as newline-separated string.
     pub fn set_options(&self, opts: &str, mode: RollerMode) -> &Self {
-        assert_ne!(self.obj.handle(), null_mut(), "Roller handle cannot be null");
+        assert_ne!(
+            self.obj.handle(),
+            null_mut(),
+            "Roller handle cannot be null"
+        );
         let mut buf = Vec::with_capacity(opts.len() + 1);
         buf.extend_from_slice(opts.as_bytes());
         buf.push(0);
         // SAFETY: handle non-null; buf NUL-terminated. LVGL copies internally.
-        unsafe { lv_roller_set_options(self.obj.handle(), buf.as_ptr() as *const c_char, mode as u32) };
+        unsafe {
+            lv_roller_set_options(
+                self.obj.handle(),
+                buf.as_ptr() as *const c_char,
+                mode as u32,
+            )
+        };
         self
     }
 
     /// Set the number of visible rows.
     pub fn set_visible_row_count(&self, rows: u32) -> &Self {
-        assert_ne!(self.obj.handle(), null_mut(), "Roller handle cannot be null");
+        assert_ne!(
+            self.obj.handle(),
+            null_mut(),
+            "Roller handle cannot be null"
+        );
         // SAFETY: handle non-null (asserted above).
         unsafe { lv_roller_set_visible_row_count(self.obj.handle(), rows) };
         self
@@ -82,7 +103,11 @@ impl<'p> Roller<'p> {
 
     /// Set the selected item (0-based index).
     pub fn set_selected(&self, idx: u32, anim: bool) -> &Self {
-        assert_ne!(self.obj.handle(), null_mut(), "Roller handle cannot be null");
+        assert_ne!(
+            self.obj.handle(),
+            null_mut(),
+            "Roller handle cannot be null"
+        );
         // SAFETY: handle non-null (asserted above).
         unsafe { lv_roller_set_selected(self.obj.handle(), idx, anim) };
         self
@@ -90,7 +115,11 @@ impl<'p> Roller<'p> {
 
     /// Get the currently selected item index.
     pub fn get_selected(&self) -> u32 {
-        assert_ne!(self.obj.handle(), null_mut(), "Roller handle cannot be null");
+        assert_ne!(
+            self.obj.handle(),
+            null_mut(),
+            "Roller handle cannot be null"
+        );
         // SAFETY: handle non-null (asserted above).
         unsafe { lv_roller_get_selected(self.obj.handle()) }
     }
@@ -99,6 +128,16 @@ impl<'p> Roller<'p> {
     pub fn get_option_count(&self) -> u32 {
         // SAFETY: handle non-null (checked in new()).
         unsafe { lv_roller_get_option_count(self.lv_handle()) }
+    }
+
+    /// Bind roller selected index to an integer subject (two-way).
+    ///
+    /// Roller changes update the subject and subject changes update the roller.
+    pub fn bind_value(&self, subject: &Subject) -> &Self {
+        // SAFETY: lv_handle() is non-null (checked in new()); subject pointer
+        // is pinned and valid for the subject's lifetime.
+        unsafe { lv_roller_bind_value(self.lv_handle(), subject.as_ptr()) };
+        self
     }
 
     /// Copy the selected option text into `buf`. Returns `None` if `buf` is

@@ -5,8 +5,9 @@ use core::{ffi::c_char, ops::Deref, ptr::null_mut};
 use lvgl_rust_sys::*;
 
 use super::{
-    WidgetError,
     obj::{AsLvHandle, Obj},
+    subject::Subject,
+    WidgetError,
 };
 
 /// LVGL text label widget.
@@ -46,7 +47,13 @@ impl<'p> Label<'p> {
         // SAFETY: parent_ptr non-null (asserted above); lv_init() called via
         // LvglDriver.
         let handle = unsafe { lv_label_create(parent_ptr) };
-        if handle.is_null() { Err(WidgetError::LvglNullPointer) } else { Ok(Label { obj: Obj::from_raw(handle) }) }
+        if handle.is_null() {
+            Err(WidgetError::LvglNullPointer)
+        } else {
+            Ok(Label {
+                obj: Obj::from_raw(handle),
+            })
+        }
     }
 
     /// Set label text. Accepts any `&str` (no NUL terminator required).
@@ -122,6 +129,19 @@ impl<'p> Label<'p> {
         assert_ne!(self.obj.handle(), null_mut(), "Label handle cannot be null");
         // SAFETY: handle non-null (asserted above).
         unsafe { lv_label_get_text_selection_start(self.obj.handle()) }
+    }
+
+    /// Bind label text to a subject with a printf-style format.
+    ///
+    /// The format string must be `'static` because LVGL stores the pointer
+    /// internally for the lifetime of the binding (spec §12.4).
+    ///
+    /// Use a `c"..."` literal: `label.bind_text(&subject, c"%d °C")`.
+    pub fn bind_text(&self, subject: &Subject, fmt: &'static core::ffi::CStr) -> &Self {
+        // SAFETY: lv_handle() non-null (checked in new()); subject is pinned;
+        // fmt is 'static so the pointer remains valid while LVGL holds it.
+        unsafe { lv_label_bind_text(self.lv_handle(), subject.as_ptr(), fmt.as_ptr()) };
+        self
     }
 }
 
