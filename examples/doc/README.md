@@ -48,6 +48,8 @@ runner (`example_main!` macro selects host SDL2 or ESP32 fire27 backend).
 - [Widgets — Spinbox](#widgets--spinbox)
 - [Widgets — Spinner](#widgets--spinner)
 - [Observer](#observer)
+- [Gradients](#gradients)
+- [Snapshot](#snapshot)
 - [Implementation Coverage](#implementation-coverage)
 - [Running](#running)
 
@@ -1309,6 +1311,40 @@ These examples require infrastructure not yet wrapped:
 | observer5 — Firmware update state machine | Raw timer callbacks, `lv_obj_clean` in observer, Win content rebuilds |
 | observer6 — Light/dark theme switching | Raw style mutation, `lv_obj_report_style_change`, leaked style structs |
 
+## Gradients
+
+### grad_1 — Horizontal gradient with adjustable stop positions
+
+Horizontal gradient with adjustable stop positions.
+
+![grad_1](screenshots/grad_1.png)
+
+### grad_2 — Linear gradient with arbitrary start/end points
+
+Linear gradient with arbitrary start/end points.
+
+![grad_2](screenshots/grad_2.png)
+
+### grad_3 — Radial gradient with focal point
+
+Radial gradient with focal point.
+
+![grad_3](screenshots/grad_3.png)
+
+### grad_4 — Conical gradient
+
+Conical gradient.
+
+![grad_4](screenshots/grad_4.png)
+
+## Snapshot
+
+### snapshot_1 — Capture and display a rotated/scaled widget snapshot
+
+Capture and display a rotated/scaled widget snapshot.
+
+![snapshot_1](screenshots/snapshot_1.png)
+
 ## Implementation Coverage
 
 Status of all [LVGL 9.5 examples](https://docs.lvgl.io/9.5/examples.html) in oxivgl.
@@ -1327,6 +1363,8 @@ Status of all [LVGL 9.5 examples](https://docs.lvgl.io/9.5/examples.html) in oxi
 | Grid | 6 | 6 | 0 | |
 | Scroll | 9 | 9 | 0 | |
 | Observer | 6 | 3 | 3 | observer4/5/6 blocked: animation/timer/style infrastructure not yet wrapped |
+| Gradients | 4 | 4 | 0 | |
+| Snapshot | 1 | 1 | 0 | |
 
 ### Widget Examples (wrapper exists)
 
@@ -1379,7 +1417,7 @@ Status of all [LVGL 9.5 examples](https://docs.lvgl.io/9.5/examples.html) in oxi
 | | Count |
 |---|---|
 | LVGL examples total | ~193 |
-| oxivgl done | 166 |
+| oxivgl done | 171 |
 | Verified on ESP32 (fire27) | 148/160 |
 | Skipped (intentional) | 1 |
 | New in v9.5 (not ported) | 2 |
