@@ -4,9 +4,9 @@ use core::{cell::Cell, ops::Deref, ptr::null_mut};
 use lvgl_rust_sys::*;
 
 use super::{
-    LVGL_SCALE, WidgetError,
     obj::{Align, AsLvHandle, Obj},
-    to_lvgl,
+    subject::Subject,
+    to_lvgl, WidgetError, LVGL_SCALE,
 };
 
 /// Arc operating mode.
@@ -67,7 +67,10 @@ impl<'p> Arc<'p> {
         if handle.is_null() {
             Err(WidgetError::LvglNullPointer)
         } else {
-            Ok(Arc { obj: Obj::from_raw(handle), max: Cell::new(0.0) })
+            Ok(Arc {
+                obj: Obj::from_raw(handle),
+                max: Cell::new(0.0),
+            })
         }
     }
 
@@ -217,6 +220,16 @@ impl<'p> Arc<'p> {
         self
     }
 
+    /// Bind arc value to an integer subject (two-way).
+    ///
+    /// Arc changes update the subject and subject changes update the arc.
+    pub fn bind_value(&self, subject: &Subject) -> &Self {
+        // SAFETY: lv_handle() is non-null (checked in new()); subject pointer
+        // is pinned and valid for the subject's lifetime.
+        unsafe { lv_arc_bind_value(self.lv_handle(), subject.as_ptr()) };
+        self
+    }
+
     /// Create an arc pre-configured as a display-only gauge ring (no knob, not
     /// clickable).
     ///
@@ -254,10 +267,18 @@ impl<'p> Arc<'p> {
             lv_obj_set_style_arc_color(h, lv_color_hex(track_color), lv_part_t_LV_PART_MAIN as u32);
             // Indicator
             lv_obj_set_style_arc_width(h, arc_width, lv_part_t_LV_PART_INDICATOR as u32);
-            lv_obj_set_style_arc_color(h, lv_color_hex(indicator_color), lv_part_t_LV_PART_INDICATOR as u32);
+            lv_obj_set_style_arc_color(
+                h,
+                lv_color_hex(indicator_color),
+                lv_part_t_LV_PART_INDICATOR as u32,
+            );
             // Hide knob
             lv_obj_set_style_pad_all(h, 0, lv_part_t_LV_PART_KNOB as u32);
-            lv_obj_set_style_opa(h, crate::enums::Opa::TRANSP.0 as lv_opa_t, lv_part_t_LV_PART_KNOB as u32);
+            lv_obj_set_style_opa(
+                h,
+                crate::enums::Opa::TRANSP.0 as lv_opa_t,
+                lv_part_t_LV_PART_KNOB as u32,
+            );
             // Not interactive
             lv_obj_remove_flag(h, crate::enums::ObjFlag::CLICKABLE.0);
         }
