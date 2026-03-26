@@ -86,6 +86,22 @@ LIBCLANG_PATH=/usr/lib64 RUSTDOCFLAGS="-W missing-docs" cargo +nightly doc --tar
 - **Example porting**: `docs/spec-example-porting.md` — how to translate LVGL C examples.
 - **Git workflow**: `docs/spec-git-workflow.md` — branching, commits, PRs, CI.
 
+## Hard Rules for Examples
+
+Examples are the public face of the library. Every example file (`examples/*.rs`)
+MUST satisfy these invariants — **no exceptions**:
+
+- **Zero `unsafe`** — not a single `unsafe` block or `unsafe fn`
+- **Zero `use lvgl_rust_sys`** — no direct FFI imports
+- **Zero working around missing wrappers** — if a wrapper is needed, add it to `src/`
+
+If an LVGL concept cannot be demonstrated without violating these rules, **simplify
+the example** (note what was simplified) or **defer it** (list as blocked in the
+coverage table). See `spec-example-porting.md` §2 and §6.
+
+CI enforces this with `grep` — a PR that introduces `unsafe` or `lvgl_rust_sys` in
+any example file will fail.
+
 ## Key Constraints
 
 - LVGL must run on a **single task** — no concurrent calls from other tasks/interrupts.
