@@ -22,8 +22,8 @@ use oxivgl::{
         Align, AnimImg, Arc, ArcLabel, ArcLabelDir, AsLvHandle, Bar, Button, Buttonmatrix, ButtonmatrixCtrl, ButtonmatrixMap,
         Calendar, CalendarDate, Canvas, Chart, ChartAxis, ChartCursor, ChartSeries, ChartType, ChartUpdateMode, CHART_POINT_NONE,
         Checkbox, Dropdown, Image, Imagebutton, ImagebuttonState, Keyboard, KeyboardMode, Label, Led, Line, Menu, MenuHeaderMode, Msgbox,
-        BarOrientation, Obj, Part, Roller, RollerMode, Screen, Slider, SliderOrientation, Spinbox, Spinner, Switch, Table, TableCellCtrl, Tabview,
-        Spangroup, SpanMode, SpanOverflow, Textarea, Tileview, ValueLabel, WidgetError, Win, RADIUS_MAX,
+        BarOrientation, Obj, Part, Roller, RollerMode, Screen, Slider, SliderOrientation, Spinbox, Spinner, Subject, Switch,
+        Table, TableCellCtrl, Tabview, Spangroup, SpanMode, SpanOverflow, Textarea, Tileview, ValueLabel, WidgetError, Win, RADIUS_MAX,
     },
 };
 
@@ -5553,4 +5553,88 @@ fn obj_get_state() {
     pump();
     let state = obj.get_state();
     assert_eq!(state.0 & ObjState::CHECKED.0, ObjState::CHECKED.0);
+}
+
+// ── Subject / observer ───────────────────────────────────────────────────────
+
+#[test]
+fn subject_int_create_get_set() {
+    let _screen = fresh_screen();
+    let subject = Subject::new_int(28);
+    assert_eq!(subject.get_int(), 28);
+    subject.set_int(42);
+    assert_eq!(subject.get_int(), 42);
+}
+
+#[test]
+fn subject_int_previous_value() {
+    let _screen = fresh_screen();
+    let subject = Subject::new_int(10);
+    subject.set_int(20);
+    assert_eq!(subject.get_int(), 20);
+    assert_eq!(subject.get_previous_int(), 10);
+}
+
+#[test]
+fn subject_int_drop_safe() {
+    let _screen = fresh_screen();
+    let subject = Subject::new_int(5);
+    subject.set_int(99);
+    drop(subject); // lv_subject_deinit must not crash
+    pump();
+}
+
+#[test]
+fn slider_bind_value() {
+    let screen = fresh_screen();
+    let subject = Subject::new_int(50);
+    let slider = Slider::new(&screen).unwrap();
+    slider.bind_value(&subject);
+    pump();
+    // Subject drives slider: value should reflect the subject's initial value.
+    assert_eq!(subject.get_int(), 50);
+}
+
+#[test]
+fn label_bind_text() {
+    let screen = fresh_screen();
+    let subject = Subject::new_int(28);
+    let label = Label::new(&screen).unwrap();
+    label.bind_text(&subject, c"%d C");
+    pump();
+    // No crash = binding established successfully.
+    assert_eq!(subject.get_int(), 28);
+}
+
+#[test]
+fn arc_bind_value() {
+    let screen = fresh_screen();
+    let subject = Subject::new_int(30);
+    let arc = Arc::new(&screen).unwrap();
+    arc.set_range_raw(0, 100);
+    arc.bind_value(&subject);
+    pump();
+    assert_eq!(subject.get_int(), 30);
+}
+
+#[test]
+fn roller_bind_value() {
+    let screen = fresh_screen();
+    let subject = Subject::new_int(1);
+    let roller = Roller::new(&screen).unwrap();
+    roller.set_options("A\nB\nC", RollerMode::Normal);
+    roller.bind_value(&subject);
+    pump();
+    assert_eq!(subject.get_int(), 1);
+}
+
+#[test]
+fn dropdown_bind_value() {
+    let screen = fresh_screen();
+    let subject = Subject::new_int(2);
+    let dd = Dropdown::new(&screen).unwrap();
+    dd.set_options("X\nY\nZ");
+    dd.bind_value(&subject);
+    pump();
+    assert_eq!(subject.get_int(), 2);
 }

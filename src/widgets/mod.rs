@@ -46,6 +46,7 @@ mod scale;
 mod screen;
 mod slider;
 mod span;
+mod subject;
 mod spinbox;
 mod spinner;
 mod switch;
@@ -87,6 +88,7 @@ pub use scale::{
 };
 pub use screen::Screen;
 pub use slider::{Slider, SliderMode, SliderOrientation};
+pub use subject::Subject;
 pub use span::{Span, SpanMode, SpanOverflow, Spangroup};
 pub use spinbox::Spinbox;
 pub use spinner::Spinner;
