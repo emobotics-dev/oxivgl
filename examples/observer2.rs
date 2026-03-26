@@ -21,7 +21,7 @@ use oxivgl::{
     event::Event,
     view::{View, register_event_on},
     widgets::{
-        Align, Button, Keyboard, KeyboardMode, Label, Obj, Screen, Subject, Textarea, WidgetError,
+        Align, Button, Child, Keyboard, KeyboardMode, Label, Screen, Subject, Textarea, WidgetError,
         observer_get_target_obj, subject_get_int_raw,
     },
 };
@@ -64,7 +64,7 @@ struct Observer2 {
     _kb: Keyboard<'static>,
     btn_logout: Button<'static>,
     _info_label: Label<'static>,
-    _btn_engine: Obj<'static>,
+    _btn_engine: Button<'static>,
     // Subjects last — drop after widgets so observers are removed before deinit.
     _engine_subject: Subject,
     auth_state_subject: Subject,
@@ -96,7 +96,7 @@ impl View for Observer2 {
         // LOG OUT button — disabled when not logged in.
         let btn_logout = Button::new(&screen)?;
         btn_logout.size(120, 40).align(Align::TopLeft, 10, 70);
-        let lbl_logout = Label::new(&btn_logout)?;
+        let lbl_logout = Child::new(Label::new(&btn_logout)?);
         lbl_logout.text("LOG OUT").center();
         btn_logout.bind_state_if_not_eq(&auth_state_subject, ObjState::DISABLED, LOGGED_IN);
         btn_logout.bubble_events();
@@ -111,20 +111,17 @@ impl View for Observer2 {
         );
 
         // START ENGINE checkable button — two-way bound to engine_subject.
-        let btn_engine = Obj::new(&screen)?;
+        let btn_engine = Button::new(&screen)?;
         btn_engine
             .add_flag(ObjFlag::CHECKABLE)
             .size(160, 40)
             .align(Align::TopLeft, 10, 160);
-        let lbl_engine = Label::new(&btn_engine)?;
+        let lbl_engine = Child::new(Label::new(&btn_engine)?);
         lbl_engine.text("START ENGINE").center();
         btn_engine.bind_checked(&engine_subject);
 
         // App-level observer for engine state (no widget).
         engine_subject.add_observer(engine_state_observer_cb, core::ptr::null_mut());
-
-        drop(lbl_logout);
-        drop(lbl_engine);
 
         Ok(Self {
             ta,
