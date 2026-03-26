@@ -2,6 +2,7 @@
 //! LVGL observer [`Subject`] — an observable value that widgets can bind to.
 
 use alloc::boxed::Box;
+use alloc::vec::Vec;
 use core::{ffi::c_void, pin::Pin};
 
 use lvgl_rust_sys::*;
@@ -28,6 +29,11 @@ use super::obj::AsLvHandle;
 /// `Subject` is `!Send + !Sync` — LVGL must be driven from a single task.
 pub struct Subject {
     inner: Pin<Box<lv_subject_t>>,
+    /// Stable pointer array for group subjects; `None` for integer subjects.
+    ///
+    /// `lv_subject_init_group` stores a pointer into this array, so it must
+    /// stay pinned for the lifetime of the subject.
+    _group_ptrs: Option<Pin<Box<[*mut lv_subject_t]>>>,
 }
 
 impl core::fmt::Debug for Subject {
@@ -50,7 +56,36 @@ impl Subject {
                 Pin::as_mut(&mut inner).get_unchecked_mut() as *mut lv_subject_t;
             lv_subject_init_int(ptr, value);
         }
-        Self { inner }
+        Self {
+            inner,
+            _group_ptrs: None,
+        }
+    }
+
+    /// Create a group subject that notifies observers when any member changes.
+    ///
+    /// The group holds a stable pointer array referencing each member subject.
+    /// Member subjects must outlive the group subject.
+    pub fn new_group(members: &[&Subject]) -> Self {
+        let ptrs: Vec<*mut lv_subject_t> = members.iter().map(|s| s.as_ptr()).collect();
+        let mut pinned_ptrs: Pin<Box<[*mut lv_subject_t]>> = Pin::new(ptrs.into_boxed_slice());
+        // SAFETY: lv_subject_t is a POD C struct; zero-init is valid before init call.
+        let mut inner: Pin<Box<lv_subject_t>> = Box::pin(unsafe { core::mem::zeroed() });
+        // SAFETY: both `inner` and `pinned_ptrs` are pinned — addresses are stable.
+        // `lv_subject_init_group` stores the array pointer internally; the pinned
+        // Box keeps it valid for the lifetime of this Subject.
+        unsafe {
+            let group_ptr: *mut lv_subject_t =
+                Pin::as_mut(&mut inner).get_unchecked_mut() as *mut lv_subject_t;
+            let arr_ptr: *mut *mut lv_subject_t = Pin::as_mut(&mut pinned_ptrs)
+                .get_unchecked_mut()
+                .as_mut_ptr();
+            lv_subject_init_group(group_ptr, arr_ptr, members.len() as u32);
+        }
+        Self {
+            inner,
+            _group_ptrs: Some(pinned_ptrs),
+        }
     }
 
     /// Set the subject value and notify all bound observers.
@@ -96,6 +131,27 @@ impl Subject {
         self
     }
 
+    /// Manually notify all observers without changing the value.
+    ///
+    /// Useful to force observer callbacks to run, e.g. after external state
+    /// changes that did not go through [`set_int`](Self::set_int).
+    pub fn notify(&self) -> &Self {
+        // SAFETY: as_ptr() returns the pinned, non-null allocation.
+        unsafe { lv_subject_notify(self.as_ptr()) };
+        self
+    }
+
+    /// Raw pointer escape hatch for advanced LVGL interop.
+    ///
+    /// Returns a raw `*mut lv_subject_t` for passing to raw LVGL APIs that
+    /// are not yet wrapped (e.g. dynamic widget creation in event callbacks).
+    ///
+    /// The pointer is valid for the lifetime of this `Subject`.  Do not store
+    /// it beyond the subject's lifetime.
+    pub fn raw_ptr(&self) -> *mut lv_subject_t {
+        self.as_ptr()
+    }
+
     /// Return a raw mutable pointer to the underlying `lv_subject_t`.
     ///
     /// The pointer is valid for the lifetime of this `Subject`.  Callers must
@@ -139,4 +195,20 @@ pub unsafe fn observer_get_target_obj(observer: *mut lv_observer_t) -> *mut lv_o
 pub unsafe fn subject_get_int_raw(subject: *mut lv_subject_t) -> i32 {
     // SAFETY: caller guarantees subject is valid.
     unsafe { lv_subject_get_int(subject) }
+}
+
+/// Get a member subject pointer from a group subject by index.
+///
+/// For use inside observer callbacks when iterating over group members.
+///
+/// # Safety
+///
+/// `subject` must be a valid group subject pointer and `index` must be
+/// within the bounds of the group's member list.
+pub unsafe fn subject_get_group_element(
+    subject: *mut lv_subject_t,
+    index: i32,
+) -> *mut lv_subject_t {
+    // SAFETY: caller guarantees subject is a valid group and index is in bounds.
+    unsafe { lv_subject_get_group_element(subject, index) }
 }

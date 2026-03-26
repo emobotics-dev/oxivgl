@@ -24,6 +24,7 @@ use oxivgl::{
         Checkbox, Dropdown, Image, Imagebutton, ImagebuttonState, Keyboard, KeyboardMode, Label, Led, Line, Menu, MenuHeaderMode, Msgbox,
         BarOrientation, Obj, Part, Roller, RollerMode, Screen, Slider, SliderOrientation, Spinbox, Spinner, Subject, Switch,
         Table, TableCellCtrl, Tabview, Spangroup, SpanMode, SpanOverflow, Textarea, Tileview, ValueLabel, WidgetError, Win, RADIUS_MAX,
+        subject_get_group_element, subject_get_int_raw,
     },
 };
 use lvgl_rust_sys::{lv_observer_t, lv_subject_t};
@@ -5696,4 +5697,62 @@ fn obj_bind_checked() {
     subject.set_int(0);
     pump();
     assert!(!obj.has_state(ObjState::CHECKED));
+}
+
+#[test]
+fn subject_new_group() {
+    let _screen = fresh_screen();
+    let s0 = Subject::new_int(10);
+    let s1 = Subject::new_int(20);
+    let s2 = Subject::new_int(30);
+    let group = Subject::new_group(&[&s0, &s1, &s2]);
+    pump();
+    // Group subject drops cleanly (deinit must not crash).
+    drop(group);
+    drop(s2);
+    drop(s1);
+    drop(s0);
+}
+
+#[test]
+fn subject_notify() {
+    let _screen = fresh_screen();
+    static CALL_COUNT: core::sync::atomic::AtomicI32 =
+        core::sync::atomic::AtomicI32::new(0);
+
+    unsafe extern "C" fn counting_cb(
+        _obs: *mut lv_observer_t,
+        _sub: *mut lv_subject_t,
+    ) {
+        CALL_COUNT.fetch_add(1, core::sync::atomic::Ordering::Relaxed);
+    }
+
+    CALL_COUNT.store(0, core::sync::atomic::Ordering::Relaxed);
+    let subject = Subject::new_int(0);
+    subject.add_observer(counting_cb, core::ptr::null_mut());
+    // Initial notify fires once when observer is added (LVGL behaviour).
+    pump();
+    let after_add = CALL_COUNT.load(core::sync::atomic::Ordering::Relaxed);
+    // Manual notify must fire the callback again.
+    subject.notify();
+    pump();
+    assert!(
+        CALL_COUNT.load(core::sync::atomic::Ordering::Relaxed) > after_add,
+        "notify() must trigger observer callback"
+    );
+}
+
+#[test]
+fn subject_get_group_element_values() {
+    let _screen = fresh_screen();
+    let s0 = Subject::new_int(11);
+    let s1 = Subject::new_int(22);
+    let group = Subject::new_group(&[&s0, &s1]);
+    pump();
+    // Retrieve member values through the group element accessor.
+    // SAFETY: group is a valid group subject; indices 0 and 1 are in bounds.
+    let v0 = unsafe { subject_get_int_raw(subject_get_group_element(group.raw_ptr(), 0)) };
+    let v1 = unsafe { subject_get_int_raw(subject_get_group_element(group.raw_ptr(), 1)) };
+    assert_eq!(v0, 11);
+    assert_eq!(v1, 22);
 }
