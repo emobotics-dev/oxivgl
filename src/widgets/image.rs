@@ -183,6 +183,25 @@ impl<'p> Image<'p> {
         unsafe { lv_image_get_src_height(self.lv_handle()) }
     }
 
+    /// Set image source from a snapshot draw buffer.
+    ///
+    /// LVGL stores the raw pointer — the [`Snapshot`](crate::snapshot::Snapshot)
+    /// must outlive the image widget. Store both in the View struct with the
+    /// snapshot field declared **after** the image field (Rust drops fields
+    /// in declaration order — image drops first, then snapshot).
+    pub fn set_src_snapshot(&self, snap: &crate::snapshot::Snapshot) -> &Self {
+        // SAFETY: handle non-null (from Image::new); snap.draw_buf_ptr() is
+        // valid and owned by the Snapshot. LVGL stores the pointer (spec §3.1);
+        // caller ensures snap outlives self via struct field ordering.
+        unsafe {
+            lv_image_set_src(
+                self.obj.handle(),
+                snap.draw_buf_ptr() as *const core::ffi::c_void,
+            )
+        };
+        self
+    }
+
     /// Set the image source to a built-in LVGL symbol.
     ///
     /// LVGL stores the pointer (`lv_image_t.src`); the symbol is `'static`
