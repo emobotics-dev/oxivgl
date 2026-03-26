@@ -18,7 +18,7 @@ impl ImageConfig {
     ///
     /// - `lv_conf_dir` from `DEP_LV_CONFIG_PATH` env var
     /// - `lvgl_include_dir` and `converter` discovered from the
-    ///   `lvgl_rust_sys` cargo git checkout or thirdparty fallback.
+    ///   `oxivgl_sys` cargo git checkout or thirdparty fallback.
     ///
     /// # Panics
     /// If `DEP_LV_CONFIG_PATH` is not set or LVGL source tree not found.
@@ -50,9 +50,8 @@ impl ImageConfig {
     /// - `LVGLImage.py` exits non-zero
     /// - `cc` compilation fails
     pub fn image_asset(&self, name: &str, png_path: &str) {
-        let manifest_dir = PathBuf::from(
-            std::env::var("CARGO_MANIFEST_DIR").expect("CARGO_MANIFEST_DIR not set"),
-        );
+        let manifest_dir =
+            PathBuf::from(std::env::var("CARGO_MANIFEST_DIR").expect("CARGO_MANIFEST_DIR not set"));
         let out_dir = PathBuf::from(std::env::var("OUT_DIR").expect("OUT_DIR not set"));
         let png_abs = manifest_dir.join(png_path);
         assert!(
@@ -101,11 +100,34 @@ impl ImageConfig {
 }
 
 /// Read `LV_COLOR_DEPTH` from `lv_conf.h` and return the matching
-/// Locate the LVGL source tree from the `lvgl_rust_sys` cargo git checkout.
+/// Locate the LVGL source tree.
 ///
-/// Scans `$CARGO_HOME/git/checkouts/lvgl_rust_sys-*/` for an `lvgl/` dir
-/// containing `lv_version.h`. Falls back to `thirdparty/lvgl_rust_sys/lvgl`.
+/// Checks (in order): sibling `oxivgl-sys/lvgl`, cargo git checkouts
+/// for `oxivgl_sys-*` or `oxivgl_sys-*`, then `thirdparty/oxivgl_sys/lvgl`.
 fn find_lvgl_root() -> PathBuf {
+    // Primary: cargo metadata from oxivgl-sys (links = "lv")
+    if let Ok(dir) = std::env::var("DEP_LV_SRC_DIR") {
+        let p = PathBuf::from(dir);
+        if p.join("lv_version.h").exists() {
+            return p;
+        }
+    }
+
+    // Fallback: sibling oxivgl-sys crate (workspace layout)
+    let manifest_dir =
+        PathBuf::from(std::env::var("CARGO_MANIFEST_DIR").expect("CARGO_MANIFEST_DIR not set"));
+    // Check both manifest_dir/oxivgl-sys/lvgl (when called from oxivgl root)
+    // and manifest_dir/../oxivgl-sys/lvgl (when called from a sibling crate)
+    for base in [
+        manifest_dir.as_path(),
+        manifest_dir.parent().unwrap_or(&manifest_dir),
+    ] {
+        let candidate = base.join("oxivgl-sys").join("lvgl");
+        if candidate.join("lv_version.h").exists() {
+            return candidate;
+        }
+    }
+
     let cargo_home = std::env::var("CARGO_HOME")
         .map(PathBuf::from)
         .unwrap_or_else(|_| {
@@ -114,7 +136,8 @@ fn find_lvgl_root() -> PathBuf {
     let checkouts = cargo_home.join("git/checkouts");
     if let Ok(entries) = std::fs::read_dir(&checkouts) {
         for entry in entries.flatten() {
-            if entry.file_name().to_string_lossy().starts_with("lvgl_rust_sys-") {
+            let name = entry.file_name().to_string_lossy().to_string();
+            if name.starts_with("oxivgl_sys-") || name.starts_with("oxivgl_sys-") {
                 if let Ok(revs) = std::fs::read_dir(entry.path()) {
                     for rev in revs.flatten() {
                         let candidate = rev.path().join("lvgl");
@@ -127,16 +150,16 @@ fn find_lvgl_root() -> PathBuf {
         }
     }
     // Fallback: thirdparty submodule (legacy)
-    let manifest_dir = PathBuf::from(
-        std::env::var("CARGO_MANIFEST_DIR").expect("CARGO_MANIFEST_DIR not set"),
-    );
-    let fallback = manifest_dir.join("thirdparty/lvgl_rust_sys/lvgl");
+    let manifest_dir =
+        PathBuf::from(std::env::var("CARGO_MANIFEST_DIR").expect("CARGO_MANIFEST_DIR not set"));
+    let fallback = manifest_dir.join("thirdparty/oxivgl_sys/lvgl");
     if fallback.join("lv_version.h").exists() {
         return fallback;
     }
     panic!(
-        "LVGL source tree not found in {}/git/checkouts/lvgl_rust_sys-*/*/lvgl/ \
-         or thirdparty/lvgl_rust_sys/lvgl/",
+        "LVGL source tree not found in oxivgl-sys/lvgl/, \
+         {}/git/checkouts/{{oxivgl_sys,oxivgl_sys}}-*/*/lvgl/, \
+         or thirdparty/oxivgl_sys/lvgl/",
         cargo_home.display()
     );
 }

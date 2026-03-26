@@ -7,7 +7,7 @@ publish = false
 # --- Host (non-xtensa) dependencies ---
 [target.'cfg(not(target_arch = "xtensa"))'.dependencies]
 oxivgl = { path = "../..", features = ["log-04", "png"] }
-lvgl_rust_sys = { git = "https://github.com/emobotics-dev/lvgl_rust_sys.git", rev = "5cb45972e2ea0f5bcc009e64652f0734f8fd57a1", default-features = false }
+oxivgl_sys = { package = "oxivgl-sys", path = "../../oxivgl-sys", default-features = false }
 log = "0.4"
 env_logger = "0.11"
 critical-section = { version = "1", features = ["std"] }
@@ -15,15 +15,15 @@ heapless = { version = "0.8" }
 
 # --- ESP32 (xtensa) dependencies ---
 [target.'cfg(target_arch = "xtensa")'.dependencies]
-oxivgl = { path = "../..", features = ["esp-hal", "log-04"] }
-lvgl_rust_sys = { git = "https://github.com/emobotics-dev/lvgl_rust_sys.git", rev = "5cb45972e2ea0f5bcc009e64652f0734f8fd57a1", default-features = false }
-esp-alloc            = { git = "https://github.com/emobotics-dev/esp-hal.git", branch = "local", features = ["internal-heap-stats"] }
-esp-backtrace        = { git = "https://github.com/emobotics-dev/esp-hal.git", branch = "local", features = ["esp32", "panic-handler", "custom-halt", "colors", "println"] }
-esp-bootloader-esp-idf = { git = "https://github.com/emobotics-dev/esp-hal.git", branch = "local", features = ["esp32"] }
-esp-hal              = { git = "https://github.com/emobotics-dev/esp-hal.git", branch = "local", features = ["esp32", "unstable"] }
-esp-println          = { git = "https://github.com/emobotics-dev/esp-hal.git", branch = "local", features = ["esp32", "log-04", "colors", "uart"], default-features = false }
-esp-rtos             = { git = "https://github.com/emobotics-dev/esp-hal.git", branch = "local", features = ["esp32", "embassy"] }
-esp-sync             = { git = "https://github.com/emobotics-dev/esp-hal.git", branch = "local", features = ["esp32"] }
+oxivgl = { path = "../..", features = ["esp-hal", "esp32", "log-04"] }
+oxivgl_sys = { package = "oxivgl-sys", path = "../../oxivgl-sys", default-features = false }
+esp-alloc            = { version = "0.9.0", features = ["internal-heap-stats"] }
+esp-backtrace        = { version = "0.18.1", features = ["esp32", "panic-handler", "custom-halt", "colors", "println"] }
+esp-bootloader-esp-idf = { version = "0.4.0", features = ["esp32"] }
+esp-hal              = { version = "1.0.0", features = ["esp32", "unstable"] }
+esp-println          = { version = "0.16.1", features = ["esp32", "log-04", "colors", "uart"], default-features = false }
+esp-rtos             = { version = "0.2.0", features = ["esp32", "embassy"] }
+esp-sync             = { version = "0.1.1", features = ["esp32"] }
 embassy-embedded-hal = { version = "0.5.0", features = ["time"] }
 embassy-executor     = { version = "0.9.1", features = ["nightly"] }
 embassy-sync         = "0.7.2"

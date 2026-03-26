@@ -32,7 +32,7 @@ the same, in the same order, with the same values.
 ## 2. Hard Constraints
 
 The core safety promise (`docs/spec-api-vision.md` §1) applies to all
-examples: no `unsafe`, no `lvgl_rust_sys`, no working around missing
+examples: no `unsafe`, no direct FFI imports, no working around missing
 wrappers. Pointer-stored data must be `'static`
 (`docs/spec-memory-lifetime.md` §3).
 
