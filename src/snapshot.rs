@@ -15,6 +15,30 @@ pub struct Snapshot {
 }
 
 impl Snapshot {
+    /// Capture any widget as ARGB8888.
+    ///
+    /// Returns `None` if the snapshot allocation fails.
+    /// The caller must ensure LVGL has rendered the widget at least once
+    /// (call after `lv_refr_now` or one render cycle).
+    pub fn take_widget(obj: &impl crate::widgets::AsLvHandle) -> Option<Self> {
+        // SAFETY: obj.lv_handle() is non-null (widget constructor guarantees).
+        // lv_snapshot_take allocates a new draw buffer; returns NULL on failure.
+        let buf = unsafe {
+            lv_snapshot_take(obj.lv_handle(), lv_color_format_t_LV_COLOR_FORMAT_ARGB8888)
+        };
+        if buf.is_null() {
+            return None;
+        }
+        // SAFETY: buf is non-null (checked above), header is valid after allocation.
+        let header = unsafe { &(*buf).header };
+        Some(Self { buf, width: header.w(), height: header.h() })
+    }
+
+    /// Raw draw buffer pointer. Used by [`Image::set_src_snapshot`](crate::widgets::Image::set_src_snapshot).
+    pub(crate) fn draw_buf_ptr(&self) -> *mut lv_draw_buf_t {
+        self.buf
+    }
+
     /// Capture the active screen as RGB565.
     ///
     /// Requires `&LvglDriver` to prove LVGL is initialised.

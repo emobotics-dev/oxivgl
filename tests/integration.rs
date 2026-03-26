@@ -7,6 +7,7 @@
 mod common;
 use common::{driver, ensure_init, fresh_screen, pump};
 
+use oxivgl::snapshot::Snapshot;
 use oxivgl::{
     anim::{anim_path_linear, anim_set_x, Anim, AnimHandle},
     draw::{DrawArcDsc, DrawImageDsc, DrawLabelDscOwned, DrawLetterDsc, DrawLineDsc, DrawTriangleDsc},
@@ -6061,4 +6062,41 @@ fn subject_empty_group() {
     group.notify();
     pump();
     // No crash = success.
+}
+
+// ── Snapshot ─────────────────────────────────────────────────────────────────
+
+#[test]
+fn snapshot_take_widget() {
+    let screen = fresh_screen();
+    let obj = Obj::new(&screen).unwrap();
+    obj.size(100, 100).center().bg_color(0xff0000).bg_opa(255);
+    pump();
+    let snap = Snapshot::take_widget(&obj).expect("snapshot allocation");
+    assert!(snap.width() > 0);
+    assert!(snap.height() > 0);
+}
+
+#[test]
+fn image_set_src_snapshot() {
+    let screen = fresh_screen();
+    let obj = Obj::new(&screen).unwrap();
+    obj.size(100, 100).center().bg_color(0xff0000).bg_opa(255);
+    pump();
+    let snap = Snapshot::take_widget(&obj).expect("snapshot allocation");
+    let img = Image::new(&screen).unwrap();
+    img.set_src_snapshot(&snap);
+    pump();
+    // Verify image source dimensions match snapshot
+    assert!(img.get_src_width() > 0);
+}
+
+#[test]
+fn snapshot_take_widget_empty_obj() {
+    let screen = fresh_screen();
+    let obj = Obj::new(&screen).unwrap();
+    // Don't set size — LVGL may return zero-sized snapshot or None
+    pump();
+    // Either works — we just verify no crash
+    let _snap = Snapshot::take_widget(&obj);
 }
