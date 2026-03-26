@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
-use lvgl_rust_sys::*;
+use oxivgl_sys::*;
 
 /// LVGL material design color palette (`lv_palette_t`).
 #[repr(u32)]

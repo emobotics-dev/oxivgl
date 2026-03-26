@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
-// Formerly `lvgl` — renamed to avoid confusion with the lvgl_rust_sys crate.
+// Formerly `lvgl` — renamed to avoid confusion with the oxivgl_sys crate.
 use core::ffi::c_char;
 
-use lvgl_rust_sys::*;
+use oxivgl_sys::*;
 
 /// Zero-sized init token. Proves `lv_init()` was called.
 #[derive(Debug)]

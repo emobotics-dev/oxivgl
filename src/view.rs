@@ -3,7 +3,7 @@ use core::ffi::c_void;
 
 use embassy_time::{Duration, Timer};
 
-use lvgl_rust_sys::*;
+use oxivgl_sys::*;
 
 use crate::{
     display::{lvgl_disp_init, LvglBuffers, DISPLAY_READY},

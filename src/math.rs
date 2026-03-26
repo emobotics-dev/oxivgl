@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
 //! LVGL math utility wrappers.
 
-use lvgl_rust_sys::*;
+use oxivgl_sys::*;
 
 /// Cubic Bezier calculation with 4 control points.
 ///

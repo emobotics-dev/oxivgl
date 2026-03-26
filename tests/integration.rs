@@ -29,7 +29,7 @@ use oxivgl::{
     },
 };
 use core::ffi::c_void;
-use lvgl_rust_sys::{lv_observer_t, lv_subject_t};
+use oxivgl_sys::{lv_observer_t, lv_subject_t};
 
 #[test]
 fn timer_handler_callable() {
@@ -639,7 +639,7 @@ fn event_callback_fires() {
 
     static FIRED: AtomicBool = AtomicBool::new(false);
 
-    unsafe extern "C" fn cb(_e: *mut lvgl_rust_sys::lv_event_t) {
+    unsafe extern "C" fn cb(_e: *mut oxivgl_sys::lv_event_t) {
         FIRED.store(true, Ordering::SeqCst);
     }
 
@@ -657,9 +657,9 @@ fn event_callback_fires() {
     // Simulate a click event
     // SAFETY: btn handle valid, LVGL initialised.
     unsafe {
-        lvgl_rust_sys::lv_obj_send_event(
+        oxivgl_sys::lv_obj_send_event(
             btn.lv_handle(),
-            lvgl_rust_sys::lv_event_code_t_LV_EVENT_CLICKED,
+            oxivgl_sys::lv_event_code_t_LV_EVENT_CLICKED,
             core::ptr::null_mut(),
         );
     }
@@ -1297,7 +1297,7 @@ fn obj_send_event() {
 
     static SENT: AtomicBool = AtomicBool::new(false);
 
-    unsafe extern "C" fn cb(_e: *mut lvgl_rust_sys::lv_event_t) {
+    unsafe extern "C" fn cb(_e: *mut oxivgl_sys::lv_event_t) {
         SENT.store(true, Ordering::SeqCst);
     }
 
@@ -1553,7 +1553,7 @@ fn event_matches() {
     let btn = Button::new(&screen).unwrap();
     let _btn_handle = btn.lv_handle();
     // Use on_event with raw callback to capture btn_handle
-    unsafe extern "C" fn match_cb(_e: *mut lvgl_rust_sys::lv_event_t) {
+    unsafe extern "C" fn match_cb(_e: *mut oxivgl_sys::lv_event_t) {
         MATCHED.store(true, std::sync::atomic::Ordering::SeqCst);
     }
     unsafe {
@@ -4751,7 +4751,7 @@ fn msgbox_get_header_after_title() {
 fn event_code_defocused_value() {
     assert_eq!(
         EventCode::DEFOCUSED.0,
-        lvgl_rust_sys::lv_event_code_t_LV_EVENT_DEFOCUSED
+        oxivgl_sys::lv_event_code_t_LV_EVENT_DEFOCUSED
     );
 }
 
@@ -5838,14 +5838,14 @@ fn label_bind_text_map_sets_correct_text() {
     });
     pump();
     let text = unsafe {
-        let ptr = lvgl_rust_sys::lv_label_get_text(label.lv_handle());
+        let ptr = oxivgl_sys::lv_label_get_text(label.lv_handle());
         core::ffi::CStr::from_ptr(ptr).to_str().unwrap()
     };
     assert_eq!(text, "zero");
     subject.set_int(1);
     pump();
     let text = unsafe {
-        let ptr = lvgl_rust_sys::lv_label_get_text(label.lv_handle());
+        let ptr = oxivgl_sys::lv_label_get_text(label.lv_handle());
         core::ffi::CStr::from_ptr(ptr).to_str().unwrap()
     };
     assert_eq!(text, "one");
@@ -5856,11 +5856,11 @@ fn observer_get_target_obj_returns_widget() {
     let screen = fresh_screen();
     let subject = Subject::new_int(0);
     let label = Label::new(&screen).unwrap();
-    static TARGET_HANDLE: core::sync::atomic::AtomicPtr<lvgl_rust_sys::lv_obj_t> =
+    static TARGET_HANDLE: core::sync::atomic::AtomicPtr<oxivgl_sys::lv_obj_t> =
         core::sync::atomic::AtomicPtr::new(core::ptr::null_mut());
     unsafe extern "C" fn cb(
-        obs: *mut lvgl_rust_sys::lv_observer_t,
-        _sub: *mut lvgl_rust_sys::lv_subject_t,
+        obs: *mut oxivgl_sys::lv_observer_t,
+        _sub: *mut oxivgl_sys::lv_subject_t,
     ) {
         // SAFETY: obs is a valid observer pointer received from LVGL.
         let ptr = unsafe { observer_get_target_obj(obs) };
@@ -5959,14 +5959,14 @@ fn label_bind_text_sets_correct_text() {
     label.bind_text(&subject, c"%d C");
     pump();
     let text = unsafe {
-        let ptr = lvgl_rust_sys::lv_label_get_text(label.lv_handle());
+        let ptr = oxivgl_sys::lv_label_get_text(label.lv_handle());
         core::ffi::CStr::from_ptr(ptr).to_str().unwrap()
     };
     assert_eq!(text, "28 C");
     subject.set_int(42);
     pump();
     let text = unsafe {
-        let ptr = lvgl_rust_sys::lv_label_get_text(label.lv_handle());
+        let ptr = oxivgl_sys::lv_label_get_text(label.lv_handle());
         core::ffi::CStr::from_ptr(ptr).to_str().unwrap()
     };
     assert_eq!(text, "42 C");

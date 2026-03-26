@@ -2,7 +2,7 @@
 use core::cell::Cell;
 
 use alloc::boxed::Box;
-use lvgl_rust_sys::*;
+use oxivgl_sys::*;
 
 /// LVGL periodic timer with polling-based trigger detection.
 ///

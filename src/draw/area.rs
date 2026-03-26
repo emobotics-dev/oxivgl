@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
 //! Rectangle area type and related constants.
 
-use lvgl_rust_sys::*;
+use oxivgl_sys::*;
 
 /// Rectangle area (x1, y1, x2, y2) — value copy of `lv_area_t`.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]

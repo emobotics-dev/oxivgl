@@ -4,7 +4,7 @@
 use alloc::vec::Vec;
 use core::cell::RefCell;
 
-use lvgl_rust_sys::*;
+use oxivgl_sys::*;
 
 use super::obj::AsLvHandle;
 use crate::{
