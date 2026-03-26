@@ -1296,6 +1296,24 @@ create/delete cycles so the time is preserved.
 
 ![observer3](screenshots/observer3.png)
 
+### observer4 — Tab navigation with animated transitions
+
+Three tab buttons switch content (sliders, dropdowns, rollers) with animated
+transitions. Widget values persist across tab switches via subjects. An
+animated indicator bar slides under the active tab button.
+
+![observer4](screenshots/observer4.png)
+
+### observer5 — Firmware update state machine
+
+Two integer subjects (`fw_update_status`, `fw_download_percent`) drive a
+complete firmware update flow. A centered button opens a Win widget. An
+observer rebuilds the content area on each state transition: a spinner
+while connecting, an arc + percent label while downloading (both bound to
+the percent subject), and a "Firmware update is ready" screen with a
+Restart button. Raw LVGL timers simulate a 2 s connection delay and 50 ms
+per 1% download. The close button in the Win header cancels the operation.
+
 ## Implementation Coverage
 
 Status of all [LVGL 9.5 examples](https://docs.lvgl.io/9.5/examples.html) in oxivgl.

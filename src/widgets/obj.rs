@@ -949,4 +949,11 @@ impl<'p> Obj<'p> {
         unsafe { lv_obj_bind_checked(self.handle, subject.as_ptr()) };
         self
     }
+
+    /// Remove all children of this object without deleting the object itself.
+    pub fn clean(&self) -> &Self {
+        // SAFETY: handle non-null (checked in new/from_raw).
+        unsafe { lv_obj_clean(self.handle) };
+        self
+    }
 }

@@ -5756,3 +5756,16 @@ fn subject_get_group_element_values() {
     assert_eq!(v0, 11);
     assert_eq!(v1, 22);
 }
+
+#[test]
+fn obj_clean() {
+    let screen = fresh_screen();
+    let parent = Obj::new(&screen).unwrap();
+    let _c1 = Obj::new(&parent).unwrap();
+    let _c2 = Obj::new(&parent).unwrap();
+    pump();
+    assert_eq!(parent.get_child_count(), 2);
+    parent.clean();
+    pump();
+    assert_eq!(parent.get_child_count(), 0);
+}
