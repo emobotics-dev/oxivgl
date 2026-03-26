@@ -26,6 +26,7 @@ use oxivgl::{
         Table, TableCellCtrl, Tabview, Spangroup, SpanMode, SpanOverflow, Textarea, Tileview, ValueLabel, WidgetError, Win, RADIUS_MAX,
     },
 };
+use lvgl_rust_sys::{lv_observer_t, lv_subject_t};
 
 #[test]
 fn timer_handler_callable() {
@@ -5637,4 +5638,62 @@ fn dropdown_bind_value() {
     dd.bind_value(&subject);
     pump();
     assert_eq!(subject.get_int(), 2);
+}
+
+#[test]
+fn subject_add_observer_obj() {
+    let screen = fresh_screen();
+    let subject = Subject::new_int(0);
+    let obj = Obj::new(&screen).unwrap();
+    unsafe extern "C" fn dummy_cb(_obs: *mut lv_observer_t, _sub: *mut lv_subject_t) {}
+    subject.add_observer_obj(dummy_cb, &obj, core::ptr::null_mut());
+    subject.set_int(42);
+    pump();
+    // No crash = success.
+}
+
+#[test]
+fn obj_bind_state_if_eq() {
+    let screen = fresh_screen();
+    let subject = Subject::new_int(0);
+    let obj = Obj::new(&screen).unwrap();
+    obj.bind_state_if_eq(&subject, ObjState::DISABLED, 1);
+    pump();
+    assert!(!obj.has_state(ObjState::DISABLED));
+    subject.set_int(1);
+    pump();
+    assert!(obj.has_state(ObjState::DISABLED));
+    subject.set_int(0);
+    pump();
+    assert!(!obj.has_state(ObjState::DISABLED));
+}
+
+#[test]
+fn obj_bind_state_if_not_eq() {
+    let screen = fresh_screen();
+    let subject = Subject::new_int(0);
+    let obj = Obj::new(&screen).unwrap();
+    obj.bind_state_if_not_eq(&subject, ObjState::DISABLED, 1);
+    pump();
+    assert!(obj.has_state(ObjState::DISABLED)); // 0 != 1 → disabled
+    subject.set_int(1);
+    pump();
+    assert!(!obj.has_state(ObjState::DISABLED)); // 1 == 1 → not disabled
+}
+
+#[test]
+fn obj_bind_checked() {
+    let screen = fresh_screen();
+    let subject = Subject::new_int(0);
+    let obj = Obj::new(&screen).unwrap();
+    obj.add_flag(ObjFlag::CHECKABLE);
+    obj.bind_checked(&subject);
+    pump();
+    assert!(!obj.has_state(ObjState::CHECKED));
+    subject.set_int(1);
+    pump();
+    assert!(obj.has_state(ObjState::CHECKED));
+    subject.set_int(0);
+    pump();
+    assert!(!obj.has_state(ObjState::CHECKED));
 }

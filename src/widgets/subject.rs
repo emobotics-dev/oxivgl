@@ -2,9 +2,11 @@
 //! LVGL observer [`Subject`] — an observable value that widgets can bind to.
 
 use alloc::boxed::Box;
-use core::pin::Pin;
+use core::{ffi::c_void, pin::Pin};
 
 use lvgl_rust_sys::*;
+
+use super::obj::AsLvHandle;
 
 /// An observable value that LVGL widgets can bind to via the observer API.
 ///
@@ -70,6 +72,30 @@ impl Subject {
         unsafe { lv_subject_get_previous_int(self.as_ptr()) }
     }
 
+    /// Add a standalone observer callback (not tied to any widget).
+    ///
+    /// The callback fires whenever the subject's value changes.
+    /// The observer is removed when the subject is dropped.
+    pub fn add_observer(&self, cb: ObserverCb, user_data: *mut c_void) -> &Self {
+        // SAFETY: as_ptr() returns pinned non-null; cb is a valid fn ptr.
+        unsafe { lv_subject_add_observer(self.as_ptr(), Some(cb), user_data) };
+        self
+    }
+
+    /// Add an observer callback tied to a widget's lifetime.
+    ///
+    /// The observer is automatically removed when the widget is deleted.
+    pub fn add_observer_obj(
+        &self,
+        cb: ObserverCb,
+        obj: &impl AsLvHandle,
+        user_data: *mut c_void,
+    ) -> &Self {
+        // SAFETY: as_ptr() pinned non-null; obj.lv_handle() non-null; cb valid fn ptr.
+        unsafe { lv_subject_add_observer_obj(self.as_ptr(), Some(cb), obj.lv_handle(), user_data) };
+        self
+    }
+
     /// Return a raw mutable pointer to the underlying `lv_subject_t`.
     ///
     /// The pointer is valid for the lifetime of this `Subject`.  Callers must
@@ -90,4 +116,27 @@ impl Drop for Subject {
         // linked-list nodes; it is safe to call even if no observers exist.
         unsafe { lv_subject_deinit(self.as_ptr()) };
     }
+}
+
+/// Observer callback function type for raw LVGL observer callbacks.
+pub type ObserverCb = unsafe extern "C" fn(*mut lv_observer_t, *mut lv_subject_t);
+
+/// Get the target widget from an observer (for use in observer callbacks).
+///
+/// # Safety
+///
+/// `observer` must be a valid pointer received in an observer callback.
+pub unsafe fn observer_get_target_obj(observer: *mut lv_observer_t) -> *mut lv_obj_t {
+    // SAFETY: caller guarantees observer is valid.
+    unsafe { lv_observer_get_target_obj(observer) }
+}
+
+/// Get the integer value from a raw subject pointer (for use in observer callbacks).
+///
+/// # Safety
+///
+/// `subject` must be a valid pointer received in an observer callback.
+pub unsafe fn subject_get_int_raw(subject: *mut lv_subject_t) -> i32 {
+    // SAFETY: caller guarantees subject is valid.
+    unsafe { lv_subject_get_int(subject) }
 }

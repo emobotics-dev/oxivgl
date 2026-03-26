@@ -246,7 +246,11 @@ impl<'p> Obj<'p> {
         // SAFETY: parent.lv_handle() is a valid non-null LVGL object; lv_init() was
         // called.
         let handle = unsafe { lv_obj_create(parent.lv_handle()) };
-        if handle.is_null() { Err(WidgetError::LvglNullPointer) } else { Ok(Obj::from_raw(handle)) }
+        if handle.is_null() {
+            Err(WidgetError::LvglNullPointer)
+        } else {
+            Ok(Obj::from_raw(handle))
+        }
     }
 
     /// Create a non-owning reference to an LVGL object from a raw pointer.
@@ -259,7 +263,11 @@ impl<'p> Obj<'p> {
 
     /// Wrap a raw LVGL pointer. `ptr` must be non-null and owned by the caller.
     pub(crate) fn from_raw(ptr: *mut lv_obj_t) -> Self {
-        Obj { handle: ptr, _styles: RefCell::new(Vec::new()), _parent: PhantomData }
+        Obj {
+            handle: ptr,
+            _styles: RefCell::new(Vec::new()),
+            _parent: PhantomData,
+        }
     }
 
     /// Return the raw `lv_obj_t` pointer.
@@ -633,7 +641,14 @@ impl<'p> Obj<'p> {
 
         // SAFETY: handle non-null; cb is stored as user_data and retrieved by
         // trampoline. fn pointers have the same size as *mut c_void.
-        unsafe { lv_obj_add_event_cb(self.handle, Some(trampoline), code.0, cb as *const () as *mut c_void) };
+        unsafe {
+            lv_obj_add_event_cb(
+                self.handle,
+                Some(trampoline),
+                code.0,
+                cb as *const () as *mut c_void,
+            )
+        };
         self
     }
 
@@ -659,7 +674,11 @@ impl<'p> Obj<'p> {
         // SAFETY: handle non-null (asserted above); LVGL returns NULL for out-of-range
         // idx.
         let child_ptr = unsafe { lv_obj_get_child(self.handle, idx) };
-        if child_ptr.is_null() { None } else { Some(super::Child::new(Obj::from_raw(child_ptr))) }
+        if child_ptr.is_null() {
+            None
+        } else {
+            Some(super::Child::new(Obj::from_raw(child_ptr)))
+        }
     }
 
     /// Move this object to a specific position among its siblings.
@@ -720,7 +739,12 @@ impl<'p> Obj<'p> {
     /// Get the absolute screen coordinates of this object.
     pub fn get_coords(&self) -> crate::draw::Area {
         assert_ne!(self.handle, null_mut());
-        let mut a = lv_area_t { x1: 0, y1: 0, x2: 0, y2: 0 };
+        let mut a = lv_area_t {
+            x1: 0,
+            y1: 0,
+            x2: 0,
+            y2: 0,
+        };
         // SAFETY: handle non-null (asserted above); lv_obj_get_coords writes into `a`.
         unsafe { lv_obj_get_coords(self.handle, &mut a) };
         a.into()
@@ -866,7 +890,9 @@ impl<'p> Obj<'p> {
         match raw {
             x if x == lv_scrollbar_mode_t_LV_SCROLLBAR_MODE_OFF => crate::enums::ScrollbarMode::Off,
             x if x == lv_scrollbar_mode_t_LV_SCROLLBAR_MODE_ON => crate::enums::ScrollbarMode::On,
-            x if x == lv_scrollbar_mode_t_LV_SCROLLBAR_MODE_ACTIVE => crate::enums::ScrollbarMode::Active,
+            x if x == lv_scrollbar_mode_t_LV_SCROLLBAR_MODE_ACTIVE => {
+                crate::enums::ScrollbarMode::Active
+            }
             _ => crate::enums::ScrollbarMode::Auto,
         }
     }
@@ -883,5 +909,44 @@ impl<'p> Obj<'p> {
         // SAFETY: handle non-null (checked in new/from_raw).
         let raw = unsafe { lv_obj_get_state(self.handle) };
         crate::enums::ObjState(raw)
+    }
+
+    // ── Observer / subject bindings ───────────────────────────────────────
+
+    /// Bind a state: set `state` when `subject == ref_value`, clear otherwise.
+    pub fn bind_state_if_eq(
+        &self,
+        subject: &super::subject::Subject,
+        state: crate::enums::ObjState,
+        ref_value: i32,
+    ) -> &Self {
+        // SAFETY: handle non-null; subject pinned.
+        unsafe {
+            lv_obj_bind_state_if_eq(self.handle, subject.as_ptr(), state.0, ref_value);
+        }
+        self
+    }
+
+    /// Bind a state: set `state` when `subject != ref_value`, clear otherwise.
+    pub fn bind_state_if_not_eq(
+        &self,
+        subject: &super::subject::Subject,
+        state: crate::enums::ObjState,
+        ref_value: i32,
+    ) -> &Self {
+        // SAFETY: handle non-null; subject pinned.
+        unsafe {
+            lv_obj_bind_state_if_not_eq(self.handle, subject.as_ptr(), state.0, ref_value);
+        }
+        self
+    }
+
+    /// Two-way bind: checked state ↔ integer subject (0/1).
+    ///
+    /// The widget must have `ObjFlag::CHECKABLE` set.
+    pub fn bind_checked(&self, subject: &super::subject::Subject) -> &Self {
+        // SAFETY: handle non-null; subject pinned.
+        unsafe { lv_obj_bind_checked(self.handle, subject.as_ptr()) };
+        self
     }
 }
