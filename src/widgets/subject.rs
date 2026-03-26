@@ -5,7 +5,7 @@ use alloc::boxed::Box;
 use alloc::vec::Vec;
 use core::{ffi::c_void, pin::Pin};
 
-use lvgl_rust_sys::*;
+use oxivgl_sys::*;
 
 use super::obj::AsLvHandle;
 

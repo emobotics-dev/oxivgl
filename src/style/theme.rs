@@ -2,7 +2,7 @@
 use alloc::boxed::Box;
 use core::{marker::PhantomData, pin::Pin, ptr::null_mut};
 
-use lvgl_rust_sys::*;
+use oxivgl_sys::*;
 
 use super::Style;
 use crate::widgets::WidgetError;

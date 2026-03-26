@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
-use lvgl_rust_sys::*;
+use oxivgl_sys::*;
 
 /// Gradient extend mode (`lv_grad_extend_t`).
 #[repr(u32)]

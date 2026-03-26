@@ -51,8 +51,8 @@ pub fn fresh_screen() -> Screen {
     ensure_init();
     // SAFETY: LVGL initialised; loading a new screen clears the previous one.
     unsafe {
-        let new = lvgl_rust_sys::lv_obj_create(core::ptr::null_mut());
-        lvgl_rust_sys::lv_screen_load(new);
+        let new = oxivgl_sys::lv_obj_create(core::ptr::null_mut());
+        oxivgl_sys::lv_screen_load(new);
     }
     Screen::active().expect("no active screen after init")
 }
@@ -61,7 +61,7 @@ pub fn fresh_screen() -> Screen {
 pub fn pump() {
     let driver = unsafe { (*core::ptr::addr_of!(DRIVER)).as_ref().unwrap() };
     driver.timer_handler();
-    unsafe { lvgl_rust_sys::lv_refr_now(core::ptr::null_mut()) };
+    unsafe { oxivgl_sys::lv_refr_now(core::ptr::null_mut()) };
 }
 
 /// Get a reference to the shared LVGL driver. Panics if not initialised.

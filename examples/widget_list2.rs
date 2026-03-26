@@ -32,7 +32,7 @@ struct WidgetList2 {
     btn_down: Child<Button<'static>>,
     btn_bottom: Child<Button<'static>>,
     btn_shuffle: Child<Button<'static>>,
-    current: Option<*mut lvgl_rust_sys::lv_obj_t>,
+    current: Option<*mut oxivgl_sys::lv_obj_t>,
 }
 
 impl View for WidgetList2 {

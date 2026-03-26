@@ -2,7 +2,7 @@
 use core::ops::Deref;
 
 use heapless::{String, format};
-use lvgl_rust_sys::lv_obj_t;
+use oxivgl_sys::lv_obj_t;
 
 use super::{WidgetError, label::Label, obj::AsLvHandle};
 

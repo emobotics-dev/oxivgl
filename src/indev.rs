@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
 //! Input device queries — non-owning wrappers for LVGL indev functions.
 
-use lvgl_rust_sys::*;
+use oxivgl_sys::*;
 
 /// 2D point (mirrors `lv_point_t`).
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]

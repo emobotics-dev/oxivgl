@@ -4,7 +4,7 @@
 
 use std::path::PathBuf;
 
-use lvgl_rust_sys::*;
+use oxivgl_sys::*;
 use oxivgl::driver::LvglDriver;
 
 pub const W: i32 = 320;

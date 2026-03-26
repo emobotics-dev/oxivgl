@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
 use core::{ffi::c_void, marker::PhantomData, sync::atomic::AtomicI32};
 
-use lvgl_rust_sys::*;
+use oxivgl_sys::*;
 
 use crate::widgets::AsLvHandle;
 

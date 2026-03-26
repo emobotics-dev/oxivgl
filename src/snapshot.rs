@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
 //! Screen capture API (host-only).
 
-use lvgl_rust_sys::*;
+use oxivgl_sys::*;
 
 use crate::driver::LvglDriver;
 

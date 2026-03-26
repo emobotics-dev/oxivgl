@@ -2,7 +2,7 @@
 use alloc::vec::Vec;
 use core::{ops::Deref, ptr::null_mut};
 
-use lvgl_rust_sys::*;
+use oxivgl_sys::*;
 
 use super::{
     WidgetError,
@@ -28,10 +28,10 @@ pub enum ScaleMode {
 }
 
 /// Rotate labels to match tick angles on round scales.
-pub const SCALE_LABEL_ROTATE_MATCH_TICKS: i32 = lvgl_rust_sys::LV_SCALE_LABEL_ROTATE_MATCH_TICKS as i32;
+pub const SCALE_LABEL_ROTATE_MATCH_TICKS: i32 = oxivgl_sys::LV_SCALE_LABEL_ROTATE_MATCH_TICKS as i32;
 
 /// Keep rotated labels upright (readable).
-pub const SCALE_LABEL_ROTATE_KEEP_UPRIGHT: i32 = lvgl_rust_sys::LV_SCALE_LABEL_ROTATE_KEEP_UPRIGHT as i32;
+pub const SCALE_LABEL_ROTATE_KEEP_UPRIGHT: i32 = oxivgl_sys::LV_SCALE_LABEL_ROTATE_KEEP_UPRIGHT as i32;
 
 /// LVGL scale widget (tick marks only, no arc). Use
 /// [`tick_ring`](Scale::tick_ring) for the pre-configured round gauge variant.

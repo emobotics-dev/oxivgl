@@ -67,9 +67,9 @@ pub enum GridAlign {
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Layout {
     /// Flexbox layout.
-    Flex = lvgl_rust_sys::lv_layout_t_LV_LAYOUT_FLEX,
+    Flex = oxivgl_sys::lv_layout_t_LV_LAYOUT_FLEX,
     /// Grid layout.
-    Grid = lvgl_rust_sys::lv_layout_t_LV_LAYOUT_GRID,
+    Grid = oxivgl_sys::lv_layout_t_LV_LAYOUT_GRID,
 }
 
 /// Grid cell placement (alignment + position + span).
@@ -110,11 +110,11 @@ impl GridCell {
 }
 
 /// Sentinel value marking the end of a grid template descriptor array.
-pub const GRID_TEMPLATE_LAST: i32 = lvgl_rust_sys::LV_COORD_MAX as i32;
+pub const GRID_TEMPLATE_LAST: i32 = oxivgl_sys::LV_COORD_MAX as i32;
 
 /// Return a fractional grid unit. Equivalent to `LV_GRID_FR(x)`.
 pub const fn grid_fr(x: i32) -> i32 {
-    lvgl_rust_sys::LV_COORD_MAX as i32 - 100 + x
+    oxivgl_sys::LV_COORD_MAX as i32 - 100 + x
 }
 
 #[cfg(test)]
@@ -141,11 +141,11 @@ mod tests {
     fn layout_discriminants() {
         assert_eq!(
             Layout::Flex as u32,
-            lvgl_rust_sys::lv_layout_t_LV_LAYOUT_FLEX
+            oxivgl_sys::lv_layout_t_LV_LAYOUT_FLEX
         );
         assert_eq!(
             Layout::Grid as u32,
-            lvgl_rust_sys::lv_layout_t_LV_LAYOUT_GRID
+            oxivgl_sys::lv_layout_t_LV_LAYOUT_GRID
         );
     }
 }

@@ -2,7 +2,7 @@
 use alloc::string::String;
 use core::{ffi::c_char, ops::Deref, ptr::null_mut};
 
-use lvgl_rust_sys::*;
+use oxivgl_sys::*;
 
 use super::{
     WidgetError,

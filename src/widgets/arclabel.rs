@@ -5,7 +5,7 @@
 
 use core::{ffi::CStr, ops::Deref, ptr::null_mut};
 
-use lvgl_rust_sys::*;
+use oxivgl_sys::*;
 
 use super::{
     WidgetError,

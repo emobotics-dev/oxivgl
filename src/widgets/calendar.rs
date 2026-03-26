@@ -2,7 +2,7 @@
 use alloc::vec::Vec;
 use core::{cell::RefCell, ops::Deref, ptr::null_mut};
 
-use lvgl_rust_sys::*;
+use oxivgl_sys::*;
 
 use super::{
     WidgetError,
@@ -178,10 +178,10 @@ impl<'p> Calendar<'p> {
     /// Requires `LV_USE_CALENDAR_CHINESE = 1` in `lv_conf.h`.
     pub fn set_chinese_mode(&self, en: bool, cjk_font: crate::fonts::Font) -> &Self {
         assert_ne!(self.obj.handle(), null_mut(), "Calendar handle cannot be null");
-        // SAFETY: handle non-null. Declared locally because lvgl_rust_sys
+        // SAFETY: handle non-null. Declared locally because oxivgl_sys
         // may not re-export the function across edition boundaries.
         unsafe extern "C" {
-            fn lv_calendar_set_chinese_mode(obj: *mut lvgl_rust_sys::lv_obj_t, en: bool);
+            fn lv_calendar_set_chinese_mode(obj: *mut oxivgl_sys::lv_obj_t, en: bool);
         }
         if en {
             // Set the CJK font BEFORE enabling Chinese mode, because
