@@ -1,12 +1,13 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
 use alloc::vec::Vec;
-use core::{ffi::c_char, ops::Deref, ptr::null_mut};
+use core::{ffi::{c_char, c_void}, ops::Deref, ptr::null_mut};
 
 use lvgl_rust_sys::*;
 
 use super::{
-    WidgetError,
     obj::{AsLvHandle, Obj},
+    subject::Subject,
+    WidgetError,
 };
 
 /// LVGL text label widget.
@@ -46,7 +47,13 @@ impl<'p> Label<'p> {
         // SAFETY: parent_ptr non-null (asserted above); lv_init() called via
         // LvglDriver.
         let handle = unsafe { lv_label_create(parent_ptr) };
-        if handle.is_null() { Err(WidgetError::LvglNullPointer) } else { Ok(Label { obj: Obj::from_raw(handle) }) }
+        if handle.is_null() {
+            Err(WidgetError::LvglNullPointer)
+        } else {
+            Ok(Label {
+                obj: Obj::from_raw(handle),
+            })
+        }
     }
 
     /// Set label text. Accepts any `&str` (no NUL terminator required).
@@ -122,6 +129,68 @@ impl<'p> Label<'p> {
         assert_ne!(self.obj.handle(), null_mut(), "Label handle cannot be null");
         // SAFETY: handle non-null (asserted above).
         unsafe { lv_label_get_text_selection_start(self.obj.handle()) }
+    }
+
+    /// Bind label text to a subject with a printf-style format.
+    ///
+    /// The format string must be `'static` because LVGL stores the pointer
+    /// internally for the lifetime of the binding (spec §12.4).
+    ///
+    /// Use a `c"..."` literal: `label.bind_text(&subject, c"%d °C")`.
+    pub fn bind_text(&self, subject: &Subject, fmt: &'static core::ffi::CStr) -> &Self {
+        // SAFETY: lv_handle() non-null (checked in new()); subject is pinned;
+        // fmt is 'static so the pointer remains valid while LVGL holds it.
+        unsafe { lv_label_bind_text(self.lv_handle(), subject.as_ptr(), fmt.as_ptr()) };
+        self
+    }
+
+    /// Reactively update this label's text based on a subject's integer value.
+    ///
+    /// The mapping function is called whenever the subject changes.  The
+    /// observer is automatically removed when this label is deleted.
+    ///
+    /// ```ignore
+    /// label.bind_text_map(&subject, |state| match state {
+    ///     1 => "Active",
+    ///     _ => "Idle",
+    /// });
+    /// ```
+    pub fn bind_text_map(
+        &self,
+        subject: &Subject,
+        map: fn(i32) -> &'static str,
+    ) -> &Self {
+        unsafe extern "C" fn trampoline(
+            observer: *mut lv_observer_t,
+            subject: *mut lv_subject_t,
+        ) {
+            // SAFETY: user_data is the fn pointer set in bind_text_map.
+            // observer target is a valid label (registered via add_observer_obj).
+            unsafe {
+                let map_ptr = lv_observer_get_user_data(observer) as *const ();
+                let map: fn(i32) -> &'static str = core::mem::transmute(map_ptr);
+                let value = lv_subject_get_int(subject);
+                let text = map(value);
+                let label_ptr = lv_observer_get_target_obj(observer);
+                // Copy &str to NUL-terminated stack buffer for LVGL.
+                let bytes = text.as_bytes();
+                let mut buf = [0u8; 128];
+                let len = bytes.len().min(127);
+                buf[..len].copy_from_slice(&bytes[..len]);
+                // buf[len] is already 0 from zero-init.
+                lv_label_set_text(label_ptr, buf.as_ptr() as *const core::ffi::c_char);
+            }
+        }
+        // SAFETY: lv_handle() non-null; subject pinned; fn pointer is pointer-sized.
+        unsafe {
+            lv_subject_add_observer_obj(
+                subject.as_ptr(),
+                Some(trampoline),
+                self.lv_handle(),
+                map as *const () as *mut c_void,
+            )
+        };
+        self
     }
 }
 
