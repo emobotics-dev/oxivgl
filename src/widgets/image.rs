@@ -189,6 +189,7 @@ impl<'p> Image<'p> {
     /// must outlive the image widget. Store both in the View struct with the
     /// snapshot field declared **after** the image field (Rust drops fields
     /// in declaration order — image drops first, then snapshot).
+    #[cfg(not(target_os = "none"))]
     pub fn set_src_snapshot(&self, snap: &crate::snapshot::Snapshot) -> &Self {
         // SAFETY: handle non-null (from Image::new); snap.draw_buf_ptr() is
         // valid and owned by the Snapshot. LVGL stores the pointer (spec §3.1);
