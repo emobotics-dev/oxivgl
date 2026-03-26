@@ -47,6 +47,7 @@ runner (`example_main!` macro selects host SDL2 or ESP32 fire27 backend).
 - [Widgets — Lottie](#widgets--lottie-abandoned)
 - [Widgets — Spinbox](#widgets--spinbox)
 - [Widgets — Spinner](#widgets--spinner)
+- [Observer](#observer)
 - [Implementation Coverage](#implementation-coverage)
 - [Running](#running)
 
@@ -1262,6 +1263,52 @@ Active tab set programmatically to the second tab on startup.
 
 ![tabview_2](screenshots/tabview_2.png)
 
+## Observer
+
+### observer1 — Slider bound to a temperature label
+
+Integer subject initialised to 28. Slider centered on screen; label 30 px
+below center shows the current value formatted as `"%d °C"`. Moving the
+slider updates both the subject and the label automatically.
+
+![observer1](screenshots/observer1.png)
+
+### observer2 — PIN login screen with state bindings
+
+Two subjects: `auth_state_subject` (LOGGED_OUT/LOGGED_IN/AUTH_FAILED) and
+`engine_subject` (0/1). A textarea in password mode accepts a PIN; pressing
+Enter checks whether it equals `"hello"`. An info label is updated by
+polling the auth subject in `update()`. A "LOG OUT" button is disabled when
+not logged in via `bind_state_if_not_eq`. A "START ENGINE" checkable button
+is two-way bound to `engine_subject` via `bind_checked`.
+
+![observer2](screenshots/observer2.png)
+
+### observer3 — Time display with subject groups (simplified)
+
+Four integer subjects (hour, minute, format, AM/PM) grouped into a single
+group subject. Hour/minute rollers and 12/24 format and AM/PM dropdowns are
+all bound to the subjects via safe `bind_value()`. The AM/PM dropdown is
+disabled in 24-hour mode via `bind_state_if_eq`. The time label is formatted
+in `update()` by polling the subject values.
+
+**Simplification**: The C original dynamically creates/deletes a settings
+panel on button click. This port shows all controls statically because
+dynamic widget creation in event callbacks requires raw LVGL APIs not yet
+wrapped.
+
+![observer3](screenshots/observer3.png)
+
+### observer4, observer5, observer6 — Blocked
+
+These examples require infrastructure not yet wrapped:
+
+| Example | Blocker |
+|---------|---------|
+| observer4 — Tab navigation with animated transitions | Animation callbacks, dynamic widget creation in observer context |
+| observer5 — Firmware update state machine | Raw timer callbacks, `lv_obj_clean` in observer, Win content rebuilds |
+| observer6 — Light/dark theme switching | Raw style mutation, `lv_obj_report_style_change`, leaked style structs |
+
 ## Implementation Coverage
 
 Status of all [LVGL 9.5 examples](https://docs.lvgl.io/9.5/examples.html) in oxivgl.
@@ -1279,6 +1326,7 @@ Status of all [LVGL 9.5 examples](https://docs.lvgl.io/9.5/examples.html) in oxi
 | Flex | 6 | 6 | 0 | |
 | Grid | 6 | 6 | 0 | |
 | Scroll | 9 | 9 | 0 | |
+| Observer | 6 | 3 | 3 | observer4/5/6 blocked: animation/timer/style infrastructure not yet wrapped |
 
 ### Widget Examples (wrapper exists)
 
