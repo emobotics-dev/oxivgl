@@ -8,6 +8,44 @@
 
 Safe Rust bindings for [LVGL](https://github.com/lvgl/lvgl) on embedded (`no_std`) and host (`std`/SDL2) targets. Wraps all unsafe LVGL calls behind type-safe APIs — user code never touches `unsafe` or `lvgl_rust_sys` directly.
 
+## Quick Start
+
+```rust
+use oxivgl::{
+    view::View,
+    widgets::{Align, Label, Screen, WidgetError},
+};
+
+struct MyView {
+    _label: Label<'static>,
+}
+
+impl View for MyView {
+    fn create() -> Result<Self, WidgetError> {
+        let screen = Screen::active().ok_or(WidgetError::LvglNullPointer)?;
+        screen.bg_color(0x003a57).bg_opa(255);
+
+        let label = Label::new(&screen)?;
+        label.text("Hello world").align(Align::Center, 0, 0);
+
+        Ok(Self { _label: label })
+    }
+
+    fn update(&mut self) -> Result<(), WidgetError> {
+        Ok(())
+    }
+}
+
+oxivgl_examples_common::example_main!(MyView);
+```
+
+Add as a git dependency:
+
+```toml
+[dependencies]
+oxivgl = { git = "https://github.com/emobotics-dev/oxivgl" }
+```
+
 ## Status
 
 oxivgl is under active development — fast-growing, frequently
@@ -17,26 +55,6 @@ yet.
 
 The intent is to publish on crates.io once the API has stabilized enough
 for external consumers. Until then, depend on it via git.
-
-## AI statement
-
-This library has been developed using AI coding agents, mostly Claude
-Code. The DMA/buffer foundations, architecture decisions, wrapper
-implementations, memory safety reviews, example porting, and
-documentation were built through human–AI collaboration.
-
-The API is designed to be AI-friendly: discoverable, well-documented,
-and free of footguns. Architecture and design boundaries are captured in
-explicit specs. Rust's type system and borrow checker catch mistakes at
-compile time that would silently corrupt memory in C — when an AI agent
-generates widget code, the compiler enforces correct lifetimes, valid
-enum values, and proper ownership. We envision AI agents as primary
-users of this crate, generating embedded GUIs from high-level
-descriptions.
-
-Contributors are encouraged to use AI tools. The project's specs,
-CLAUDE.md, and example patterns are structured to give AI agents the
-context they need to contribute effectively.
 
 ## Architecture
 
@@ -63,6 +81,7 @@ context they need to contribute effectively.
 | `Label`, `Button`, `Arc`, `Bar`, `Slider` | `widgets` | Common widget wrappers |
 | `Switch`, `Checkbox`, `Led`, `Dropdown`, `Roller` | `widgets` | Input/indicator widgets |
 | `Image`, `Imagebutton`, `Line`, `Scale` | `widgets` | Visual/gauge widgets |
+| `ArcLabel` | `widgets` | Text rendered along a circular arc |
 | `Chart` | `widgets` | Chart widget (line, bar, scatter) |
 | `Calendar` | `widgets` | Date picker calendar |
 | `Table` | `widgets` | Row/column data table |
@@ -85,13 +104,26 @@ context they need to contribute effectively.
 | `Child<W>` | `widgets` | Non-owning wrapper — suppresses `Drop` (parent owns) |
 | `ScaleBuilder` | `widgets` | Builder for `Scale` widget configuration |
 
+**Observer / reactive** — subjects connect state to widgets automatically.
+
+| Type | Module | Role |
+|------|--------|------|
+| `Subject` | `widgets` | Shared integer state cell; notifies observers on change |
+| `Subject::new_int` | `widgets` | Create with initial integer value |
+| `Subject::new_group` | `widgets` | Group multiple subjects into a single observable |
+| `Subject::on_change` | `widgets` | Register a `fn(i32)` callback, fired immediately and on every change |
+| `Slider::bind_value` / `Arc::bind_value` | `widgets` | Two-way bind widget value to a `Subject` |
+| `Label::bind_text` | `widgets` | Bind label text to subject via printf-style format |
+| `Label::bind_text_map` | `widgets` | Bind label text via `fn(i32) -> &'static str` mapper |
+| `Obj::bind_state_if_eq` / `bind_checked` | `widgets` | Bind widget state (checked, disabled, …) to subject value |
+
 **Style system** — two-phase: mutable build → frozen `Rc`-backed handle.
 
 | Type | Module | Role |
 |------|--------|------|
 | `StyleBuilder` | `style` | Mutable builder: chain setters, call `.build()` |
 | `Style` | `style` | Frozen, cheaply clonable `Rc<StyleInner>` handle |
-| `GradDsc` | `style` | Gradient descriptor (linear, radial, conical) |
+| `GradDsc` | `style` | Gradient descriptor (horizontal, linear, radial, conical) |
 | `TransitionDsc` | `style` | Property transition with path function and timing |
 | `Theme` | `style` | Extend the active LVGL theme; restores parent on `Drop` |
 | `Palette` | `style` | Material Design color palette (18 colors) |
@@ -139,7 +171,7 @@ context they need to contribute effectively.
 |------|--------|------|
 | `LvglBuffers<BYTES>` | `display` | Pair of DMA-aligned render buffers (`'static`) |
 | `DisplayOutput` | `flush_pipeline` | Trait for async display write (ESP32 only) |
-| `Snapshot` | `snapshot` | Screen capture with `write_png()` (host-only, `png` feature) |
+| `Snapshot` | `snapshot` | Widget or screen capture; `take_widget()`, `take()`, `write_png()` (host-only, `png` feature) |
 
 **Enums & constants** — newtype wrappers over LVGL C constants.
 
@@ -170,14 +202,14 @@ These guarantees are verified by [integration tests](#testing) that exercise sty
 
 ## Examples
 
-148+ ported LVGL examples covering getting started, styles, animations, events, layouts, scrolling, and individual widgets (including canvas). Each is a self-contained `View` impl — runs on host SDL2 or ESP32 with zero code changes.
+171 ported LVGL examples covering getting started, styles, animations, events, layouts, scrolling, gradients, observer/reactive UI, and individual widgets (including canvas). Each is a self-contained `View` impl — runs on host SDL2 or ESP32 with zero code changes.
 
 **[Browse the full gallery with screenshots](examples/doc/README.md)**
 
 ```sh
 ./run_host.sh getting_started1      # interactive SDL2 window
 ./run_host.sh -s getting_started1   # headless screenshot
-./run_host.sh -s                    # screenshot all 148+ examples
+./run_host.sh -s                    # screenshot all 171 examples
 ./run_fire27.sh event_trickle       # flash to ESP32
 ```
 
@@ -188,21 +220,17 @@ These guarantees are verified by [integration tests](#testing) that exercise sty
 | **ESP32** (Xtensa) | `xtensa-esp32-none-elf` | SPI TFT via DMA flush pipeline | Production firmware |
 | **Linux / macOS** (x86_64, aarch64) | `x86_64-unknown-linux-gnu` | SDL2 window or `SDL_VIDEODRIVER=dummy` (headless) | Development, testing, screenshots |
 
-### Why test on host?
-
-LVGL's widget tree, layout engine, and style system are pure C — platform-independent. Running tests on the host (x86_64) gives sub-second feedback without flashing hardware. The headless SDL2 dummy driver (`SDL_VIDEODRIVER=dummy`) enables CI without a display server. Only the flush pipeline and DMA buffer handling are ESP32-specific.
-
 ## Testing
 
-467 automated tests across four tiers — all run on host without hardware:
+624 automated tests across four tiers — all run on host without hardware:
 
 | Tier | Count | What it covers |
 |------|-------|----------------|
-| **Unit** | 52 | Pure logic — enums, value mapping, style bitflags, grid helpers |
-| **Doc** | 33 | Doctests embedded in API documentation |
-| **Integration** | 336 | Full LVGL instance — widget lifecycle, style add/remove/drop ordering, layout, events, every widget type incl. Canvas |
-| **Leak detection** | 46 | Global heap tracking via `mallinfo2()` — catches leaks in both Rust and LVGL's C code across the FFI boundary |
-| **Visual** | 148+ | Screenshot capture for all ported examples |
+| **Unit** | 55 | Pure logic — enums, value mapping, style bitflags, grid helpers |
+| **Doc** | 34 | Doctests embedded in API documentation |
+| **Integration** | 478 | Full LVGL instance — widget lifecycle, style add/remove/drop ordering, layout, events, every widget type incl. Canvas and observer |
+| **Leak detection** | 57 | Global heap tracking via `mallinfo2()` — catches leaks in both Rust and LVGL's C code across the FFI boundary |
+| **Visual** | 171 | Screenshot capture for all ported examples |
 
 ```sh
 ./run_tests.sh all          # unit + integration + leak (< 5 seconds)
@@ -220,7 +248,9 @@ Integration and leak tests run against a real LVGL instance with `SDL_VIDEODRIVE
 |---|---|
 | [`docs/spec-api-vision.md`](docs/spec-api-vision.md) | API design principles — safety, thin wrappers, `no_std`, canonical paths |
 | [`docs/spec-memory-lifetime.md`](docs/spec-memory-lifetime.md) | Memory safety invariants — pointer ownership, style lifecycle, drop ordering |
+| [`docs/spec-widget-wrapper.md`](docs/spec-widget-wrapper.md) | How to wrap a new LVGL widget — struct pattern, SAFETY comments, tests |
 | [`docs/spec-example-porting.md`](docs/spec-example-porting.md) | How to port LVGL C examples — View pattern, hard constraints, checklist |
+| [`docs/spec-testing.md`](docs/spec-testing.md) | Test tiers, when to write what, portability |
 | [`docs/spec-git-workflow.md`](docs/spec-git-workflow.md) | Git conventions — branching, commits, PRs, CI |
 
 ## LVGL Configuration (`conf/lv_conf.h`)
@@ -260,6 +290,26 @@ cargo +esp -Zbuild-std=alloc,core check --features esp-hal,log-04
 ```
 
 `build.rs` compiles LVGL from source via the `cc` crate (`lvgl_rust_sys`). Expects `DEP_LV_CONFIG_PATH` pointing to `lv_conf.h`.
+
+## AI Statement
+
+This library has been developed using AI coding agents, mostly Claude
+Code. The DMA/buffer foundations, architecture decisions, wrapper
+implementations, memory safety reviews, example porting, and
+documentation were built through human–AI collaboration.
+
+The API is designed to be AI-friendly: discoverable, well-documented,
+and free of footguns. Architecture and design boundaries are captured in
+explicit specs. Rust's type system and borrow checker catch mistakes at
+compile time that would silently corrupt memory in C — when an AI agent
+generates widget code, the compiler enforces correct lifetimes, valid
+enum values, and proper ownership. We envision AI agents as primary
+users of this crate, generating embedded GUIs from high-level
+descriptions.
+
+Contributors are encouraged to use AI tools. The project's specs,
+CLAUDE.md, and example patterns are structured to give AI agents the
+context they need to contribute effectively.
 
 ## License
 
