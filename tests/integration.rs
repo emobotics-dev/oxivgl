@@ -5892,3 +5892,173 @@ fn subject_drop_before_widgets() {
     pump();
     // No crash = both drop orders are safe.
 }
+
+// ── Strengthened bind tests ──────────────────────────────────────────────────
+
+#[test]
+fn slider_bind_value_updates_widget() {
+    let screen = fresh_screen();
+    let subject = Subject::new_int(50);
+    let slider = Slider::new(&screen).unwrap();
+    slider.set_range(0, 100);
+    slider.bind_value(&subject);
+    pump();
+    assert_eq!(slider.get_value(), 50);
+    subject.set_int(75);
+    pump();
+    assert_eq!(slider.get_value(), 75);
+}
+
+#[test]
+fn arc_bind_value_updates_widget() {
+    let screen = fresh_screen();
+    let subject = Subject::new_int(30);
+    let arc = Arc::new(&screen).unwrap();
+    arc.bind_value(&subject);
+    pump();
+    assert_eq!(arc.get_value_raw(), 30);
+    subject.set_int(60);
+    pump();
+    assert_eq!(arc.get_value_raw(), 60);
+}
+
+#[test]
+fn roller_bind_value_updates_widget() {
+    let screen = fresh_screen();
+    let subject = Subject::new_int(2);
+    let roller = Roller::new(&screen).unwrap();
+    roller.set_options("A\nB\nC\nD", RollerMode::Normal);
+    roller.bind_value(&subject);
+    pump();
+    assert_eq!(roller.get_selected(), 2); // "C"
+    subject.set_int(0);
+    pump();
+    assert_eq!(roller.get_selected(), 0); // "A"
+}
+
+#[test]
+fn dropdown_bind_value_updates_widget() {
+    let screen = fresh_screen();
+    let subject = Subject::new_int(1);
+    let dd = Dropdown::new(&screen).unwrap();
+    dd.set_options("X\nY\nZ");
+    dd.bind_value(&subject);
+    pump();
+    assert_eq!(dd.get_selected(), 1); // "Y"
+    subject.set_int(2);
+    pump();
+    assert_eq!(dd.get_selected(), 2); // "Z"
+}
+
+#[test]
+fn label_bind_text_sets_correct_text() {
+    let screen = fresh_screen();
+    let subject = Subject::new_int(28);
+    let label = Label::new(&screen).unwrap();
+    label.bind_text(&subject, c"%d C");
+    pump();
+    let text = unsafe {
+        let ptr = lvgl_rust_sys::lv_label_get_text(label.lv_handle());
+        core::ffi::CStr::from_ptr(ptr).to_str().unwrap()
+    };
+    assert_eq!(text, "28 C");
+    subject.set_int(42);
+    pump();
+    let text = unsafe {
+        let ptr = lvgl_rust_sys::lv_label_get_text(label.lv_handle());
+        core::ffi::CStr::from_ptr(ptr).to_str().unwrap()
+    };
+    assert_eq!(text, "42 C");
+}
+
+// ── Interaction tests ────────────────────────────────────────────────────────
+
+#[test]
+fn subject_group_notifies_on_member_change() {
+    let _screen = fresh_screen();
+    static FIRE_COUNT: core::sync::atomic::AtomicI32 = core::sync::atomic::AtomicI32::new(0);
+    unsafe extern "C" fn cb(_obs: *mut lv_observer_t, _sub: *mut lv_subject_t) {
+        FIRE_COUNT.fetch_add(1, core::sync::atomic::Ordering::Relaxed);
+    }
+    let s1 = Subject::new_int(0);
+    let s2 = Subject::new_int(0);
+    let group = Subject::new_group(&[&s1, &s2]);
+    FIRE_COUNT.store(0, core::sync::atomic::Ordering::Relaxed);
+    group.add_observer(cb, core::ptr::null_mut());
+    pump();
+    let after_add = FIRE_COUNT.load(core::sync::atomic::Ordering::Relaxed);
+    // Change member s1 — group observer should fire.
+    s1.set_int(10);
+    pump();
+    let after_s1 = FIRE_COUNT.load(core::sync::atomic::Ordering::Relaxed);
+    assert!(after_s1 > after_add, "group observer must fire when member changes");
+    // Change member s2 — group observer should fire again.
+    s2.set_int(20);
+    pump();
+    let after_s2 = FIRE_COUNT.load(core::sync::atomic::Ordering::Relaxed);
+    assert!(after_s2 > after_s1, "group observer must fire when another member changes");
+}
+
+#[test]
+fn subject_multiple_observers() {
+    let _screen = fresh_screen();
+    static COUNT_A: core::sync::atomic::AtomicI32 = core::sync::atomic::AtomicI32::new(0);
+    static COUNT_B: core::sync::atomic::AtomicI32 = core::sync::atomic::AtomicI32::new(0);
+    let subject = Subject::new_int(0);
+    subject.on_change(|_| { COUNT_A.fetch_add(1, core::sync::atomic::Ordering::Relaxed); });
+    subject.on_change(|_| { COUNT_B.fetch_add(1, core::sync::atomic::Ordering::Relaxed); });
+    COUNT_A.store(0, core::sync::atomic::Ordering::Relaxed);
+    COUNT_B.store(0, core::sync::atomic::Ordering::Relaxed);
+    subject.set_int(1);
+    pump();
+    assert!(COUNT_A.load(core::sync::atomic::Ordering::Relaxed) > 0, "first observer must fire");
+    assert!(COUNT_B.load(core::sync::atomic::Ordering::Relaxed) > 0, "second observer must fire");
+}
+
+#[test]
+fn widget_drop_then_subject_set() {
+    let screen = fresh_screen();
+    let subject = Subject::new_int(0);
+    let slider = Slider::new(&screen).unwrap();
+    slider.bind_value(&subject);
+    pump();
+    drop(slider); // widget drops, LVGL removes observer
+    pump();
+    subject.set_int(99); // must not crash — no observers left
+    pump();
+}
+
+#[test]
+fn subject_on_change_fires_on_registration() {
+    let _screen = fresh_screen();
+    static INITIAL: core::sync::atomic::AtomicI32 = core::sync::atomic::AtomicI32::new(-1);
+    INITIAL.store(-1, core::sync::atomic::Ordering::Relaxed);
+    let subject = Subject::new_int(42);
+    subject.on_change(|v| { INITIAL.store(v, core::sync::atomic::Ordering::Relaxed); });
+    pump();
+    // LVGL fires observers on registration with current value.
+    assert_eq!(INITIAL.load(core::sync::atomic::Ordering::Relaxed), 42);
+}
+
+#[test]
+fn subject_previous_int_tracks_last_change() {
+    let _screen = fresh_screen();
+    let subject = Subject::new_int(0);
+    subject.set_int(1);
+    subject.set_int(2);
+    subject.set_int(3);
+    assert_eq!(subject.get_previous_int(), 2);
+    assert_eq!(subject.get_int(), 3);
+}
+
+// ── Edge case tests ──────────────────────────────────────────────────────────
+
+#[test]
+fn subject_empty_group() {
+    let _screen = fresh_screen();
+    let group = Subject::new_group(&[]);
+    pump();
+    group.notify();
+    pump();
+    // No crash = success.
+}
