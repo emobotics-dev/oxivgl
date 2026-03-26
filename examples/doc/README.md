@@ -1273,6 +1273,17 @@ slider updates both the subject and the label automatically.
 
 ![observer1](screenshots/observer1.png)
 
+### observer2 — PIN login screen with state bindings
+
+Two subjects: `auth_state_subject` (LOGGED_OUT/LOGGED_IN/AUTH_FAILED) and
+`engine_subject` (0/1). A textarea in password mode accepts a PIN; pressing
+Enter checks whether it equals `"hello"`. An info label is updated by an
+observer callback. A "LOG OUT" button is disabled when not logged in via
+`bind_state_if_not_eq`. A "START ENGINE" checkable button is two-way bound
+to `engine_subject` via `bind_checked`.
+
+![observer2](screenshots/observer2.png)
+
 ## Implementation Coverage
 
 Status of all [LVGL 9.5 examples](https://docs.lvgl.io/9.5/examples.html) in oxivgl.

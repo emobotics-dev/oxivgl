@@ -76,6 +76,7 @@ ALL_EXAMPLES=(
     widget_chart4
     widget_keyboard3
     observer1
+    observer2
     scroll5
 )
 
