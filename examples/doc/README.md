@@ -1284,6 +1284,18 @@ to `engine_subject` via `bind_checked`.
 
 ![observer2](screenshots/observer2.png)
 
+### observer3 — Time picker with subject groups
+
+Four integer subjects (hour, minute, format, AM/PM) grouped into a single
+group subject. An observer on the group formats the time label. Clicking
+"Set" dynamically creates a settings panel with hour/minute rollers and
+12/24 format and AM/PM dropdowns, all bound to the subjects. The AM/PM
+dropdown is disabled in 24-hour mode via `lv_obj_bind_state_if_eq`.
+Clicking the close button deletes the panel; subjects persist across
+create/delete cycles so the time is preserved.
+
+![observer3](screenshots/observer3.png)
+
 ## Implementation Coverage
 
 Status of all [LVGL 9.5 examples](https://docs.lvgl.io/9.5/examples.html) in oxivgl.
