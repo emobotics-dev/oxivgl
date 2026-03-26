@@ -24,9 +24,10 @@ use oxivgl::{
         Checkbox, Dropdown, Image, Imagebutton, ImagebuttonState, Keyboard, KeyboardMode, Label, Led, Line, Menu, MenuHeaderMode, Msgbox,
         BarOrientation, Obj, Part, Roller, RollerMode, Screen, Slider, SliderOrientation, Spinbox, Spinner, Subject, Switch,
         Table, TableCellCtrl, Tabview, Spangroup, SpanMode, SpanOverflow, Textarea, Tileview, ValueLabel, WidgetError, Win, RADIUS_MAX,
-        subject_get_group_element, subject_get_int_raw,
+        observer_get_target, subject_get_group_element, subject_get_int_raw,
     },
 };
+use core::ffi::c_void;
 use lvgl_rust_sys::{lv_observer_t, lv_subject_t};
 
 #[test]
@@ -5768,4 +5769,29 @@ fn obj_clean() {
     parent.clean();
     pump();
     assert_eq!(parent.get_child_count(), 0);
+}
+
+#[test]
+fn subject_add_observer_with_target() {
+    let _screen = fresh_screen();
+    static mut TARGET_VAL: i32 = 0;
+    unsafe extern "C" fn cb(observer: *mut lv_observer_t, _subject: *mut lv_subject_t) {
+        unsafe {
+            // SAFETY: target is &mut TARGET_VAL cast to *mut c_void, set below.
+            let target = observer_get_target(observer) as *mut i32;
+            *target = 99;
+        }
+    }
+    let subject = Subject::new_int(0);
+    // SAFETY: TARGET_VAL is a static mut; single-threaded test, no concurrent access.
+    // &raw mut avoids creating an intermediate reference to the mutable static.
+    subject.add_observer_with_target(
+        cb,
+        &raw mut TARGET_VAL as *mut c_void,
+        core::ptr::null_mut(),
+    );
+    subject.set_int(1);
+    pump();
+    // SAFETY: TARGET_VAL written only by `cb` on the same thread; no concurrent access.
+    unsafe { assert_eq!(*(&raw const TARGET_VAL), 99); }
 }

@@ -117,6 +117,28 @@ impl Subject {
         self
     }
 
+    /// Add an observer callback with an arbitrary (non-widget) target pointer.
+    ///
+    /// Unlike [`add_observer_obj`](Self::add_observer_obj) which ties the
+    /// observer to a widget's lifetime, this variant allows any pointer as
+    /// the target. The observer is removed only when the subject is dropped.
+    ///
+    /// Typical use: passing a leaked style struct so the callback can modify
+    /// styles in place and call `lv_obj_report_style_change`.
+    pub fn add_observer_with_target(
+        &self,
+        cb: ObserverCb,
+        target: *mut c_void,
+        user_data: *mut c_void,
+    ) -> &Self {
+        // SAFETY: as_ptr() pinned non-null; cb is a valid fn ptr; target/user_data
+        // validity is the caller's responsibility.
+        unsafe {
+            lv_subject_add_observer_with_target(self.as_ptr(), Some(cb), target, user_data)
+        };
+        self
+    }
+
     /// Add an observer callback tied to a widget's lifetime.
     ///
     /// The observer is automatically removed when the widget is deleted.
@@ -211,4 +233,18 @@ pub unsafe fn subject_get_group_element(
 ) -> *mut lv_subject_t {
     // SAFETY: caller guarantees subject is a valid group and index is in bounds.
     unsafe { lv_subject_get_group_element(subject, index) }
+}
+
+/// Get the raw target pointer from an observer (for use in observer callbacks).
+///
+/// Returns the `target` that was passed to
+/// [`add_observer_with_target`](Subject::add_observer_with_target).
+/// Unlike [`observer_get_target_obj`] this returns `*mut c_void`, not `*mut lv_obj_t`.
+///
+/// # Safety
+///
+/// `observer` must be a valid pointer received in an observer callback.
+pub unsafe fn observer_get_target(observer: *mut lv_observer_t) -> *mut c_void {
+    // SAFETY: caller guarantees observer is valid.
+    unsafe { lv_observer_get_target(observer) }
 }

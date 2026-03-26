@@ -1314,6 +1314,16 @@ the percent subject), and a "Firmware update is ready" screen with a
 Restart button. Raw LVGL timers simulate a 2 s connection delay and 50 ms
 per 1% download. The close button in the Win header cancels the operation.
 
+### observer6 — Light/dark theme switching
+
+A `theme_subject` (LIGHT=0, DARK=1) drives global style changes via
+`Subject::add_observer_with_target`. The target of each observer is a
+leaked `PanelStyles` or `ButtonStyles` struct (heap-allocated, 'static
+lifetime). Observer callbacks modify the `lv_style_t` fields in-place and
+call `lv_obj_report_style_change` to propagate updated colors to all
+affected widgets. Clicking any of the 10 gradient buttons toggles between
+light and dark themes.
+
 ## Implementation Coverage
 
 Status of all [LVGL 9.5 examples](https://docs.lvgl.io/9.5/examples.html) in oxivgl.

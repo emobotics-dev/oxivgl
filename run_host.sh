@@ -80,6 +80,7 @@ ALL_EXAMPLES=(
     observer3
     observer4
     observer5
+    observer6
     scroll5
 )
 
