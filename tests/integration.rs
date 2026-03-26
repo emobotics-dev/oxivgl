@@ -22,10 +22,12 @@ use oxivgl::{
         Align, AnimImg, Arc, ArcLabel, ArcLabelDir, AsLvHandle, Bar, Button, Buttonmatrix, ButtonmatrixCtrl, ButtonmatrixMap,
         Calendar, CalendarDate, Canvas, Chart, ChartAxis, ChartCursor, ChartSeries, ChartType, ChartUpdateMode, CHART_POINT_NONE,
         Checkbox, Dropdown, Image, Imagebutton, ImagebuttonState, Keyboard, KeyboardMode, Label, Led, Line, Menu, MenuHeaderMode, Msgbox,
-        BarOrientation, Obj, Part, Roller, RollerMode, Screen, Slider, SliderOrientation, Spinbox, Spinner, Switch, Table, TableCellCtrl, Tabview,
-        Spangroup, SpanMode, SpanOverflow, Textarea, Tileview, ValueLabel, WidgetError, Win, RADIUS_MAX,
+        BarOrientation, Obj, Part, Roller, RollerMode, Screen, Slider, SliderOrientation, Spinbox, Spinner, Subject, Switch,
+        Table, TableCellCtrl, Tabview, Spangroup, SpanMode, SpanOverflow, Textarea, Tileview, ValueLabel, WidgetError, Win, RADIUS_MAX,
+        subject_get_group_element, subject_get_int_raw,
     },
 };
+use lvgl_rust_sys::{lv_observer_t, lv_subject_t};
 
 #[test]
 fn timer_handler_callable() {
@@ -5553,4 +5555,217 @@ fn obj_get_state() {
     pump();
     let state = obj.get_state();
     assert_eq!(state.0 & ObjState::CHECKED.0, ObjState::CHECKED.0);
+}
+
+// ── Subject / observer ───────────────────────────────────────────────────────
+
+#[test]
+fn subject_int_create_get_set() {
+    let _screen = fresh_screen();
+    let subject = Subject::new_int(28);
+    assert_eq!(subject.get_int(), 28);
+    subject.set_int(42);
+    assert_eq!(subject.get_int(), 42);
+}
+
+#[test]
+fn subject_int_previous_value() {
+    let _screen = fresh_screen();
+    let subject = Subject::new_int(10);
+    subject.set_int(20);
+    assert_eq!(subject.get_int(), 20);
+    assert_eq!(subject.get_previous_int(), 10);
+}
+
+#[test]
+fn subject_int_drop_safe() {
+    let _screen = fresh_screen();
+    let subject = Subject::new_int(5);
+    subject.set_int(99);
+    drop(subject); // lv_subject_deinit must not crash
+    pump();
+}
+
+#[test]
+fn slider_bind_value() {
+    let screen = fresh_screen();
+    let subject = Subject::new_int(50);
+    let slider = Slider::new(&screen).unwrap();
+    slider.bind_value(&subject);
+    pump();
+    // Subject drives slider: value should reflect the subject's initial value.
+    assert_eq!(subject.get_int(), 50);
+}
+
+#[test]
+fn label_bind_text() {
+    let screen = fresh_screen();
+    let subject = Subject::new_int(28);
+    let label = Label::new(&screen).unwrap();
+    label.bind_text(&subject, c"%d C");
+    pump();
+    // No crash = binding established successfully.
+    assert_eq!(subject.get_int(), 28);
+}
+
+#[test]
+fn arc_bind_value() {
+    let screen = fresh_screen();
+    let subject = Subject::new_int(30);
+    let arc = Arc::new(&screen).unwrap();
+    arc.set_range_raw(0, 100);
+    arc.bind_value(&subject);
+    pump();
+    assert_eq!(subject.get_int(), 30);
+}
+
+#[test]
+fn roller_bind_value() {
+    let screen = fresh_screen();
+    let subject = Subject::new_int(1);
+    let roller = Roller::new(&screen).unwrap();
+    roller.set_options("A\nB\nC", RollerMode::Normal);
+    roller.bind_value(&subject);
+    pump();
+    assert_eq!(subject.get_int(), 1);
+}
+
+#[test]
+fn dropdown_bind_value() {
+    let screen = fresh_screen();
+    let subject = Subject::new_int(2);
+    let dd = Dropdown::new(&screen).unwrap();
+    dd.set_options("X\nY\nZ");
+    dd.bind_value(&subject);
+    pump();
+    assert_eq!(subject.get_int(), 2);
+}
+
+#[test]
+fn subject_add_observer_obj() {
+    let screen = fresh_screen();
+    let subject = Subject::new_int(0);
+    let obj = Obj::new(&screen).unwrap();
+    unsafe extern "C" fn dummy_cb(_obs: *mut lv_observer_t, _sub: *mut lv_subject_t) {}
+    subject.add_observer_obj(dummy_cb, &obj, core::ptr::null_mut());
+    subject.set_int(42);
+    pump();
+    // No crash = success.
+}
+
+#[test]
+fn obj_bind_state_if_eq() {
+    let screen = fresh_screen();
+    let subject = Subject::new_int(0);
+    let obj = Obj::new(&screen).unwrap();
+    obj.bind_state_if_eq(&subject, ObjState::DISABLED, 1);
+    pump();
+    assert!(!obj.has_state(ObjState::DISABLED));
+    subject.set_int(1);
+    pump();
+    assert!(obj.has_state(ObjState::DISABLED));
+    subject.set_int(0);
+    pump();
+    assert!(!obj.has_state(ObjState::DISABLED));
+}
+
+#[test]
+fn obj_bind_state_if_not_eq() {
+    let screen = fresh_screen();
+    let subject = Subject::new_int(0);
+    let obj = Obj::new(&screen).unwrap();
+    obj.bind_state_if_not_eq(&subject, ObjState::DISABLED, 1);
+    pump();
+    assert!(obj.has_state(ObjState::DISABLED)); // 0 != 1 → disabled
+    subject.set_int(1);
+    pump();
+    assert!(!obj.has_state(ObjState::DISABLED)); // 1 == 1 → not disabled
+}
+
+#[test]
+fn obj_bind_checked() {
+    let screen = fresh_screen();
+    let subject = Subject::new_int(0);
+    let obj = Obj::new(&screen).unwrap();
+    obj.add_flag(ObjFlag::CHECKABLE);
+    obj.bind_checked(&subject);
+    pump();
+    assert!(!obj.has_state(ObjState::CHECKED));
+    subject.set_int(1);
+    pump();
+    assert!(obj.has_state(ObjState::CHECKED));
+    subject.set_int(0);
+    pump();
+    assert!(!obj.has_state(ObjState::CHECKED));
+}
+
+#[test]
+fn subject_new_group() {
+    let _screen = fresh_screen();
+    let s0 = Subject::new_int(10);
+    let s1 = Subject::new_int(20);
+    let s2 = Subject::new_int(30);
+    let group = Subject::new_group(&[&s0, &s1, &s2]);
+    pump();
+    // Group subject drops cleanly (deinit must not crash).
+    drop(group);
+    drop(s2);
+    drop(s1);
+    drop(s0);
+}
+
+#[test]
+fn subject_notify() {
+    let _screen = fresh_screen();
+    static CALL_COUNT: core::sync::atomic::AtomicI32 =
+        core::sync::atomic::AtomicI32::new(0);
+
+    unsafe extern "C" fn counting_cb(
+        _obs: *mut lv_observer_t,
+        _sub: *mut lv_subject_t,
+    ) {
+        CALL_COUNT.fetch_add(1, core::sync::atomic::Ordering::Relaxed);
+    }
+
+    CALL_COUNT.store(0, core::sync::atomic::Ordering::Relaxed);
+    let subject = Subject::new_int(0);
+    subject.add_observer(counting_cb, core::ptr::null_mut());
+    // Initial notify fires once when observer is added (LVGL behaviour).
+    pump();
+    let after_add = CALL_COUNT.load(core::sync::atomic::Ordering::Relaxed);
+    // Manual notify must fire the callback again.
+    subject.notify();
+    pump();
+    assert!(
+        CALL_COUNT.load(core::sync::atomic::Ordering::Relaxed) > after_add,
+        "notify() must trigger observer callback"
+    );
+}
+
+#[test]
+fn subject_get_group_element_values() {
+    let _screen = fresh_screen();
+    let s0 = Subject::new_int(11);
+    let s1 = Subject::new_int(22);
+    let group = Subject::new_group(&[&s0, &s1]);
+    pump();
+    // Retrieve member values through the group element accessor.
+    // SAFETY: group is a valid group subject; indices 0 and 1 are in bounds.
+    let v0 = unsafe { subject_get_int_raw(subject_get_group_element(group.raw_ptr(), 0)) };
+    let v1 = unsafe { subject_get_int_raw(subject_get_group_element(group.raw_ptr(), 1)) };
+    assert_eq!(v0, 11);
+    assert_eq!(v1, 22);
+}
+
+#[test]
+fn obj_clean() {
+    let screen = fresh_screen();
+    let parent = Obj::new(&screen).unwrap();
+    let _c1 = Obj::new(&parent).unwrap();
+    let _c2 = Obj::new(&parent).unwrap();
+    pump();
+    assert_eq!(parent.get_child_count(), 2);
+    parent.clean();
+    pump();
+    assert_eq!(parent.get_child_count(), 0);
 }

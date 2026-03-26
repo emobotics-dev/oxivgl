@@ -47,6 +47,7 @@ runner (`example_main!` macro selects host SDL2 or ESP32 fire27 backend).
 - [Widgets — Lottie](#widgets--lottie-abandoned)
 - [Widgets — Spinbox](#widgets--spinbox)
 - [Widgets — Spinner](#widgets--spinner)
+- [Observer](#observer)
 - [Implementation Coverage](#implementation-coverage)
 - [Running](#running)
 
@@ -1261,6 +1262,57 @@ Left-positioned tab bar (width 80 px). Four content tabs with plain text.
 Active tab set programmatically to the second tab on startup.
 
 ![tabview_2](screenshots/tabview_2.png)
+
+## Observer
+
+### observer1 — Slider bound to a temperature label
+
+Integer subject initialised to 28. Slider centered on screen; label 30 px
+below center shows the current value formatted as `"%d °C"`. Moving the
+slider updates both the subject and the label automatically.
+
+![observer1](screenshots/observer1.png)
+
+### observer2 — PIN login screen with state bindings
+
+Two subjects: `auth_state_subject` (LOGGED_OUT/LOGGED_IN/AUTH_FAILED) and
+`engine_subject` (0/1). A textarea in password mode accepts a PIN; pressing
+Enter checks whether it equals `"hello"`. An info label is updated by an
+observer callback. A "LOG OUT" button is disabled when not logged in via
+`bind_state_if_not_eq`. A "START ENGINE" checkable button is two-way bound
+to `engine_subject` via `bind_checked`.
+
+![observer2](screenshots/observer2.png)
+
+### observer3 — Time picker with subject groups
+
+Four integer subjects (hour, minute, format, AM/PM) grouped into a single
+group subject. An observer on the group formats the time label. Clicking
+"Set" dynamically creates a settings panel with hour/minute rollers and
+12/24 format and AM/PM dropdowns, all bound to the subjects. The AM/PM
+dropdown is disabled in 24-hour mode via `lv_obj_bind_state_if_eq`.
+Clicking the close button deletes the panel; subjects persist across
+create/delete cycles so the time is preserved.
+
+![observer3](screenshots/observer3.png)
+
+### observer4 — Tab navigation with animated transitions
+
+Three tab buttons switch content (sliders, dropdowns, rollers) with animated
+transitions. Widget values persist across tab switches via subjects. An
+animated indicator bar slides under the active tab button.
+
+![observer4](screenshots/observer4.png)
+
+### observer5 — Firmware update state machine
+
+Two integer subjects (`fw_update_status`, `fw_download_percent`) drive a
+complete firmware update flow. A centered button opens a Win widget. An
+observer rebuilds the content area on each state transition: a spinner
+while connecting, an arc + percent label while downloading (both bound to
+the percent subject), and a "Firmware update is ready" screen with a
+Restart button. Raw LVGL timers simulate a 2 s connection delay and 50 ms
+per 1% download. The close button in the Win header cancels the operation.
 
 ## Implementation Coverage
 
