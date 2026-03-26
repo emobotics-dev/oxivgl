@@ -70,7 +70,7 @@ When an example or consumer needs LVGL functionality not yet wrapped:
 1. Add the wrapper to the core library with proper safety invariants.
 2. Then use it from the example.
 
-Never add `unsafe` to user code as a shortcut. Never call `lvgl_rust_sys`
+Never add `unsafe` to user code as a shortcut. Never call `oxivgl-sys` FFI
 from outside the library. If the `View` trait lacks a needed hook,
 extend the trait.
 

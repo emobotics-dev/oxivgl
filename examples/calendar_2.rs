@@ -10,8 +10,8 @@
 //! allows selecting month and year. Requires `LV_USE_CALENDAR_CHINESE`
 //! and `LV_FONT_SOURCE_HAN_SANS_SC_14_CJK` enabled in `lv_conf.h`.
 //!
-//! Requires the btnmatrix text_length fix in lvgl_rust_sys (branch
-//! local-9.5.0) for correct rendering on ESP32.
+//! Requires the btnmatrix text_length patch applied in `oxivgl-sys/build.rs`
+//! for correct rendering on ESP32 (LVGL 9.5 bug).
 
 use oxivgl::{
     fonts,

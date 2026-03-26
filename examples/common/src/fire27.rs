@@ -106,7 +106,7 @@ macro_rules! fire27_main {
 
             let tg0 = TimerGroup::new(p.TIMG0);
             let sw_int = SoftwareInterruptControl::new(p.SW_INTERRUPT);
-            esp_rtos::start(tg0.timer0, sw_int.software_interrupt0);
+            esp_rtos::start(tg0.timer0);
             info!("Embassy initialized");
 
             let spi_config = SpiConfig::default()
