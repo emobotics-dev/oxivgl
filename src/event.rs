@@ -4,7 +4,7 @@
 use oxivgl_sys::*;
 
 use crate::draw::{DrawTask, Layer};
-use crate::enums::EventCode;
+use crate::enums::{EventCode, Key};
 use crate::widgets::{AsLvHandle, Child, Obj};
 
 /// Safe wrapper around an LVGL event (`lv_event_t`).
@@ -84,6 +84,21 @@ impl Event {
         } else {
             Some(DrawTask::from_raw(ptr))
         }
+    }
+
+    /// Key code from a `KEY` event.
+    ///
+    /// Returns the key code wrapped as [`Key`], or `None` if called on a
+    /// non-`KEY` event (LVGL returns 0 which is not a defined key).
+    ///
+    /// Only meaningful when `event.code() == EventCode::KEY`.
+    pub fn key(&self) -> Option<Key> {
+        // SAFETY: raw pointer valid for callback duration.
+        // lv_event_get_key returns 0 for non-KEY events, which is not a valid
+        // lv_key_t value — treat 0 as None.
+        // See lvgl/src/indev/lv_indev.c — lv_event_get_key.
+        let k = unsafe { lv_event_get_key(self.raw) };
+        if k == 0 { None } else { Some(Key(k)) }
     }
 
     /// Get the draw layer for a draw event (`DRAW_MAIN_END`, `DRAW_TASK_ADDED`, etc.).

@@ -42,6 +42,10 @@ pub use lcd_async;
 pub use log;
 #[cfg(target_arch = "xtensa")]
 pub use static_cell;
+#[cfg(target_arch = "xtensa")]
+pub use async_button;
+#[cfg(target_arch = "xtensa")]
+pub use oxivgl_sys;
 
 /// Generate a `main` function for the given [`oxivgl::view::View`] type,
 /// selecting the correct backend at compile time.

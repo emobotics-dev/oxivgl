@@ -31,3 +31,4 @@ embassy-time         = "0.5.0"
 lcd-async            = "0.1.1"
 log                  = "0.4"
 static_cell          = { version = "2.1.1", features = ["nightly"] }
+async-button         = "0.2.0"

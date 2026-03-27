@@ -106,6 +106,18 @@ impl<'p> Slider<'p> {
         self
     }
 
+    /// Sets the slider value with optional slide animation.
+    pub fn set_value_animated(&self, val: i32, anim: bool) -> &Self {
+        assert_ne!(
+            self.obj.handle(),
+            null_mut(),
+            "Slider handle cannot be null"
+        );
+        // SAFETY: handle non-null (asserted above).
+        unsafe { lv_slider_set_value(self.obj.handle(), val, anim) };
+        self
+    }
+
     /// Set slider mode (normal, symmetrical, or range).
     pub fn set_mode(&self, mode: SliderMode) -> &Self {
         assert_ne!(

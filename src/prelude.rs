@@ -21,7 +21,7 @@ pub use crate::draw::{
 // Canvas
 pub use crate::draw_buf::{ColorFormat, DrawBuf, ImageDsc};
 // Core LVGL enums
-pub use crate::enums::{EventCode, ObjFlag, ObjState, Opa, ScrollDir, ScrollSnap, ScrollbarMode};
+pub use crate::enums::{EventCode, Key, ObjFlag, ObjState, Opa, ScrollDir, ScrollSnap, ScrollbarMode};
 // Event system
 pub use crate::event::Event;
 // Layout
@@ -53,3 +53,6 @@ pub use crate::{
     view::View,
     widgets::{Canvas, lv_color_t, lv_image_dsc_t, lv_point_precise_t},
 };
+// Group and gridnav
+pub use crate::group::{Group, GroupRef, group_get_default, group_remove_obj};
+pub use crate::gridnav::{GridnavCtrl, gridnav_add, gridnav_remove};

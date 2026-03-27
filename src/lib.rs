@@ -50,6 +50,10 @@ pub mod symbols;
 pub mod draw_buf;
 /// LVGL translation/i18n support (`LV_USE_TRANSLATION`).
 pub mod translation;
+/// LVGL input group — focus management for keyboard/encoder navigation.
+pub mod group;
+/// Grid navigation (`LV_USE_GRIDNAV`) — keyboard-driven focus inside containers.
+pub mod gridnav;
 
 /// Declare an LVGL image asset compiled by `oxivgl-build`.
 ///

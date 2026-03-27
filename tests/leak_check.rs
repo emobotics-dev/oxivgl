@@ -906,10 +906,32 @@ fn leak_remove_style_none() {
         obj.add_style(&style, Selector::DEFAULT);
         pump_child();
         obj.remove_style(None, Selector::DEFAULT);
-        // Known limitation: _styles Vec still holds Rc clone (bounded leak per
-        // widget lifetime). This test verifies no *unbounded* leak across iterations.
         drop(obj);
         drop(style);
+    }));
+}
+
+// ── Group / Gridnav leak tests ────────────────────────────────────────────────
+
+#[test]
+fn leak_group() {
+    run_isolated("Group", || measure_widget(|s| {
+        use oxivgl::group::Group;
+        let group = Group::new().unwrap();
+        let obj = Obj::new(s).unwrap();
+        group.add_obj(&obj);
+        drop(obj);
+        drop(group);
+    }));
+}
+
+#[test]
+fn leak_gridnav() {
+    run_isolated("Gridnav", || measure_widget(|s| {
+        use oxivgl::gridnav::{gridnav_add, GridnavCtrl};
+        let obj = Obj::new(s).unwrap();
+        gridnav_add(&obj, GridnavCtrl::NONE);
+        drop(obj);
     }));
 }
 

@@ -57,13 +57,14 @@ pub struct SdlBuilder {
     h: i32,
     title: Option<&'static core::ffi::CStr>,
     mouse: bool,
+    keyboard: bool,
 }
 
 #[cfg(not(target_os = "none"))]
 impl LvglDriver {
     /// Start building an SDL-backed LVGL driver.
     pub fn sdl(w: i32, h: i32) -> SdlBuilder {
-        SdlBuilder { w, h, title: None, mouse: true }
+        SdlBuilder { w, h, title: None, mouse: true, keyboard: false }
     }
 }
 
@@ -81,6 +82,16 @@ impl SdlBuilder {
         self
     }
 
+    /// Enable/disable SDL keyboard input device. Default: disabled.
+    ///
+    /// When enabled, SDL keyboard events are forwarded to the focused group as
+    /// LVGL keypad events. Call [`crate::group::Group::assign_to_keyboard_indevs`]
+    /// after building to link a group to the created keyboard indev.
+    pub fn keyboard(mut self, enabled: bool) -> Self {
+        self.keyboard = enabled;
+        self
+    }
+
     /// Build the driver. Initialises LVGL, creates SDL window.
     pub fn build(self) -> LvglDriver {
         init_common();
@@ -95,6 +106,13 @@ impl SdlBuilder {
             // SAFETY: LVGL and SDL display are initialised.
             let indev = unsafe { lv_sdl_mouse_create() };
             assert!(!indev.is_null(), "lv_sdl_mouse_create returned NULL");
+        }
+        if self.keyboard {
+            // SAFETY: LVGL and SDL display are initialised.
+            // lv_sdl_keyboard_create registers an SDL keyboard indev with LVGL.
+            // See lvgl/src/drivers/sdl/lv_sdl_keyboard.c — lv_sdl_keyboard_create.
+            let indev = unsafe { lv_sdl_keyboard_create() };
+            assert!(!indev.is_null(), "lv_sdl_keyboard_create returned NULL");
         }
         LvglDriver
     }

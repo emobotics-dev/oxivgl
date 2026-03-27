@@ -2,10 +2,24 @@
 //! M5Stack Fire27 hardware boilerplate macro.
 //!
 //! [`fire27_main!`] generates the entire `#[esp_rtos::main]` entry point
-//! including SPI bus, ILI9342C display init, flush task, and LVGL render
-//! loop — the caller only supplies the [`View`] type.
+//! including SPI bus, ILI9342C display init, flush task, LVGL render loop,
+//! and a keypad input device driven by the three front-panel buttons
+//! (A=GPIO39, B=GPIO38, C=GPIO37, active-low with external pull-ups) —
+//! the caller only supplies the [`View`] type.
 
 /// Generate a complete Fire27 main function for the given [`oxivgl::view::View`] type.
+///
+/// The macro registers a LVGL `KEYPAD` input device backed by the three
+/// hardware buttons on the M5Stack Fire v2.7:
+///
+/// | Button | GPIO | LVGL key      |
+/// |--------|------|---------------|
+/// | A      | 39   | `Key::PREV`   |
+/// | B      | 38   | `Key::ENTER`  |
+/// | C      | 37   | `Key::NEXT`   |
+///
+/// Call [`Group::assign_to_keyboard_indevs`] from your `View::create` to route
+/// key events to a focus group.
 #[macro_export]
 macro_rules! fire27_main {
     ($View:ty) => {
@@ -21,7 +35,7 @@ macro_rules! fire27_main {
         use esp_hal::{
             Async,
             clock::CpuClock,
-            gpio::{Level, Output, OutputConfig},
+            gpio::{Input, InputConfig, Level, Output, OutputConfig},
             interrupt::Priority,
             interrupt::software::SoftwareInterruptControl,
             ram,
@@ -96,6 +110,105 @@ macro_rules! fire27_main {
             flush_frame_buffer(driver).await
         }
 
+        // -------------------------------------------------------------------
+        // Hardware button → LVGL keypad input device
+        // -------------------------------------------------------------------
+
+        /// Pending key code written by button tasks, read by the LVGL callback.
+        /// 0 means no pending key. Single-core ESP32: Relaxed ordering is sufficient.
+        static KEY_PENDING: core::sync::atomic::AtomicU32 =
+            core::sync::atomic::AtomicU32::new(0);
+
+        /// One embassy task per button. Loops forever: awaits a ShortPress event
+        /// and stores the corresponding LVGL key code in KEY_PENDING.
+        #[embassy_executor::task(pool_size = 3)]
+        async fn button_task(
+            pin: Input<'static>,
+            key_code: u32,
+        ) -> ! {
+            use $crate::async_button::{Button, ButtonConfig, Mode as BtnMode};
+            let config = ButtonConfig {
+                mode: BtnMode::PullUp,
+                ..ButtonConfig::default()
+            };
+            let mut btn = Button::new(pin, config);
+            loop {
+                use $crate::async_button::ButtonEvent;
+                match btn.update().await {
+                    ButtonEvent::ShortPress { .. } => {
+                        // Only write if no key is pending (last press wins on overlap).
+                        KEY_PENDING.store(
+                            key_code,
+                            core::sync::atomic::Ordering::Relaxed,
+                        );
+                    }
+                    ButtonEvent::LongPress => {}
+                }
+            }
+        }
+
+        /// LVGL keypad read callback. Called by LVGL on every timer tick.
+        ///
+        /// # SAFETY
+        /// Called from the LVGL task only (single-core ESP32). `data` is
+        /// a non-null pointer provided by LVGL.
+        unsafe extern "C" fn keypad_read_cb(
+            _indev: *mut oxivgl_sys::lv_indev_t,
+            data: *mut oxivgl_sys::lv_indev_data_t,
+        ) {
+            let key = KEY_PENDING.swap(0, core::sync::atomic::Ordering::Relaxed);
+            // SAFETY: `data` is non-null and exclusively owned by LVGL for the
+            // duration of this callback.
+            unsafe {
+                if key != 0 {
+                    (*data).key = key;
+                    (*data).state =
+                        oxivgl_sys::lv_indev_state_t_LV_INDEV_STATE_PRESSED;
+                } else {
+                    (*data).state =
+                        oxivgl_sys::lv_indev_state_t_LV_INDEV_STATE_RELEASED;
+                }
+            }
+        }
+
+        /// Thin wrapper that registers the LVGL keypad indev before delegating
+        /// to the user-supplied [`View`] type. This ensures the indev is created
+        /// after `lv_init()` (inside `run_lvgl`) but before `$View::create()`.
+        struct Fire27View($View);
+
+        impl $crate::oxivgl::view::View for Fire27View {
+            fn create() -> Result<Self, $crate::oxivgl::widgets::WidgetError> {
+                // SAFETY: lv_indev_create / lv_indev_set_type / lv_indev_set_read_cb
+                // are called after lv_init() (guaranteed by the View::create contract)
+                // and before any widget is created. The indev pointer is non-null
+                // (checked). keypad_read_cb has the correct signature for a KEYPAD indev.
+                unsafe {
+                    let indev = oxivgl_sys::lv_indev_create();
+                    assert!(!indev.is_null(), "lv_indev_create returned NULL");
+                    oxivgl_sys::lv_indev_set_type(
+                        indev,
+                        oxivgl_sys::lv_indev_type_t_LV_INDEV_TYPE_KEYPAD,
+                    );
+                    oxivgl_sys::lv_indev_set_read_cb(indev, Some(keypad_read_cb));
+                }
+                Ok(Fire27View(<$View>::create()?))
+            }
+
+            fn update(&mut self) -> Result<(), $crate::oxivgl::widgets::WidgetError> {
+                self.0.update()
+            }
+
+            fn on_event(&mut self, event: &$crate::oxivgl::event::Event) {
+                self.0.on_event(event);
+            }
+
+            fn register_events(&mut self) {
+                self.0.register_events();
+            }
+        }
+
+        // -------------------------------------------------------------------
+
         #[esp_rtos::main]
         async fn main(_low_prio_spawner: Spawner) {
             $crate::esp_println::logger::init_logger_from_env();
@@ -108,6 +221,20 @@ macro_rules! fire27_main {
             let sw_int = SoftwareInterruptControl::new(p.SW_INTERRUPT);
             esp_rtos::start(tg0.timer0);
             info!("Embassy initialized");
+
+            // Configure hardware buttons (active-low, external pull-ups on GPIO34-39).
+            // GPIO34-39 on ESP32 are input-only; no internal pull-up available.
+            let btn_a = Input::new(p.GPIO39, InputConfig::default()); // A — PREV
+            let btn_b = Input::new(p.GPIO38, InputConfig::default()); // B — ENTER
+            let btn_c = Input::new(p.GPIO37, InputConfig::default()); // C — NEXT
+
+            // Spawn one task per button before the LVGL loop starts.
+            _low_prio_spawner
+                .must_spawn(button_task(btn_a, $crate::oxivgl::enums::Key::PREV.0));
+            _low_prio_spawner
+                .must_spawn(button_task(btn_b, $crate::oxivgl::enums::Key::ENTER.0));
+            _low_prio_spawner
+                .must_spawn(button_task(btn_c, $crate::oxivgl::enums::Key::NEXT.0));
 
             let spi_config = SpiConfig::default()
                 .with_frequency(Rate::from_khz(40_000))
@@ -156,7 +283,7 @@ macro_rules! fire27_main {
             // LVGL render loop takes exclusive ownership.
             let bufs = unsafe { &mut *core::ptr::addr_of_mut!(LVGL_BUFS) };
 
-            run_lvgl::<$View, LVGL_BUF_BYTES>(SCREEN_W.into(), SCREEN_H.into(), bufs)
+            run_lvgl::<Fire27View, LVGL_BUF_BYTES>(SCREEN_W.into(), SCREEN_H.into(), bufs)
                 .await;
         }
     };
