@@ -160,11 +160,13 @@ impl<'p> Label<'p> {
         subject: &Subject,
         map: fn(i32) -> &'static str,
     ) -> &Self {
+        const _: () = assert!(core::mem::size_of::<fn(i32) -> &'static str>() == core::mem::size_of::<*mut core::ffi::c_void>());
         unsafe extern "C" fn trampoline(
             observer: *mut lv_observer_t,
             subject: *mut lv_subject_t,
         ) {
-            // SAFETY: user_data is the fn pointer set in bind_text_map.
+            // SAFETY: user_data is the fn pointer set in bind_text_map;
+            // size equality verified by const assert above.
             // observer target is a valid label (registered via add_observer_obj).
             unsafe {
                 let map_ptr = lv_observer_get_user_data(observer) as *const ();

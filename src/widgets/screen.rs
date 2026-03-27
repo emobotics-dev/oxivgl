@@ -19,11 +19,11 @@ use crate::{
 ///
 /// # Style lifetime
 ///
-/// Styles added via [`add_style`](Screen::add_style) are kept alive by this
-/// `Screen` reference. If the `Screen` is dropped while child widgets still
-/// reference those styles, the underlying `lv_style_t` memory is freed and
-/// LVGL will read dangling pointers. Ensure the `Screen` outlives all styles
-/// added to it (typically by storing it in the `View` struct).
+/// Styles added via [`add_style`](Screen::add_style) are intentionally
+/// **leaked** when this `Screen` is dropped. The LVGL screen object outlives
+/// any Rust handle to it, so styles must remain valid indefinitely. Each
+/// `add_style` call costs one `Rc` bump that is never reclaimed — this is a
+/// bounded leak proportional to the number of styles added.
 ///
 /// # Examples
 ///
@@ -169,5 +169,16 @@ impl Screen {
             )
         };
         self
+    }
+}
+
+impl Drop for Screen {
+    fn drop(&mut self) {
+        // Intentionally leak style Rc clones. The LVGL screen object outlives
+        // this non-owning handle — freeing styles here would leave dangling
+        // pointers in LVGL. Bounded leak: one Rc bump per add_style call.
+        for style in self._styles.get_mut().drain(..) {
+            core::mem::forget(style);
+        }
     }
 }

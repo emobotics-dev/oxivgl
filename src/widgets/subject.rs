@@ -148,22 +148,23 @@ impl Subject {
     /// });
     /// ```
     pub fn on_change(&self, cb: fn(i32)) -> &Self {
+        const _: () = assert!(core::mem::size_of::<fn(i32)>() == core::mem::size_of::<*mut core::ffi::c_void>());
         unsafe extern "C" fn trampoline(
             observer: *mut lv_observer_t,
             subject: *mut lv_subject_t,
         ) {
             // SAFETY: user_data was set to a fn pointer in on_change();
-            // fn pointers are pointer-sized. lv_observer_get_user_data and
-            // lv_subject_get_int are safe to call with valid pointers
-            // received from LVGL.
+            // size equality verified by const assert above.
+            // lv_observer_get_user_data and lv_subject_get_int are safe
+            // to call with valid pointers received from LVGL.
             unsafe {
                 let cb_ptr = lv_observer_get_user_data(observer) as *const ();
                 let cb: fn(i32) = core::mem::transmute(cb_ptr);
                 cb(lv_subject_get_int(subject));
             }
         }
-        // SAFETY: as_ptr() returns pinned non-null; fn pointers have the
-        // same size as *mut c_void (guaranteed by Rust ABI).
+        // SAFETY: as_ptr() returns pinned non-null; fn pointer size
+        // matches *mut c_void (compile-time assertion above).
         unsafe {
             lv_subject_add_observer(
                 self.as_ptr(),
