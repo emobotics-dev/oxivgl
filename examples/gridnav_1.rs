@@ -51,7 +51,7 @@ impl View for Gridnav1 {
             )
             .size(lv_pct(50), lv_pct(100));
 
-        gridnav_add(&cont1, GridnavCtrl::None);
+        gridnav_add(&cont1, GridnavCtrl::NONE);
 
         let label1 = Label::new(&cont1)?;
         label1.text("No rollover");
@@ -87,7 +87,7 @@ impl View for Gridnav1 {
             .size(lv_pct(50), lv_pct(100))
             .align(Align::RightMid, 0, 0);
 
-        gridnav_add(&cont2, GridnavCtrl::Rollover);
+        gridnav_add(&cont2, GridnavCtrl::ROLLOVER);
 
         let label2 = Label::new(&cont2)?;
         label2.width(lv_pct(100));

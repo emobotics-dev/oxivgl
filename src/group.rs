@@ -64,6 +64,31 @@ impl Group {
         self
     }
 
+    /// Move focus to a specific object within this group.
+    ///
+    /// The object must already be a member of this group.
+    /// See lvgl/src/indev/lv_indev.c — lv_group_focus_obj.
+    pub fn focus_obj(&self, obj: &impl AsLvHandle) -> &Self {
+        // SAFETY: obj.lv_handle() is non-null. lv_group_focus_obj moves the
+        // focus cursor to the given object inside its group; no ownership is
+        // transferred.
+        // See lvgl/src/indev/lv_indev.c — lv_group_focus_obj.
+        unsafe { lv_group_focus_obj(obj.lv_handle()) };
+        self
+    }
+
+    /// Move focus to the next object in this group.
+    ///
+    /// Wraps around to the first object when the end is reached.
+    /// See lvgl/src/indev/lv_indev.c — lv_group_focus_next.
+    pub fn focus_next(&self) -> &Self {
+        // SAFETY: self.ptr is non-null (checked in new()).
+        // lv_group_focus_next advances the focus cursor in the group.
+        // See lvgl/src/indev/lv_indev.c — lv_group_focus_next.
+        unsafe { lv_group_focus_next(self.ptr) };
+        self
+    }
+
     /// Assign this group to all keyboard and encoder input devices.
     ///
     /// Iterates all registered indevs with `lv_indev_get_next` and calls
@@ -117,6 +142,30 @@ impl GroupRef {
         // SAFETY: self.ptr is non-null (checked in group_get_default()).
         // See lvgl/src/indev/lv_indev.c — lv_group_add_obj.
         unsafe { lv_group_add_obj(self.ptr, obj.lv_handle()) };
+        self
+    }
+
+    /// Move focus to a specific object within this group.
+    ///
+    /// The object must already be a member of this group.
+    /// See lvgl/src/indev/lv_indev.c — lv_group_focus_obj.
+    pub fn focus_obj(&self, obj: &impl AsLvHandle) -> &Self {
+        // SAFETY: obj.lv_handle() is non-null. lv_group_focus_obj moves the
+        // focus cursor to the given object inside its group.
+        // See lvgl/src/indev/lv_indev.c — lv_group_focus_obj.
+        unsafe { lv_group_focus_obj(obj.lv_handle()) };
+        self
+    }
+
+    /// Move focus to the next object in this group.
+    ///
+    /// Wraps around to the first object when the end is reached.
+    /// See lvgl/src/indev/lv_indev.c — lv_group_focus_next.
+    pub fn focus_next(&self) -> &Self {
+        // SAFETY: self.ptr is non-null (checked in group_get_default()).
+        // lv_group_focus_next advances the focus cursor in the group.
+        // See lvgl/src/indev/lv_indev.c — lv_group_focus_next.
+        unsafe { lv_group_focus_next(self.ptr) };
         self
     }
 }

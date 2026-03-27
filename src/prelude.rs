@@ -21,7 +21,7 @@ pub use crate::draw::{
 // Canvas
 pub use crate::draw_buf::{ColorFormat, DrawBuf, ImageDsc};
 // Core LVGL enums
-pub use crate::enums::{EventCode, ObjFlag, ObjState, Opa, ScrollDir, ScrollSnap, ScrollbarMode};
+pub use crate::enums::{EventCode, Key, ObjFlag, ObjState, Opa, ScrollDir, ScrollSnap, ScrollbarMode};
 // Event system
 pub use crate::event::Event;
 // Layout

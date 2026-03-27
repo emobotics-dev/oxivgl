@@ -58,6 +58,59 @@ impl EventCode {
     pub const DEFOCUSED: Self = Self(oxivgl_sys::lv_event_code_t_LV_EVENT_DEFOCUSED);
     /// Text input ready (Enter pressed on keyboard/textarea).
     pub const READY: Self = Self(oxivgl_sys::lv_event_code_t_LV_EVENT_READY);
+    /// A key was pressed while the object was focused.
+    pub const KEY: Self = Self(oxivgl_sys::lv_event_code_t_LV_EVENT_KEY);
+}
+
+/// LVGL key code constants (`lv_key_t`).
+///
+/// Returned by [`Event::key`](crate::event::Event::key) for `KEY` events.
+/// The inner `u32` can be matched directly or compared with these constants.
+///
+/// ```
+/// use oxivgl::enums::{EventCode, Key};
+/// use oxivgl::event::Event;
+///
+/// fn handle(event: &Event) {
+///     if event.code() == EventCode::KEY {
+///         if let Some(k) = event.key() {
+///             match k {
+///                 Key::ENTER => { /* confirm */ }
+///                 Key::ESC   => { /* cancel */ }
+///                 _          => {}
+///             }
+///         }
+///     }
+/// }
+/// ```
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct Key(pub u32);
+
+impl Key {
+    /// Move cursor / focus up.
+    pub const UP: Self = Self(oxivgl_sys::lv_key_t_LV_KEY_UP);
+    /// Move cursor / focus down.
+    pub const DOWN: Self = Self(oxivgl_sys::lv_key_t_LV_KEY_DOWN);
+    /// Move cursor / focus right.
+    pub const RIGHT: Self = Self(oxivgl_sys::lv_key_t_LV_KEY_RIGHT);
+    /// Move cursor / focus left.
+    pub const LEFT: Self = Self(oxivgl_sys::lv_key_t_LV_KEY_LEFT);
+    /// Escape / back.
+    pub const ESC: Self = Self(oxivgl_sys::lv_key_t_LV_KEY_ESC);
+    /// Delete character.
+    pub const DEL: Self = Self(oxivgl_sys::lv_key_t_LV_KEY_DEL);
+    /// Backspace.
+    pub const BACKSPACE: Self = Self(oxivgl_sys::lv_key_t_LV_KEY_BACKSPACE);
+    /// Enter / confirm.
+    pub const ENTER: Self = Self(oxivgl_sys::lv_key_t_LV_KEY_ENTER);
+    /// Focus next (Tab).
+    pub const NEXT: Self = Self(oxivgl_sys::lv_key_t_LV_KEY_NEXT);
+    /// Focus previous.
+    pub const PREV: Self = Self(oxivgl_sys::lv_key_t_LV_KEY_PREV);
+    /// Move to start of content.
+    pub const HOME: Self = Self(oxivgl_sys::lv_key_t_LV_KEY_HOME);
+    /// Move to end of content.
+    pub const END: Self = Self(oxivgl_sys::lv_key_t_LV_KEY_END);
 }
 
 /// LVGL object flag. Combine with `|` for multi-flag operations.

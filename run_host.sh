@@ -82,6 +82,9 @@ ALL_EXAMPLES=(
     snapshot_1
     scroll5
     gridnav_1
+    gridnav_2
+    gridnav_3
+    gridnav_4
 )
 
 run_example() {
