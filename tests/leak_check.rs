@@ -854,6 +854,65 @@ fn leak_subject_bind_text_map() {
     }));
 }
 
+// ── Sub-descriptor double-set leak tests (spec §4.4) ─────────────────────────
+
+#[test]
+fn leak_style_bg_grad_double_set() {
+    run_isolated("bg_grad double-set", || {
+        measure_rust(|| {
+            let mut g1 = GradDsc::new();
+            g1.init_stops(
+                &[palette_main(Palette::Blue), palette_main(Palette::Red)],
+                &[255, 255],
+                &[0, 255],
+            )
+            .horizontal();
+            let mut g2 = GradDsc::new();
+            g2.init_stops(
+                &[palette_main(Palette::Green), palette_main(Palette::Yellow)],
+                &[255, 255],
+                &[0, 255],
+            )
+            .horizontal();
+            let mut sb = StyleBuilder::new();
+            sb.bg_opa(255).bg_grad(g1).bg_grad(g2);
+            drop(sb.build());
+        })
+    });
+}
+
+#[test]
+fn leak_style_transition_double_set() {
+    run_isolated("transition double-set", || {
+        measure_rust(|| {
+            let t1 = TransitionDsc::new(&TRANS_PROPS, Some(anim_path_linear), 200, 0);
+            let t2 = TransitionDsc::new(&TRANS_PROPS, Some(anim_path_linear), 300, 50);
+            let mut sb = StyleBuilder::new();
+            sb.bg_color_hex(0xFF0000).bg_opa(255).transition(t1).transition(t2);
+            drop(sb.build());
+        })
+    });
+}
+
+// ── remove_style(None) leak test (spec §5.3) ─────────────────────────────────
+
+#[test]
+fn leak_remove_style_none() {
+    run_isolated("remove_style(None)", || measure_widget(|s| {
+        let mut sb = StyleBuilder::new();
+        sb.bg_color_hex(0xFF0000).bg_opa(255);
+        let style = sb.build();
+        let obj = Obj::new(s).unwrap();
+        obj.add_style(&style, Selector::DEFAULT);
+        pump_child();
+        obj.remove_style(None, Selector::DEFAULT);
+        // Known limitation: _styles Vec still holds Rc clone (bounded leak per
+        // widget lifetime). This test verifies no *unbounded* leak across iterations.
+        drop(obj);
+        drop(style);
+    }));
+}
+
 // ── Snapshot leak tests ───────────────────────────────────────────────────────
 
 #[test]

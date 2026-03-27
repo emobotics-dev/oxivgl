@@ -879,6 +879,107 @@ fn remove_style_then_drop() {
     drop(style);
 }
 
+// ── Sub-descriptor double-set (spec §4.4) ────────────────────────────────────
+
+#[test]
+fn style_bg_grad_double_set() {
+    // Calling bg_grad twice on the same StyleBuilder must not leak the first
+    // GradDsc. LVGL overwrites the property map entry in-place (lv_style.c:344-346);
+    // the old Box drops after LVGL no longer references it.
+    let screen = fresh_screen();
+    let mut grad1 = GradDsc::new();
+    grad1
+        .init_stops(
+            &[palette_main(Palette::Blue), palette_main(Palette::Red)],
+            &[255, 255],
+            &[0, 255],
+        )
+        .horizontal();
+    let mut grad2 = GradDsc::new();
+    grad2
+        .init_stops(
+            &[palette_main(Palette::Green), palette_main(Palette::Yellow)],
+            &[255, 255],
+            &[0, 255],
+        )
+        .horizontal();
+    let mut sb = StyleBuilder::new();
+    sb.bg_opa(255).bg_grad(grad1).bg_grad(grad2);
+    let style = sb.build();
+    let obj = Obj::new(&screen).unwrap();
+    obj.add_style(&style, Selector::DEFAULT);
+    obj.size(100, 50);
+    pump();
+    drop(obj);
+    drop(style);
+    pump();
+}
+
+#[test]
+fn style_transition_double_set() {
+    // Same principle as bg_grad: calling transition() twice replaces the
+    // first TransitionDsc without leaking.
+    static P1: [props::lv_style_prop_t; 2] = [props::BG_COLOR, props::LAST];
+    static P2: [props::lv_style_prop_t; 2] = [props::BG_OPA, props::LAST];
+    let screen = fresh_screen();
+    let t1 = TransitionDsc::new(&P1, Some(anim_path_linear), 200, 0);
+    let t2 = TransitionDsc::new(&P2, Some(anim_path_linear), 300, 50);
+    let mut sb = StyleBuilder::new();
+    sb.bg_color_hex(0xFF0000).bg_opa(255).transition(t1).transition(t2);
+    let style = sb.build();
+    let obj = Obj::new(&screen).unwrap();
+    obj.add_style(&style, Selector::DEFAULT);
+    pump();
+    drop(obj);
+    drop(style);
+    pump();
+}
+
+// ── remove_style(None) — known limitation (spec §5.3) ───────────────────────
+
+#[test]
+fn remove_style_none_selector() {
+    // remove_style(None, selector) tells LVGL to remove all styles for that
+    // selector but does NOT update _styles Vec (spec §5.3 known limitation).
+    // Styles remain pinned as Rc clones until widget drops — memory leak, not UAF.
+    let screen = fresh_screen();
+    let mut sb = StyleBuilder::new();
+    sb.bg_color_hex(0xFF0000).bg_opa(255);
+    let style = sb.build();
+    let obj = Obj::new(&screen).unwrap();
+    obj.add_style(&style, Selector::DEFAULT);
+    pump();
+    obj.remove_style(None, Selector::DEFAULT);
+    pump();
+    // Widget and style drop cleanly — no UAF despite stale Vec entries.
+    drop(obj);
+    drop(style);
+    pump();
+}
+
+// ── Screen style leak-on-drop (spec §5, F2 fix) ─────────────────────────────
+
+#[test]
+fn screen_drop_leaks_styles_safely() {
+    // Dropping a Screen value must leak Rc clones (via mem::forget in
+    // Screen::Drop) so the LVGL screen object retains valid style pointers.
+    // This test verifies no crash when Screen is dropped before child widgets.
+    let screen = fresh_screen();
+    let mut sb = StyleBuilder::new();
+    sb.bg_color_hex(0x112233).bg_opa(255);
+    let style = sb.build();
+    let style_clone = style.clone();
+    screen.add_style(&style, Selector::DEFAULT);
+    pump();
+    drop(screen);
+    // style_clone keeps StyleInner alive — no UAF on next pump.
+    pump();
+    // Verify the Rc is still valid (Screen::Drop leaked its clone, plus we
+    // hold style_clone).
+    drop(style);
+    drop(style_clone);
+}
+
 // ── Checkbox ─────────────────────────────────────────────────────────────────
 
 #[test]
