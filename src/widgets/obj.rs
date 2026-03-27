@@ -682,6 +682,20 @@ impl<'p> Obj<'p> {
         }
     }
 
+    /// Get the parent of this object as a non-owning handle. Returns `None`
+    /// for screen objects (which have no parent).
+    pub fn get_parent(&self) -> Option<super::Child<Obj<'_>>> {
+        assert_ne!(self.handle, null_mut(), "Obj handle cannot be null");
+        // SAFETY: handle non-null (asserted above); lv_obj_get_parent returns
+        // NULL for screen objects.
+        let parent_ptr = unsafe { lv_obj_get_parent(self.handle) };
+        if parent_ptr.is_null() {
+            None
+        } else {
+            Some(super::Child::new(Obj::from_raw(parent_ptr)))
+        }
+    }
+
     /// Move this object to a specific position among its siblings.
     ///
     /// Index 0 = background (behind all siblings). Values beyond the child

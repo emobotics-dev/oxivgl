@@ -85,6 +85,8 @@ ALL_EXAMPLES=(
     gridnav_2
     gridnav_3
     gridnav_4
+    gridnav_5
+    list_2
 )
 
 run_example() {
