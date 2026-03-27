@@ -53,3 +53,6 @@ pub use crate::{
     view::View,
     widgets::{Canvas, lv_color_t, lv_image_dsc_t, lv_point_precise_t},
 };
+// Group and gridnav
+pub use crate::group::{Group, GroupRef, group_get_default, group_remove_obj};
+pub use crate::gridnav::{GridnavCtrl, gridnav_add, gridnav_remove};

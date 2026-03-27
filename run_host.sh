@@ -81,6 +81,7 @@ ALL_EXAMPLES=(
     grad_{1,2,3,4}
     snapshot_1
     scroll5
+    gridnav_1
 )
 
 run_example() {

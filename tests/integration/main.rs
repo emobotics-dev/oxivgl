@@ -10,6 +10,7 @@ mod common;
 mod anim;
 mod draw;
 mod event;
+mod group;
 mod misc;
 mod obj;
 mod observer;
