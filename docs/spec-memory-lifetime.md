@@ -29,11 +29,10 @@ LVGL function that stores the pointer beyond the call's duration.
 | LVGL type                     | Allocated by | Freed by | Lifetime | Referred by in LVGL |
 |-------------------------------|---|---|---|---|
 | `lv_obj_t`, including widgets | User --- `lv_obj_create` | User --- `lv_obj_delete` | Until explicitly deleted; children cascade | Parent's child list; display's `scr_ll` |
-| `lv_obj_t::name` (if `LV_USE_OBJ_NAME`) | LVGL --- `lv_obj_set_name` | LVGL --- destructor (unless `name_static`) | Until object deleted | `obj->spec_attr->name` |
 | `lv_obj_t::matrix` (if `LV_DRAW_TRANSFORM_USE_MATRIX`) | LVGL --- `lv_obj_set_transform_matrix` | LVGL --- destructor | Until object deleted | `obj->spec_attr->matrix` |
 | `lv_style_t`                  | User | User --- `lv_style_reset` | Must outlive all widgets using it | Pointer array in `lv_obj_t` style list |
 | `lv_style_transition_dsc_t`   | User | User | Must outlive the style referencing it | Pointer inside `lv_style_t` property map |
-| `lv_font_t` (runtime)         | User | User --- font-specific destroy fn | Must outlive all styles using it | Pointer inside `lv_style_t` property map |
+| `lv_font_t`                   | Typically static (compile-time font data) | N/A for static fonts | Must outlive all styles using it | Pointer inside `lv_style_t` property map |
 | `lv_image_dsc_t` / pixel buf  | User | User | Must outlive all widgets using it | Pointer inside `lv_image_t` widget struct |
 | `lv_anim_t` (descriptor)      | User | LVGL --- after `lv_anim_start` | Discardable after `lv_anim_start` | Not retained --- copied immediately |
 | `lv_anim_t` (internal copy)   | LVGL --- on `lv_anim_start` | LVGL --- on complete or `lv_anim_delete` | Until animation ends or is cancelled | Global animation list (`lv_ll`) |
@@ -42,9 +41,14 @@ LVGL function that stores the pointer beyond the call's duration.
 | `lv_display_t`                | LVGL --- `lv_display_create` | User --- `lv_display_delete` | Application lifetime typically | Global display list |
 | `lv_indev_t`                  | LVGL --- `lv_indev_create` | User --- `lv_indev_delete` | Application lifetime typically | Global indev list |
 | `lv_group_t`                  | LVGL --- `lv_group_create` | User --- `lv_group_delete` | Until explicitly deleted | User holds the pointer |
+| `lv_theme_t`                  | User or LVGL --- `lv_theme_create` (v9.5) | User --- `lv_theme_delete` | Must outlive all widgets styled by it | Display's theme chain |
+| `lv_subject_t`                | User --- `lv_subject_init_*` | User --- `lv_subject_deinit` | Must outlive all observers and bound widgets | Observer linked list; widget bindings |
+| `lv_observer_t`               | LVGL --- `lv_subject_add_observer` / `lv_*_bind_*` | LVGL --- on widget delete, or User --- `lv_observer_remove` | Until widget deleted or manually removed | Subject's observer list |
+| `lv_draw_buf_t`               | User --- `lv_draw_buf_create` | User --- `lv_draw_buf_destroy` | Until explicitly destroyed | Canvas widget; snapshot callers |
 | `lv_event_t`                  | LVGL (stack frame) | LVGL --- automatic | Duration of the event callback only | Stack frame in `lv_event_send` |
 | `lv_draw_task_t`              | LVGL --- render pipeline | LVGL --- after draw completes | Duration of `DRAW_TASK_ADDED` callback only | Render task list; passed via `lv_event_get_draw_task` |
 | `lv_draw_label_dsc_t` (in draw task) | LVGL --- render pipeline | LVGL --- after draw completes | Same scope as parent `lv_draw_task_t` | `draw_task->draw_dsc` pointer |
+| `lv_draw_rect_dsc_t` etc. (user draw) | User (stack) | Automatic | Duration of the draw call | Not retained by LVGL |
 
 ---
 
@@ -397,8 +401,8 @@ in `Obj::drop` before `lv_obj_delete` would be redundant.
 
 ### 7.1 Style ownership
 
-`Theme::extend_current` takes a `Style` (clone). The `Theme` stores the clone
-internally. The LVGL `user_data` pointer is obtained via
+`Theme::extend_current` takes a `Style` by value (ownership transfer). The
+`Theme` stores it internally. The LVGL `user_data` pointer is obtained via
 `Rc::as_ptr(&style.inner).cast::<lv_style_t>()` (valid due to the `#[repr(C)]`
 offset-0 guarantee).
 
@@ -505,7 +509,7 @@ Theme
 | `Obj::remove_style` | Removes exactly one entry by Rc pointer identity |
 | `Obj::_styles` | `RefCell<Vec<Style>>`; `alloc::vec::Vec` on all targets |
 | `Obj::drop` | Calls `lv_obj_delete`; SAFETY comment documents LVGL cleanup |
-| `Theme::extend_current` | Takes `Style` (clone stored internally) |
+| `Theme::extend_current` | Takes `Style` by value (ownership stored internally) |
 | `Image::set_src` | `&'static lv_image_dsc_t` |
 | `StyleBuilder::bg_image_src` | `&'static lv_image_dsc_t` |
 | `Line::set_points` | `&'static [lv_point_precise_t]` |
