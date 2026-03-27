@@ -209,7 +209,7 @@
 #define LV_FONT_UNSCII_8  0
 #define LV_FONT_UNSCII_16 0
 
-#define LV_FONT_CUSTOM_DECLARE LV_FONT_DECLARE(lv_font_altreg_rpm)
+#define LV_FONT_CUSTOM_DECLARE
 
 #define LV_FONT_DEFAULT &lv_font_montserrat_14
 #define LV_FONT_FMT_TXT_LARGE 0
