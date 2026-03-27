@@ -107,6 +107,12 @@ impl<'p> Canvas<'p> {
 
     /// Borrow the owned draw buffer (e.g. to obtain an `lv_image_dsc_t` for
     /// canvas-to-canvas drawing via [`DrawBuf::image_dsc`]).
+    ///
+    /// # Warning
+    ///
+    /// Do not call this from inside an `LV_EVENT_DELETE` callback on the same
+    /// canvas — the underlying allocation may already be freed by
+    /// `canvas_delete_cb`.
     pub fn draw_buf(&self) -> &DrawBuf {
         // SAFETY: draw_buf is a valid Box<DrawBuf> raw pointer for the lifetime
         // of this Canvas (freed by canvas_delete_cb on LV_EVENT_DELETE).

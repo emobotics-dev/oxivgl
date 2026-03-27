@@ -221,10 +221,10 @@ impl<'p> core::fmt::Debug for Obj<'p> {
 
 impl<'p> Drop for Obj<'p> {
     fn drop(&mut self) {
-        // SAFETY: handle non-null; lv_obj_is_valid returns false for already-deleted
-        // objects (parent cascade), making this a safe no-op in that case.
+        // SAFETY: lv_obj_is_valid returns false for already-deleted objects
+        // (parent cascade), making this a safe no-op in that case.
         // lv_obj_delete (LVGL v9.5, lv_obj.c) calls lv_obj_remove_style_all
-        // and lv_anim_delete(obj, NULL) internally,
+        // (lv_obj.c:521) and lv_anim_delete(obj, NULL) (lv_obj.c:525) internally,
         // so all style and animation back-references are cleared before Rust
         // drops _styles and any live Anim.
         // Re-verify these call sites when upgrading LVGL.
@@ -626,11 +626,12 @@ impl<'p> Obj<'p> {
     /// [`View::on_event`](crate::view::View::on_event) with event bubbling
     /// instead.
     pub fn on(&self, code: crate::enums::EventCode, cb: fn(&crate::event::Event)) -> &Self {
+        const _: () = assert!(core::mem::size_of::<fn(&crate::event::Event)>() == core::mem::size_of::<*mut core::ffi::c_void>());
         assert_ne!(self.handle, null_mut(), "Obj handle cannot be null");
 
         unsafe extern "C" fn trampoline(e: *mut lv_event_t) {
-            // SAFETY: user_data was set to a fn pointer in on(); transmute
-            // back. fn pointers are pointer-sized.
+            // SAFETY: user_data was set to a fn pointer in on(); size
+            // equality verified by const assert above.
             unsafe {
                 let cb_ptr = lv_event_get_user_data(e) as *const ();
                 let cb: fn(&crate::event::Event) = core::mem::transmute(cb_ptr);
