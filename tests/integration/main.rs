@@ -15,4 +15,6 @@ mod obj;
 mod observer;
 mod style;
 mod timer;
-mod widgets;
+mod widgets_container;
+mod widgets_display;
+mod widgets_input;
