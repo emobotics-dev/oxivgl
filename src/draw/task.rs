@@ -7,7 +7,7 @@
 //!
 //! See `docs/spec-memory-lifetime.md` §2 for the lifetime table.
 
-use lvgl_rust_sys::*;
+use oxivgl_sys::*;
 
 use crate::widgets::Part;
 
@@ -106,7 +106,7 @@ impl DrawTask {
 
     /// Raw draw task type discriminant (`lv_draw_task_type_t` cast to `u32`).
     ///
-    /// Use the `LV_DRAW_TASK_TYPE_*` constants from `lvgl_rust_sys` to
+    /// Use the `LV_DRAW_TASK_TYPE_*` constants from `oxivgl_sys` to
     /// distinguish fill, label, image, etc. tasks.
     pub fn task_type(&self) -> u32 {
         // SAFETY: ptr valid during callback.

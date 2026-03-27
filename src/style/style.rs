@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
 use alloc::{boxed::Box, rc::Rc};
 
-use lvgl_rust_sys::*;
+use oxivgl_sys::*;
 
 use super::GradDir;
 
@@ -63,31 +63,31 @@ impl TransitionDsc {
 
 /// Commonly used style property constants (cast to `lv_style_prop_t`).
 pub mod props {
-    pub use lvgl_rust_sys::lv_style_prop_t;
+    pub use oxivgl_sys::lv_style_prop_t;
 
     /// Background color property.
-    pub const BG_COLOR: lv_style_prop_t = lvgl_rust_sys::_lv_style_id_t_LV_STYLE_BG_COLOR as lv_style_prop_t;
+    pub const BG_COLOR: lv_style_prop_t = oxivgl_sys::_lv_style_id_t_LV_STYLE_BG_COLOR as lv_style_prop_t;
     /// Border color property.
-    pub const BORDER_COLOR: lv_style_prop_t = lvgl_rust_sys::_lv_style_id_t_LV_STYLE_BORDER_COLOR as lv_style_prop_t;
+    pub const BORDER_COLOR: lv_style_prop_t = oxivgl_sys::_lv_style_id_t_LV_STYLE_BORDER_COLOR as lv_style_prop_t;
     /// Border width property.
-    pub const BORDER_WIDTH: lv_style_prop_t = lvgl_rust_sys::_lv_style_id_t_LV_STYLE_BORDER_WIDTH as lv_style_prop_t;
+    pub const BORDER_WIDTH: lv_style_prop_t = oxivgl_sys::_lv_style_id_t_LV_STYLE_BORDER_WIDTH as lv_style_prop_t;
     /// Background opacity property.
-    pub const BG_OPA: lv_style_prop_t = lvgl_rust_sys::_lv_style_id_t_LV_STYLE_BG_OPA as lv_style_prop_t;
+    pub const BG_OPA: lv_style_prop_t = oxivgl_sys::_lv_style_id_t_LV_STYLE_BG_OPA as lv_style_prop_t;
     /// Width property.
-    pub const WIDTH: lv_style_prop_t = lvgl_rust_sys::_lv_style_id_t_LV_STYLE_WIDTH as lv_style_prop_t;
+    pub const WIDTH: lv_style_prop_t = oxivgl_sys::_lv_style_id_t_LV_STYLE_WIDTH as lv_style_prop_t;
     /// Outline width property.
-    pub const OUTLINE_WIDTH: lv_style_prop_t = lvgl_rust_sys::_lv_style_id_t_LV_STYLE_OUTLINE_WIDTH as lv_style_prop_t;
+    pub const OUTLINE_WIDTH: lv_style_prop_t = oxivgl_sys::_lv_style_id_t_LV_STYLE_OUTLINE_WIDTH as lv_style_prop_t;
     /// Outline opacity property.
-    pub const OUTLINE_OPA: lv_style_prop_t = lvgl_rust_sys::_lv_style_id_t_LV_STYLE_OUTLINE_OPA as lv_style_prop_t;
+    pub const OUTLINE_OPA: lv_style_prop_t = oxivgl_sys::_lv_style_id_t_LV_STYLE_OUTLINE_OPA as lv_style_prop_t;
     /// Transform width offset property.
     pub const TRANSFORM_WIDTH: lv_style_prop_t =
-        lvgl_rust_sys::_lv_style_id_t_LV_STYLE_TRANSFORM_WIDTH as lv_style_prop_t;
+        oxivgl_sys::_lv_style_id_t_LV_STYLE_TRANSFORM_WIDTH as lv_style_prop_t;
     /// Transform height offset property.
     pub const TRANSFORM_HEIGHT: lv_style_prop_t =
-        lvgl_rust_sys::_lv_style_id_t_LV_STYLE_TRANSFORM_HEIGHT as lv_style_prop_t;
+        oxivgl_sys::_lv_style_id_t_LV_STYLE_TRANSFORM_HEIGHT as lv_style_prop_t;
     /// Text letter spacing property.
     pub const TEXT_LETTER_SPACE: lv_style_prop_t =
-        lvgl_rust_sys::_lv_style_id_t_LV_STYLE_TEXT_LETTER_SPACE as lv_style_prop_t;
+        oxivgl_sys::_lv_style_id_t_LV_STYLE_TEXT_LETTER_SPACE as lv_style_prop_t;
     /// Sentinel: end of property list.
     pub const LAST: lv_style_prop_t = 0;
 }
@@ -129,12 +129,12 @@ impl core::ops::BitOr for BorderSide {
 /// Return an LVGL percentage value. Wraps `lv_pct()`.
 pub fn lv_pct(v: i32) -> i32 {
     // SAFETY: lv_pct is a pure arithmetic function.
-    unsafe { lvgl_rust_sys::lv_pct(v) }
+    unsafe { oxivgl_sys::lv_pct(v) }
 }
 
 /// Special LVGL size value: object sizes itself to fit its content.
 /// Equivalent to the C macro `LV_SIZE_CONTENT`.
-pub const LV_SIZE_CONTENT: i32 = (lvgl_rust_sys::LV_COORD_MAX | lvgl_rust_sys::LV_COORD_TYPE_SPEC) as i32;
+pub const LV_SIZE_CONTENT: i32 = (oxivgl_sys::LV_COORD_MAX | oxivgl_sys::LV_COORD_TYPE_SPEC) as i32;
 
 // ── StyleInner ──────────────────────────────────────────────────────────
 
@@ -760,7 +760,7 @@ mod tests {
     #[test]
     fn size_content_uses_spec_type() {
         // LV_SIZE_CONTENT = LV_COORD_MAX | LV_COORD_TYPE_SPEC
-        let expected = (lvgl_rust_sys::LV_COORD_MAX | lvgl_rust_sys::LV_COORD_TYPE_SPEC) as i32;
+        let expected = (oxivgl_sys::LV_COORD_MAX | oxivgl_sys::LV_COORD_TYPE_SPEC) as i32;
         assert_eq!(LV_SIZE_CONTENT, expected);
     }
 }

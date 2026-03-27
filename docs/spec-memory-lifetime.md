@@ -286,7 +286,7 @@ animation references before Rust drops `_styles`.
 
 **Invariant**: LVGL releases pointers before Rust frees allocations.
 
-**Version pinning**: verified for LVGL v9.3 and v9.5 (same behavior in both).
+**Version pinning**: verified for LVGL v9.5.
 Both call sites MUST be re-verified on any LVGL upgrade. LVGL also frees
 `name` and `matrix` in the destructor, but these are LVGL-managed and
 do not affect Rust-side cleanup. An integration test SHALL exercise the
@@ -320,7 +320,7 @@ impl<'p> Drop for Obj<'p> {
     fn drop(&mut self) {
         // SAFETY: lv_obj_is_valid returns false for already-deleted objects
         // (parent cascade), making this a safe no-op in that case.
-        // lv_obj_delete (LVGL v9.3, lv_obj.c) calls lv_obj_remove_style_all
+        // lv_obj_delete (LVGL v9.5, lv_obj.c) calls lv_obj_remove_style_all
         // (lv_obj.c:521) and lv_anim_delete(obj, NULL) (lv_obj.c:525) internally,
         // so all style and animation back-references are cleared before Rust
         // drops _styles and any live Anim.
@@ -448,7 +448,7 @@ formulation.
 
 ## 9. Memory Leak Analysis
 
-All claims verified against LVGL v9.3 source.
+All claims verified against LVGL v9.5 source.
 
 | Scenario | Leak? | Reason |
 |---|---|---|

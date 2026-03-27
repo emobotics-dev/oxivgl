@@ -3,7 +3,7 @@ use core::cell::UnsafeCell;
 use core::mem::MaybeUninit;
 use core::ptr::addr_of;
 
-use lvgl_rust_sys::{lv_font_glyph_dsc_t, lv_font_get_glyph_dsc_fmt_txt, lv_font_t};
+use oxivgl_sys::{lv_font_glyph_dsc_t, lv_font_get_glyph_dsc_fmt_txt, lv_font_t};
 
 /// Wrapper around an LVGL font pointer.
 #[derive(Copy, Clone, Debug)]
@@ -23,7 +23,7 @@ impl Font {
     /// Create a [`Font`] from an opaque extern-C symbol address.
     ///
     /// Use this to reference custom fonts compiled from `.c` files without
-    /// importing `lvgl_rust_sys` directly:
+    /// importing `oxivgl_sys` directly:
     ///
     /// ```no_run
     /// use oxivgl::fonts::Font;
@@ -49,16 +49,16 @@ impl Font {
 
 /// LVGL built-in DejaVu 16 pt with Persian/Hebrew glyphs.
 pub static DEJAVU_16_PERSIAN_HEBREW: Font =
-    Font(addr_of!(lvgl_rust_sys::lv_font_dejavu_16_persian_hebrew));
+    Font(addr_of!(oxivgl_sys::lv_font_dejavu_16_persian_hebrew));
 
 
 /// LVGL built-in Source Han Sans SC 14 pt with CJK glyphs.
 pub static SOURCE_HAN_SANS_SC_14_CJK: Font =
-    Font(addr_of!(lvgl_rust_sys::lv_font_source_han_sans_sc_14_cjk));
+    Font(addr_of!(oxivgl_sys::lv_font_source_han_sans_sc_14_cjk));
 
 /// LVGL built-in Source Han Sans SC 16 pt with CJK glyphs.
 pub static SOURCE_HAN_SANS_SC_16_CJK: Font =
-    Font(addr_of!(lvgl_rust_sys::lv_font_source_han_sans_sc_16_cjk));
+    Font(addr_of!(oxivgl_sys::lv_font_source_han_sans_sc_16_cjk));
 
 /// Fixed-width font derived from an existing LVGL font.
 ///
@@ -149,47 +149,47 @@ unsafe extern "C" fn fixed_width_get_glyph_dsc(
 // binary (enabled via LV_FONT_MONTSERRAT_* in lv_conf.h). LTO removes unused.
 
 /// LVGL built-in Montserrat 8 pt.
-pub static MONTSERRAT_8: Font = Font(addr_of!(lvgl_rust_sys::lv_font_montserrat_8));
+pub static MONTSERRAT_8: Font = Font(addr_of!(oxivgl_sys::lv_font_montserrat_8));
 /// LVGL built-in Montserrat 10 pt.
-pub static MONTSERRAT_10: Font = Font(addr_of!(lvgl_rust_sys::lv_font_montserrat_10));
+pub static MONTSERRAT_10: Font = Font(addr_of!(oxivgl_sys::lv_font_montserrat_10));
 /// LVGL built-in Montserrat 12 pt.
-pub static MONTSERRAT_12: Font = Font(addr_of!(lvgl_rust_sys::lv_font_montserrat_12));
+pub static MONTSERRAT_12: Font = Font(addr_of!(oxivgl_sys::lv_font_montserrat_12));
 /// LVGL built-in Montserrat 14 pt.
-pub static MONTSERRAT_14: Font = Font(addr_of!(lvgl_rust_sys::lv_font_montserrat_14));
+pub static MONTSERRAT_14: Font = Font(addr_of!(oxivgl_sys::lv_font_montserrat_14));
 /// LVGL built-in Montserrat 16 pt.
-pub static MONTSERRAT_16: Font = Font(addr_of!(lvgl_rust_sys::lv_font_montserrat_16));
+pub static MONTSERRAT_16: Font = Font(addr_of!(oxivgl_sys::lv_font_montserrat_16));
 /// LVGL built-in Montserrat 18 pt.
-pub static MONTSERRAT_18: Font = Font(addr_of!(lvgl_rust_sys::lv_font_montserrat_18));
+pub static MONTSERRAT_18: Font = Font(addr_of!(oxivgl_sys::lv_font_montserrat_18));
 /// LVGL built-in Montserrat 20 pt.
-pub static MONTSERRAT_20: Font = Font(addr_of!(lvgl_rust_sys::lv_font_montserrat_20));
+pub static MONTSERRAT_20: Font = Font(addr_of!(oxivgl_sys::lv_font_montserrat_20));
 /// LVGL built-in Montserrat 22 pt.
-pub static MONTSERRAT_22: Font = Font(addr_of!(lvgl_rust_sys::lv_font_montserrat_22));
+pub static MONTSERRAT_22: Font = Font(addr_of!(oxivgl_sys::lv_font_montserrat_22));
 /// LVGL built-in Montserrat 24 pt.
-pub static MONTSERRAT_24: Font = Font(addr_of!(lvgl_rust_sys::lv_font_montserrat_24));
+pub static MONTSERRAT_24: Font = Font(addr_of!(oxivgl_sys::lv_font_montserrat_24));
 /// LVGL built-in Montserrat 26 pt.
-pub static MONTSERRAT_26: Font = Font(addr_of!(lvgl_rust_sys::lv_font_montserrat_26));
+pub static MONTSERRAT_26: Font = Font(addr_of!(oxivgl_sys::lv_font_montserrat_26));
 /// LVGL built-in Montserrat 28 pt.
-pub static MONTSERRAT_28: Font = Font(addr_of!(lvgl_rust_sys::lv_font_montserrat_28));
+pub static MONTSERRAT_28: Font = Font(addr_of!(oxivgl_sys::lv_font_montserrat_28));
 /// LVGL built-in Montserrat 30 pt.
-pub static MONTSERRAT_30: Font = Font(addr_of!(lvgl_rust_sys::lv_font_montserrat_30));
+pub static MONTSERRAT_30: Font = Font(addr_of!(oxivgl_sys::lv_font_montserrat_30));
 /// LVGL built-in Montserrat 32 pt.
-pub static MONTSERRAT_32: Font = Font(addr_of!(lvgl_rust_sys::lv_font_montserrat_32));
+pub static MONTSERRAT_32: Font = Font(addr_of!(oxivgl_sys::lv_font_montserrat_32));
 /// LVGL built-in Montserrat 34 pt.
-pub static MONTSERRAT_34: Font = Font(addr_of!(lvgl_rust_sys::lv_font_montserrat_34));
+pub static MONTSERRAT_34: Font = Font(addr_of!(oxivgl_sys::lv_font_montserrat_34));
 /// LVGL built-in Montserrat 36 pt.
-pub static MONTSERRAT_36: Font = Font(addr_of!(lvgl_rust_sys::lv_font_montserrat_36));
+pub static MONTSERRAT_36: Font = Font(addr_of!(oxivgl_sys::lv_font_montserrat_36));
 /// LVGL built-in Montserrat 38 pt.
-pub static MONTSERRAT_38: Font = Font(addr_of!(lvgl_rust_sys::lv_font_montserrat_38));
+pub static MONTSERRAT_38: Font = Font(addr_of!(oxivgl_sys::lv_font_montserrat_38));
 /// LVGL built-in Montserrat 40 pt.
-pub static MONTSERRAT_40: Font = Font(addr_of!(lvgl_rust_sys::lv_font_montserrat_40));
+pub static MONTSERRAT_40: Font = Font(addr_of!(oxivgl_sys::lv_font_montserrat_40));
 /// LVGL built-in Montserrat 42 pt.
-pub static MONTSERRAT_42: Font = Font(addr_of!(lvgl_rust_sys::lv_font_montserrat_42));
+pub static MONTSERRAT_42: Font = Font(addr_of!(oxivgl_sys::lv_font_montserrat_42));
 /// LVGL built-in Montserrat 44 pt.
-pub static MONTSERRAT_44: Font = Font(addr_of!(lvgl_rust_sys::lv_font_montserrat_44));
+pub static MONTSERRAT_44: Font = Font(addr_of!(oxivgl_sys::lv_font_montserrat_44));
 /// LVGL built-in Montserrat 46 pt.
-pub static MONTSERRAT_46: Font = Font(addr_of!(lvgl_rust_sys::lv_font_montserrat_46));
+pub static MONTSERRAT_46: Font = Font(addr_of!(oxivgl_sys::lv_font_montserrat_46));
 /// LVGL built-in Montserrat 48 pt.
-pub static MONTSERRAT_48: Font = Font(addr_of!(lvgl_rust_sys::lv_font_montserrat_48));
+pub static MONTSERRAT_48: Font = Font(addr_of!(oxivgl_sys::lv_font_montserrat_48));
 
 #[cfg(test)]
 mod tests {

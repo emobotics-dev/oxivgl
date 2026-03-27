@@ -21,7 +21,7 @@
 //! ```
 
 use core::ffi::{CStr, c_char};
-use lvgl_rust_sys::*;
+use oxivgl_sys::*;
 
 /// A `*const c_char` wrapper that is `Sync` + `Send`.
 ///

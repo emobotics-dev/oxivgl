@@ -9,7 +9,7 @@
 use core::slice::from_raw_parts;
 
 use embassy_sync::{blocking_mutex::raw::CriticalSectionRawMutex, channel::Channel};
-use lvgl_rust_sys::{lv_area_t, lv_display_flush_ready, lv_display_t};
+use oxivgl_sys::{lv_area_t, lv_display_flush_ready, lv_display_t};
 
 /// Error type for display output operations.
 #[derive(Debug)]

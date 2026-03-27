@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
 use core::{ffi::c_char, ops::Deref, ptr::null_mut};
 
-use lvgl_rust_sys::*;
+use oxivgl_sys::*;
 
 use super::{
     child::Child,
@@ -148,9 +148,9 @@ mod tests {
     #[test]
     fn dddir_values_for_tabview() {
         // Verify the DdDir values match lv_dir_t used by lv_tabview_set_tab_bar_position.
-        assert_eq!(DdDir::Top as u32, lvgl_rust_sys::lv_dir_t_LV_DIR_TOP);
-        assert_eq!(DdDir::Bottom as u32, lvgl_rust_sys::lv_dir_t_LV_DIR_BOTTOM);
-        assert_eq!(DdDir::Left as u32, lvgl_rust_sys::lv_dir_t_LV_DIR_LEFT);
-        assert_eq!(DdDir::Right as u32, lvgl_rust_sys::lv_dir_t_LV_DIR_RIGHT);
+        assert_eq!(DdDir::Top as u32, oxivgl_sys::lv_dir_t_LV_DIR_TOP);
+        assert_eq!(DdDir::Bottom as u32, oxivgl_sys::lv_dir_t_LV_DIR_BOTTOM);
+        assert_eq!(DdDir::Left as u32, oxivgl_sys::lv_dir_t_LV_DIR_LEFT);
+        assert_eq!(DdDir::Right as u32, oxivgl_sys::lv_dir_t_LV_DIR_RIGHT);
     }
 }

@@ -6,7 +6,13 @@
 
 # oxivgl
 
-Safe Rust bindings for [LVGL](https://github.com/lvgl/lvgl) on embedded (`no_std`) and host (`std`/SDL2) targets. Wraps all unsafe LVGL calls behind type-safe APIs — user code never touches `unsafe` or `lvgl_rust_sys` directly.
+Safe Rust bindings for [LVGL](https://github.com/lvgl/lvgl) on embedded (`no_std`) and host (`std`/SDL2) targets. Wraps all unsafe LVGL calls behind type-safe APIs — user code never touches `unsafe` or raw FFI directly.
+
+## Motivation
+
+Embedded `no_std` Rust has very few compact UI frameworks, leaving Rust developers envying the C ecosystem's broad reliance on LVGL. LVGL itself, however, feels foreign when approached with a Rust mindset — raw pointers, manual memory management, complex ownership model make it easy to make mistakes which are hard to debug.
+
+oxivgl was created to close this gap. It is a safety layer on top of LVGL that enforces correct ownership, makes lifetimes explicit, and eliminates the `unsafe` FFI surface from application code. The goal is to make building LVGL UIs in Rust not just safer but genuinely easier and less frustrating than writing the equivalent in plain C directly.
 
 ## Quick Start
 
@@ -48,13 +54,7 @@ oxivgl = { git = "https://github.com/emobotics-dev/oxivgl" }
 
 ## Status
 
-oxivgl is under active development — fast-growing, frequently
-refactored, and **not API-stable**. Module paths, type names, and method
-signatures may change between commits. There are no semver guarantees
-yet.
-
-The intent is to publish on crates.io once the API has stabilized enough
-for external consumers. Until then, depend on it via git.
+oxivgl is under active development. Even if it has reached some degree of maturity and is used intensively by our own embedded projects, it is **not guaranteed to be API-stable** yet — expect breaking changes to happen frequently. Currently, oxivgl does not map 100% of LVGL's features but covers a majority of all APIs demonstrated and used by the comprehensive set of LVGL examples. If you miss a feature that is important for you, you are more than welcome to contribute by writing issues and submitting PRs!
 
 ## Architecture
 
@@ -250,8 +250,6 @@ Integration and leak tests run against a real LVGL instance with `SDL_VIDEODRIVE
 | [`docs/spec-memory-lifetime.md`](docs/spec-memory-lifetime.md) | Memory safety invariants — pointer ownership, style lifecycle, drop ordering |
 | [`docs/spec-widget-wrapper.md`](docs/spec-widget-wrapper.md) | How to wrap a new LVGL widget — struct pattern, SAFETY comments, tests |
 | [`docs/spec-example-porting.md`](docs/spec-example-porting.md) | How to port LVGL C examples — View pattern, hard constraints, checklist |
-| [`docs/spec-testing.md`](docs/spec-testing.md) | Test tiers, when to write what, portability |
-| [`docs/spec-git-workflow.md`](docs/spec-git-workflow.md) | Git conventions — branching, commits, PRs, CI |
 
 ## LVGL Configuration (`conf/lv_conf.h`)
 
@@ -289,27 +287,15 @@ LIBCLANG_PATH=/usr/lib64 cargo +nightly test --target x86_64-unknown-linux-gnu
 cargo +esp -Zbuild-std=alloc,core check --features esp-hal,log-04
 ```
 
-`build.rs` compiles LVGL from source via the `cc` crate (`lvgl_rust_sys`). Expects `DEP_LV_CONFIG_PATH` pointing to `lv_conf.h`.
+`oxivgl-sys/build.rs` downloads and compiles LVGL from source via the `cc` crate. Expects `DEP_LV_CONFIG_PATH` pointing to `lv_conf.h`.
 
 ## AI Statement
 
-This library has been developed using AI coding agents, mostly Claude
-Code. The DMA/buffer foundations, architecture decisions, wrapper
-implementations, memory safety reviews, example porting, and
-documentation were built through human–AI collaboration.
+This library has been developed using agentic coding, mostly with Claude Code. The DMA/buffer foundations, architecture decisions, wrapper implementations, memory safety reviews, example porting, and documentation were built through human–AI collaboration.
 
-The API is designed to be AI-friendly: discoverable, well-documented,
-and free of footguns. Architecture and design boundaries are captured in
-explicit specs. Rust's type system and borrow checker catch mistakes at
-compile time that would silently corrupt memory in C — when an AI agent
-generates widget code, the compiler enforces correct lifetimes, valid
-enum values, and proper ownership. We envision AI agents as primary
-users of this crate, generating embedded GUIs from high-level
-descriptions.
+The API is designed to be AI-friendly: discoverable, well-documented, and free of footguns. Architecture and design boundaries are captured in explicit specs. Rust's type system and borrow checker catch mistakes at compile time that would silently corrupt memory in C — when an AI agent generates widget code, the compiler enforces correct lifetimes, valid enum values, and proper ownership.
 
-Contributors are encouraged to use AI tools. The project's specs,
-CLAUDE.md, and example patterns are structured to give AI agents the
-context they need to contribute effectively.
+Contributors are encouraged to use AI tools. The project's specs, CLAUDE.md, and example patterns are structured to give AI agents the context they need to contribute effectively.
 
 ## License
 

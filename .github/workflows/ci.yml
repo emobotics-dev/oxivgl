@@ -54,7 +54,7 @@ jobs:
       - name: Use system 64-bit libclang for host builds
         run: echo "LIBCLANG_PATH=$(llvm-config --libdir)" >> "$GITHUB_ENV"
 
-      - name: Enforce example safety (no unsafe, no lvgl_rust_sys)
+      - name: Enforce example safety (no unsafe, no oxivgl_sys)
         run: |
           # Pre-existing exceptions (to be fixed incrementally):
           EXEMPT="examples/anim4.rs|examples/animimg_1.rs|examples/widget_label4.rs|examples/widget_roller3.rs"
@@ -63,12 +63,12 @@ jobs:
             echo "::error::Examples must not contain 'unsafe'. Use safe wrapper APIs."
             FAIL=1
           fi
-          if grep -rn 'use lvgl_rust_sys' examples/*.rs | grep -v '^examples/common/' | grep -Ev "$EXEMPT"; then
-            echo "::error::Examples must not import lvgl_rust_sys. Use oxivgl wrapper APIs."
+          if grep -rn 'use oxivgl_sys' examples/*.rs | grep -v '^examples/common/' | grep -Ev "$EXEMPT"; then
+            echo "::error::Examples must not import oxivgl_sys. Use oxivgl wrapper APIs."
             FAIL=1
           fi
           if [ "$FAIL" -eq 1 ]; then exit 1; fi
-          echo "All examples are safe — no unsafe, no lvgl_rust_sys (4 legacy exemptions)."
+          echo "All examples are safe — no unsafe, no oxivgl_sys (4 legacy exemptions)."
 
       - name: Unit tests
         run: cargo +nightly test --target x86_64-unknown-linux-gnu --lib

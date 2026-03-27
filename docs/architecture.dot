@@ -41,7 +41,7 @@ digraph architecture {
         label="C / FFI" labeljust=l fontsize=10 fontcolor="#666666"
         style="dashed,rounded" color="#999999"
 
-        sys [label="lvgl_rust_sys\nraw LVGL 9.3 bindings"
+        sys [label="oxivgl-sys\nraw LVGL 9.5 bindings"
              fillcolor="#f0f0f0" color="#888888"]
 
         lvgl_c [label="LVGL C library\nwidgets · layout · rendering"

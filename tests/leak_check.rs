@@ -145,7 +145,7 @@ fn screen() -> oxivgl::widgets::Screen {
 }
 
 fn pump_child() {
-    unsafe { lvgl_rust_sys::lv_refr_now(core::ptr::null_mut()) };
+    unsafe { oxivgl_sys::lv_refr_now(core::ptr::null_mut()) };
 }
 
 /// Measure per-iteration leak for a widget test closure.
@@ -201,15 +201,15 @@ use oxivgl::{
 #[test]
 fn leak_aa_lvgl_baseline() {
     run_isolated("LVGL C baseline", || {
-        let screen_ptr = unsafe { lvgl_rust_sys::lv_screen_active() };
+        let screen_ptr = unsafe { oxivgl_sys::lv_screen_active() };
         start_tracking();
         let before = total_alloc_bytes();
         for _ in 0..MEASURE {
             unsafe {
-                let obj = lvgl_rust_sys::lv_obj_create(screen_ptr);
-                lvgl_rust_sys::lv_obj_set_size(obj, 100, 50);
-                lvgl_rust_sys::lv_obj_delete(obj);
-                lvgl_rust_sys::lv_refr_now(core::ptr::null_mut());
+                let obj = oxivgl_sys::lv_obj_create(screen_ptr);
+                oxivgl_sys::lv_obj_set_size(obj, 100, 50);
+                oxivgl_sys::lv_obj_delete(obj);
+                oxivgl_sys::lv_refr_now(core::ptr::null_mut());
             }
         }
         let after = total_alloc_bytes();

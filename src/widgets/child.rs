@@ -65,7 +65,7 @@ impl<W: core::fmt::Debug> core::fmt::Debug for Child<W> {
 }
 
 impl<W: AsLvHandle> AsLvHandle for Child<W> {
-    fn lv_handle(&self) -> *mut lvgl_rust_sys::lv_obj_t {
+    fn lv_handle(&self) -> *mut oxivgl_sys::lv_obj_t {
         self.0.lv_handle()
     }
 }

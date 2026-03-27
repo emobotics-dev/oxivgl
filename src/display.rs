@@ -9,13 +9,13 @@
 use core::ffi::c_void;
 
 use embassy_sync::{blocking_mutex::raw::CriticalSectionRawMutex, signal::Signal};
-use lvgl_rust_sys::{
+use oxivgl_sys::{
     lv_display_create, lv_display_set_buffers, lv_display_set_color_format,
     lv_color_format_t_LV_COLOR_FORMAT_RGB565_SWAPPED,
     lv_display_render_mode_t_LV_DISPLAY_RENDER_MODE_PARTIAL,
 };
 #[cfg(feature = "esp-hal")]
-use lvgl_rust_sys::{lv_display_set_flush_cb, lv_display_set_flush_wait_cb};
+use oxivgl_sys::{lv_display_set_flush_cb, lv_display_set_flush_wait_cb};
 
 /// Number of pixel rows per render stripe. Large value trades stack RAM for fewer flush calls.
 // NOTE: this is a lot of buffer — reduces available stack RAM intentionally; easy to shrink later.

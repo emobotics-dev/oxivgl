@@ -77,7 +77,7 @@ pub use led::Led;
 pub use line::Line;
 pub use list::List;
 // Re-export raw FFI types used in public widget APIs.
-pub use lvgl_rust_sys::{lv_color_t, lv_image_dsc_t, lv_point_precise_t};
+pub use oxivgl_sys::{lv_color_t, lv_image_dsc_t, lv_point_precise_t};
 pub use menu::{Menu, MenuHeaderMode};
 pub use msgbox::Msgbox;
 pub use obj::{Align, AsLvHandle, BaseDir, Matrix, Obj, Part, TextAlign};

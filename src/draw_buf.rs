@@ -2,7 +2,7 @@
 //! Owned LVGL draw buffer — wraps `lv_draw_buf_t`.
 
 use core::marker::PhantomData;
-use lvgl_rust_sys::*;
+use oxivgl_sys::*;
 
 /// LVGL pixel color format.
 ///

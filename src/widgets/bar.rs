@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
 use core::{cell::Cell, ops::Deref, ptr::null_mut};
 
-use lvgl_rust_sys::*;
+use oxivgl_sys::*;
 
 use super::{
     LVGL_SCALE, WidgetError,
@@ -14,12 +14,12 @@ use super::{
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum BarMode {
     /// Standard bar (indicator from min to value).
-    Normal = lvgl_rust_sys::lv_bar_mode_t_LV_BAR_MODE_NORMAL,
+    Normal = oxivgl_sys::lv_bar_mode_t_LV_BAR_MODE_NORMAL,
     /// Indicator draws from zero point towards value (needs range with negative
     /// min).
-    Symmetrical = lvgl_rust_sys::lv_bar_mode_t_LV_BAR_MODE_SYMMETRICAL,
+    Symmetrical = oxivgl_sys::lv_bar_mode_t_LV_BAR_MODE_SYMMETRICAL,
     /// Indicator between start value and end value.
-    Range = lvgl_rust_sys::lv_bar_mode_t_LV_BAR_MODE_RANGE,
+    Range = oxivgl_sys::lv_bar_mode_t_LV_BAR_MODE_RANGE,
 }
 
 /// Bar widget orientation.

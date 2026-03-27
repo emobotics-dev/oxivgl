@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
 //! Safe wrapper around LVGL events (`lv_event_t`).
 
-use lvgl_rust_sys::*;
+use oxivgl_sys::*;
 
 use crate::draw::{DrawTask, Layer};
 use crate::enums::EventCode;

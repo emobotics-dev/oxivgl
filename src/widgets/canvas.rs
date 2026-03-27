@@ -3,7 +3,7 @@
 
 use core::marker::PhantomData;
 
-use lvgl_rust_sys::*;
+use oxivgl_sys::*;
 
 use crate::{
     draw::{
