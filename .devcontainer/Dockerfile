@@ -58,9 +58,5 @@ RUN bash -c '\
     echo "export BINDGEN_EXTRA_CLANG_ARGS_xtensa_esp32s3_none_elf=\"--sysroot=$SYSROOT\"" \
         | tee -a "$HOME/.bashrc" >> "$HOME/.clco-env"'
 
-# ── Host LIBCLANG_PATH (override ESP libclang for host builds) ──────
-RUN echo "export LIBCLANG_PATH=$(llvm-config --libdir)" \
-    | tee -a "$HOME/.bashrc" >> "$HOME/.clco-env"
-
 USER claude
 WORKDIR /workspace
