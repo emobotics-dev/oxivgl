@@ -58,5 +58,12 @@ RUN bash -c '\
     echo "export BINDGEN_EXTRA_CLANG_ARGS_xtensa_esp32s3_none_elf=\"--sysroot=$SYSROOT\"" \
         | tee -a "$HOME/.bashrc" >> "$HOME/.clco-env"'
 
+# Override LIBCLANG_PATH back to the system clang for host builds.
+# espup set it to the ESP clang (Xtensa-only), which can't find x86_64
+# headers. oxivgl-sys/build.rs auto-detects ESP clang for xtensa targets,
+# so host builds just need the system clang.
+RUN echo 'export LIBCLANG_PATH=/usr/lib64' \
+    | tee -a "$HOME/.bashrc" >> "$HOME/.clco-env"
+
 USER claude
 WORKDIR /workspace

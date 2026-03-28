@@ -15,4 +15,3 @@ rustflags = [
 [env]
 DEP_LV_CONFIG_PATH = { value = "examples/conf", relative = true }
 ESP_LOG            = "info"
-LIBCLANG_PATH      = { value = "/usr/lib64", force = true }
