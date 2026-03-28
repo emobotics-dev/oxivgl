@@ -7,14 +7,6 @@
 #   ./run_host.sh -s                  Screenshot all examples
 set -e
 
-# Use system 64-bit libclang for host builds.
-# The ESP toolchain may set LIBCLANG_PATH to a 32-bit clang which
-# breaks x86_64 bindgen — override it when detected.
-if [[ "${LIBCLANG_PATH:-}" == *"xtensa"* || "${LIBCLANG_PATH:-}" == *"esp"* ]]; then
-    export LIBCLANG_PATH=/usr/lib64
-elif [[ -z "${LIBCLANG_PATH:-}" ]]; then
-    export LIBCLANG_PATH=/usr/lib64
-fi
 TARGET="x86_64-unknown-linux-gnu"
 
 SCREENSHOT=0
@@ -100,16 +92,16 @@ run_example() {
     if [[ "$SCREENSHOT" == 1 ]]; then
         echo "=== $ex ==="
         SCREENSHOT_ONLY=1 SDL_VIDEODRIVER=dummy \
-            cargo +nightly run --example "$ex" --target "$TARGET"
+            cargo run --example "$ex" --target "$TARGET"
     else
         echo "Running $ex (SDL window)… Close the window or press Ctrl-C to exit."
-        cargo +nightly run --example "$ex" --target "$TARGET"
+        cargo run --example "$ex" --target "$TARGET"
     fi
 }
 
 if [[ $# -eq 0 && "$SCREENSHOT" == 1 ]]; then
     # Build all examples first
-    cargo +nightly build --examples --target "$TARGET"
+    cargo build --examples --target "$TARGET"
     # Run built binaries directly in parallel (avoids cargo lock contention)
     BIN_DIR="target/$TARGET/debug/examples"
     N=${SCREENSHOT_JOBS:-$(nproc 2>/dev/null || echo 4)}
