@@ -248,17 +248,24 @@ fn main() {
         "-fvisibility=default",
     ];
 
-    // For Xtensa targets, use the ESP-capable clang (the system clang
-    // doesn't understand Xtensa).  .cargo/config.toml sets LIBCLANG_PATH
-    // to the system clang for host convenience, so we override here.
+    // For Xtensa targets, auto-detect the ESP-capable clang if LIBCLANG_PATH
+    // doesn't already point to one. The system clang doesn't understand Xtensa.
     let target = env::var("TARGET").expect("Cargo build scripts always have TARGET");
     if target.starts_with("xtensa-") {
-        let home = env::var("HOME").unwrap_or_default();
-        let esp_clang = format!(
-            "{home}/.rustup/toolchains/esp/xtensa-esp32-elf-clang/esp-20.1.1_20250829/esp-clang/lib"
-        );
-        if std::path::Path::new(&esp_clang).exists() {
-            env::set_var("LIBCLANG_PATH", &esp_clang);
+        let current = env::var("LIBCLANG_PATH").unwrap_or_default();
+        if !current.contains("esp") {
+            // Search common ESP clang locations (devcontainer, CI image).
+            let suffix = "toolchains/esp/xtensa-esp32-elf-clang/esp-20.1.1_20250829/esp-clang/lib";
+            let candidates = [
+                format!("{}/.rustup/{suffix}", env::var("HOME").unwrap_or_default()),
+                format!("{}/{suffix}", env::var("RUSTUP_HOME").unwrap_or_default()),
+            ];
+            for path in &candidates {
+                if std::path::Path::new(path).exists() {
+                    env::set_var("LIBCLANG_PATH", path);
+                    break;
+                }
+            }
         }
     }
 

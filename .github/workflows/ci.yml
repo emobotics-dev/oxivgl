@@ -149,4 +149,4 @@ jobs:
           [ -n "$ESP_ELF_BIN" ] && echo "$ESP_ELF_BIN" >> "$GITHUB_PATH"
 
       - name: Build example getting_started1 (ESP32)
-        run: cargo +esp -Zbuild-std=alloc,core build --release --example getting_started1
+        run: cargo +esp -Zbuild-std=alloc,core build --target xtensa-esp32-none-elf --release --example getting_started1
