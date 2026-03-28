@@ -334,6 +334,7 @@ fn main() {
                 .unwrap_or(Vec::new()),
         )
         .clang_args(&extra_clang_args)
+        .wrap_unsafe_ops(true)
         .wrap_static_fns(true)
         .wrap_static_fns_path(out_path.join("static_fns.c"))
         .generate()
@@ -417,7 +418,7 @@ fn fix_bindgen_transmutes(path: &Path) {
 
     // Phase 1: Replace `::core::mem::transmute(INNER)` → `(INNER) as _`.
     // Uses paren-matching to handle multi-line expressions.
-    let needle = "::core::mem::transmute(";
+    let needle = ":: core :: mem :: transmute (";
     while let Some(start) = code.find(needle) {
         let inner_start = start + needle.len();
         let mut depth: u32 = 1;
