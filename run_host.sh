@@ -91,6 +91,8 @@ ALL_EXAMPLES=(
     gridnav_4
     gridnav_5
     list_2
+    translation_1
+    translation_2
 )
 
 run_example() {
