@@ -157,6 +157,30 @@ impl Screen {
         self
     }
 
+    /// Conditionally bind a style via the observer API: add `style` with
+    /// `selector` when `subject == ref_value`, remove it otherwise.
+    ///
+    /// Same lifetime contract as [`add_style`](Self::add_style) — the style Rc
+    /// clone is intentionally leaked on drop because the LVGL screen outlives
+    /// this non-owning handle.
+    pub fn bind_style(
+        &self,
+        style: &Style,
+        selector: impl Into<Selector>,
+        subject: &super::subject::Subject,
+        ref_value: i32,
+    ) -> &Self {
+        let selector = selector.into().raw();
+        // Intentionally leaked on drop (same as add_style for Screen).
+        self._styles.borrow_mut().push(style.clone());
+        // SAFETY: handle non-null; style pointer valid for Rc lifetime
+        // (repr(C) offset-0 guarantee); subject is pinned.
+        unsafe {
+            lv_obj_bind_style(self.handle, style.lv_ptr(), selector, subject.as_ptr(), ref_value);
+        }
+        self
+    }
+
     /// Set flex alignment (main, cross, track).
     pub fn set_flex_align(&self, main: FlexAlign, cross: FlexAlign, track: FlexAlign) -> &Self {
         // SAFETY: handle non-null (Screen::active() returns None for null).

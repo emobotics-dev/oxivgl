@@ -956,6 +956,30 @@ impl<'p> Obj<'p> {
         self
     }
 
+    /// Bind a style: add `style` with `selector` when `subject == ref_value`,
+    /// remove it otherwise.
+    ///
+    /// This is the observer-driven equivalent of `add_style` — the style is
+    /// automatically added or removed whenever the subject value changes.
+    pub fn bind_style(
+        &self,
+        style: &crate::style::Style,
+        selector: impl Into<crate::style::Selector>,
+        subject: &super::subject::Subject,
+        ref_value: i32,
+    ) -> &Self {
+        let selector = selector.into().raw();
+        assert_ne!(self.handle, core::ptr::null_mut(), "Obj handle cannot be null");
+        // Keep the Rc alive as long as the widget, same as add_style.
+        self._styles.borrow_mut().push(style.clone());
+        // SAFETY: handle non-null (asserted above); style pointer valid for
+        // Rc lifetime (offset-0 repr(C) guarantee); subject pinned.
+        unsafe {
+            lv_obj_bind_style(self.handle, style.lv_ptr(), selector, subject.as_ptr(), ref_value);
+        }
+        self
+    }
+
     /// Two-way bind: checked state ↔ integer subject (0/1).
     ///
     /// The widget must have `ObjFlag::CHECKABLE` set.

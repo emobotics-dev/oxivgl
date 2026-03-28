@@ -112,14 +112,14 @@ pub struct DrawLabelDscOwned {
 }
 
 impl DrawLabelDscOwned {
-    /// Create with default font (`lv_font_montserrat_14`) and LVGL defaults.
+    /// Create with default font (LV_FONT_DEFAULT) and LVGL defaults.
     pub fn default_font() -> Self {
         // SAFETY: zeroed is a valid starting state; init fills required fields.
         let mut inner = unsafe { core::mem::zeroed() };
         unsafe { lv_draw_label_dsc_init(&mut inner) };
-        // SAFETY: lv_font_montserrat_14 is a 'static LVGL global; pointer is always
-        // valid.
-        inner.font = unsafe { &lv_font_montserrat_14 };
+        // SAFETY: lv_font_get_default() returns a pointer to the LV_FONT_DEFAULT
+        // static font object, which is valid for the lifetime of the program.
+        inner.font = unsafe { lv_font_get_default() };
         Self { inner }
     }
 

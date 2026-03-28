@@ -1,4 +1,18 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
+//! Font types and built-in LVGL font constants.
+//!
+//! # Font availability
+//!
+//! The `MONTSERRAT_*` constants (and other built-in font statics) reference
+//! `extern "C"` symbols that are compiled into the LVGL binary **only when the
+//! corresponding `LV_FONT_MONTSERRAT_*` option is enabled** in the
+//! application's `lv_conf.h`.
+//!
+//! Referencing a font that was not enabled causes a **linker error** at build
+//! time — fail-fast, not undefined behaviour.  Applications must ensure their
+//! `lv_conf.h` enables every font they intend to use.  LTO removes unused font
+//! symbols automatically, so enabling extras you don't use has no code-size
+//! cost.
 use core::cell::UnsafeCell;
 use core::mem::MaybeUninit;
 use core::ptr::addr_of;

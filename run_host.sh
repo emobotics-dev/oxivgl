@@ -78,6 +78,10 @@ ALL_EXAMPLES=(
     observer1
     observer2
     observer3
+    observer4
+    observer5
+    observer6
+    observer7
     grad_{1,2,3,4}
     snapshot_1
     scroll5
@@ -87,6 +91,8 @@ ALL_EXAMPLES=(
     gridnav_4
     gridnav_5
     list_2
+    translation_1
+    translation_2
 )
 
 run_example() {

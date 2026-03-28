@@ -5,6 +5,7 @@
 #![allow(non_upper_case_globals)]
 #![allow(clippy::too_many_arguments)]
 #![allow(clippy::redundant_static_lifetimes)]
+#![allow(unsafe_op_in_unsafe_fn)] // bindgen bitfield accessors use transmute without unsafe blocks
 
 include!(concat!(env!("OUT_DIR"), "/bindings.rs"));
 

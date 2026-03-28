@@ -16,5 +16,5 @@ rustflags = [
 target = "xtensa-esp32-none-elf"
 
 [env]
-DEP_LV_CONFIG_PATH = { value = "conf", relative = true }
+DEP_LV_CONFIG_PATH = { value = "examples/conf", relative = true }
 ESP_LOG            = "info"

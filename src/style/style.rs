@@ -324,6 +324,22 @@ impl StyleBuilder {
         self
     }
 
+    /// Apply the built-in LVGL shade color filter with the given opacity.
+    ///
+    /// This uses the global `lv_color_filter_shade` descriptor, so no
+    /// heap allocation is needed. The filter darkens colors by the given
+    /// opacity level (0 = transparent, 255 = fully dark).
+    pub fn color_filter_shade(&mut self, opa: u8) -> &mut Self {
+        // SAFETY: lv_color_filter_shade is a global static in LVGL,
+        // valid for the entire program lifetime.
+        unsafe {
+            lv_style_set_color_filter_dsc(&mut self.inner.lv, &lv_color_filter_shade);
+            lv_style_set_color_filter_opa(&mut self.inner.lv, opa as lv_opa_t);
+        }
+        // No Box ownership needed — the global static outlives everything.
+        self
+    }
+
     /// Set style width.
     pub fn width(&mut self, w: i32) -> &mut Self {
         unsafe { lv_style_set_width(&mut self.inner.lv, w) };
@@ -345,6 +361,13 @@ impl StyleBuilder {
     /// Set style Y offset.
     pub fn y(&mut self, y: i32) -> &mut Self {
         unsafe { lv_style_set_y(&mut self.inner.lv, y) };
+        self
+    }
+
+    /// Set gap between items (used in flex and grid layouts).
+    pub fn pad_gap(&mut self, p: i32) -> &mut Self {
+        // SAFETY: inner was initialized by lv_style_init.
+        unsafe { lv_style_set_pad_gap(&mut self.inner.lv, p) };
         self
     }
 

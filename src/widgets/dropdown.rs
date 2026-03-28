@@ -209,6 +209,18 @@ impl<'p> Dropdown<'p> {
         unsafe { lv_dropdown_get_dir(self.obj.handle()) }
     }
 
+    /// Get the popup list widget of the dropdown.
+    ///
+    /// The returned [`Child`] is a non-owning handle; the list is owned
+    /// by the dropdown and lives as long as the dropdown exists.
+    pub fn get_list(&self) -> super::Child<super::Obj<'p>> {
+        // SAFETY: handle non-null (checked in new()); lv_dropdown_get_list
+        // always returns a valid child pointer for an existing dropdown.
+        let ptr = unsafe { lv_dropdown_get_list(self.obj.handle()) };
+        assert!(!ptr.is_null(), "lv_dropdown_get_list returned NULL");
+        super::Child::new(super::Obj::from_raw(ptr))
+    }
+
     /// Get the currently selected item index.
     pub fn get_selected(&self) -> u32 {
         assert_ne!(

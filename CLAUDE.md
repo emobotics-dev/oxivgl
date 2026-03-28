@@ -72,7 +72,7 @@ LIBCLANG_PATH=/usr/lib64 RUSTDOCFLAGS="-W missing-docs" cargo +nightly doc --tar
 ## Build System
 
 - **All targets**: `oxivgl-sys/build.rs` (cc crate) downloads LVGL v9.5.0 and compiles it from source. For Xtensa, `source ~/.clco-env` puts the ESP toolchain in PATH.
-- `lv_conf.h` lives in `conf/`; pointed to by `DEP_LV_CONFIG_PATH` in `.cargo/config.toml`.
+- `lv_conf.h` is **owned by the application**, not the library. The examples ship their config in `examples/conf/lv_conf.h`. Applications using oxivgl as a dependency must supply their own `lv_conf.h` and set `DEP_LV_CONFIG_PATH` to a directory containing it. The workspace default (`examples/conf`) is set in `.cargo/config.toml` and is only authoritative for the examples and tests in this repo.
 - **CRITICAL — single LVGL source**: LVGL must only be compiled once, by `oxivgl-sys`. Never add a second compilation (e.g. cmake) from a different LVGL source tree — struct layouts change between versions, causing silent memory corruption on ESP32 (see issue #55).
 
 ## Specifications

@@ -1,0 +1,223 @@
+#![cfg_attr(target_arch = "xtensa", no_std, no_main)]
+#![cfg_attr(
+    target_arch = "xtensa",
+    feature(impl_trait_in_assoc_type, type_alias_impl_trait)
+)]
+// SPDX-License-Identifier: MIT OR Apache-2.0
+//! Observer 4 — Tabbed interface with indicator animation
+//!
+//! Three-tab footer with an animated indicator bar that slides to the active
+//! tab. Each tab shows different content: sliders (tab 0), dropdowns (tab 1),
+//! or rollers (tab 2), each bound to their own subject.
+//!
+//! **Simplification**: Content transitions are instant (clean + recreate)
+//! instead of animated, because the safe API does not yet expose
+//! `set_completed_cb` for auto-deleting animated widgets. The indicator slide
+//! animation IS preserved.
+
+use core::ffi::c_void;
+use core::ptr::null_mut;
+
+use oxivgl::{
+    anim::{Anim, anim_path_ease_in_out, anim_set_x},
+    enums::{EventCode, ObjFlag, ObjState, ScrollDir},
+    event::Event,
+    layout::{FlexAlign, FlexFlow},
+    style::{Selector, lv_pct},
+    view::View,
+    widgets::{Align, AsLvHandle, Button, Child, Dropdown, Label, Obj, Roller, RollerMode, Screen, Slider, Subject, WidgetError},
+};
+
+const DROPDOWN_OPTIONS: &str = "Red\nGreen\nBlue";
+const ROLLER_OPTIONS: &str = "Alpha\nBeta\nGamma\nDelta\nEpsilon";
+
+struct Observer4 {
+    // Widgets stored before subjects so subjects drop last.
+    _main_cont: Obj<'static>,
+    cont: Obj<'static>,
+    footer: Obj<'static>,
+    indicator: Obj<'static>,
+    btn_handles: [*mut c_void; 3],
+    last_tab: i32,
+
+    // Subjects — drop after widgets so observers are removed before deinit.
+    tab_subject: Subject,
+    slider_subjects: [Subject; 4],
+    dropdown_subjects: [Subject; 3],
+    roller_subjects: [Subject; 2],
+}
+
+impl View for Observer4 {
+    fn create() -> Result<Self, WidgetError> {
+        let screen = Screen::active().ok_or(WidgetError::LvglNullPointer)?;
+
+        // Subjects.
+        let tab_subject = Subject::new_int(0);
+        let slider_subjects = [
+            Subject::new_int(25),
+            Subject::new_int(50),
+            Subject::new_int(75),
+            Subject::new_int(40),
+        ];
+        let dropdown_subjects = [
+            Subject::new_int(0),
+            Subject::new_int(1),
+            Subject::new_int(2),
+        ];
+        let roller_subjects = [
+            Subject::new_int(0),
+            Subject::new_int(2),
+        ];
+
+        // Main container — full screen, flex column.
+        let main_cont = Obj::new(&screen)?;
+        main_cont
+            .remove_style_all()
+            .size(lv_pct(100), lv_pct(100))
+            .pad(0)
+            .set_flex_flow(FlexFlow::Column);
+
+        // Content area — flex-grow 1, scrollable vertically.
+        let cont = Obj::new(&main_cont)?;
+        cont.remove_style_all()
+            .set_flex_grow(1)
+            .pad(8)
+            .width(lv_pct(100))
+            .set_scroll_dir(ScrollDir::VER);
+
+        // Footer — 60px tall, row layout with buttons.
+        let footer = Obj::new(&main_cont)?;
+        footer
+            .remove_style_all()
+            .size(lv_pct(100), 60)
+            .style_pad_column(8, Selector::DEFAULT)
+            .pad(8)
+            .set_flex_flow(FlexFlow::Row)
+            .set_flex_align(FlexAlign::Center, FlexAlign::Center, FlexAlign::Center);
+
+        // Three tab buttons.
+        let btn_labels = ["First", "Second", "Third"];
+        let mut btn_handles: [*mut c_void; 3] = [null_mut(); 3];
+
+        for (i, lbl_text) in btn_labels.iter().enumerate() {
+            let btn = Child::new(Button::new(&footer)?);
+            btn.set_flex_grow(1)
+                .height(lv_pct(100))
+                .radius(0, Selector::DEFAULT)
+                .bubble_events();
+            btn.bind_state_if_eq(&tab_subject, ObjState::CHECKED, i as i32);
+
+            let lbl = Child::new(Label::new(&*btn)?);
+            lbl.text(lbl_text).center();
+
+            btn_handles[i] = btn.lv_handle() as *mut c_void;
+        }
+
+        // Indicator bar — 10px tall, 40% bg opacity, outside flex layout.
+        let indicator = Obj::new(&footer)?;
+        indicator
+            .remove_style(None, Selector::DEFAULT)
+            .bg_opa(102) // 40% of 255 ≈ 102
+            .height(10)
+            .align(Align::BottomLeft, 0, 0)
+            .add_flag(ObjFlag::IGNORE_LAYOUT);
+
+        // Force layout so we can read button positions for the initial indicator.
+        indicator.update_layout();
+
+        // Trigger initial state so buttons get the CHECKED binding applied.
+        tab_subject.notify();
+
+        Ok(Self {
+            _main_cont: main_cont,
+            cont,
+            footer,
+            indicator,
+            btn_handles,
+            last_tab: -1, // force initial content build
+            tab_subject,
+            slider_subjects,
+            dropdown_subjects,
+            roller_subjects,
+        })
+    }
+
+    fn on_event(&mut self, event: &Event) {
+        if event.code() != EventCode::CLICKED {
+            return;
+        }
+        let target = event.target_handle() as *mut c_void;
+        for (i, &handle) in self.btn_handles.iter().enumerate() {
+            if !handle.is_null() && target == handle {
+                self.tab_subject.set_int(i as i32);
+                return;
+            }
+        }
+    }
+
+    fn update(&mut self) -> Result<(), WidgetError> {
+        let tab = self.tab_subject.get_int();
+        if tab == self.last_tab {
+            return Ok(());
+        }
+        self.last_tab = tab;
+
+        // Remove old content and rebuild for the active tab.
+        self.cont.clean();
+
+        match tab {
+            0 => {
+                // Tab 0: four sliders.
+                // Child wrappers suppress Rust Drop — LVGL parent owns these.
+                for i in 0..4_i32 {
+                    let slider = Child::new(Slider::new(&self.cont)?);
+                    slider
+                        .set_range(0, 100)
+                        .align(Align::TopMid, 0, 10 + i * 30);
+                    slider.bind_value(&self.slider_subjects[i as usize]);
+                }
+            }
+            1 => {
+                // Tab 1: three dropdowns.
+                for i in 0..3_i32 {
+                    let dd = Child::new(Dropdown::new(&self.cont)?);
+                    dd.set_options(DROPDOWN_OPTIONS)
+                        .align(Align::TopMid, 0, i * 50);
+                    dd.bind_value(&self.dropdown_subjects[i as usize]);
+                }
+            }
+            2 => {
+                // Tab 2: two rollers side by side.
+                for i in 0..2_i32 {
+                    let roller = Child::new(Roller::new(&self.cont)?);
+                    roller
+                        .set_options(ROLLER_OPTIONS, RollerMode::Normal)
+                        .align(Align::Center, -80 + i * 160, 0);
+                    roller.bind_value(&self.roller_subjects[i as usize]);
+                }
+            }
+            _ => {}
+        }
+
+        // Animate indicator to slide under the active button.
+        if let Some(btn_child) = self.footer.get_child(tab) {
+            let btn_x = btn_child.get_x();
+            let btn_w = btn_child.get_width();
+            let ind_x = self.indicator.get_x();
+
+            self.indicator.width(btn_w);
+
+            let mut anim = Anim::new();
+            anim.set_var(&self.indicator)
+                .set_exec_cb(Some(anim_set_x))
+                .set_values(ind_x, btn_x)
+                .set_duration(300)
+                .set_path_cb(Some(anim_path_ease_in_out));
+            anim.start();
+        }
+
+        Ok(())
+    }
+}
+
+oxivgl_examples_common::example_main!(Observer4);

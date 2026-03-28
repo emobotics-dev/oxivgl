@@ -1,0 +1,165 @@
+#![cfg_attr(target_arch = "xtensa", no_std, no_main)]
+#![cfg_attr(
+    target_arch = "xtensa",
+    feature(impl_trait_in_assoc_type, type_alias_impl_trait)
+)]
+// SPDX-License-Identifier: MIT OR Apache-2.0
+//! Observer 7 — Conditional style binding: light / dark theme toggle
+//!
+//! Two subjects drive the UI:
+//! - `subject_theme`: 0 = light, 1 = dark
+//! - `subject_room_temperature`: integer 20–40 °C displayed by a label and a slider
+//!
+//! When `subject_theme == 1` the dark-overlay styles are conditionally bound
+//! to the screen, container, and all three slider parts, demonstrating
+//! `lv_obj_bind_style`. A dropdown lets the user switch between Light and Dark.
+
+use oxivgl::{
+    layout::FlexFlow,
+    style::{LV_SIZE_CONTENT, Palette, Selector, StyleBuilder, color_make, palette_main},
+    view::View,
+    widgets::{Align, Child, Dropdown, Label, Obj, Part, Screen, Slider, Subject, WidgetError},
+};
+
+struct Observer7 {
+    // Widgets — dropped before subjects.
+    _cont: Obj<'static>,
+    _label: Child<Label<'static>>,
+    _slider: Child<Slider<'static>>,
+    _dropdown: Dropdown<'static>,
+
+    // Light styles (added unconditionally).
+    _style_screen: oxivgl::style::Style,
+    _style_slider_main: oxivgl::style::Style,
+    _style_slider_indicator: oxivgl::style::Style,
+    _style_slider_knob: oxivgl::style::Style,
+
+    // Dark overlay styles (bound conditionally when theme == 1).
+    _style_screen_dark: oxivgl::style::Style,
+    _style_bg_dark: oxivgl::style::Style,
+    _style_yellow: oxivgl::style::Style,
+
+    // Subjects — dropped last so observer linkage outlives widgets.
+    _subject_theme: Subject,
+    _subject_room_temperature: Subject,
+}
+
+impl View for Observer7 {
+    fn create() -> Result<Self, WidgetError> {
+        // ── Subjects ────────────────────────────────────────────────────────
+        let subject_theme = Subject::new_int(0);
+        let subject_room_temperature = Subject::new_int(25);
+
+        // ── Light styles ────────────────────────────────────────────────────
+        // Screen background: #cccccc
+        let mut b = StyleBuilder::new();
+        b.bg_color(color_make(204, 204, 204)).bg_opa(255);
+        let style_screen = b.build();
+
+        // Slider main track: red palette
+        let mut b = StyleBuilder::new();
+        b.bg_color(palette_main(Palette::Red)).bg_opa(255);
+        let style_slider_main = b.build();
+
+        // Slider indicator (filled portion): red palette
+        let mut b = StyleBuilder::new();
+        b.bg_color(palette_main(Palette::Red)).bg_opa(255);
+        let style_slider_indicator = b.build();
+
+        // Slider knob: red palette fill, white outline 4 px
+        let mut b = StyleBuilder::new();
+        b.bg_color(palette_main(Palette::Red))
+            .bg_opa(255)
+            .outline_color(color_make(255, 255, 255))
+            .outline_width(4);
+        let style_slider_knob = b.build();
+
+        // ── Dark overlay styles ──────────────────────────────────────────────
+        // Screen dark: #444444 bg, #eeeeee text
+        let mut b = StyleBuilder::new();
+        b.bg_color(color_make(68, 68, 68))
+            .bg_opa(255)
+            .text_color(color_make(238, 238, 238));
+        let style_screen_dark = b.build();
+
+        // Container/dropdown dark: #222222 bg, #eeeeee text, 30% border opacity
+        let mut b = StyleBuilder::new();
+        b.bg_color(color_make(34, 34, 34))
+            .bg_opa(255)
+            .text_color(color_make(238, 238, 238))
+            .border_opa(77); // ~30% of 255
+        let style_bg_dark = b.build();
+
+        // Slider dark: yellow palette fill, #222222 outline
+        let mut b = StyleBuilder::new();
+        b.bg_color(palette_main(Palette::Yellow))
+            .bg_opa(255)
+            .outline_color(color_make(34, 34, 34));
+        let style_yellow = b.build();
+
+        // ── Screen ──────────────────────────────────────────────────────────
+        let screen = Screen::active().ok_or(WidgetError::LvglNullPointer)?;
+        screen.add_style(&style_screen, Selector::DEFAULT);
+        screen.bind_style(&style_screen_dark, Selector::DEFAULT, &subject_theme, 1);
+
+        // ── Container ───────────────────────────────────────────────────────
+        let cont = Obj::new(&screen)?;
+        cont.bind_style(&style_bg_dark, Selector::DEFAULT, &subject_theme, 1)
+            .set_flex_flow(FlexFlow::Column)
+            .size(LV_SIZE_CONTENT, LV_SIZE_CONTENT)
+            .align(Align::TopMid, 0, 20);
+
+        // ── Label ────────────────────────────────────────────────────────────
+        let label = Child::new(Label::new(&cont)?);
+        label.bind_text(&subject_room_temperature, c"%d \u{00b0}C");
+
+        // ── Slider ───────────────────────────────────────────────────────────
+        let slider = Child::new(Slider::new(&cont)?);
+        slider.set_range(20, 40);
+        slider.bind_value(&subject_room_temperature);
+
+        // Apply light styles to all three slider parts.
+        slider.add_style(&style_slider_main, Part::Main);
+        slider.add_style(&style_slider_indicator, Part::Indicator);
+        slider.add_style(&style_slider_knob, Part::Knob);
+
+        // Bind dark (yellow) overlay styles for all three parts when theme == 1.
+        slider.bind_style(&style_yellow, Part::Main, &subject_theme, 1);
+        slider.bind_style(&style_yellow, Part::Indicator, &subject_theme, 1);
+        slider.bind_style(&style_yellow, Part::Knob, &subject_theme, 1);
+
+        // ── Dropdown ─────────────────────────────────────────────────────────
+        let dropdown = Dropdown::new(&screen)?;
+        dropdown
+            .set_options("Light\nDark")
+            .align(Align::TopMid, 0, 120);
+        dropdown.bind_value(&subject_theme);
+        dropdown.bind_style(&style_bg_dark, Selector::DEFAULT, &subject_theme, 1);
+
+        // Style the popup list as well.
+        let list = dropdown.get_list();
+        list.bind_style(&style_bg_dark, Selector::DEFAULT, &subject_theme, 1);
+
+        Ok(Self {
+            _cont: cont,
+            _label: label,
+            _slider: slider,
+            _dropdown: dropdown,
+            _style_screen: style_screen,
+            _style_slider_main: style_slider_main,
+            _style_slider_indicator: style_slider_indicator,
+            _style_slider_knob: style_slider_knob,
+            _style_screen_dark: style_screen_dark,
+            _style_bg_dark: style_bg_dark,
+            _style_yellow: style_yellow,
+            _subject_theme: subject_theme,
+            _subject_room_temperature: subject_room_temperature,
+        })
+    }
+
+    fn update(&mut self) -> Result<(), WidgetError> {
+        Ok(())
+    }
+}
+
+oxivgl_examples_common::example_main!(Observer7);
