@@ -79,7 +79,7 @@ impl<'p> Menu<'p> {
     /// this page. Pass `None` for untitled pages.
     ///
     /// LVGL copies the title string internally. The returned page is owned by
-    /// the menu — wrap in [`Child`] if you need to keep a handle.
+    /// the menu — wrap in [`Child`](super::Child) if you need to keep a handle.
     pub fn page_create(&self, title: Option<&str>) -> Child<Obj<'p>> {
         assert_ne!(self.obj.handle(), null_mut(), "Menu handle cannot be null");
         // `_buf` must remain live until after `lv_menu_page_create` returns —

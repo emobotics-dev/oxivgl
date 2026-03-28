@@ -211,7 +211,7 @@ impl<'p> Dropdown<'p> {
 
     /// Get the popup list widget of the dropdown.
     ///
-    /// The returned [`Child`] is a non-owning handle; the list is owned
+    /// The returned [`Child`](super::Child) is a non-owning handle; the list is owned
     /// by the dropdown and lives as long as the dropdown exists.
     pub fn get_list(&self) -> super::Child<super::Obj<'p>> {
         // SAFETY: handle non-null (checked in new()); lv_dropdown_get_list
