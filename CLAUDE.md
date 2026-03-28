@@ -15,14 +15,17 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Build & Test
 
-Toolchain: `esp` (nightly Xtensa). Set via `rust-toolchain.toml`.
+Toolchain: `nightly` (set via `rust-toolchain.toml`); `esp` for Xtensa cross-builds.
+
+`LIBCLANG_PATH` is set to `/usr/lib64` in `.cargo/config.toml` for host builds.
+For Xtensa targets, `oxivgl-sys/build.rs` auto-detects the ESP clang.
 
 ```sh
 # Check host (std, no ESP toolchain needed):
-LIBCLANG_PATH=/usr/lib64 cargo +nightly check --target x86_64-unknown-linux-gnu
+cargo check
 
 # Check embedded (requires Xtensa toolchain):
-cargo +esp -Zbuild-std=alloc,core check --features esp-hal,esp32,log-04
+cargo +esp -Zbuild-std=alloc,core check --target xtensa-esp32-none-elf --features esp-hal,esp32,log-04
 
 # Run tests (preferred — handles SDL_VIDEODRIVER, test separation):
 ./run_tests.sh unit        # unit + doc tests
@@ -31,10 +34,10 @@ cargo +esp -Zbuild-std=alloc,core check --features esp-hal,esp32,log-04
 ./run_tests.sh all         # all of the above
 
 # Run single unit test directly:
-LIBCLANG_PATH=/usr/lib64 cargo +nightly test --target x86_64-unknown-linux-gnu to_lvgl_half
+cargo test to_lvgl_half
 
 # Audit doc coverage (should report 0 missing):
-LIBCLANG_PATH=/usr/lib64 RUSTDOCFLAGS="-W missing-docs" cargo +nightly doc --target x86_64-unknown-linux-gnu --no-deps 2>&1 | grep "warning:"
+RUSTDOCFLAGS="-W missing-docs" cargo doc --no-deps 2>&1 | grep "warning:"
 
 # Run host example (interactive SDL window):
 ./run_host.sh getting_started1
@@ -71,6 +74,7 @@ LIBCLANG_PATH=/usr/lib64 RUSTDOCFLAGS="-W missing-docs" cargo +nightly doc --tar
 
 ## Build System
 
+- **Defaults should just work.** `cargo check`, `cargo test`, and `cargo doc` should work without explicit env vars, toolchain overrides, or target flags. Host-specific config (`LIBCLANG_PATH`, nightly toolchain) is handled by `.cargo/config.toml` and `rust-toolchain.toml`. ESP32-specific config (ESP clang path) is auto-detected in `oxivgl-sys/build.rs`. When adding build infrastructure, prefer declarative config over manual flags.
 - **All targets**: `oxivgl-sys/build.rs` (cc crate) downloads LVGL v9.5.0 and compiles it from source. For Xtensa, `source ~/.clco-env` puts the ESP toolchain in PATH.
 - `lv_conf.h` is **owned by the application**, not the library. The examples ship their config in `examples/conf/lv_conf.h`. Applications using oxivgl as a dependency must supply their own `lv_conf.h` and set `DEP_LV_CONFIG_PATH` to a directory containing it. The workspace default (`examples/conf`) is set in `.cargo/config.toml` and is only authoritative for the examples and tests in this repo.
 - **CRITICAL — single LVGL source**: LVGL must only be compiled once, by `oxivgl-sys`. Never add a second compilation (e.g. cmake) from a different LVGL source tree — struct layouts change between versions, causing silent memory corruption on ESP32 (see issue #55).
