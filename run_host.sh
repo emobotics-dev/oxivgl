@@ -78,6 +78,10 @@ ALL_EXAMPLES=(
     observer1
     observer2
     observer3
+    observer4
+    observer5
+    observer6
+    observer7
     grad_{1,2,3,4}
     snapshot_1
     scroll5
