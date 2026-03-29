@@ -6,9 +6,20 @@ version = "0.1.0"
 license = "MIT OR Apache-2.0"
 description = "Safe no_std Rust bindings for LVGL — embedded GUI on ESP32 and host SDL2"
 repository = "https://github.com/emobotics-dev/oxivgl"
+homepage = "https://github.com/emobotics-dev/oxivgl"
+documentation = "https://docs.rs/oxivgl"
 readme = "README.md"
 keywords = ["lvgl", "embedded-gui", "esp32", "no-std", "ui"]
 categories = ["embedded", "no-std", "gui"]
+exclude = [
+    ".devcontainer/",
+    ".github/",
+    "CLAUDE.md",
+    "docs/",
+    "examples/doc/screenshots/",
+    "examples/common/",
+    "run_*.sh",
+]
 
 [package.metadata.docs.rs]
 features = ["log-04", "png"]

@@ -4,7 +4,7 @@
 //! Requires `LV_USE_TRANSLATION = 1` in `lv_conf.h`.
 //!
 //! Register static translation packs, then switch languages at runtime.
-//! Labels created with [`Label::set_translation_tag`] auto-update when
+//! Labels created with [`Label::set_translation_tag`](crate::widgets::Label::set_translation_tag) auto-update when
 //! the language changes.
 //!
 //! # Example
@@ -116,7 +116,7 @@ pub struct TagDsc {
 /// Create a new empty dynamic translation pack and register it with LVGL.
 ///
 /// Add languages via [`DynamicPack::add_language`] and tags via
-/// [`DynamicPack::add_tag`] before calling [`translation::set_language`].
+/// [`DynamicPack::add_tag`] before calling [`set_language`].
 pub fn add_dynamic() -> DynamicPack {
     // SAFETY: allocates a new empty pack via LVGL's allocator.
     let ptr = unsafe { lv_translation_add_dynamic() };

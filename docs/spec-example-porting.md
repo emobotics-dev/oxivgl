@@ -124,8 +124,7 @@ When a C example uses LVGL APIs not yet wrapped:
 6. Check for regressions: `./run_tests.sh unit`.
 7. Check doc coverage:
    ```
-   LIBCLANG_PATH=/usr/lib64 RUSTDOCFLAGS="-W missing-docs" \
-     cargo +nightly doc --target x86_64-unknown-linux-gnu --no-deps
+   RUSTDOCFLAGS="-W missing-docs" cargo doc --no-deps
    ```
 
 ---

@@ -248,8 +248,28 @@ fn main() {
         "-fvisibility=default",
     ];
 
-    // Set correct target triple for bindgen when cross-compiling
+    // For Xtensa targets, auto-detect the ESP-capable clang if LIBCLANG_PATH
+    // doesn't already point to one. The system clang doesn't understand Xtensa.
     let target = env::var("TARGET").expect("Cargo build scripts always have TARGET");
+    if target.starts_with("xtensa-") {
+        let current = env::var("LIBCLANG_PATH").unwrap_or_default();
+        if !current.contains("esp") {
+            // Search common ESP clang locations (devcontainer, CI image).
+            let suffix = "toolchains/esp/xtensa-esp32-elf-clang/esp-20.1.1_20250829/esp-clang/lib";
+            let candidates = [
+                format!("{}/.rustup/{suffix}", env::var("HOME").unwrap_or_default()),
+                format!("{}/{suffix}", env::var("RUSTUP_HOME").unwrap_or_default()),
+            ];
+            for path in &candidates {
+                if std::path::Path::new(path).exists() {
+                    env::set_var("LIBCLANG_PATH", path);
+                    break;
+                }
+            }
+        }
+    }
+
+    // Set correct target triple for bindgen when cross-compiling
     let host = env::var("HOST").expect("Cargo build scripts always have HOST");
     if target != host {
         cc_args.push("-target");

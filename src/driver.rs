@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
-// Formerly `lvgl` — renamed to avoid confusion with the oxivgl_sys crate.
+//! LVGL driver initialization: tick source, log bridge, and display setup.
+
 use core::ffi::c_char;
 
 use oxivgl_sys::*;

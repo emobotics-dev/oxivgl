@@ -6,6 +6,8 @@ version = "0.1.0"
 license = "MIT OR Apache-2.0"
 description = "Build-time helpers for oxivgl (LVGL image asset conversion)"
 repository = "https://github.com/emobotics-dev/oxivgl"
+homepage = "https://github.com/emobotics-dev/oxivgl"
+documentation = "https://docs.rs/oxivgl-build"
 keywords = ["lvgl", "build-tools", "embedded-gui"]
 categories = ["development-tools::build-utils"]
 

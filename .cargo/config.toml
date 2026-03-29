@@ -12,9 +12,6 @@ rustflags = [
   "-C", "link-arg=-nostartfiles",
 ]
 
-[build]
-target = "xtensa-esp32-none-elf"
-
 [env]
 DEP_LV_CONFIG_PATH = { value = "examples/conf", relative = true }
 ESP_LOG            = "info"
