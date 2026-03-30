@@ -86,7 +86,7 @@ pub use scale::{
     SCALE_LABEL_ROTATE_KEEP_UPRIGHT, SCALE_LABEL_ROTATE_MATCH_TICKS, Scale, ScaleBuilder, ScaleLabels, ScaleMode,
     ScaleSection,
 };
-pub use screen::Screen;
+pub use screen::{Screen, ScreenAnim, ScreenAnimType};
 pub use slider::{Slider, SliderMode, SliderOrientation};
 pub use subject::{ObserverCb, Subject, observer_get_target, observer_get_target_obj, subject_get_group_element, subject_get_int_raw};
 pub use span::{Span, SpanMode, SpanOverflow, Spangroup};
