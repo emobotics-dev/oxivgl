@@ -22,7 +22,7 @@
 /// key events to a focus group.
 #[macro_export]
 macro_rules! fire27_main {
-    ($View:ty) => {
+    ($view_expr:expr) => {
         // Crate aliases for proc-macro attributes (#[embassy_executor::task], etc.)
         use $crate::esp_hal as esp_hal;
 
@@ -55,7 +55,7 @@ macro_rules! fire27_main {
         use $crate::log::info;
         use $crate::oxivgl::flush_pipeline::{DisplayOutput, UiError, flush_frame_buffer};
         use $crate::oxivgl::display::LvglBuffers;
-        use $crate::oxivgl::view::run_lvgl;
+        use $crate::oxivgl::view::run_app;
         use $crate::static_cell::{StaticCell, make_static};
 
         esp_bootloader_esp_idf::esp_app_desc!();
@@ -172,38 +172,48 @@ macro_rules! fire27_main {
         }
 
         /// Thin wrapper that registers the LVGL keypad indev before delegating
-        /// to the user-supplied [`View`] type. This ensures the indev is created
-        /// after `lv_init()` (inside `run_lvgl`) but before `$View::create()`.
-        struct Fire27View($View);
+        /// to the user-supplied [`View`] instance. This ensures the indev is
+        /// created after `lv_init()` (inside `run_app`) but before the user
+        /// view's `create()`.
+        struct Fire27View<V: $crate::oxivgl::view::View> {
+            inner: V,
+            indev_registered: bool,
+        }
 
-        impl $crate::oxivgl::view::View for Fire27View {
-            fn create() -> Result<Self, $crate::oxivgl::widgets::WidgetError> {
-                // SAFETY: lv_indev_create / lv_indev_set_type / lv_indev_set_read_cb
-                // are called after lv_init() (guaranteed by the View::create contract)
-                // and before any widget is created. The indev pointer is non-null
-                // (checked). keypad_read_cb has the correct signature for a KEYPAD indev.
-                unsafe {
-                    let indev = oxivgl_sys::lv_indev_create();
-                    assert!(!indev.is_null(), "lv_indev_create returned NULL");
-                    oxivgl_sys::lv_indev_set_type(
-                        indev,
-                        oxivgl_sys::lv_indev_type_t_LV_INDEV_TYPE_KEYPAD,
-                    );
-                    oxivgl_sys::lv_indev_set_read_cb(indev, Some(keypad_read_cb));
+        impl<V: $crate::oxivgl::view::View> $crate::oxivgl::view::View for Fire27View<V> {
+            fn create(
+                &mut self,
+                container: &$crate::oxivgl::widgets::obj::Obj<'static>,
+            ) -> Result<(), $crate::oxivgl::widgets::WidgetError> {
+                if !self.indev_registered {
+                    // SAFETY: lv_indev_create / lv_indev_set_type / lv_indev_set_read_cb
+                    // are called after lv_init() (guaranteed by run_app) and before any
+                    // widget is created. The indev pointer is non-null (checked).
+                    // keypad_read_cb has the correct signature for a KEYPAD indev.
+                    unsafe {
+                        let indev = oxivgl_sys::lv_indev_create();
+                        assert!(!indev.is_null(), "lv_indev_create returned NULL");
+                        oxivgl_sys::lv_indev_set_type(
+                            indev,
+                            oxivgl_sys::lv_indev_type_t_LV_INDEV_TYPE_KEYPAD,
+                        );
+                        oxivgl_sys::lv_indev_set_read_cb(indev, Some(keypad_read_cb));
+                    }
+                    self.indev_registered = true;
                 }
-                Ok(Fire27View(<$View>::create()?))
+                self.inner.create(container)
             }
 
             fn update(&mut self) -> Result<(), $crate::oxivgl::widgets::WidgetError> {
-                self.0.update()
+                self.inner.update()
             }
 
             fn on_event(&mut self, event: &$crate::oxivgl::event::Event) {
-                self.0.on_event(event);
+                self.inner.on_event(event);
             }
 
             fn register_events(&mut self) {
-                self.0.register_events();
+                self.inner.register_events();
             }
         }
 
@@ -283,8 +293,10 @@ macro_rules! fire27_main {
             // LVGL render loop takes exclusive ownership.
             let bufs = unsafe { &mut *core::ptr::addr_of_mut!(LVGL_BUFS) };
 
-            run_lvgl::<Fire27View, LVGL_BUF_BYTES>(SCREEN_W.into(), SCREEN_H.into(), bufs)
-                .await;
+            let wrapper = Fire27View { inner: $view_expr, indev_registered: false };
+            run_app::<Fire27View<_>, LVGL_BUF_BYTES>(
+                SCREEN_W.into(), SCREEN_H.into(), bufs, wrapper,
+            ).await;
         }
     };
 }

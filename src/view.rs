@@ -1,4 +1,10 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
+//! View trait and navigation primitives.
+//!
+//! The [`View`](crate::view::View) trait defines a single screen of UI with a repeatable
+//! lifecycle: `create` → `update` → `on_event` → `will_hide`, cycling
+//! on each navigation transition. See `docs/spec-navigation.md`.
+
 use core::ffi::c_void;
 
 use embassy_time::{Duration, Timer};
@@ -10,13 +16,20 @@ use crate::{
     driver::LvglDriver,
     enums::EventCode,
     event::Event,
-    widgets::WidgetError,
+    widgets::{Obj, WidgetError},
 };
 
-/// UI view trait. Implement this for each screen layout.
+/// A single view of UI (one screen or modal in a navigation stack).
 ///
-/// `run_lvgl` calls [`create`](View::create) once, then [`update`](View::update)
-/// in a loop at `LV_DEF_REFR_PERIOD / 4` ms intervals.
+/// The lifecycle is:
+///
+/// 1. **Construction** — caller creates the struct (e.g. `Default::default()`)
+/// 2. [`create`](View::create) — build widgets into `container`; may be called
+///    multiple times across push/pop cycles
+/// 3. [`did_show`](View::did_show) — post-creation setup (optional)
+/// 4. [`update`](View::update) — per-tick polling (runs in render loop)
+/// 5. [`on_event`](View::on_event) — LVGL event dispatch
+/// 6. [`will_hide`](View::will_hide) — save transient state before teardown
 ///
 /// Override [`on_event`](View::on_event) to handle LVGL widget events (clicks,
 /// presses, etc.) without writing `unsafe extern "C"` callbacks. Widgets that
@@ -27,12 +40,21 @@ use crate::{
 /// [`register_events`](View::register_events) to add event handlers on
 /// intermediate objects via [`register_event_on`].
 pub trait View: Sized {
-    /// Create all LVGL widgets for this view. Called once after display init.
-    fn create() -> Result<Self, WidgetError>;
-    /// Refresh widget values from the latest application state. Called every render tick.
-    fn update(&mut self) -> Result<(), WidgetError>;
+    /// Build all LVGL widgets for this view into `container`.
+    ///
+    /// Called each time this view becomes the active (topmost) view —
+    /// both on initial display and when a view above it is popped.
+    /// `container` is the LVGL screen object to build into.
+    fn create(&mut self, container: &Obj<'static>) -> Result<(), WidgetError>;
+
+    /// Refresh widget values from application state. Called every render tick.
+    fn update(&mut self) -> Result<(), WidgetError> {
+        Ok(())
+    }
+
     /// Handle a bubbled LVGL event. Default is a no-op.
     fn on_event(&mut self, _event: &Event) {}
+
     /// Register event handlers. Called once after [`create`](View::create).
     /// Default registers on the active screen only. Override to register on
     /// additional objects (e.g. containers that catch bubbled events).
@@ -40,6 +62,14 @@ pub trait View: Sized {
         // SAFETY: lv_screen_active() is valid after lv_init().
         register_event_on(self, unsafe { lv_screen_active() });
     }
+
+    /// Called before this view's widget tree is destroyed (navigating away).
+    /// Save any transient widget state here. Default is a no-op.
+    fn will_hide(&mut self) {}
+
+    /// Called after this view becomes visible again (navigated back to).
+    /// Default is a no-op.
+    fn did_show(&mut self) {}
 }
 
 /// Register event handlers for the view. Calls [`View::register_events`],
@@ -47,7 +77,7 @@ pub trait View: Sized {
 /// to register on additional objects.
 ///
 /// The `view` reference must remain at a stable address for the lifetime of
-/// the LVGL display (guaranteed by `run_lvgl` and `host_main!`).
+/// the LVGL display (guaranteed by `run_app` and `host_main!`).
 pub fn register_view_events<V: View>(view: &mut V) {
     view.register_events();
 }
@@ -59,12 +89,12 @@ pub fn register_view_events<V: View>(view: &mut V) {
 /// # Safety requirement (not enforced by the type system)
 ///
 /// `view` must remain at a stable address for the LVGL display lifetime.
-/// This is guaranteed by `run_lvgl` (async frame pin) and `host_main!`
+/// This is guaranteed by `run_app` (async frame pin) and `host_main!`
 /// (stack-local before infinite loop). Do not call on a local that may move.
 pub fn register_event_on<V: View>(view: &mut V, obj: *mut lv_obj_t) {
     let view_ptr = view as *mut V as *mut c_void;
     // SAFETY: obj must be a valid LVGL object; view_ptr remains valid for the
-    // LVGL display lifetime (guaranteed by run_lvgl / host_main!).
+    // LVGL display lifetime (guaranteed by run_app / host_main!).
     unsafe {
         lv_obj_add_event_cb(
             obj,
@@ -88,16 +118,24 @@ unsafe extern "C" fn view_event_trampoline<V: View>(e: *mut lv_event_t) {
     }
 }
 
-/// Run the LVGL render loop with a [`View`] of type `V`.
+/// Run the LVGL render loop with a [`View`].
 ///
-/// Initialises LVGL, waits for the display driver to be ready, creates the view,
-/// then loops: calls `V::update` and drives `lv_timer_handler` every tick.
-/// `w` and `h` are the display resolution in pixels. `bufs` must be a `'static`
-/// caller-allocated [`LvglBuffers`] sized for the screen width. Never returns.
-pub async fn run_lvgl<V: View, const BYTES: usize>(
+/// This is an embassy async task. Spawn it alongside your other application
+/// tasks. It initialises LVGL, creates the view, then loops: calls
+/// `V::update` and drives `lv_timer_handler` every tick.
+///
+/// `w` and `h` are the display resolution in pixels. `bufs` must be a
+/// `'static` caller-allocated [`LvglBuffers`] sized for the screen width.
+///
+/// `view` is the initial view instance. Its `create` method is called once
+/// the display is ready.
+///
+/// Never returns.
+pub async fn run_app<V: View, const BYTES: usize>(
     w: i32,
     h: i32,
     bufs: &'static mut LvglBuffers<BYTES>,
+    mut view: V,
 ) -> ! {
     info!("UI task started");
     let driver = LvglDriver::init(w, h);
@@ -107,12 +145,21 @@ pub async fn run_lvgl<V: View, const BYTES: usize>(
     DISPLAY_READY.wait().await;
     info!("Display ready");
 
-    let Ok(mut view) = V::create() else {
-        warn!("Could not create LVGL widgets, disabling UI");
+    // Wrap the active screen in a non-owning Obj for the container parameter.
+    let screen_handle = unsafe { lv_screen_active() };
+    assert!(!screen_handle.is_null(), "no active screen after display init");
+    let container = Obj::from_raw(screen_handle);
+
+    if let Err(e) = view.create(&container) {
+        warn!("Could not create LVGL widgets: {:?}, disabling UI", e);
+        // Forget container so we don't delete the LVGL screen.
+        core::mem::forget(container);
         loop {
             Timer::after(Duration::from_secs(60)).await;
         }
-    };
+    }
+    // Forget container — the LVGL screen must not be deleted.
+    core::mem::forget(container);
 
     register_view_events(&mut view);
 

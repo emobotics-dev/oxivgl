@@ -44,21 +44,20 @@ pub fn capture(driver: &LvglDriver, name: &str, dir: &str) {
     println!("Screenshot: {}", path.display());
 }
 
-/// Generate a host `main` function for the given [`oxivgl::view::View`] type.
+/// Generate a host `main` function for the given [`oxivgl::view::View`].
 ///
 /// The generated main:
 /// 1. Initialises `env_logger` and the LVGL SDL2 driver.
-/// 2. Creates the view.
+/// 2. Creates the view from the given expression.
 /// 3. If `SCREENSHOT_ONLY=1`, captures a screenshot and exits.
 /// 4. Otherwise runs the interactive host loop.
 #[macro_export]
 macro_rules! host_main {
-    ($View:ty) => {
+    ($view_expr:expr) => {
         fn main() {
             use $crate::host::{H, W, capture, pump};
             use $crate::oxivgl::driver::LvglDriver;
             use $crate::oxivgl::view::View;
-
             $crate::env_logger::init();
             let screenshot_only =
                 std::env::var("SCREENSHOT_ONLY").as_deref() == Ok("1");
@@ -67,7 +66,17 @@ macro_rules! host_main {
             } else {
                 LvglDriver::sdl(W, H).title(c"oxivgl").mouse(true).build()
             };
-            let mut _view = <$View>::create().expect("view create failed");
+
+            let mut _view = $view_expr;
+
+            // Wrap the active screen as a non-owning container.
+            let screen_handle = unsafe { oxivgl_sys::lv_screen_active() };
+            assert!(!screen_handle.is_null(), "no active screen");
+            let container = $crate::oxivgl::widgets::Obj::from_raw(screen_handle);
+            _view.create(&container).expect("view create failed");
+            // Don't delete the LVGL screen when container drops.
+            core::mem::forget(container);
+
             $crate::oxivgl::view::register_view_events(&mut _view);
 
             // Derive screenshot name from source file path.
