@@ -91,9 +91,7 @@ impl View for Anim4 {
         if let Some(ref pause_timer) = self.pause_timer {
             if pause_timer.triggered() {
                 if let Some(ref handle) = self.anim_handle {
-                    // SAFETY: timer fires at 200ms, animation duration is 500ms,
-                    // so the animation is guaranteed to still be running.
-                    unsafe { handle.pause_for(1000) };
+                    handle.pause_for(1000);
                 }
             }
         }

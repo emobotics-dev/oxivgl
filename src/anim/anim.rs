@@ -7,20 +7,23 @@ use crate::widgets::AsLvHandle;
 
 /// Handle to a running LVGL animation (the LVGL-owned copy).
 ///
-/// Returned by [`Anim::start()`]. Valid only while the animation is
-/// running — LVGL frees the copy when the animation completes or the
-/// target widget is deleted.
+/// Returned by [`Anim::start()`]. The handle stores enough information
+/// to look up the animation via `lv_anim_get`, so operations like
+/// [`pause_for`](Self::pause_for) are safe — they silently no-op if the
+/// animation has already completed.
 ///
 /// ```ignore
 /// let mut a = Anim::new();
 /// a.set_var(&obj).set_values(0, 100).set_duration(500)
 ///     .set_exec_cb(Some(anim_set_x));
 /// let handle = a.start();
-/// // SAFETY: animation is still running (just started).
-/// unsafe { handle.pause_for(200) };
+/// handle.pause_for(200);
 /// ```
 pub struct AnimHandle {
-    ptr: *mut lv_anim_t,
+    /// Target variable pointer, used for `lv_anim_get` lookup.
+    var: *mut c_void,
+    /// Exec callback, used for `lv_anim_get` lookup.
+    exec_cb: lv_anim_exec_xcb_t,
 }
 
 impl core::fmt::Debug for AnimHandle {
@@ -33,14 +36,19 @@ impl AnimHandle {
     /// Pause the running animation for `ms` milliseconds.
     ///
     /// The animation resumes automatically after the pause expires.
+    /// If the animation has already completed (or the target widget was
+    /// deleted), this is a no-op.
     ///
-    /// # Safety
-    /// The caller must ensure the animation is still running. LVGL frees
-    /// the internal copy when the animation completes or the target widget
-    /// is deleted — calling this after that point is undefined behaviour.
     /// Must be called from the LVGL task (LVGL is not thread-safe).
-    pub unsafe fn pause_for(&self, ms: u32) {
-        unsafe { lv_anim_pause_for(self.ptr, ms) };
+    pub fn pause_for(&self, ms: u32) {
+        // Look up the animation by (var, exec_cb). Returns null if the
+        // animation has already completed or the widget was deleted.
+        let ptr = unsafe { lv_anim_get(self.var, self.exec_cb) };
+        if !ptr.is_null() {
+            // SAFETY: lv_anim_get returned a valid pointer to a running
+            // animation owned by LVGL's internal list.
+            unsafe { lv_anim_pause_for(ptr, ms) };
+        }
     }
 }
 
@@ -175,12 +183,16 @@ impl<'w> Anim<'w> {
 
     /// Start the animation. LVGL copies the descriptor internally.
     ///
-    /// Returns a handle to the running (LVGL-owned) copy. The handle is
-    /// valid only while the animation is active.
+    /// Returns a handle that can look up the running animation by
+    /// `(var, exec_cb)`. The handle's operations are no-ops once the
+    /// animation completes.
     pub fn start(&self) -> AnimHandle {
         let ptr = unsafe { lv_anim_start(&self.inner) };
         assert!(!ptr.is_null(), "lv_anim_start returned NULL");
-        AnimHandle { ptr }
+        AnimHandle {
+            var: self.inner.var,
+            exec_cb: self.inner.exec_cb,
+        }
     }
 }
 

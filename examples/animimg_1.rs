@@ -11,33 +11,15 @@
 //! application each frame would be a distinct image. The animation loops
 //! infinitely with a 1-second cycle.
 
+extern crate alloc;
+
 use oxivgl::{
     anim::ANIM_REPEAT_INFINITE,
     view::View,
-    widgets::{Obj, AnimImg, WidgetError, lv_image_dsc_t},
+    widgets::{Obj, AnimImg, WidgetError},
 };
 
-// Declare the extern image symbol directly so we can take its address
-// in a static context. image_declare! generates a function, which cannot
-// be called in const/static initializers.
-unsafe extern "C" {
-    #[allow(non_upper_case_globals)]
-    static img_cogwheel_argb: lv_image_dsc_t;
-}
-
-/// Wrapper to make `*const c_void` usable in a `static`.
-#[repr(transparent)]
-#[derive(Default)]
-struct SyncPtr(*const core::ffi::c_void);
-// SAFETY: image descriptors are immutable compile-time data.
-unsafe impl Sync for SyncPtr {}
-
-/// Static array of frame pointers — must be `'static` because LVGL stores
-/// the raw pointer (spec §3.1).
-static FRAME_PTRS: [SyncPtr; 2] = [
-    SyncPtr(&raw const img_cogwheel_argb as *const core::ffi::c_void),
-    SyncPtr(&raw const img_cogwheel_argb as *const core::ffi::c_void),
-];
+oxivgl::image_declare!(img_cogwheel_argb);
 
 #[derive(Default)]
 struct AnimImg1 {
@@ -49,10 +31,15 @@ impl View for AnimImg1 {
 
         let animimg = AnimImg::new(container)?;
         animimg.center();
-        // SAFETY: FRAME_PTRS has the same layout as [*const c_void; 2]
-        // due to #[repr(transparent)] on SyncPtr.
+
+        // Both frames use the same image; in a real application each frame
+        // would be a distinct image descriptor.
+        let dsc = img_cogwheel_argb();
+        let ptr = dsc as *const _ as *const core::ffi::c_void;
+        // Leak a small heap array so the frame pointer slice is 'static
+        // (LVGL stores the raw pointer — spec §3.1).
         let frames: &'static [*const core::ffi::c_void] =
-            unsafe { core::slice::from_raw_parts(FRAME_PTRS.as_ptr().cast(), FRAME_PTRS.len()) };
+            alloc::boxed::Box::leak(alloc::boxed::Box::new([ptr, ptr]));
         animimg
             .set_src(frames)
             .set_duration(1000)

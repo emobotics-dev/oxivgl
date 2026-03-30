@@ -183,7 +183,7 @@ macro_rules! fire27_main {
         impl<V: $crate::oxivgl::view::View> $crate::oxivgl::view::View for Fire27View<V> {
             fn create(
                 &mut self,
-                container: &$crate::oxivgl::widgets::obj::Obj<'static>,
+                container: &$crate::oxivgl::widgets::Obj<'static>,
             ) -> Result<(), $crate::oxivgl::widgets::WidgetError> {
                 if !self.indev_registered {
                     // SAFETY: lv_indev_create / lv_indev_set_type / lv_indev_set_read_cb

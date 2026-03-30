@@ -64,7 +64,7 @@ macro_rules! host_main {
             let driver = if screenshot_only {
                 LvglDriver::init(W, H)
             } else {
-                LvglDriver::sdl(W, H).title(c"oxivgl").mouse(true).build()
+                LvglDriver::sdl(W, H).title(c"oxivgl").mouse(true).keyboard(true).build()
             };
 
             let mut _view = $view_expr;
