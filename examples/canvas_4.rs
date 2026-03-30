@@ -11,18 +11,18 @@ use oxivgl::{
     draw_buf::{ColorFormat, DrawBuf},
     style::color_make,
     view::View,
-    widgets::{Align, Canvas, Screen, WidgetError},
+    widgets::{Obj, Align, Canvas, WidgetError},
 };
 
+#[derive(Default)]
 struct Canvas4 {
-    _canvas: Canvas<'static>,
+    _canvas: Option<Canvas<'static>>,
 }
 
 impl View for Canvas4 {
-    fn create() -> Result<Self, WidgetError> {
-        let screen = Screen::active().ok_or(WidgetError::LvglNullPointer)?;
+    fn create(&mut self, container: &Obj<'static>) -> Result<(), WidgetError> {
         let canvas = Canvas::new(
-            &screen,
+            container,
             DrawBuf::create(80, 30, ColorFormat::ARGB8888).ok_or(WidgetError::LvglNullPointer)?,
         )?;
         canvas.fill_bg(color_make(0xcc, 0xcc, 0xcc), 255);
@@ -33,7 +33,8 @@ impl View for Canvas4 {
             dsc.set_color(color_make(0xff, 0, 0));
             layer.draw_label(&dsc, Area { x1: 5, y1: 5, x2: 75, y2: 25 }, "Hello");
         }
-        Ok(Self { _canvas: canvas })
+                self._canvas = Some(canvas);
+        Ok(())
     }
 
     fn update(&mut self) -> Result<(), WidgetError> {
@@ -41,4 +42,4 @@ impl View for Canvas4 {
     }
 }
 
-oxivgl_examples_common::example_main!(Canvas4);
+oxivgl_examples_common::example_main!(Canvas4::default());

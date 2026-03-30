@@ -11,30 +11,29 @@ extern crate alloc;
 use oxivgl::{
     style::{palette_main, Palette, Selector, Style, StyleBuilder},
     view::View,
-    widgets::{Arc, Screen, WidgetError},
+    widgets::{Obj, Arc, WidgetError},
 };
 
+#[derive(Default)]
 struct Style7 {
-    _arc: Arc<'static>,
-    _style: Style,
+    _arc: Option<Arc<'static>>,
+    _style: Option<Style>,
 }
 
 impl View for Style7 {
-    fn create() -> Result<Self, WidgetError> {
-        let screen = Screen::active().ok_or(WidgetError::LvglNullPointer)?;
+    fn create(&mut self, container: &Obj<'static>) -> Result<(), WidgetError> {
 
         let mut builder = StyleBuilder::new();
         builder.arc_color(palette_main(Palette::Red)).arc_width(4);
         let style = builder.build();
 
-        let arc = Arc::new(&screen)?;
+        let arc = Arc::new(container)?;
         arc.add_style(&style, Selector::DEFAULT);
         arc.center();
 
-        Ok(Self {
-            _arc: arc,
-            _style: style,
-        })
+                self._arc = Some(arc);
+        self._style = Some(style);
+        Ok(())
     }
 
     fn update(&mut self) -> Result<(), WidgetError> {
@@ -42,4 +41,4 @@ impl View for Style7 {
     }
 }
 
-oxivgl_examples_common::example_main!(Style7);
+oxivgl_examples_common::example_main!(Style7::default());

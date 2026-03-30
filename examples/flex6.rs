@@ -10,20 +10,20 @@ use oxivgl::{
     style::{Selector, LV_SIZE_CONTENT},
     view::View,
     layout::FlexFlow,
-    widgets::{BaseDir, Label, Obj, Screen, WidgetError},
+    widgets::{BaseDir, Label, Obj, WidgetError},
 };
 
+#[derive(Default)]
 struct Flex6 {
-    _cont: Obj<'static>,
+    _cont: Option<Obj<'static>>,
     _items: heapless::Vec<Obj<'static>, 20>,
     _labels: heapless::Vec<Label<'static>, 20>,
 }
 
 impl View for Flex6 {
-    fn create() -> Result<Self, WidgetError> {
-        let screen = Screen::active().ok_or(WidgetError::LvglNullPointer)?;
+    fn create(&mut self, container: &Obj<'static>) -> Result<(), WidgetError> {
 
-        let cont = Obj::new(&screen)?;
+        let cont = Obj::new(container)?;
         cont.style_base_dir(BaseDir::Rtl, Selector::DEFAULT);
         cont.size(300, 220).center();
         cont.set_flex_flow(FlexFlow::RowWrap);
@@ -44,11 +44,10 @@ impl View for Flex6 {
             let _ = labels.push(label);
         }
 
-        Ok(Self {
-            _cont: cont,
-            _items: items,
-            _labels: labels,
-        })
+                self._cont = Some(cont);
+        self._items = items;
+        self._labels = labels;
+        Ok(())
     }
 
     fn update(&mut self) -> Result<(), WidgetError> {
@@ -56,4 +55,4 @@ impl View for Flex6 {
     }
 }
 
-oxivgl_examples_common::example_main!(Flex6);
+oxivgl_examples_common::example_main!(Flex6::default());

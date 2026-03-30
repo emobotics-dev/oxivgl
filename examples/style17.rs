@@ -9,17 +9,17 @@
 use oxivgl::{
     style::{color_make, lv_pct, GradDsc, GradExtend, Selector, Style, StyleBuilder},
     view::View,
-    widgets::{Obj, Screen, WidgetError},
+    widgets::{Obj, WidgetError},
 };
 
+#[derive(Default)]
 struct Style17 {
-    _obj: Obj<'static>,
-    _style: Style,
+    _obj: Option<Obj<'static>>,
+    _style: Option<Style>,
 }
 
 impl View for Style17 {
-    fn create() -> Result<Self, WidgetError> {
-        let screen = Screen::active().ok_or(WidgetError::LvglNullPointer)?;
+    fn create(&mut self, container: &Obj<'static>) -> Result<(), WidgetError> {
 
         let colors = [color_make(0x9b, 0x18, 0x42), color_make(0x00, 0x00, 0x00)];
 
@@ -36,15 +36,14 @@ impl View for Style17 {
         style.bg_grad(grad);
         let style = style.build();
 
-        let obj = Obj::new(&screen)?;
+        let obj = Obj::new(container)?;
         obj.add_style(&style, Selector::DEFAULT);
         obj.size(320, 240);
         obj.center();
 
-        Ok(Self {
-            _obj: obj,
-            _style: style,
-        })
+                self._obj = Some(obj);
+        self._style = Some(style);
+        Ok(())
     }
 
     fn update(&mut self) -> Result<(), WidgetError> {
@@ -52,4 +51,4 @@ impl View for Style17 {
     }
 }
 
-oxivgl_examples_common::example_main!(Style17);
+oxivgl_examples_common::example_main!(Style17::default());

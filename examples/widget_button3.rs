@@ -14,7 +14,7 @@ use oxivgl::{
     style::{props, Selector, Style, StyleBuilder, TransitionDsc},
     view::View,
     enums::ObjState,
-    widgets::{Align, Button, Label, Screen, WidgetError},
+    widgets::{Obj, Align, Button, Label, WidgetError},
 };
 
 /// Transition property list: transform width + height + letter spacing + sentinel.
@@ -25,16 +25,16 @@ static TRANS_PROPS: [props::lv_style_prop_t; 4] = [
     props::LAST,
 ];
 
+#[derive(Default)]
 struct WidgetButton3 {
-    _btn: Button<'static>,
-    _label: Label<'static>,
-    _style_def: Style,
-    _style_pr: Style,
+    _btn: Option<Button<'static>>,
+    _label: Option<Label<'static>>,
+    _style_def: Option<Style>,
+    _style_pr: Option<Style>,
 }
 
 impl View for WidgetButton3 {
-    fn create() -> Result<Self, WidgetError> {
-        let screen = Screen::active().ok_or(WidgetError::LvglNullPointer)?;
+    fn create(&mut self, container: &Obj<'static>) -> Result<(), WidgetError> {
 
         // Default state: overshoot transition back from press (100ms delay)
         let trans_def =
@@ -54,7 +54,7 @@ impl View for WidgetButton3 {
             .transition(trans_pr);
         let style_pr = sb_pr.build();
 
-        let btn = Button::new(&screen)?;
+        let btn = Button::new(container)?;
         btn.add_style(&style_def, Selector::DEFAULT);
         btn.add_style(&style_pr, ObjState::PRESSED);
         btn.align(Align::Center, 0, 0);
@@ -62,12 +62,11 @@ impl View for WidgetButton3 {
         let label = Label::new(&btn)?;
         label.text("Gum");
 
-        Ok(Self {
-            _btn: btn,
-            _label: label,
-            _style_def: style_def,
-            _style_pr: style_pr,
-        })
+                self._btn = Some(btn);
+        self._label = Some(label);
+        self._style_def = Some(style_def);
+        self._style_pr = Some(style_pr);
+        Ok(())
     }
 
     fn update(&mut self) -> Result<(), WidgetError> {
@@ -75,4 +74,4 @@ impl View for WidgetButton3 {
     }
 }
 
-oxivgl_examples_common::example_main!(WidgetButton3);
+oxivgl_examples_common::example_main!(WidgetButton3::default());

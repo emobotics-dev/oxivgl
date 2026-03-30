@@ -17,30 +17,28 @@ use oxivgl::{
     style::lv_pct,
     symbols,
     view::{register_event_on, View},
-    widgets::{
-        Align, AsLvHandle, Button, Child, List, Obj, Screen, WidgetError,
-    },
+    widgets::{Align, AsLvHandle, Button, Child, List, Obj, WidgetError},
 };
 
+#[derive(Default)]
 struct WidgetList2 {
-    list1: List<'static>,
-    _list2: List<'static>,
+    list1: Option<List<'static>>,
+    _list2: Option<List<'static>>,
     _item_btns: heapless::Vec<Button<'static>, 15>,
-    btn_top: Child<Button<'static>>,
-    btn_up: Child<Button<'static>>,
-    btn_center: Child<Button<'static>>,
-    btn_down: Child<Button<'static>>,
-    btn_bottom: Child<Button<'static>>,
-    btn_shuffle: Child<Button<'static>>,
+    btn_top: Option<Child<Button<'static>>>,
+    btn_up: Option<Child<Button<'static>>>,
+    btn_center: Option<Child<Button<'static>>>,
+    btn_down: Option<Child<Button<'static>>>,
+    btn_bottom: Option<Child<Button<'static>>>,
+    btn_shuffle: Option<Child<Button<'static>>>,
     current: Option<*mut oxivgl_sys::lv_obj_t>,
 }
 
 impl View for WidgetList2 {
-    fn create() -> Result<Self, WidgetError> {
-        let screen = Screen::active().ok_or(WidgetError::LvglNullPointer)?;
+    fn create(&mut self, container: &Obj<'static>) -> Result<(), WidgetError> {
 
         // Left list: items
-        let list1 = List::new(&screen)?;
+        let list1 = List::new(container)?;
         list1.size(lv_pct(60), lv_pct(100));
         list1.style_pad_row(5, oxivgl::style::Selector::DEFAULT);
 
@@ -64,7 +62,7 @@ impl View for WidgetList2 {
         }
 
         // Right list: control buttons
-        let list2 = List::new(&screen)?;
+        let list2 = List::new(container)?;
         list2.size(lv_pct(40), lv_pct(100));
         list2.align(Align::TopRight, 0, 0);
         list2.set_flex_flow(FlexFlow::Column);
@@ -82,40 +80,41 @@ impl View for WidgetList2 {
         let btn_shuffle = list2.add_button(Some(&symbols::SHUFFLE), "Shuffle");
         btn_shuffle.bubble_events();
 
-        Ok(Self {
-            list1,
-            _list2: list2,
-            _item_btns: item_btns,
-            btn_top,
-            btn_up,
-            btn_center,
-            btn_down,
-            btn_bottom,
-            btn_shuffle,
-            current: first_ptr,
-        })
+                self.list1 = Some(list1);
+        self._list2 = Some(list2);
+        self._item_btns = item_btns;
+        self.btn_top = Some(btn_top);
+        self.btn_up = Some(btn_up);
+        self.btn_center = Some(btn_center);
+        self.btn_down = Some(btn_down);
+        self.btn_bottom = Some(btn_bottom);
+        self.btn_shuffle = Some(btn_shuffle);
+        self.current = first_ptr;
+        Ok(())
     }
 
     fn register_events(&mut self) {
-        register_event_on(self, self.list1.lv_handle());
-        register_event_on(self, self._list2.lv_handle());
+        if let Some(ref list1) = self.list1 { register_event_on(self, list1.lv_handle()); }
+        if let Some(ref list2) = self._list2 { register_event_on(self, list2.lv_handle()); }
     }
 
     fn on_event(&mut self, event: &Event) {
         let code = event.code();
         let target = event.target_handle();
 
+        let Some(ref list1) = self.list1 else { return };
+
         // Item click in list1 — toggle selection
-        if code == EventCode::CLICKED && event.current_target_handle() == self.list1.lv_handle() {
+        if code == EventCode::CLICKED && event.current_target_handle() == list1.lv_handle() {
             if self.current == Some(target) {
                 self.current = None;
             } else {
                 self.current = Some(target);
             }
             // Update checked state on all item children
-            let count = self.list1.get_child_count();
+            let count = list1.get_child_count();
             for i in 0..count as i32 {
-                if let Some(child) = self.list1.get_child(i) {
+                if let Some(child) = list1.get_child(i) {
                     if Some(child.lv_handle()) == self.current {
                         child.add_state(ObjState::CHECKED);
                     } else {
@@ -134,29 +133,36 @@ impl View for WidgetList2 {
             return;
         }
 
-        if target == self.btn_top.lv_handle() && code == EventCode::CLICKED {
+        let btn_top_h = self.btn_top.as_ref().map(|b| b.lv_handle());
+        let btn_up_h = self.btn_up.as_ref().map(|b| b.lv_handle());
+        let btn_center_h = self.btn_center.as_ref().map(|b| b.lv_handle());
+        let btn_down_h = self.btn_down.as_ref().map(|b| b.lv_handle());
+        let btn_bottom_h = self.btn_bottom.as_ref().map(|b| b.lv_handle());
+        let btn_shuffle_h = self.btn_shuffle.as_ref().map(|b| b.lv_handle());
+
+        if Some(target) == btn_top_h && code == EventCode::CLICKED {
             cur_obj.move_background();
             cur_obj.scroll_to_view(true);
-        } else if target == self.btn_up.lv_handle() {
+        } else if Some(target) == btn_up_h {
             let idx = cur_obj.get_index();
             if idx > 0 {
                 cur_obj.move_to_index(idx - 1);
                 cur_obj.scroll_to_view(true);
             }
-        } else if target == self.btn_center.lv_handle() {
-            let count = self.list1.get_child_count();
+        } else if Some(target) == btn_center_h {
+            let count = list1.get_child_count();
             cur_obj.move_to_index(count as i32 / 2);
             cur_obj.scroll_to_view(true);
-        } else if target == self.btn_down.lv_handle() {
+        } else if Some(target) == btn_down_h {
             let idx = cur_obj.get_index();
             cur_obj.move_to_index(idx + 1);
             cur_obj.scroll_to_view(true);
-        } else if target == self.btn_bottom.lv_handle() && code == EventCode::CLICKED {
+        } else if Some(target) == btn_bottom_h && code == EventCode::CLICKED {
             cur_obj.move_foreground();
             cur_obj.scroll_to_view(true);
-        } else if target == self.btn_shuffle.lv_handle() {
+        } else if Some(target) == btn_shuffle_h {
             // Deterministic shuffle: rotate each child by 7 positions
-            let count = self.list1.get_child_count();
+            let count = list1.get_child_count();
             if count > 1 {
                 let idx = cur_obj.get_index();
                 let new_idx = (idx + 7) % count as i32;
@@ -171,4 +177,4 @@ impl View for WidgetList2 {
     }
 }
 
-oxivgl_examples_common::example_main!(WidgetList2);
+oxivgl_examples_common::example_main!(WidgetList2::default());

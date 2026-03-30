@@ -18,7 +18,7 @@ use oxivgl::{
     },
     view::View,
     widgets::{
-        Align, Label, Line, Obj, Part, Scale, ScaleLabels, ScaleMode, Screen, WidgetError,
+        Align, Label, Line, Obj, Part, Scale, ScaleLabels, ScaleMode, WidgetError,
         SCALE_LABEL_ROTATE_KEEP_UPRIGHT, SCALE_LABEL_ROTATE_MATCH_TICKS,
     },
 };
@@ -27,21 +27,21 @@ static COMPASS_LABELS: &ScaleLabels = scale_labels!(
     c"N", c"NE", c"E", c"SE", c"S", c"SW", c"W", c"NW"
 );
 
+#[derive(Default)]
 struct WidgetScale12 {
-    _bg: Obj<'static>,
-    _scale: Scale<'static>,
-    _needle: Line<'static>,
-    _needle_style: oxivgl::style::Style,
-    _tick_style: oxivgl::style::Style,
-    _heading_lbl: Label<'static>,
+    _bg: Option<Obj<'static>>,
+    _scale: Option<Scale<'static>>,
+    _needle: Option<Line<'static>>,
+    _needle_style: Option<oxivgl::style::Style>,
+    _tick_style: Option<oxivgl::style::Style>,
+    _heading_lbl: Option<Label<'static>>,
 }
 
 impl View for WidgetScale12 {
-    fn create() -> Result<Self, WidgetError> {
-        let screen = Screen::active().ok_or(WidgetError::LvglNullPointer)?;
+    fn create(&mut self, container: &Obj<'static>) -> Result<(), WidgetError> {
 
         // Dark circular background
-        let bg = Obj::new(&screen)?;
+        let bg = Obj::new(container)?;
         bg.size(220, 220).center();
         bg.radius(i32::MAX, Selector::DEFAULT);
         bg.style_bg_color(palette_darken(Palette::Grey, 4), Selector::DEFAULT);
@@ -108,14 +108,13 @@ impl View for WidgetScale12 {
             .set_repeat_count(ANIM_REPEAT_INFINITE);
         anim.start();
 
-        Ok(Self {
-            _bg: bg,
-            _scale: scale,
-            _needle: needle,
-            _needle_style: needle_style,
-            _tick_style: tick_style,
-            _heading_lbl: heading_lbl,
-        })
+                self._bg = Some(bg);
+        self._scale = Some(scale);
+        self._needle = Some(needle);
+        self._needle_style = Some(needle_style);
+        self._tick_style = Some(tick_style);
+        self._heading_lbl = Some(heading_lbl);
+        Ok(())
     }
 
     fn update(&mut self) -> Result<(), WidgetError> {
@@ -123,4 +122,4 @@ impl View for WidgetScale12 {
     }
 }
 
-oxivgl_examples_common::example_main!(WidgetScale12);
+oxivgl_examples_common::example_main!(WidgetScale12::default());

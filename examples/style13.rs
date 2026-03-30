@@ -12,18 +12,18 @@ use oxivgl::{
     style::{palette_lighten, palette_main, GradDir, Palette, Style, StyleBuilder},
     view::View,
     enums::ObjState,
-    widgets::{Part, Screen, Slider, WidgetError},
+    widgets::{Obj, Part, Slider, WidgetError},
 };
 
+#[derive(Default)]
 struct Style13 {
-    _slider: Slider<'static>,
-    _style_indic: Style,
-    _style_indic_pr: Style,
+    _slider: Option<Slider<'static>>,
+    _style_indic: Option<Style>,
+    _style_indic_pr: Option<Style>,
 }
 
 impl View for Style13 {
-    fn create() -> Result<Self, WidgetError> {
-        let screen = Screen::active().ok_or(WidgetError::LvglNullPointer)?;
+    fn create(&mut self, container: &Obj<'static>) -> Result<(), WidgetError> {
 
         let mut builder_indic = StyleBuilder::new();
         builder_indic
@@ -39,17 +39,16 @@ impl View for Style13 {
             .shadow_spread(3);
         let style_indic_pr = builder_indic_pr.build();
 
-        let slider = Slider::new(&screen)?;
+        let slider = Slider::new(container)?;
         slider.add_style(&style_indic, Part::Indicator);
         slider.add_style(&style_indic_pr, Part::Indicator | ObjState::PRESSED);
         slider.set_value(70);
         slider.center();
 
-        Ok(Self {
-            _slider: slider,
-            _style_indic: style_indic,
-            _style_indic_pr: style_indic_pr,
-        })
+                self._slider = Some(slider);
+        self._style_indic = Some(style_indic);
+        self._style_indic_pr = Some(style_indic_pr);
+        Ok(())
     }
 
     fn update(&mut self) -> Result<(), WidgetError> {
@@ -57,4 +56,4 @@ impl View for Style13 {
     }
 }
 
-oxivgl_examples_common::example_main!(Style13);
+oxivgl_examples_common::example_main!(Style13::default());

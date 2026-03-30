@@ -17,22 +17,21 @@ use oxivgl::{
     style::{Palette, lv_pct, palette_lighten},
     symbols,
     view::View,
-    widgets::{Align, List, Screen, WidgetError},
+    widgets::{Obj, Align, List, WidgetError},
 };
 
+#[derive(Default)]
 struct Gridnav2 {
-    _screen: Screen,
-    _group: Group,
-    _list1: List<'static>,
-    _list2: List<'static>,
+    _group: Option<Group>,
+    _list1: Option<List<'static>>,
+    _list2: Option<List<'static>>,
 }
 
 impl View for Gridnav2 {
-    fn create() -> Result<Self, WidgetError> {
-        let screen = Screen::active().ok_or(WidgetError::LvglNullPointer)?;
+    fn create(&mut self, container: &Obj<'static>) -> Result<(), WidgetError> {
 
         // ── List 1: File items, no rollover ───────────────────────────────
-        let list1 = List::new(&screen)?;
+        let list1 = List::new(container)?;
         list1
             .size(lv_pct(45), lv_pct(80))
             .align(Align::LeftMid, 5, 0)
@@ -49,7 +48,7 @@ impl View for Gridnav2 {
         }
 
         // ── List 2: Folder items, rollover ────────────────────────────────
-        let list2 = List::new(&screen)?;
+        let list2 = List::new(container)?;
         list2
             .size(lv_pct(45), lv_pct(80))
             .align(Align::RightMid, -5, 0)
@@ -72,12 +71,10 @@ impl View for Gridnav2 {
         group.add_obj(&list2);
         group.assign_to_keyboard_indevs();
 
-        Ok(Self {
-            _screen: screen,
-            _group: group,
-            _list1: list1,
-            _list2: list2,
-        })
+        self._group = Some(group);
+        self._list1 = Some(list1);
+        self._list2 = Some(list2);
+        Ok(())
     }
 
     fn update(&mut self) -> Result<(), WidgetError> {
@@ -107,7 +104,13 @@ fn main() {
             .keyboard(true)
             .build()
     };
-    let mut _view = Gridnav2::create().expect("view create failed");
+    let mut _view = Gridnav2::default();
+    // SAFETY: lv_screen_active() is valid after LvglDriver::init/sdl.
+    let screen_handle = unsafe { oxivgl_sys::lv_screen_active() };
+    assert!(!screen_handle.is_null(), "no active screen");
+    let screen_container = oxivgl::widgets::Obj::from_raw(screen_handle);
+    _view.create(&screen_container).expect("view create failed");
+    core::mem::forget(screen_container);
     register_view_events(&mut _view);
 
     let src = file!();

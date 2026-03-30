@@ -21,18 +21,18 @@ use oxivgl::{
     math::map,
     style::{lv_pct, Selector},
     view::{register_event_on, View},
-    widgets::{Button, Label, Obj, Screen, WidgetError, RADIUS_MAX},
+    widgets::{Button, Label, Obj, WidgetError, RADIUS_MAX},
 };
 
+#[derive(Default)]
 struct Scroll6 {
-    cont: Obj<'static>,
+    cont: Option<Obj<'static>>,
 }
 
 impl View for Scroll6 {
-    fn create() -> Result<Self, WidgetError> {
-        let screen = Screen::active().ok_or(WidgetError::LvglNullPointer)?;
+    fn create(&mut self, container: &Obj<'static>) -> Result<(), WidgetError> {
 
-        let cont = Obj::new(&screen)?;
+        let cont = Obj::new(container)?;
         cont.size(200, 200).center();
         cont.set_flex_flow(FlexFlow::Column);
         cont.style_clip_corner(true, Selector::DEFAULT);
@@ -56,26 +56,33 @@ impl View for Scroll6 {
             first.scroll_to_view(false);
         }
 
-        Ok(Self { cont })
+                self.cont = Some(cont);
+        Ok(())
     }
 
     fn register_events(&mut self) {
-        register_event_on(self, self.cont.handle());
+        if let Some(ref cont) = self.cont {
+            register_event_on(self, cont.handle());
+        }
     }
 
     fn on_event(&mut self, event: &Event) {
         if event.code() != EventCode::SCROLL {
             return;
         }
-        if event.current_target_handle() != self.cont.handle() {
+        let cont = match self.cont.as_ref() {
+            Some(c) => c,
+            None => return,
+        };
+        if event.current_target_handle() != cont.handle() {
             return;
         }
-        let coords = self.cont.get_coords();
+        let coords = cont.get_coords();
         let cont_y_center = coords.y1 + coords.height() / 2;
-        let r = self.cont.get_height() * 7 / 10;
+        let r = cont.get_height() * 7 / 10;
 
-        for i in 0..self.cont.get_child_count() as i32 {
-            let Some(child) = self.cont.get_child(i) else {
+        for i in 0..cont.get_child_count() as i32 {
+            let Some(child) = cont.get_child(i) else {
                 continue;
             };
             let child_coords = child.get_coords();
@@ -98,4 +105,4 @@ impl View for Scroll6 {
     }
 }
 
-oxivgl_examples_common::example_main!(Scroll6);
+oxivgl_examples_common::example_main!(Scroll6::default());

@@ -9,16 +9,17 @@
 use oxivgl::{
     style::{color_make, lv_pct, GradDsc, Selector, Style, StyleBuilder},
     view::View,
-    widgets::{Obj, Screen, WidgetError},
+    widgets::{Obj, WidgetError},
 };
 
+#[derive(Default)]
 struct GettingStarted5 {
-    _obj: Obj<'static>,
-    _style: Style,
+    _obj: Option<Obj<'static>>,
+    _style: Option<Style>,
 }
 
 impl View for GettingStarted5 {
-    fn create() -> Result<Self, WidgetError> {
+    fn create(&mut self, container: &Obj<'static>) -> Result<(), WidgetError> {
         let colors = [color_make(0xff, 0, 0), color_make(0, 0xff, 0)];
         let opas = [255u8, 0];
         let fracs = [(20u16 * 255 / 100) as u8, (80u16 * 255 / 100) as u8];
@@ -34,16 +35,13 @@ impl View for GettingStarted5 {
             .radius(12)
             .pad_all(0);
         let style = style.build();
-
-        let screen = Screen::active().ok_or(WidgetError::LvglNullPointer)?;
-        let obj = Obj::new(&screen)?;
+        let obj = Obj::new(container)?;
         obj.size(lv_pct(80), lv_pct(80)).center();
         obj.add_style(&style, Selector::DEFAULT);
 
-        Ok(Self {
-            _obj: obj,
-            _style: style,
-        })
+                self._obj = Some(obj);
+        self._style = Some(style);
+        Ok(())
     }
 
     fn update(&mut self) -> Result<(), WidgetError> {
@@ -51,4 +49,4 @@ impl View for GettingStarted5 {
     }
 }
 
-oxivgl_examples_common::example_main!(GettingStarted5);
+oxivgl_examples_common::example_main!(GettingStarted5::default());

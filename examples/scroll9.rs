@@ -16,7 +16,7 @@ use alloc::vec::Vec;
 use oxivgl::{
     enums::ObjFlag,
     view::View,
-    widgets::{Align, Label, Obj, Screen, Switch, WidgetError},
+    widgets::{Align, Label, Obj, Switch, WidgetError},
 };
 
 /// Grid columns and rows for child placement.
@@ -28,19 +28,19 @@ const GAP: i32 = 10;
 /// Colors for child objects (cycled).
 const COLORS: [u32; 5] = [0xe74c3c, 0x3498db, 0x2ecc71, 0xf39c12, 0x9b59b6];
 
+#[derive(Default)]
 struct Scroll9 {
-    _panel: Obj<'static>,
-    _switches: Vec<Switch<'static>>,
-    _labels: Vec<Label<'static>>,
-    _children: Vec<Obj<'static>>,
+    _panel: Option<Obj<'static>>,
+    _switches: Option<Vec<Switch<'static>>>,
+    _labels: Option<Vec<Label<'static>>>,
+    _children: Option<Vec<Obj<'static>>>,
 }
 
 impl View for Scroll9 {
-    fn create() -> Result<Self, WidgetError> {
-        let screen = Screen::active().ok_or(WidgetError::LvglNullPointer)?;
+    fn create(&mut self, container: &Obj<'static>) -> Result<(), WidgetError> {
 
         // Scrollable panel
-        let panel = Obj::new(&screen)?;
+        let panel = Obj::new(container)?;
         panel.size(200, 120);
         panel.align(Align::TopMid, 0, 5);
         panel.bg_color(0xeeeeee);
@@ -67,11 +67,11 @@ impl View for Scroll9 {
         let mut labels = Vec::with_capacity(4);
 
         for (i, name) in flag_names.iter().enumerate() {
-            let lbl = Label::new(&screen)?;
+            let lbl = Label::new(container)?;
             lbl.text(name);
             lbl.align(Align::TopLeft, 10, 135 + (i as i32) * 26);
 
-            let sw = Switch::new(&screen)?;
+            let sw = Switch::new(container)?;
             sw.align(Align::TopLeft, 100, 132 + (i as i32) * 26);
             // All switches initially checked
             sw.add_state(oxivgl::enums::ObjState::CHECKED);
@@ -80,12 +80,11 @@ impl View for Scroll9 {
             labels.push(lbl);
         }
 
-        Ok(Self {
-            _panel: panel,
-            _switches: switches,
-            _labels: labels,
-            _children: children,
-        })
+                self._panel = Some(panel);
+        self._switches = Some(switches);
+        self._labels = Some(labels);
+        self._children = Some(children);
+        Ok(())
     }
 
     fn update(&mut self) -> Result<(), WidgetError> {
@@ -93,4 +92,4 @@ impl View for Scroll9 {
     }
 }
 
-oxivgl_examples_common::example_main!(Scroll9);
+oxivgl_examples_common::example_main!(Scroll9::default());

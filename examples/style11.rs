@@ -14,21 +14,21 @@ use oxivgl::{
         LV_SIZE_CONTENT,
     },
     view::View,
-    widgets::{Align, Label, Obj, Screen, WidgetError},
+    widgets::{Align, Label, Obj, WidgetError},
 };
 
+#[derive(Default)]
 struct Style11 {
-    _label_warn: Label<'static>,
-    _obj_warn: Obj<'static>,
-    _label_base: Label<'static>,
-    _obj_base: Obj<'static>,
-    _style_warning: Style,
-    _style_base: Style,
+    _label_warn: Option<Label<'static>>,
+    _obj_warn: Option<Obj<'static>>,
+    _label_base: Option<Label<'static>>,
+    _obj_base: Option<Obj<'static>>,
+    _style_warning: Option<Style>,
+    _style_base: Option<Style>,
 }
 
 impl View for Style11 {
-    fn create() -> Result<Self, WidgetError> {
-        let screen = Screen::active().ok_or(WidgetError::LvglNullPointer)?;
+    fn create(&mut self, container: &Obj<'static>) -> Result<(), WidgetError> {
 
         let mut builder_base = StyleBuilder::new();
         builder_base
@@ -51,14 +51,14 @@ impl View for Style11 {
             .text_color(palette_darken(Palette::Yellow, 4));
         let style_warning = builder_warning.build();
 
-        let obj_base = Obj::new(&screen)?;
+        let obj_base = Obj::new(container)?;
         obj_base.add_style(&style_base, Selector::DEFAULT);
         obj_base.align(Align::LeftMid, 20, 0);
 
         let label_base = Label::new(&obj_base)?;
         label_base.text("Base").center();
 
-        let obj_warn = Obj::new(&screen)?;
+        let obj_warn = Obj::new(container)?;
         obj_warn.add_style(&style_base, Selector::DEFAULT);
         obj_warn.add_style(&style_warning, Selector::DEFAULT);
         obj_warn.align(Align::RightMid, -20, 0);
@@ -66,14 +66,13 @@ impl View for Style11 {
         let label_warn = Label::new(&obj_warn)?;
         label_warn.text("Warning").center();
 
-        Ok(Self {
-            _label_warn: label_warn,
-            _obj_warn: obj_warn,
-            _label_base: label_base,
-            _obj_base: obj_base,
-            _style_warning: style_warning,
-            _style_base: style_base,
-        })
+                self._label_warn = Some(label_warn);
+        self._obj_warn = Some(obj_warn);
+        self._label_base = Some(label_base);
+        self._obj_base = Some(obj_base);
+        self._style_warning = Some(style_warning);
+        self._style_base = Some(style_base);
+        Ok(())
     }
 
     fn update(&mut self) -> Result<(), WidgetError> {
@@ -81,4 +80,4 @@ impl View for Style11 {
     }
 }
 
-oxivgl_examples_common::example_main!(Style11);
+oxivgl_examples_common::example_main!(Style11::default());

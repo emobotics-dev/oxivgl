@@ -11,23 +11,23 @@ use oxivgl::{
     draw_buf::{ColorFormat, DrawBuf},
     style::color_make,
     view::View,
-    widgets::{Align, Canvas, Screen, WidgetError},
+    widgets::{Obj, Align, Canvas, WidgetError},
 };
 
 oxivgl::image_declare!(img_cogwheel_argb);
 
+#[derive(Default)]
 struct Canvas6 {
-    _canvas: Canvas<'static>,
+    _canvas: Option<Canvas<'static>>,
 }
 
 impl View for Canvas6 {
-    fn create() -> Result<Self, WidgetError> {
-        let screen = Screen::active().ok_or(WidgetError::LvglNullPointer)?;
+    fn create(&mut self, container: &Obj<'static>) -> Result<(), WidgetError> {
 
         // Canvas large enough for the 100x100 cogwheel image
         let buf = DrawBuf::create(100, 100, ColorFormat::ARGB8888)
             .ok_or(WidgetError::LvglNullPointer)?;
-        let canvas = Canvas::new(&screen, buf)?;
+        let canvas = Canvas::new(container, buf)?;
         canvas.fill_bg(color_make(0xcf, 0xcf, 0xcf), 255);
         canvas.align(Align::Center, 0, 0);
 
@@ -37,7 +37,8 @@ impl View for Canvas6 {
             layer.draw_image(&dsc, Area { x1: 0, y1: 0, x2: 99, y2: 99 });
         }
 
-        Ok(Self { _canvas: canvas })
+                self._canvas = Some(canvas);
+        Ok(())
     }
 
     fn register_events(&mut self) {}
@@ -48,4 +49,4 @@ impl View for Canvas6 {
     }
 }
 
-oxivgl_examples_common::example_main!(Canvas6);
+oxivgl_examples_common::example_main!(Canvas6::default());

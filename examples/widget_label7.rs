@@ -17,7 +17,7 @@ use oxivgl::{
     event::Event,
     translation::{self, StaticCStr as S},
     view::{register_event_on, View},
-    widgets::{Align, Dropdown, Label, Screen, WidgetError},
+    widgets::{Obj, Align, Dropdown, Label, WidgetError},
 };
 
 // NULL-terminated static arrays — LVGL stores these pointers directly.
@@ -38,63 +38,64 @@ static TRANSLATIONS: [S; 12] = [
 
 static LANG_CSTR: [&core::ffi::CStr; 3] = [c"en", c"de", c"es"];
 
+#[derive(Default)]
 struct WidgetLabel7 {
-    dd: Dropdown<'static>,
-    _lbl_hello: Label<'static>,
-    _lbl_welcome: Label<'static>,
-    _lbl_button: Label<'static>,
-    _lbl_goodbye: Label<'static>,
+    dd: Option<Dropdown<'static>>,
+    _lbl_hello: Option<Label<'static>>,
+    _lbl_welcome: Option<Label<'static>>,
+    _lbl_button: Option<Label<'static>>,
+    _lbl_goodbye: Option<Label<'static>>,
 }
 
 impl View for WidgetLabel7 {
-    fn create() -> Result<Self, WidgetError> {
-        let screen = Screen::active().ok_or(WidgetError::LvglNullPointer)?;
+    fn create(&mut self, container: &Obj<'static>) -> Result<(), WidgetError> {
 
         // Register translation pack and set initial language
         translation::add_static(&LANGUAGES, &TAGS, &TRANSLATIONS);
         translation::set_language(c"en");
 
         // Language selector dropdown
-        let dd = Dropdown::new(&screen)?;
+        let dd = Dropdown::new(container)?;
         dd.set_options("English\nDeutsch\nEspanol");
         dd.align(Align::TopMid, 0, 10);
         dd.bubble_events();
 
         // Labels with translation tags — auto-update on language change
-        let lbl_hello = Label::new(&screen)?;
+        let lbl_hello = Label::new(container)?;
         lbl_hello.set_translation_tag("hello");
         lbl_hello.align(Align::Center, 0, -40);
 
-        let lbl_welcome = Label::new(&screen)?;
+        let lbl_welcome = Label::new(container)?;
         lbl_welcome.set_translation_tag("welcome");
         lbl_welcome.align(Align::Center, 0, -10);
 
-        let lbl_button = Label::new(&screen)?;
+        let lbl_button = Label::new(container)?;
         lbl_button.set_translation_tag("button");
         lbl_button.align(Align::Center, 0, 20);
 
-        let lbl_goodbye = Label::new(&screen)?;
+        let lbl_goodbye = Label::new(container)?;
         lbl_goodbye.set_translation_tag("goodbye");
         lbl_goodbye.align(Align::Center, 0, 50);
 
-        Ok(Self {
-            dd,
-            _lbl_hello: lbl_hello,
-            _lbl_welcome: lbl_welcome,
-            _lbl_button: lbl_button,
-            _lbl_goodbye: lbl_goodbye,
-        })
+                self.dd = Some(dd);
+        self._lbl_hello = Some(lbl_hello);
+        self._lbl_welcome = Some(lbl_welcome);
+        self._lbl_button = Some(lbl_button);
+        self._lbl_goodbye = Some(lbl_goodbye);
+        Ok(())
     }
 
     fn register_events(&mut self) {
-        register_event_on(self, self.dd.handle());
+        if let Some(ref dd) = self.dd { register_event_on(self, dd.handle()); }
     }
 
     fn on_event(&mut self, event: &Event) {
         if event.code() == EventCode::VALUE_CHANGED {
-            let idx = self.dd.get_selected() as usize;
-            if idx < LANG_CSTR.len() {
-                translation::set_language(LANG_CSTR[idx]);
+            if let Some(ref dd) = self.dd {
+                let idx = dd.get_selected() as usize;
+                if idx < LANG_CSTR.len() {
+                    translation::set_language(LANG_CSTR[idx]);
+                }
             }
         }
     }
@@ -104,4 +105,4 @@ impl View for WidgetLabel7 {
     }
 }
 
-oxivgl_examples_common::example_main!(WidgetLabel7);
+oxivgl_examples_common::example_main!(WidgetLabel7::default());

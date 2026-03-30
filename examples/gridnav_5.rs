@@ -20,16 +20,16 @@ use oxivgl::{
     layout::{FlexAlign, FlexFlow},
     style::lv_pct,
     view::{View, register_event_on},
-    widgets::{Align, Obj, Roller, RollerMode, Screen, Slider, WidgetError},
+    widgets::{Align, Obj, Roller, RollerMode, Slider, WidgetError},
 };
 
+#[derive(Default)]
 struct Gridnav5 {
-    _screen: Screen,
-    _group: Group,
+    _group: Option<Group>,
     sliders: heapless::Vec<Slider<'static>, 3>,
     rollers: heapless::Vec<Roller<'static>, 3>,
-    _cont_top: Obj<'static>,
-    _cont_bot: Obj<'static>,
+    _cont_top: Option<Obj<'static>>,
+    _cont_bot: Option<Obj<'static>>,
 }
 
 /// Roller options and matching slider ranges for each of the three columns.
@@ -41,11 +41,10 @@ const OPTS: [&str; 3] = [
 const COUNTS: [i32; 3] = [6, 10, 3];
 
 impl View for Gridnav5 {
-    fn create() -> Result<Self, WidgetError> {
-        let screen = Screen::active().ok_or(WidgetError::LvglNullPointer)?;
+    fn create(&mut self, container: &Obj<'static>) -> Result<(), WidgetError> {
 
         // ── Top container: sliders, vertical-move-only ────────────────────
-        let cont_top = Obj::new(&screen)?;
+        let cont_top = Obj::new(container)?;
         cont_top
             .set_flex_flow(FlexFlow::Column)
             .set_flex_align(FlexAlign::Center, FlexAlign::Center, FlexAlign::Center)
@@ -62,7 +61,7 @@ impl View for Gridnav5 {
         }
 
         // ── Bottom container: rollers, horizontal-move-only ───────────────
-        let cont_bot = Obj::new(&screen)?;
+        let cont_bot = Obj::new(container)?;
         cont_bot
             .set_flex_flow(FlexFlow::Row)
             .set_flex_align(FlexAlign::Center, FlexAlign::Center, FlexAlign::Center)
@@ -86,37 +85,33 @@ impl View for Gridnav5 {
         group.add_obj(&cont_bot);
         group.assign_to_keyboard_indevs();
 
-        Ok(Self {
-            _screen: screen,
-            _group: group,
-            sliders,
-            rollers,
-            _cont_top: cont_top,
-            _cont_bot: cont_bot,
-        })
+        self._group = Some(group);
+        self.sliders = sliders;
+        self.rollers = rollers;
+        self._cont_top = Some(cont_top);
+        self._cont_bot = Some(cont_bot);
+        Ok(())
     }
 
     fn register_events(&mut self) {
-        register_event_on(self, self._cont_top.handle());
-        register_event_on(self, self._cont_bot.handle());
+        if let Some(ref ct) = self._cont_top { register_event_on(self, ct.handle()); }
+        if let Some(ref cb) = self._cont_bot { register_event_on(self, cb.handle()); }
     }
 
     fn on_event(&mut self, event: &Event) {
         if event.code() != EventCode::KEY {
             return;
         }
-        // Sync all three slider↔roller pairs on any key event in either
-        // container. The active container determines which direction to sync.
         let target = event.target();
         let target_handle = target.handle();
-        if target_handle == self._cont_top.handle() {
-            // Slider had focus — push slider values to rollers.
+        let ct_handle = self._cont_top.as_ref().map(|c| c.handle());
+        let cb_handle = self._cont_bot.as_ref().map(|c| c.handle());
+        if Some(target_handle) == ct_handle {
             for i in 0..3 {
                 let val = self.sliders[i].get_value() as u32;
                 self.rollers[i].set_selected(val, true);
             }
-        } else if target_handle == self._cont_bot.handle() {
-            // Roller had focus — push roller selections to sliders.
+        } else if Some(target_handle) == cb_handle {
             for i in 0..3 {
                 let sel = self.rollers[i].get_selected() as i32;
                 self.sliders[i].set_value_animated(sel, true);
@@ -132,7 +127,7 @@ impl View for Gridnav5 {
 // ── Platform entry points ──────────────────────────────────────────────────
 
 #[cfg(target_arch = "xtensa")]
-oxivgl_examples_common::fire27_main!(Gridnav5);
+oxivgl_examples_common::fire27_main!(Gridnav5::default());
 
 #[cfg(not(target_arch = "xtensa"))]
 fn main() {
@@ -151,7 +146,12 @@ fn main() {
             .keyboard(true)
             .build()
     };
-    let mut _view = Gridnav5::create().expect("view create failed");
+    let mut _view = Gridnav5::default();
+    let screen_handle = unsafe { oxivgl_sys::lv_screen_active() };
+    assert!(!screen_handle.is_null(), "no active screen");
+    let container = oxivgl::widgets::Obj::from_raw(screen_handle);
+    _view.create(&container).expect("view create failed");
+    core::mem::forget(container);
     register_view_events(&mut _view);
 
     let src = file!();

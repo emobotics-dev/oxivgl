@@ -10,32 +10,31 @@
 
 use oxivgl::{
     view::View,
-    widgets::{Align, Bar, Label, Screen, WidgetError},
+    widgets::{Obj, Align, Bar, Label, WidgetError},
 };
 
+#[derive(Default)]
 struct WidgetBar7 {
-    _bar: Bar<'static>,
-    _label: Label<'static>,
+    _bar: Option<Bar<'static>>,
+    _label: Option<Label<'static>>,
 }
 
 impl View for WidgetBar7 {
-    fn create() -> Result<Self, WidgetError> {
-        let screen = Screen::active().ok_or(WidgetError::LvglNullPointer)?;
+    fn create(&mut self, container: &Obj<'static>) -> Result<(), WidgetError> {
 
-        let bar = Bar::new(&screen)?;
+        let bar = Bar::new(container)?;
         bar.size(20, 200);
         bar.set_range_raw(100, 0);
         bar.set_value_raw(70, false);
         bar.align(Align::Center, 0, -30);
 
-        let label = Label::new(&screen)?;
+        let label = Label::new(container)?;
         label.text("Top to bottom");
         label.align_to(&bar, Align::OutTopMid, 0, -5);
 
-        Ok(Self {
-            _bar: bar,
-            _label: label,
-        })
+                self._bar = Some(bar);
+        self._label = Some(label);
+        Ok(())
     }
 
     fn update(&mut self) -> Result<(), WidgetError> {
@@ -43,4 +42,4 @@ impl View for WidgetBar7 {
     }
 }
 
-oxivgl_examples_common::example_main!(WidgetBar7);
+oxivgl_examples_common::example_main!(WidgetBar7::default());

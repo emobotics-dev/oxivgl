@@ -14,34 +14,38 @@ use oxivgl::{
     event::Event,
     indev::Indev,
     view::View,
-    widgets::{Button, Label, Screen, WidgetError},
+    widgets::{Obj, Button, Label, WidgetError},
 };
 
+#[derive(Default)]
 struct EventStreak {
-    btn: Button<'static>,
-    btn_label: Label<'static>,
-    info_label: Label<'static>,
+    btn: Option<Button<'static>>,
+    btn_label: Option<Label<'static>>,
+    info_label: Option<Label<'static>>,
 }
 
 impl View for EventStreak {
-    fn create() -> Result<Self, WidgetError> {
-        let screen = Screen::active().ok_or(WidgetError::LvglNullPointer)?;
+    fn create(&mut self, container: &Obj<'static>) -> Result<(), WidgetError> {
 
-        let info_label = Label::new(&screen)?;
+        let info_label = Label::new(container)?;
         info_label.text("No events yet");
 
-        let btn = Button::new(&screen)?;
+        let btn = Button::new(container)?;
         btn.size(100, 50).center();
         btn.bubble_events();
 
         let btn_label = Label::new(&btn)?;
         btn_label.text("Click me!").center();
 
-        Ok(Self { btn, btn_label, info_label })
+                self.btn = Some(btn);
+        self.btn_label = Some(btn_label);
+        self.info_label = Some(info_label);
+        Ok(())
     }
 
     fn on_event(&mut self, event: &Event) {
-        if event.matches(&self.btn, EventCode::SHORT_CLICKED) {
+        let Some(ref btn) = self.btn else { return };
+        if event.matches(btn, EventCode::SHORT_CLICKED) {
             if let Some(indev) = Indev::active() {
                 let cnt = indev.short_click_streak();
                 let mut buf = heapless::String::<32>::new();
@@ -49,14 +53,22 @@ impl View for EventStreak {
                     &mut buf,
                     format_args!("Short click streak: {}", cnt),
                 );
-                self.info_label.text(&buf);
+                if let Some(ref info_label) = self.info_label {
+                    info_label.text(&buf);
+                }
             }
-        } else if event.matches(&self.btn, EventCode::SINGLE_CLICKED) {
-            self.btn_label.text("Single clicked");
-        } else if event.matches(&self.btn, EventCode::DOUBLE_CLICKED) {
-            self.btn_label.text("Double clicked");
-        } else if event.matches(&self.btn, EventCode::TRIPLE_CLICKED) {
-            self.btn_label.text("Triple clicked");
+        } else if event.matches(btn, EventCode::SINGLE_CLICKED) {
+            if let Some(ref btn_label) = self.btn_label {
+                btn_label.text("Single clicked");
+            }
+        } else if event.matches(btn, EventCode::DOUBLE_CLICKED) {
+            if let Some(ref btn_label) = self.btn_label {
+                btn_label.text("Double clicked");
+            }
+        } else if event.matches(btn, EventCode::TRIPLE_CLICKED) {
+            if let Some(ref btn_label) = self.btn_label {
+                btn_label.text("Triple clicked");
+            }
         }
     }
 
@@ -65,4 +77,4 @@ impl View for EventStreak {
     }
 }
 
-oxivgl_examples_common::example_main!(EventStreak);
+oxivgl_examples_common::example_main!(EventStreak::default());

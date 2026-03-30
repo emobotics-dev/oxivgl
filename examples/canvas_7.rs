@@ -11,18 +11,18 @@ use oxivgl::{
     draw_buf::{ColorFormat, DrawBuf},
     style::color_make,
     view::View,
-    widgets::{Align, Canvas, Screen, WidgetError},
+    widgets::{Obj, Align, Canvas, WidgetError},
 };
 
+#[derive(Default)]
 struct Canvas7 {
-    _canvas: Canvas<'static>,
+    _canvas: Option<Canvas<'static>>,
 }
 
 impl View for Canvas7 {
-    fn create() -> Result<Self, WidgetError> {
-        let screen = Screen::active().ok_or(WidgetError::LvglNullPointer)?;
+    fn create(&mut self, container: &Obj<'static>) -> Result<(), WidgetError> {
         let canvas = Canvas::new(
-            &screen,
+            container,
             DrawBuf::create(50, 50, ColorFormat::ARGB8888).ok_or(WidgetError::LvglNullPointer)?,
         )?;
         canvas.fill_bg(color_make(0xcc, 0xcc, 0xcc), 255);
@@ -39,7 +39,8 @@ impl View for Canvas7 {
                 .round_end(true);
             layer.draw_line(&dsc);
         }
-        Ok(Self { _canvas: canvas })
+                self._canvas = Some(canvas);
+        Ok(())
     }
 
     fn update(&mut self) -> Result<(), WidgetError> {
@@ -47,4 +48,4 @@ impl View for Canvas7 {
     }
 }
 
-oxivgl_examples_common::example_main!(Canvas7);
+oxivgl_examples_common::example_main!(Canvas7::default());

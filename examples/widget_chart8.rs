@@ -14,7 +14,7 @@ use oxivgl::{
     style::Selector,
     timer::Timer,
     view::View,
-    widgets::{Chart, ChartAxis, ChartSeries, ChartType, ChartUpdateMode, Part, Screen, WidgetError, CHART_POINT_NONE},
+    widgets::{Obj, Chart, ChartAxis, ChartSeries, ChartType, ChartUpdateMode, Part, WidgetError, CHART_POINT_NONE},
 };
 
 /// Simple LCG pseudo-random.
@@ -24,19 +24,18 @@ fn pseudo_rand(seed: &mut u32, min: i32, max: i32) -> i32 {
     min + ((*seed >> 16) % range) as i32
 }
 
+#[derive(Default)]
 struct WidgetChart8 {
-    _screen: Screen,
-    chart: Chart<'static>,
-    ser: ChartSeries,
-    timer: Timer,
+    chart: Option<Chart<'static>>,
+    ser: Option<ChartSeries>,
+    timer: Option<Timer>,
     seed: u32,
 }
 
 impl View for WidgetChart8 {
-    fn create() -> Result<Self, WidgetError> {
-        let screen = Screen::active().ok_or(WidgetError::LvglNullPointer)?;
+    fn create(&mut self, container: &Obj<'static>) -> Result<(), WidgetError> {
 
-        let chart = Chart::new(&screen)?;
+        let chart = Chart::new(container)?;
         chart.size(280, 150);
         chart.center();
         chart.set_type(ChartType::Line);
@@ -54,24 +53,32 @@ impl View for WidgetChart8 {
 
         let timer = Timer::new(300)?;
 
-        Ok(Self { _screen: screen, chart, ser, timer, seed })
+        self.chart = Some(chart);
+        self.ser = Some(ser);
+        self.timer = Some(timer);
+        self.seed = seed;
+        Ok(())
     }
 
     fn update(&mut self) -> Result<(), WidgetError> {
-        if self.timer.triggered() {
-            self.chart.set_next_value(&self.ser, pseudo_rand(&mut self.seed, 10, 90));
+        if let Some(ref timer) = self.timer {
+            if timer.triggered() {
+                if let (Some(chart), Some(ser)) = (&self.chart, &self.ser) {
+                    chart.set_next_value(ser, pseudo_rand(&mut self.seed, 10, 90));
 
-            // Blank 3 points ahead of write cursor to create gap
-            let p = self.chart.get_point_count();
-            let s = self.chart.get_x_start_point(&self.ser);
-            for offset in 1..=3 {
-                let idx = (s + offset) % p;
-                self.chart.set_series_value_by_id(&self.ser, idx, CHART_POINT_NONE as i32);
+                    // Blank 3 points ahead of write cursor to create gap
+                    let p = chart.get_point_count();
+                    let s = chart.get_x_start_point(ser);
+                    for offset in 1..=3 {
+                        let idx = (s + offset) % p;
+                        chart.set_series_value_by_id(ser, idx, CHART_POINT_NONE as i32);
+                    }
+                    chart.refresh();
+                }
             }
-            self.chart.refresh();
         }
         Ok(())
     }
 }
 
-oxivgl_examples_common::example_main!(WidgetChart8);
+oxivgl_examples_common::example_main!(WidgetChart8::default());

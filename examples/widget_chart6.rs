@@ -13,22 +13,21 @@ use oxivgl::{
     enums::EventCode,
     event::Event,
     view::View,
-    widgets::{Align, Chart, ChartAxis, ChartCursor, ChartSeries, ChartType, Label, Screen, WidgetError},
+    widgets::{Obj, Align, Chart, ChartAxis, ChartCursor, ChartSeries, ChartType, Label, WidgetError},
 };
 
+#[derive(Default)]
 struct WidgetChart6 {
-    _screen: Screen,
-    chart: Chart<'static>,
-    cursor: ChartCursor,
-    _ser: ChartSeries,
-    _label: Label<'static>,
+    chart: Option<Chart<'static>>,
+    cursor: Option<ChartCursor>,
+    _ser: Option<ChartSeries>,
+    _label: Option<Label<'static>>,
 }
 
 impl View for WidgetChart6 {
-    fn create() -> Result<Self, WidgetError> {
-        let screen = Screen::active().ok_or(WidgetError::LvglNullPointer)?;
+    fn create(&mut self, container: &Obj<'static>) -> Result<(), WidgetError> {
 
-        let chart = Chart::new(&screen)?;
+        let chart = Chart::new(container)?;
         chart.size(200, 150);
         chart.align(Align::Center, 0, 10);
         chart.set_type(ChartType::Line);
@@ -43,17 +42,23 @@ impl View for WidgetChart6 {
             chart.set_next_value(&ser, v);
         }
 
-        let label = Label::new(&screen)?;
+        let label = Label::new(container)?;
         label.text("Click on a point");
         label.align(Align::TopMid, 0, 5);
 
-        Ok(Self { _screen: screen, chart, cursor, _ser: ser, _label: label })
+                self.chart = Some(chart);
+        self.cursor = Some(cursor);
+        self._ser = Some(ser);
+        self._label = Some(label);
+        Ok(())
     }
 
     fn on_event(&mut self, event: &Event) {
-        if event.matches(&self.chart, EventCode::VALUE_CHANGED) {
-            if let Some(id) = self.chart.get_pressed_point() {
-                self.chart.set_cursor_point(&self.cursor, None, id);
+        if let (Some(chart), Some(cursor)) = (&self.chart, &self.cursor) {
+            if event.matches(chart, EventCode::VALUE_CHANGED) {
+                if let Some(id) = chart.get_pressed_point() {
+                    chart.set_cursor_point(cursor, None, id);
+                }
             }
         }
     }
@@ -63,4 +68,4 @@ impl View for WidgetChart6 {
     }
 }
 
-oxivgl_examples_common::example_main!(WidgetChart6);
+oxivgl_examples_common::example_main!(WidgetChart6::default());

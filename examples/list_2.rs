@@ -24,27 +24,26 @@ use oxivgl::{
     style::lv_pct,
     symbols,
     view::{View, register_event_on},
-    widgets::{Align, Button, Label, List, Part, Screen, WidgetError},
+    widgets::{Obj, Align, Button, Label, List, Part, WidgetError},
 };
+#[derive(Default)]
 struct List2 {
-    _screen: Screen,
-    _group: Group,
-    list1: List<'static>,
-    list2: List<'static>,
+    _group: Option<Group>,
+    list1: Option<List<'static>>,
+    list2: Option<List<'static>>,
     /// Child index in list1 of the currently selected item, or None.
     current_idx: Option<i32>,
     /// Counter used to drive deterministic shuffle.
     shuffle_ctr: u32,
     /// Labels for the left-list items (kept alive; owned by their buttons).
-    _item_labels: heapless::Vec<Label<'static>, 15>,
+    _item_labels: Option<heapless::Vec<Label<'static>, 15>>,
 }
 
 impl View for List2 {
-    fn create() -> Result<Self, WidgetError> {
-        let screen = Screen::active().ok_or(WidgetError::LvglNullPointer)?;
+    fn create(&mut self, container: &Obj<'static>) -> Result<(), WidgetError> {
 
         // ── Left list: 15 plain buttons ───────────────────────────────────
-        let list1 = List::new(&screen)?;
+        let list1 = List::new(container)?;
         list1
             .size(lv_pct(60), lv_pct(100))
             .style_pad_row(5, Part::Main);
@@ -75,7 +74,7 @@ impl View for List2 {
         }
 
         // ── Right list: control buttons ───────────────────────────────────
-        let list2 = List::new(&screen)?;
+        let list2 = List::new(container)?;
         list2
             .size(lv_pct(40), lv_pct(100))
             .align(Align::TopRight, 0, 0)
@@ -111,20 +110,22 @@ impl View for List2 {
         group.add_obj(&list2);
         group.assign_to_keyboard_indevs();
 
-        Ok(Self {
-            _screen: screen,
-            _group: group,
-            list1,
-            list2,
-            current_idx: Some(0),
-            shuffle_ctr: 0,
-            _item_labels: item_labels,
-        })
+        self._group = Some(group);
+        self.list1 = Some(list1);
+        self.list2 = Some(list2);
+        self.current_idx = Some(0);
+        self.shuffle_ctr = 0;
+        self._item_labels = Some(item_labels);
+        Ok(())
     }
 
     fn register_events(&mut self) {
-        register_event_on(self, self.list1.handle());
-        register_event_on(self, self.list2.handle());
+        if let Some(ref list1) = self.list1 {
+            register_event_on(self, list1.handle());
+        }
+        if let Some(ref list2) = self.list2 {
+            register_event_on(self, list2.handle());
+        }
     }
 
     fn on_event(&mut self, event: &Event) {
@@ -135,20 +136,30 @@ impl View for List2 {
         }
 
         let target_handle = event.target().handle();
-        let list1_handle = self.list1.handle();
-        let list2_handle = self.list2.handle();
+
+        let list1_handle = match self.list1 {
+            Some(ref l) => l.handle(),
+            None => return,
+        };
+        let list2_handle = match self.list2 {
+            Some(ref l) => l.handle(),
+            None => return,
+        };
 
         if target_handle == list1_handle || target_handle == list2_handle {
             // Event on the container itself — ignore.
             return;
         }
 
+        let list1 = self.list1.as_ref().unwrap();
+        let list2 = self.list2.as_ref().unwrap();
+
         // ── Determine if the click is in list1 (item select) or list2 (control) ──
         // Check whether target is a direct child of list1.
-        let cnt1 = self.list1.get_child_count();
+        let cnt1 = list1.get_child_count();
         let mut in_list1 = false;
         for i in 0..cnt1 as i32 {
-            if let Some(child) = self.list1.get_child(i) {
+            if let Some(child) = list1.get_child(i) {
                 if child.handle() == target_handle {
                     in_list1 = true;
                     break;
@@ -159,7 +170,7 @@ impl View for List2 {
         if in_list1 {
             // Find the clicked item's index.
             let clicked_idx = (0..cnt1 as i32).find(|&i| {
-                self.list1
+                list1
                     .get_child(i)
                     .map(|c| c.handle() == target_handle)
                     .unwrap_or(false)
@@ -172,7 +183,7 @@ impl View for List2 {
             }
             // Update CHECKED state on all list1 children.
             for i in 0..cnt1 as i32 {
-                if let Some(child) = self.list1.get_child(i) {
+                if let Some(child) = list1.get_child(i) {
                     if self.current_idx == Some(i) {
                         child.add_state(ObjState::CHECKED);
                     } else {
@@ -188,11 +199,11 @@ impl View for List2 {
             Some(i) => i,
             None => return,
         };
-        let cur = match self.list1.get_child(cur_idx) {
+        let cur = match list1.get_child(cur_idx) {
             Some(c) => c,
             None => return,
         };
-        let btn_text = self.list2.get_button_text(&event.target());
+        let btn_text = list2.get_button_text(&event.target());
 
         match btn_text {
             Some("Top") => {
@@ -209,7 +220,7 @@ impl View for List2 {
                 }
             }
             Some("Center") => {
-                let cnt = self.list1.get_child_count() as i32;
+                let cnt = list1.get_child_count() as i32;
                 cur.move_to_index(cnt / 2);
                 cur.scroll_to_view(true);
                 self.current_idx = Some(cur.get_index());
@@ -226,7 +237,7 @@ impl View for List2 {
                 self.current_idx = Some(cur.get_index());
             }
             Some("Shuffle") => {
-                let cnt = self.list1.get_child_count();
+                let cnt = list1.get_child_count();
                 if cnt > 1 {
                     // Deterministic shuffle: swap pairs using a counter.
                     for _ in 0..20u32 {
@@ -236,8 +247,8 @@ impl View for List2 {
                         let b = (self.shuffle_ctr >> 16) % cnt;
                         if a != b {
                             if let (Some(ca), Some(cb)) = (
-                                self.list1.get_child(a as i32),
-                                self.list1.get_child(b as i32),
+                                list1.get_child(a as i32),
+                                list1.get_child(b as i32),
                             ) {
                                 ca.swap(&*cb);
                             }
@@ -278,7 +289,13 @@ fn main() {
             .keyboard(true)
             .build()
     };
-    let mut _view = List2::create().expect("view create failed");
+
+    let mut _view = List2::default();
+    let screen_handle = unsafe { oxivgl_sys::lv_screen_active() };
+    assert!(!screen_handle.is_null(), "no active screen");
+    let container = oxivgl::widgets::Obj::from_raw(screen_handle);
+    _view.create(&container).expect("view create failed");
+    core::mem::forget(container);
     register_view_events(&mut _view);
 
     let src = file!();

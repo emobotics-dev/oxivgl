@@ -16,7 +16,7 @@ use oxivgl::{
     math::{trigo_cos, trigo_sin},
     style::{color_hsv, color_make},
     view::View,
-    widgets::{Align, Canvas, Screen, WidgetError},
+    widgets::{Obj, Align, Canvas, WidgetError},
 };
 
 /// Canvas size — 160×160 fits ESP32's 50KB heap (160×160×2 = 51200 bytes).
@@ -29,22 +29,24 @@ const TXT: &[u8] = b"HELLO LVGL 9.5";
 const RADIUS: i32 = 80;
 const SPACING_DEG: i32 = 22; // degrees between characters
 
+#[derive(Default)]
 struct Canvas12 {
-    canvas: Canvas<'static>,
+    canvas: Option<Canvas<'static>>,
     tick: i32,
 }
 
 impl View for Canvas12 {
-    fn create() -> Result<Self, WidgetError> {
-        let screen = Screen::active().ok_or(WidgetError::LvglNullPointer)?;
+    fn create(&mut self, container: &Obj<'static>) -> Result<(), WidgetError> {
         let canvas = Canvas::new(
-            &screen,
+            container,
             DrawBuf::create(SIZE as u32, SIZE as u32, ColorFormat::RGB565)
                 .ok_or(WidgetError::LvglNullPointer)?,
         )?;
         canvas.fill_bg(color_make(20, 20, 40), 255);
         canvas.align(Align::Center, 0, 0);
-        Ok(Self { canvas, tick: 0 })
+                self.canvas = Some(canvas);
+        self.tick = 0;
+        Ok(())
     }
 
     fn update(&mut self) -> Result<(), WidgetError> {
@@ -52,9 +54,10 @@ impl View for Canvas12 {
         let cy = SIZE / 2;
         let n = TXT.len() as i32;
 
-        self.canvas.fill_bg(color_make(20, 20, 40), 255);
+        let canvas = self.canvas.as_ref().unwrap();
+        canvas.fill_bg(color_make(20, 20, 40), 255);
         {
-            let mut layer = self.canvas.init_layer();
+            let mut layer = canvas.init_layer();
             for i in 0..n {
                 let ch = TXT[i as usize];
                 // angle in degrees for this character
@@ -79,4 +82,4 @@ impl View for Canvas12 {
     }
 }
 
-oxivgl_examples_common::example_main!(Canvas12);
+oxivgl_examples_common::example_main!(Canvas12::default());

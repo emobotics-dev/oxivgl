@@ -10,18 +10,18 @@ use oxivgl::{
     anim::{anim_path_ease_in_out, anim_set_size, anim_set_x, Anim, ANIM_REPEAT_INFINITE},
     style::{palette_main, Palette, Selector},
     view::View,
-    widgets::{Align, Obj, Screen, WidgetError, RADIUS_MAX},
+    widgets::{Align, Obj, WidgetError, RADIUS_MAX},
 };
 
+#[derive(Default)]
 struct Anim2 {
-    _obj: Obj<'static>,
+    _obj: Option<Obj<'static>>,
 }
 
 impl View for Anim2 {
-    fn create() -> Result<Self, WidgetError> {
-        let screen = Screen::active().ok_or(WidgetError::LvglNullPointer)?;
+    fn create(&mut self, container: &Obj<'static>) -> Result<(), WidgetError> {
 
-        let obj = Obj::new(&screen)?;
+        let obj = Obj::new(container)?;
         obj.remove_scrollable();
         obj.style_bg_color(palette_main(Palette::Red), Selector::DEFAULT);
         obj.radius(RADIUS_MAX, Selector::DEFAULT);
@@ -44,7 +44,8 @@ impl View for Anim2 {
         a.set_values(10, 240);
         a.start();
 
-        Ok(Self { _obj: obj })
+                self._obj = Some(obj);
+        Ok(())
     }
 
     fn update(&mut self) -> Result<(), WidgetError> {
@@ -52,4 +53,4 @@ impl View for Anim2 {
     }
 }
 
-oxivgl_examples_common::example_main!(Anim2);
+oxivgl_examples_common::example_main!(Anim2::default());

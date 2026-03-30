@@ -17,30 +17,29 @@
 use oxivgl::{
     style::Selector,
     view::View,
-    widgets::{Align, Label, Msgbox, Screen, WidgetError},
+    widgets::{Align, Label, Msgbox, Obj, Screen, WidgetError},
 };
 
+#[derive(Default)]
 struct WidgetMsgbox3 {
-    _screen: Screen,
-    _label1: Label<'static>,
-    _label2: Label<'static>,
-    _label3: Label<'static>,
+    _label1: Option<Label<'static>>,
+    _label2: Option<Label<'static>>,
+    _label3: Option<Label<'static>>,
 }
 
 impl View for WidgetMsgbox3 {
-    fn create() -> Result<Self, WidgetError> {
-        let screen = Screen::active().ok_or(WidgetError::LvglNullPointer)?;
+    fn create(&mut self, container: &Obj<'static>) -> Result<(), WidgetError> {
 
         // Background content — visible through the blurred/dimmed backdrop
-        let label1 = Label::new(&screen)?;
+        let label1 = Label::new(container)?;
         label1.text("Background text line 1");
         label1.align(Align::TopMid, 0, 30);
 
-        let label2 = Label::new(&screen)?;
+        let label2 = Label::new(container)?;
         label2.text("Background text line 2");
         label2.align(Align::Center, 0, 0);
 
-        let label3 = Label::new(&screen)?;
+        let label3 = Label::new(container)?;
         label3.text("Background text line 3");
         label3.align(Align::BottomMid, 0, -30);
 
@@ -61,12 +60,10 @@ impl View for WidgetMsgbox3 {
         // LVGL owns the msgbox — forget the Rust handle
         core::mem::forget(mbox);
 
-        Ok(Self {
-            _screen: screen,
-            _label1: label1,
-            _label2: label2,
-            _label3: label3,
-        })
+                self._label1 = Some(label1);
+        self._label2 = Some(label2);
+        self._label3 = Some(label3);
+        Ok(())
     }
 
     fn update(&mut self) -> Result<(), WidgetError> {
@@ -74,4 +71,4 @@ impl View for WidgetMsgbox3 {
     }
 }
 
-oxivgl_examples_common::example_main!(WidgetMsgbox3);
+oxivgl_examples_common::example_main!(WidgetMsgbox3::default());

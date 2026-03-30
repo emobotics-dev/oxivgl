@@ -11,18 +11,18 @@ use oxivgl::{
     draw_buf::{ColorFormat, DrawBuf},
     style::{color_make, GradDir},
     view::View,
-    widgets::{Align, Canvas, Screen, WidgetError},
+    widgets::{Obj, Align, Canvas, WidgetError},
 };
 
+#[derive(Default)]
 struct Canvas9 {
-    _canvas: Canvas<'static>,
+    _canvas: Option<Canvas<'static>>,
 }
 
 impl View for Canvas9 {
-    fn create() -> Result<Self, WidgetError> {
-        let screen = Screen::active().ok_or(WidgetError::LvglNullPointer)?;
+    fn create(&mut self, container: &Obj<'static>) -> Result<(), WidgetError> {
         let canvas = Canvas::new(
-            &screen,
+            container,
             DrawBuf::create(80, 80, ColorFormat::RGB565).ok_or(WidgetError::LvglNullPointer)?,
         )?;
         canvas.fill_bg(color_make(0xcc, 0xcc, 0xcc), 255);
@@ -38,7 +38,8 @@ impl View for Canvas9 {
                 .grad_stop(1, color_make(0x00, 0x00, 0xff), 192, 0);
             layer.draw_triangle(&dsc);
         }
-        Ok(Self { _canvas: canvas })
+                self._canvas = Some(canvas);
+        Ok(())
     }
 
     fn update(&mut self) -> Result<(), WidgetError> {
@@ -46,4 +47,4 @@ impl View for Canvas9 {
     }
 }
 
-oxivgl_examples_common::example_main!(Canvas9);
+oxivgl_examples_common::example_main!(Canvas9::default());

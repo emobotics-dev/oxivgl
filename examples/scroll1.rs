@@ -13,26 +13,25 @@ use oxivgl::{
     enums::EventCode,
     event::Event,
     view::View,
-    widgets::{Align, Button, Label, Obj, Screen, WidgetError},
+    widgets::{Align, Button, Label, Obj, WidgetError},
 };
 
+#[derive(Default)]
 struct Scroll1 {
-    panel: Obj<'static>,
-    save_btn: Button<'static>,
-    restore_btn: Button<'static>,
-    _inner_btn: Button<'static>,
+    panel: Option<Obj<'static>>,
+    save_btn: Option<Button<'static>>,
+    restore_btn: Option<Button<'static>>,
+    _inner_btn: Option<Button<'static>>,
     _children: heapless::Vec<Obj<'static>, 3>,
     _labels: heapless::Vec<Label<'static>, 4>,
-    _btn_labels: [Label<'static>; 2],
+    _btn_labels: Option<[Label<'static>; 2]>,
     saved_x: i32,
     saved_y: i32,
 }
 
 impl View for Scroll1 {
-    fn create() -> Result<Self, WidgetError> {
-        let screen = Screen::active().ok_or(WidgetError::LvglNullPointer)?;
-
-        let panel = Obj::new(&screen)?;
+    fn create(&mut self, container: &Obj<'static>) -> Result<(), WidgetError> {
+        let panel = Obj::new(container)?;
         panel.size(200, 200).align(Align::Center, 44, 0);
 
         // Child at top-left
@@ -56,48 +55,48 @@ impl View for Scroll1 {
         label2.text("Bottom").center();
 
         // Save button
-        let save_btn = Button::new(&screen)?;
+        let save_btn = Button::new(container)?;
         save_btn.align_to(&panel, Align::OutLeftMid, -10, -20);
         save_btn.bubble_events();
         let save_lbl = Label::new(&save_btn)?;
         save_lbl.text("Save").center();
 
         // Restore button
-        let restore_btn = Button::new(&screen)?;
+        let restore_btn = Button::new(container)?;
         restore_btn.align_to(&panel, Align::OutLeftMid, -10, 20);
         restore_btn.bubble_events();
         let restore_lbl = Label::new(&restore_btn)?;
         restore_lbl.text("Restore").center();
 
-        let mut children = heapless::Vec::new();
-        let _ = children.push(child0);
-        let _ = children.push(child1);
-        let _ = children.push(child2);
+        let _ = self._children.push(child0);
+        let _ = self._children.push(child1);
+        let _ = self._children.push(child2);
 
-        let mut labels = heapless::Vec::new();
-        let _ = labels.push(label0);
-        let _ = labels.push(label1);
-        let _ = labels.push(label2);
+        let _ = self._labels.push(label0);
+        let _ = self._labels.push(label1);
+        let _ = self._labels.push(label2);
 
-        Ok(Self {
-            panel,
-            save_btn,
-            restore_btn,
-            _inner_btn: btn_inner,
-            _children: children,
-            _labels: labels,
-            _btn_labels: [save_lbl, restore_lbl],
-            saved_x: 0,
-            saved_y: 0,
-        })
+        self.panel = Some(panel);
+        self.save_btn = Some(save_btn);
+        self.restore_btn = Some(restore_btn);
+        self._inner_btn = Some(btn_inner);
+        self._btn_labels = Some([save_lbl, restore_lbl]);
+
+        Ok(())
     }
 
     fn on_event(&mut self, event: &Event) {
-        if event.matches(&self.save_btn, EventCode::CLICKED) {
-            self.saved_x = self.panel.get_scroll_x();
-            self.saved_y = self.panel.get_scroll_y();
-        } else if event.matches(&self.restore_btn, EventCode::CLICKED) {
-            self.panel.scroll_to(self.saved_x, self.saved_y, true);
+        if let (Some(save_btn), Some(panel)) = (&self.save_btn, &self.panel) {
+            if event.matches(save_btn, EventCode::CLICKED) {
+                self.saved_x = panel.get_scroll_x();
+                self.saved_y = panel.get_scroll_y();
+                return;
+            }
+        }
+        if let (Some(restore_btn), Some(panel)) = (&self.restore_btn, &self.panel) {
+            if event.matches(restore_btn, EventCode::CLICKED) {
+                panel.scroll_to(self.saved_x, self.saved_y, true);
+            }
         }
     }
 
@@ -106,4 +105,4 @@ impl View for Scroll1 {
     }
 }
 
-oxivgl_examples_common::example_main!(Scroll1);
+oxivgl_examples_common::example_main!(Scroll1::default());

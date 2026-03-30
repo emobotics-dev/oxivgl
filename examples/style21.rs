@@ -15,27 +15,27 @@ use oxivgl::{
     layout::FlexFlow,
     style::{color_make, Selector},
     view::View,
-    widgets::{Align, Arc, Label, Obj, Screen, Slider, WidgetError},
+    widgets::{Align, Arc, Label, Obj, Slider, WidgetError},
 };
 
+#[derive(Default)]
 struct Style21 {
-    card1: Obj<'static>,
-    card2: Obj<'static>,
-    arc: Arc<'static>,
-    slider: Slider<'static>,
-    _lbl1: Label<'static>,
-    _lbl2: Label<'static>,
-    _arc_lbl: Label<'static>,
-    _slider_lbl: Label<'static>,
+    card1: Option<Obj<'static>>,
+    card2: Option<Obj<'static>>,
+    arc: Option<Arc<'static>>,
+    slider: Option<Slider<'static>>,
+    _lbl1: Option<Label<'static>>,
+    _lbl2: Option<Label<'static>>,
+    _arc_lbl: Option<Label<'static>>,
+    _slider_lbl: Option<Label<'static>>,
 }
 
 impl View for Style21 {
-    fn create() -> Result<Self, WidgetError> {
-        let screen = Screen::active().ok_or(WidgetError::LvglNullPointer)?;
-        screen.bg_color(0xeeeeee).bg_opa(255);
+    fn create(&mut self, container: &Obj<'static>) -> Result<(), WidgetError> {
+        container.bg_color(0xeeeeee).bg_opa(255);
 
         // --- Card 1 ---
-        let card1 = Obj::new(&screen)?;
+        let card1 = Obj::new(container)?;
         card1.size(120, 80);
         card1.align(Align::TopLeft, 20, 20);
         card1.bg_color(0xffffff).bg_opa(255);
@@ -54,7 +54,7 @@ impl View for Style21 {
         lbl1.text("Card A").center();
 
         // --- Card 2 ---
-        let card2 = Obj::new(&screen)?;
+        let card2 = Obj::new(container)?;
         card2.size(120, 80);
         card2.align(Align::TopRight, -20, 20);
         card2.bg_color(0xffffff).bg_opa(255);
@@ -73,7 +73,7 @@ impl View for Style21 {
         lbl2.text("Card B").center();
 
         // --- Controls container (bottom half) ---
-        let controls = Obj::new(&screen)?;
+        let controls = Obj::new(container)?;
         controls.size(280, 100);
         controls.align(Align::BottomMid, 0, -10);
         controls.bg_opa(0);
@@ -119,36 +119,37 @@ impl View for Style21 {
         card1.style_transform_rotation(450, Selector::DEFAULT);
         card2.style_transform_rotation(450, Selector::DEFAULT);
 
-        Ok(Self {
-            card1,
-            card2,
-            arc,
-            slider,
-            _lbl1: lbl1,
-            _lbl2: lbl2,
-            _arc_lbl: arc_lbl,
-            _slider_lbl: slider_lbl,
-        })
+                self.card1 = Some(card1);
+        self.card2 = Some(card2);
+        self.arc = Some(arc);
+        self.slider = Some(slider);
+        self._lbl1 = Some(lbl1);
+        self._lbl2 = Some(lbl2);
+        self._arc_lbl = Some(arc_lbl);
+        self._slider_lbl = Some(slider_lbl);
+        Ok(())
     }
 
     fn on_event(&mut self, event: &Event) {
-        if event.matches(&self.arc, EventCode::VALUE_CHANGED) {
-            let angle = self.arc.get_value_raw();
-            self.card1
-                .style_transform_rotation(angle, Selector::DEFAULT);
-            self.card2
-                .style_transform_rotation(angle, Selector::DEFAULT);
+        if let Some(ref arc) = self.arc {
+            if event.matches(arc, EventCode::VALUE_CHANGED) {
+                let angle = arc.get_value_raw();
+                if let Some(ref card1) = self.card1 { card1.style_transform_rotation(angle, Selector::DEFAULT); }
+                if let Some(ref card2) = self.card2 { card2.style_transform_rotation(angle, Selector::DEFAULT); }
+            }
         }
-        if event.matches(&self.slider, EventCode::VALUE_CHANGED) {
-            let scale = self.slider.get_value();
-            self.card1
-                .style_transform_scale_x(scale, Selector::DEFAULT);
-            self.card1
-                .style_transform_scale_y(scale, Selector::DEFAULT);
-            self.card2
-                .style_transform_scale_x(scale, Selector::DEFAULT);
-            self.card2
-                .style_transform_scale_y(scale, Selector::DEFAULT);
+        if let Some(ref slider) = self.slider {
+            if event.matches(slider, EventCode::VALUE_CHANGED) {
+                let scale = slider.get_value();
+                if let Some(ref card1) = self.card1 {
+                    card1.style_transform_scale_x(scale, Selector::DEFAULT);
+                    card1.style_transform_scale_y(scale, Selector::DEFAULT);
+                }
+                if let Some(ref card2) = self.card2 {
+                    card2.style_transform_scale_x(scale, Selector::DEFAULT);
+                    card2.style_transform_scale_y(scale, Selector::DEFAULT);
+                }
+            }
         }
     }
 
@@ -157,4 +158,4 @@ impl View for Style21 {
     }
 }
 
-oxivgl_examples_common::example_main!(Style21);
+oxivgl_examples_common::example_main!(Style21::default());

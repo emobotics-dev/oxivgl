@@ -13,18 +13,18 @@ extern crate alloc;
 use oxivgl::{
     style::{palette_main, Palette, Selector, Style, StyleBuilder},
     view::View,
-    widgets::{Align, Image, ImageAlign, Screen, WidgetError},
+    widgets::{Obj, Align, Image, ImageAlign, WidgetError},
 };
 
 oxivgl::image_declare!(img_cogwheel_argb);
 
+#[derive(Default)]
 struct WidgetImage5 {
-    _style: Style,
+    _style: Option<Style>,
 }
 
 impl View for WidgetImage5 {
-    fn create() -> Result<Self, WidgetError> {
-        let screen = Screen::active().ok_or(WidgetError::LvglNullPointer)?;
+    fn create(&mut self, container: &Obj<'static>) -> Result<(), WidgetError> {
 
         let mut sb = StyleBuilder::new();
         sb.outline_width(1)
@@ -32,7 +32,7 @@ impl View for WidgetImage5 {
         let style = sb.build();
 
         // Image 1: Default alignment
-        let img1 = Image::new(&screen)?;
+        let img1 = Image::new(container)?;
         img1.set_src(img_cogwheel_argb());
         img1.size(100, 100);
         img1.set_inner_align(ImageAlign::Default);
@@ -40,7 +40,7 @@ impl View for WidgetImage5 {
         img1.align(Align::LeftMid, 20, 0);
 
         // Image 2: Stretch mode
-        let img2 = Image::new(&screen)?;
+        let img2 = Image::new(container)?;
         img2.set_src(img_cogwheel_argb());
         img2.size(100, 100);
         img2.set_inner_align(ImageAlign::Stretch);
@@ -48,14 +48,15 @@ impl View for WidgetImage5 {
         img2.center();
 
         // Image 3: Tile mode
-        let img3 = Image::new(&screen)?;
+        let img3 = Image::new(container)?;
         img3.set_src(img_cogwheel_argb());
         img3.size(100, 100);
         img3.set_inner_align(ImageAlign::Tile);
         img3.add_style(&style, Selector::DEFAULT);
         img3.align(Align::RightMid, -20, 0);
 
-        Ok(Self { _style: style })
+                self._style = Some(style);
+        Ok(())
     }
 
     fn update(&mut self) -> Result<(), WidgetError> {
@@ -63,4 +64,4 @@ impl View for WidgetImage5 {
     }
 }
 
-oxivgl_examples_common::example_main!(WidgetImage5);
+oxivgl_examples_common::example_main!(WidgetImage5::default());

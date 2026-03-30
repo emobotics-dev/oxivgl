@@ -11,37 +11,36 @@
 use oxivgl::{
     style::{palette_main, Palette},
     view::View,
-    widgets::{Align, Led, Screen, WidgetError},
+    widgets::{Obj, Align, Led, WidgetError},
 };
 
+#[derive(Default)]
 struct WidgetLed1 {
-    _led1: Led<'static>,
-    _led2: Led<'static>,
-    _led3: Led<'static>,
+    _led1: Option<Led<'static>>,
+    _led2: Option<Led<'static>>,
+    _led3: Option<Led<'static>>,
 }
 
 impl View for WidgetLed1 {
-    fn create() -> Result<Self, WidgetError> {
-        let screen = Screen::active().ok_or(WidgetError::LvglNullPointer)?;
+    fn create(&mut self, container: &Obj<'static>) -> Result<(), WidgetError> {
 
-        let led1 = Led::new(&screen)?;
+        let led1 = Led::new(container)?;
         led1.align(Align::Center, -80, 0);
         led1.off();
 
-        let led2 = Led::new(&screen)?;
+        let led2 = Led::new(container)?;
         led2.align(Align::Center, 0, 0);
         led2.set_brightness(150);
         led2.set_color(palette_main(Palette::Red));
 
-        let led3 = Led::new(&screen)?;
+        let led3 = Led::new(container)?;
         led3.align(Align::Center, 80, 0);
         led3.on();
 
-        Ok(Self {
-            _led1: led1,
-            _led2: led2,
-            _led3: led3,
-        })
+                self._led1 = Some(led1);
+        self._led2 = Some(led2);
+        self._led3 = Some(led3);
+        Ok(())
     }
 
     fn update(&mut self) -> Result<(), WidgetError> {
@@ -49,4 +48,4 @@ impl View for WidgetLed1 {
     }
 }
 
-oxivgl_examples_common::example_main!(WidgetLed1);
+oxivgl_examples_common::example_main!(WidgetLed1::default());

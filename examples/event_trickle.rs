@@ -15,19 +15,19 @@ use oxivgl::{
     view::View,
     enums::{ObjFlag, ObjState},
     layout::FlexFlow,
-    widgets::{Label, Obj, Screen, WidgetError},
+    widgets::{Label, Obj, WidgetError},
 };
 
+#[derive(Default)]
 struct EventTrickle {
-    _cont: Obj<'static>,
-    _style_black: Style,
+    _cont: Option<Obj<'static>>,
+    _style_black: Option<Style>,
     _subconts: heapless::Vec<Obj<'static>, 9>,
     _labels: heapless::Vec<Label<'static>, 9>,
 }
 
 impl View for EventTrickle {
-    fn create() -> Result<Self, WidgetError> {
-        let screen = Screen::active().ok_or(WidgetError::LvglNullPointer)?;
+    fn create(&mut self, container: &Obj<'static>) -> Result<(), WidgetError> {
 
         let mut style_black = StyleBuilder::new();
         style_black
@@ -35,7 +35,7 @@ impl View for EventTrickle {
             .bg_color(color_black());
         let style_black = style_black.build();
 
-        let cont = Obj::new(&screen)?;
+        let cont = Obj::new(container)?;
         cont.size(290, 200).center();
         cont.set_flex_flow(FlexFlow::RowWrap);
         cont.add_flag(ObjFlag::EVENT_TRICKLE);
@@ -58,12 +58,11 @@ impl View for EventTrickle {
             let _ = labels.push(label);
         }
 
-        Ok(Self {
-            _cont: cont,
-            _style_black: style_black,
-            _subconts: subconts,
-            _labels: labels,
-        })
+                self._cont = Some(cont);
+        self._style_black = Some(style_black);
+        self._subconts = subconts;
+        self._labels = labels;
+        Ok(())
     }
 
     fn update(&mut self) -> Result<(), WidgetError> {
@@ -71,4 +70,4 @@ impl View for EventTrickle {
     }
 }
 
-oxivgl_examples_common::example_main!(EventTrickle);
+oxivgl_examples_common::example_main!(EventTrickle::default());

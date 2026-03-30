@@ -12,35 +12,42 @@ use oxivgl::{
     view::View,
     enums::EventCode,
     event::Event,
-    widgets::{Button, Label, Screen, WidgetError},
+    widgets::{Obj, Button, Label, WidgetError},
 };
 
+#[derive(Default)]
 struct EventClick {
-    btn: Button<'static>,
-    label: Label<'static>,
+    btn: Option<Button<'static>>,
+    label: Option<Label<'static>>,
     cnt: u32,
 }
 
 impl View for EventClick {
-    fn create() -> Result<Self, WidgetError> {
-        let screen = Screen::active().ok_or(WidgetError::LvglNullPointer)?;
+    fn create(&mut self, container: &Obj<'static>) -> Result<(), WidgetError> {
 
-        let btn = Button::new(&screen)?;
+        let btn = Button::new(container)?;
         btn.size(100, 50).center();
         btn.bubble_events();
 
         let label = Label::new(&btn)?;
         label.text("Click me!").center();
 
-        Ok(Self { btn, label, cnt: 0 })
+                self.btn = Some(btn);
+        self.label = Some(label);
+        self.cnt = 0;
+        Ok(())
     }
 
     fn on_event(&mut self, event: &Event) {
-        if event.matches(&self.btn, EventCode::CLICKED) {
-            self.cnt += 1;
-            let mut buf = heapless::String::<12>::new();
-            let _ = core::fmt::Write::write_fmt(&mut buf, format_args!("{}", self.cnt));
-            self.label.text(&buf);
+        if let Some(ref btn) = self.btn {
+            if event.matches(btn, EventCode::CLICKED) {
+                self.cnt += 1;
+                let mut buf = heapless::String::<12>::new();
+                let _ = core::fmt::Write::write_fmt(&mut buf, format_args!("{}", self.cnt));
+                if let Some(ref label) = self.label {
+                    label.text(&buf);
+                }
+            }
         }
     }
 
@@ -49,4 +56,4 @@ impl View for EventClick {
     }
 }
 
-oxivgl_examples_common::example_main!(EventClick);
+oxivgl_examples_common::example_main!(EventClick::default());

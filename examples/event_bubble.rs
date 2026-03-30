@@ -16,20 +16,20 @@ use oxivgl::{
     enums::EventCode,
     event::Event,
     layout::FlexFlow,
-    widgets::{Button, Label, Obj, Screen, WidgetError},
+    widgets::{Button, Label, Obj, WidgetError},
 };
 
+#[derive(Default)]
 struct EventBubble {
-    cont: Obj<'static>,
-    _buttons: heapless::Vec<Button<'static>, 30>,
-    _labels: heapless::Vec<Label<'static>, 30>,
+    cont: Option<Obj<'static>>,
+    _buttons: Option<heapless::Vec<Button<'static>, 30>>,
+    _labels: Option<heapless::Vec<Label<'static>, 30>>,
 }
 
 impl View for EventBubble {
-    fn create() -> Result<Self, WidgetError> {
-        let screen = Screen::active().ok_or(WidgetError::LvglNullPointer)?;
+    fn create(&mut self, container: &Obj<'static>) -> Result<(), WidgetError> {
 
-        let cont = Obj::new(&screen)?;
+        let cont = Obj::new(container)?;
         cont.size(290, 200).center();
         cont.set_flex_flow(FlexFlow::RowWrap);
 
@@ -50,15 +50,16 @@ impl View for EventBubble {
             let _ = labels.push(label);
         }
 
-        Ok(Self {
-            cont,
-            _buttons: buttons,
-            _labels: labels,
-        })
+                self.cont = Some(cont);
+        self._buttons = Some(buttons);
+        self._labels = Some(labels);
+        Ok(())
     }
 
     fn register_events(&mut self) {
-        register_event_on(self, self.cont.handle());
+        if let Some(ref cont) = self.cont {
+            register_event_on(self, cont.handle());
+        }
     }
 
     fn on_event(&mut self, event: &Event) {
@@ -66,8 +67,10 @@ impl View for EventBubble {
             return;
         }
         let target = event.target_handle();
-        if target == self.cont.handle() {
-            return;
+        if let Some(ref cont) = self.cont {
+            if target == cont.handle() {
+                return;
+            }
         }
         event.target_style_bg_color(palette_main(Palette::Red), Selector::DEFAULT);
     }
@@ -77,4 +80,4 @@ impl View for EventBubble {
     }
 }
 
-oxivgl_examples_common::example_main!(EventBubble);
+oxivgl_examples_common::example_main!(EventBubble::default());

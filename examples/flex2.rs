@@ -11,19 +11,19 @@ use oxivgl::{
     view::View,
     enums::ObjFlag,
     layout::{FlexAlign, FlexFlow, Layout},
-    widgets::{Label, Obj, Screen, WidgetError},
+    widgets::{Label, Obj, WidgetError},
 };
 
+#[derive(Default)]
 struct Flex2 {
-    _style: Style,
-    _cont: Obj<'static>,
+    _style: Option<Style>,
+    _cont: Option<Obj<'static>>,
     _items: heapless::Vec<Obj<'static>, 8>,
     _labels: heapless::Vec<Label<'static>, 8>,
 }
 
 impl View for Flex2 {
-    fn create() -> Result<Self, WidgetError> {
-        let screen = Screen::active().ok_or(WidgetError::LvglNullPointer)?;
+    fn create(&mut self, container: &Obj<'static>) -> Result<(), WidgetError> {
 
         let mut style = StyleBuilder::new();
         style
@@ -32,7 +32,7 @@ impl View for Flex2 {
             .layout(Layout::Flex);
         let style = style.build();
 
-        let cont = Obj::new(&screen)?;
+        let cont = Obj::new(container)?;
         cont.size(300, 220).center();
         cont.add_style(&style, Selector::DEFAULT);
 
@@ -53,12 +53,11 @@ impl View for Flex2 {
             let _ = labels.push(label);
         }
 
-        Ok(Self {
-            _style: style,
-            _cont: cont,
-            _items: items,
-            _labels: labels,
-        })
+                self._style = Some(style);
+        self._cont = Some(cont);
+        self._items = items;
+        self._labels = labels;
+        Ok(())
     }
 
     fn update(&mut self) -> Result<(), WidgetError> {
@@ -66,4 +65,4 @@ impl View for Flex2 {
     }
 }
 
-oxivgl_examples_common::example_main!(Flex2);
+oxivgl_examples_common::example_main!(Flex2::default());

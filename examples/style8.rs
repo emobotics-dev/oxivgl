@@ -11,17 +11,17 @@ extern crate alloc;
 use oxivgl::{
     style::{palette_lighten, palette_main, Palette, Selector, Style, StyleBuilder, TextDecor},
     view::View,
-    widgets::{Label, Screen, WidgetError},
+    widgets::{Obj, Label, WidgetError},
 };
 
+#[derive(Default)]
 struct Style8 {
-    _label: Label<'static>,
-    _style: Style,
+    _label: Option<Label<'static>>,
+    _style: Option<Style>,
 }
 
 impl View for Style8 {
-    fn create() -> Result<Self, WidgetError> {
-        let screen = Screen::active().ok_or(WidgetError::LvglNullPointer)?;
+    fn create(&mut self, container: &Obj<'static>) -> Result<(), WidgetError> {
 
         let mut builder = StyleBuilder::new();
         builder
@@ -37,15 +37,14 @@ impl View for Style8 {
             .text_decor(TextDecor::UNDERLINE);
         let style = builder.build();
 
-        let label = Label::new(&screen)?;
+        let label = Label::new(container)?;
         label.add_style(&style, Selector::DEFAULT);
         label.text("Text of\na label");
         label.center();
 
-        Ok(Self {
-            _label: label,
-            _style: style,
-        })
+                self._label = Some(label);
+        self._style = Some(style);
+        Ok(())
     }
 
     fn update(&mut self) -> Result<(), WidgetError> {
@@ -53,4 +52,4 @@ impl View for Style8 {
     }
 }
 
-oxivgl_examples_common::example_main!(Style8);
+oxivgl_examples_common::example_main!(Style8::default());

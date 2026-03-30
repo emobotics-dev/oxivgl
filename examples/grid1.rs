@@ -9,23 +9,23 @@
 use oxivgl::{
     view::View,
     layout::{GridAlign, GridCell, GRID_TEMPLATE_LAST},
-    widgets::{Button, Label, Obj, Screen, WidgetError},
+    widgets::{Button, Label, Obj, WidgetError},
 };
 
 static COL_DSC: [i32; 4] = [70, 70, 70, GRID_TEMPLATE_LAST];
 static ROW_DSC: [i32; 4] = [50, 50, 50, GRID_TEMPLATE_LAST];
 
+#[derive(Default)]
 struct Grid1 {
-    _cont: Obj<'static>,
+    _cont: Option<Obj<'static>>,
     _buttons: heapless::Vec<Button<'static>, 9>,
     _labels: heapless::Vec<Label<'static>, 9>,
 }
 
 impl View for Grid1 {
-    fn create() -> Result<Self, WidgetError> {
-        let screen = Screen::active().ok_or(WidgetError::LvglNullPointer)?;
+    fn create(&mut self, container: &Obj<'static>) -> Result<(), WidgetError> {
 
-        let cont = oxivgl::widgets::Obj::new(&screen)?;
+        let cont = oxivgl::widgets::Obj::new(container)?;
         cont.set_grid_dsc_array(&COL_DSC, &ROW_DSC);
         cont.size(300, 220).center();
 
@@ -51,11 +51,10 @@ impl View for Grid1 {
             let _ = labels.push(label);
         }
 
-        Ok(Self {
-            _cont: cont,
-            _buttons: buttons,
-            _labels: labels,
-        })
+                self._cont = Some(cont);
+        self._buttons = buttons;
+        self._labels = labels;
+        Ok(())
     }
 
     fn update(&mut self) -> Result<(), WidgetError> {
@@ -63,4 +62,4 @@ impl View for Grid1 {
     }
 }
 
-oxivgl_examples_common::example_main!(Grid1);
+oxivgl_examples_common::example_main!(Grid1::default());

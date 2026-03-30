@@ -12,16 +12,16 @@
 use oxivgl::{
     style::{palette_main, LV_SIZE_CONTENT, Palette, Selector, StyleBuilder, TextDecor},
     view::View,
-    widgets::{Align, Screen, Spangroup, SpanOverflow, WidgetError},
+    widgets::{Obj, Align, Spangroup, SpanOverflow, WidgetError},
 };
 
+#[derive(Default)]
 struct Span1 {
-    _spans: Spangroup<'static>,
+    _spans: Option<Spangroup<'static>>,
 }
 
 impl View for Span1 {
-    fn create() -> Result<Self, WidgetError> {
-        let screen = Screen::active().ok_or(WidgetError::LvglNullPointer)?;
+    fn create(&mut self, container: &Obj<'static>) -> Result<(), WidgetError> {
 
         let mut sb = StyleBuilder::new();
         sb.border_width(1)
@@ -29,7 +29,7 @@ impl View for Span1 {
             .pad_all(2);
         let style = sb.build();
 
-        let spans = Spangroup::new(&screen)?;
+        let spans = Spangroup::new(container)?;
         spans.width(300);
         spans.height(LV_SIZE_CONTENT);
         spans.align(Align::Center, 0, 0);
@@ -62,7 +62,8 @@ impl View for Span1 {
 
         spans.refresh();
 
-        Ok(Self { _spans: spans })
+                self._spans = Some(spans);
+        Ok(())
     }
 
     fn update(&mut self) -> Result<(), WidgetError> {
@@ -70,4 +71,4 @@ impl View for Span1 {
     }
 }
 
-oxivgl_examples_common::example_main!(Span1);
+oxivgl_examples_common::example_main!(Span1::default());

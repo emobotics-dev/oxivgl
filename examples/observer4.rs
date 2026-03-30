@@ -25,31 +25,31 @@ use oxivgl::{
     layout::{FlexAlign, FlexFlow},
     style::{Selector, lv_pct},
     view::View,
-    widgets::{Align, AsLvHandle, Button, Child, Dropdown, Label, Obj, Roller, RollerMode, Screen, Slider, Subject, WidgetError},
+    widgets::{Align, AsLvHandle, Button, Child, Dropdown, Label, Obj, Roller, RollerMode, Slider, Subject, WidgetError},
 };
 
 const DROPDOWN_OPTIONS: &str = "Red\nGreen\nBlue";
 const ROLLER_OPTIONS: &str = "Alpha\nBeta\nGamma\nDelta\nEpsilon";
 
+#[derive(Default)]
 struct Observer4 {
     // Widgets stored before subjects so subjects drop last.
-    _main_cont: Obj<'static>,
-    cont: Obj<'static>,
-    footer: Obj<'static>,
-    indicator: Obj<'static>,
+    _main_cont: Option<Obj<'static>>,
+    cont: Option<Obj<'static>>,
+    footer: Option<Obj<'static>>,
+    indicator: Option<Obj<'static>>,
     btn_handles: [*mut c_void; 3],
     last_tab: i32,
 
     // Subjects — drop after widgets so observers are removed before deinit.
-    tab_subject: Subject,
-    slider_subjects: [Subject; 4],
-    dropdown_subjects: [Subject; 3],
-    roller_subjects: [Subject; 2],
+    tab_subject: Option<Subject>,
+    slider_subjects: Option<[Subject; 4]>,
+    dropdown_subjects: Option<[Subject; 3]>,
+    roller_subjects: Option<[Subject; 2]>,
 }
 
 impl View for Observer4 {
-    fn create() -> Result<Self, WidgetError> {
-        let screen = Screen::active().ok_or(WidgetError::LvglNullPointer)?;
+    fn create(&mut self, container: &Obj<'static>) -> Result<(), WidgetError> {
 
         // Subjects.
         let tab_subject = Subject::new_int(0);
@@ -70,7 +70,7 @@ impl View for Observer4 {
         ];
 
         // Main container — full screen, flex column.
-        let main_cont = Obj::new(&screen)?;
+        let main_cont = Obj::new(container)?;
         main_cont
             .remove_style_all()
             .size(lv_pct(100), lv_pct(100))
@@ -128,18 +128,17 @@ impl View for Observer4 {
         // Trigger initial state so buttons get the CHECKED binding applied.
         tab_subject.notify();
 
-        Ok(Self {
-            _main_cont: main_cont,
-            cont,
-            footer,
-            indicator,
-            btn_handles,
-            last_tab: -1, // force initial content build
-            tab_subject,
-            slider_subjects,
-            dropdown_subjects,
-            roller_subjects,
-        })
+        self._main_cont = Some(main_cont);
+        self.cont = Some(cont);
+        self.footer = Some(footer);
+        self.indicator = Some(indicator);
+        self.btn_handles = btn_handles;
+        self.last_tab = -1; // force initial content build
+        self.tab_subject = Some(tab_subject);
+        self.slider_subjects = Some(slider_subjects);
+        self.dropdown_subjects = Some(dropdown_subjects);
+        self.roller_subjects = Some(roller_subjects);
+        Ok(())
     }
 
     fn on_event(&mut self, event: &Event) {
@@ -149,75 +148,86 @@ impl View for Observer4 {
         let target = event.target_handle() as *mut c_void;
         for (i, &handle) in self.btn_handles.iter().enumerate() {
             if !handle.is_null() && target == handle {
-                self.tab_subject.set_int(i as i32);
+                if let Some(ref tab_subject) = self.tab_subject {
+                    tab_subject.set_int(i as i32);
+                }
                 return;
             }
         }
     }
 
     fn update(&mut self) -> Result<(), WidgetError> {
-        let tab = self.tab_subject.get_int();
+        let tab = if let Some(ref ts) = self.tab_subject { ts.get_int() } else { return Ok(()); };
         if tab == self.last_tab {
             return Ok(());
         }
         self.last_tab = tab;
 
+        let Some(ref cont) = self.cont else { return Ok(()); };
         // Remove old content and rebuild for the active tab.
-        self.cont.clean();
+        cont.clean();
 
         match tab {
             0 => {
                 // Tab 0: four sliders.
-                // Child wrappers suppress Rust Drop — LVGL parent owns these.
-                for i in 0..4_i32 {
-                    let slider = Child::new(Slider::new(&self.cont)?);
-                    slider
-                        .set_range(0, 100)
-                        .align(Align::TopMid, 0, 10 + i * 30);
-                    slider.bind_value(&self.slider_subjects[i as usize]);
+                if let Some(ref slider_subjects) = self.slider_subjects {
+                    for i in 0..4_i32 {
+                        let slider = Child::new(Slider::new(cont)?);
+                        slider
+                            .set_range(0, 100)
+                            .align(Align::TopMid, 0, 10 + i * 30);
+                        slider.bind_value(&slider_subjects[i as usize]);
+                    }
                 }
             }
             1 => {
                 // Tab 1: three dropdowns.
-                for i in 0..3_i32 {
-                    let dd = Child::new(Dropdown::new(&self.cont)?);
-                    dd.set_options(DROPDOWN_OPTIONS)
-                        .align(Align::TopMid, 0, i * 50);
-                    dd.bind_value(&self.dropdown_subjects[i as usize]);
+                if let Some(ref dropdown_subjects) = self.dropdown_subjects {
+                    for i in 0..3_i32 {
+                        let dd = Child::new(Dropdown::new(cont)?);
+                        dd.set_options(DROPDOWN_OPTIONS)
+                            .align(Align::TopMid, 0, i * 50);
+                        dd.bind_value(&dropdown_subjects[i as usize]);
+                    }
                 }
             }
             2 => {
                 // Tab 2: two rollers side by side.
-                for i in 0..2_i32 {
-                    let roller = Child::new(Roller::new(&self.cont)?);
-                    roller
-                        .set_options(ROLLER_OPTIONS, RollerMode::Normal)
-                        .align(Align::Center, -80 + i * 160, 0);
-                    roller.bind_value(&self.roller_subjects[i as usize]);
+                if let Some(ref roller_subjects) = self.roller_subjects {
+                    for i in 0..2_i32 {
+                        let roller = Child::new(Roller::new(cont)?);
+                        roller
+                            .set_options(ROLLER_OPTIONS, RollerMode::Normal)
+                            .align(Align::Center, -80 + i * 160, 0);
+                        roller.bind_value(&roller_subjects[i as usize]);
+                    }
                 }
             }
             _ => {}
         }
 
         // Animate indicator to slide under the active button.
-        if let Some(btn_child) = self.footer.get_child(tab) {
-            let btn_x = btn_child.get_x();
-            let btn_w = btn_child.get_width();
-            let ind_x = self.indicator.get_x();
+        if let Some(ref footer) = self.footer {
+            if let Some(btn_child) = footer.get_child(tab) {
+                let btn_x = btn_child.get_x();
+                let btn_w = btn_child.get_width();
+                if let Some(ref indicator) = self.indicator {
+                    let ind_x = indicator.get_x();
+                    indicator.width(btn_w);
 
-            self.indicator.width(btn_w);
-
-            let mut anim = Anim::new();
-            anim.set_var(&self.indicator)
-                .set_exec_cb(Some(anim_set_x))
-                .set_values(ind_x, btn_x)
-                .set_duration(300)
-                .set_path_cb(Some(anim_path_ease_in_out));
-            anim.start();
+                    let mut anim = Anim::new();
+                    anim.set_var(indicator)
+                        .set_exec_cb(Some(anim_set_x))
+                        .set_values(ind_x, btn_x)
+                        .set_duration(300)
+                        .set_path_cb(Some(anim_path_ease_in_out));
+                    anim.start();
+                }
+            }
         }
 
         Ok(())
     }
 }
 
-oxivgl_examples_common::example_main!(Observer4);
+oxivgl_examples_common::example_main!(Observer4::default());

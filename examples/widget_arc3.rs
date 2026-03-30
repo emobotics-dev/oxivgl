@@ -19,13 +19,14 @@ use oxivgl::{
     math::{trigo_cos, trigo_sin, TRIGO_SHIFT},
     style::{palette_main, Palette},
     view::{register_event_on, View},
-    widgets::{Align, Arc, ArcMode, Label, Obj, Part, Screen, WidgetError},
+    widgets::{Align, Arc, ArcMode, Label, Obj, Part, WidgetError},
 };
 
 const CHART_SIZE: i32 = 150;
 const SLICE_OFFSET: i32 = 20;
 const NUM_SLICES: usize = 5;
 
+#[derive(Default)]
 struct SliceInfo {
     mid_angle: i32,
     home_x: i32,
@@ -33,11 +34,12 @@ struct SliceInfo {
     out: bool,
 }
 
+#[derive(Default)]
 struct WidgetArc3 {
-    _container: Obj<'static>,
-    arcs: [Arc<'static>; NUM_SLICES],
-    _labels: [Label<'static>; NUM_SLICES],
-    slices: [SliceInfo; NUM_SLICES],
+    _container: Option<Obj<'static>>,
+    arcs: Option<[Arc<'static>; NUM_SLICES]>,
+    _labels: Option<[Label<'static>; NUM_SLICES]>,
+    slices: Option<[SliceInfo; NUM_SLICES]>,
     active: Option<usize>,
 }
 
@@ -52,7 +54,8 @@ const COLORS: [Palette; NUM_SLICES] = [
 
 impl WidgetArc3 {
     fn animate_slice(&self, idx: usize, to_x: i32, to_y: i32) {
-        let arc = &self.arcs[idx];
+        let Some(ref arcs) = self.arcs else { return };
+        let arc = &arcs[idx];
         let cur_x = arc.get_x();
         let cur_y = arc.get_y();
 
@@ -73,11 +76,10 @@ impl WidgetArc3 {
 }
 
 impl View for WidgetArc3 {
-    fn create() -> Result<Self, WidgetError> {
-        let screen = Screen::active().ok_or(WidgetError::LvglNullPointer)?;
+    fn create(&mut self, container: &Obj<'static>) -> Result<(), WidgetError> {
 
         // Slices container — transparent, non-scrollable
-        let cont = Obj::new(&screen)?;
+        let cont = Obj::new(container)?;
         let cont_size = CHART_SIZE + 2 * SLICE_OFFSET;
         cont.size(cont_size, cont_size).center();
         cont.pad(0);
@@ -142,19 +144,20 @@ impl View for WidgetArc3 {
         let slices: [SliceInfo; NUM_SLICES] = slices_vec.try_into().ok()
             .ok_or(WidgetError::LvglNullPointer)?;
 
-        Ok(Self {
-            _container: cont,
-            arcs,
-            _labels: labels,
-            slices,
-            active: None,
-        })
+        self._container = Some(cont);
+        self.arcs = Some(arcs);
+        self._labels = Some(labels);
+        self.slices = Some(slices);
+        self.active = None;
+        Ok(())
     }
 
     fn register_events(&mut self) {
-        let handles: [_; NUM_SLICES] = core::array::from_fn(|i| self.arcs[i].handle());
-        for h in handles {
-            register_event_on(self, h);
+        if let Some(ref arcs) = self.arcs {
+            let handles: [_; NUM_SLICES] = core::array::from_fn(|i| arcs[i].handle());
+            for h in handles {
+                register_event_on(self, h);
+            }
         }
     }
 
@@ -164,32 +167,41 @@ impl View for WidgetArc3 {
         }
         let target = event.target_handle();
 
+        let Some(ref arcs) = self.arcs else { return };
+
         // Find which slice was clicked
-        let Some(idx) = self.arcs.iter().position(|a| a.handle() == target) else {
+        let Some(idx) = arcs.iter().position(|a| a.handle() == target) else {
             return;
         };
 
+        let Some(ref mut slices) = self.slices else { return };
+
         // If another slice is currently out, animate it back
         if let Some(prev) = self.active {
-            if prev != idx && self.slices[prev].out {
-                let info = &self.slices[prev];
-                self.animate_slice(prev, info.home_x, info.home_y);
-                self.slices[prev].out = false;
+            if prev != idx && slices[prev].out {
+                let home_x = slices[prev].home_x;
+                let home_y = slices[prev].home_y;
+                self.animate_slice(prev, home_x, home_y);
+                if let Some(ref mut slices) = self.slices { slices[prev].out = false; }
             }
         }
 
-        let info = &self.slices[idx];
+        let Some(ref mut slices) = self.slices else { return };
+        let info = &slices[idx];
         if info.out {
-            // Animate back
-            self.animate_slice(idx, info.home_x, info.home_y);
-            self.slices[idx].out = false;
+            let home_x = info.home_x;
+            let home_y = info.home_y;
+            self.animate_slice(idx, home_x, home_y);
+            if let Some(ref mut slices) = self.slices { slices[idx].out = false; }
             self.active = None;
         } else {
-            // Animate out
-            let x_off = (SLICE_OFFSET * trigo_cos(info.mid_angle)) >> TRIGO_SHIFT;
-            let y_off = (SLICE_OFFSET * trigo_sin(info.mid_angle)) >> TRIGO_SHIFT;
-            self.animate_slice(idx, info.home_x + x_off, info.home_y + y_off);
-            self.slices[idx].out = true;
+            let mid_angle = info.mid_angle;
+            let home_x = info.home_x;
+            let home_y = info.home_y;
+            let x_off = (SLICE_OFFSET * trigo_cos(mid_angle)) >> TRIGO_SHIFT;
+            let y_off = (SLICE_OFFSET * trigo_sin(mid_angle)) >> TRIGO_SHIFT;
+            self.animate_slice(idx, home_x + x_off, home_y + y_off);
+            if let Some(ref mut slices) = self.slices { slices[idx].out = true; }
             self.active = Some(idx);
         }
     }
@@ -199,4 +211,4 @@ impl View for WidgetArc3 {
     }
 }
 
-oxivgl_examples_common::example_main!(WidgetArc3);
+oxivgl_examples_common::example_main!(WidgetArc3::default());

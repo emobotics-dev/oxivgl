@@ -11,49 +11,48 @@
 use oxivgl::{
     style::Selector,
     view::View,
-    widgets::{Align, Bar, BaseDir, Label, Screen, WidgetError},
+    widgets::{Obj, Align, Bar, BaseDir, Label, WidgetError},
 };
 
+#[derive(Default)]
 struct WidgetBar5 {
-    _bar_ltr: Bar<'static>,
-    _bar_rtl: Bar<'static>,
-    _label_ltr: Label<'static>,
-    _label_rtl: Label<'static>,
+    _bar_ltr: Option<Bar<'static>>,
+    _bar_rtl: Option<Bar<'static>>,
+    _label_ltr: Option<Label<'static>>,
+    _label_rtl: Option<Label<'static>>,
 }
 
 impl View for WidgetBar5 {
-    fn create() -> Result<Self, WidgetError> {
-        let screen = Screen::active().ok_or(WidgetError::LvglNullPointer)?;
+    fn create(&mut self, container: &Obj<'static>) -> Result<(), WidgetError> {
 
         // LTR bar
-        let bar_ltr = Bar::new(&screen)?;
+        let bar_ltr = Bar::new(container)?;
         bar_ltr.size(200, 20);
         bar_ltr.set_range_raw(0, 100);
         bar_ltr.set_value_raw(70, false);
         bar_ltr.align(Align::Center, 0, -30);
 
-        let label_ltr = Label::new(&screen)?;
+        let label_ltr = Label::new(container)?;
         label_ltr.text("Left to Right base direction");
         label_ltr.align_to(&bar_ltr, Align::OutTopMid, 0, -5);
 
         // RTL bar
-        let bar_rtl = Bar::new(&screen)?;
+        let bar_rtl = Bar::new(container)?;
         bar_rtl.size(200, 20);
         bar_rtl.set_range_raw(0, 100);
         bar_rtl.set_value_raw(70, false);
         bar_rtl.style_base_dir(BaseDir::Rtl, Selector::DEFAULT);
         bar_rtl.align(Align::Center, 0, 30);
 
-        let label_rtl = Label::new(&screen)?;
+        let label_rtl = Label::new(container)?;
         label_rtl.text("Right to Left base direction");
         label_rtl.align_to(&bar_rtl, Align::OutTopMid, 0, -5);
 
-        Ok(Self {
-            _bar_ltr: bar_ltr,
-            _bar_rtl: bar_rtl,
-            _label_ltr: label_ltr,
-            _label_rtl: label_rtl,
-        })
+                self._bar_ltr = Some(bar_ltr);
+        self._bar_rtl = Some(bar_rtl);
+        self._label_ltr = Some(label_ltr);
+        self._label_rtl = Some(label_rtl);
+        Ok(())
     }
 
     fn update(&mut self) -> Result<(), WidgetError> {
@@ -61,4 +60,4 @@ impl View for WidgetBar5 {
     }
 }
 
-oxivgl_examples_common::example_main!(WidgetBar5);
+oxivgl_examples_common::example_main!(WidgetBar5::default());

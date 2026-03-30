@@ -9,17 +9,17 @@
 
 use oxivgl::{
     view::View,
-    widgets::{DdDir, Label, Screen, Tabview, WidgetError},
+    widgets::{Obj, DdDir, Label, Tabview, WidgetError},
 };
 
+#[derive(Default)]
 struct Tabview2 {
-    _tv: Tabview<'static>,
+    _tv: Option<Tabview<'static>>,
 }
 
 impl View for Tabview2 {
-    fn create() -> Result<Self, WidgetError> {
-        let screen = Screen::active().ok_or(WidgetError::LvglNullPointer)?;
-        let tv = Tabview::new(&screen)?;
+    fn create(&mut self, container: &Obj<'static>) -> Result<(), WidgetError> {
+        let tv = Tabview::new(container)?;
 
         tv.set_tab_bar_position(DdDir::Left).set_tab_bar_size(80);
 
@@ -43,7 +43,8 @@ impl View for Tabview2 {
         // Start on the second tab.
         tv.set_active(1, false);
 
-        Ok(Self { _tv: tv })
+                self._tv = Some(tv);
+        Ok(())
     }
 
     fn update(&mut self) -> Result<(), WidgetError> {
@@ -51,4 +52,4 @@ impl View for Tabview2 {
     }
 }
 
-oxivgl_examples_common::example_main!(Tabview2);
+oxivgl_examples_common::example_main!(Tabview2::default());

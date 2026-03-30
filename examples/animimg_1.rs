@@ -14,7 +14,7 @@
 use oxivgl::{
     anim::ANIM_REPEAT_INFINITE,
     view::View,
-    widgets::{AnimImg, Screen, WidgetError, lv_image_dsc_t},
+    widgets::{Obj, AnimImg, WidgetError, lv_image_dsc_t},
 };
 
 // Declare the extern image symbol directly so we can take its address
@@ -27,6 +27,7 @@ unsafe extern "C" {
 
 /// Wrapper to make `*const c_void` usable in a `static`.
 #[repr(transparent)]
+#[derive(Default)]
 struct SyncPtr(*const core::ffi::c_void);
 // SAFETY: image descriptors are immutable compile-time data.
 unsafe impl Sync for SyncPtr {}
@@ -38,15 +39,15 @@ static FRAME_PTRS: [SyncPtr; 2] = [
     SyncPtr(&raw const img_cogwheel_argb as *const core::ffi::c_void),
 ];
 
+#[derive(Default)]
 struct AnimImg1 {
-    _animimg: AnimImg<'static>,
+    _animimg: Option<AnimImg<'static>>,
 }
 
 impl View for AnimImg1 {
-    fn create() -> Result<Self, WidgetError> {
-        let screen = Screen::active().ok_or(WidgetError::LvglNullPointer)?;
+    fn create(&mut self, container: &Obj<'static>) -> Result<(), WidgetError> {
 
-        let animimg = AnimImg::new(&screen)?;
+        let animimg = AnimImg::new(container)?;
         animimg.center();
         // SAFETY: FRAME_PTRS has the same layout as [*const c_void; 2]
         // due to #[repr(transparent)] on SyncPtr.
@@ -58,7 +59,8 @@ impl View for AnimImg1 {
             .set_repeat_count(ANIM_REPEAT_INFINITE)
             .start();
 
-        Ok(Self { _animimg: animimg })
+        self._animimg = Some(animimg);
+        Ok(())
     }
 
     fn update(&mut self) -> Result<(), WidgetError> {
@@ -66,4 +68,4 @@ impl View for AnimImg1 {
     }
 }
 
-oxivgl_examples_common::example_main!(AnimImg1);
+oxivgl_examples_common::example_main!(AnimImg1::default());

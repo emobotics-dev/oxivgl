@@ -16,24 +16,24 @@ use oxivgl::{
     },
     view::View,
     enums::{ObjState, ScrollbarMode},
-    widgets::{Label, Obj, Part, Screen, WidgetError},
+    widgets::{Label, Obj, Part, WidgetError},
 };
 
+#[derive(Default)]
 struct Scroll4 {
-    _obj: Obj<'static>,
-    _label: Label<'static>,
-    _style: Style,
-    _style_scrolled: Style,
+    _obj: Option<Obj<'static>>,
+    _label: Option<Label<'static>>,
+    _style: Option<Style>,
+    _style_scrolled: Option<Style>,
 }
 
 /// Transition property list: opacity + width + sentinel.
 static TRANS_PROPS: [props::lv_style_prop_t; 3] = [props::BG_OPA, props::WIDTH, props::LAST];
 
 impl View for Scroll4 {
-    fn create() -> Result<Self, WidgetError> {
-        let screen = Screen::active().ok_or(WidgetError::LvglNullPointer)?;
+    fn create(&mut self, container: &Obj<'static>) -> Result<(), WidgetError> {
 
-        let obj = Obj::new(&screen)?;
+        let obj = Obj::new(container)?;
         obj.size(200, 100).center();
 
         let label = Label::new(&obj)?;
@@ -86,12 +86,11 @@ impl View for Scroll4 {
         obj.add_style(&style, Part::Scrollbar);
         obj.add_style(&style_scrolled, Part::Scrollbar | ObjState::SCROLLED);
 
-        Ok(Self {
-            _obj: obj,
-            _label: label,
-            _style: style,
-            _style_scrolled: style_scrolled,
-        })
+                self._obj = Some(obj);
+        self._label = Some(label);
+        self._style = Some(style);
+        self._style_scrolled = Some(style_scrolled);
+        Ok(())
     }
 
     fn update(&mut self) -> Result<(), WidgetError> {
@@ -99,4 +98,4 @@ impl View for Scroll4 {
     }
 }
 
-oxivgl_examples_common::example_main!(Scroll4);
+oxivgl_examples_common::example_main!(Scroll4::default());

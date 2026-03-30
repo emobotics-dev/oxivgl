@@ -10,19 +10,19 @@
 
 use oxivgl::{
     view::View,
-    widgets::{Scale, ScaleMode, Screen, WidgetError},
+    widgets::{Obj, Scale, ScaleMode, WidgetError},
 };
 
+#[derive(Default)]
 struct WidgetScale1 {
-    _scale: Scale<'static>,
+    _scale: Option<Scale<'static>>,
 }
 
 impl View for WidgetScale1 {
-    fn create() -> Result<Self, WidgetError> {
-        let screen = Screen::active().ok_or(WidgetError::LvglNullPointer)?;
+    fn create(&mut self, container: &Obj<'static>) -> Result<(), WidgetError> {
 
         let scale = Scale::tick_ring(
-            &screen,
+            container,
             200,
             ScaleMode::RoundInner,
             135,
@@ -37,7 +37,8 @@ impl View for WidgetScale1 {
             0x999999,
         )?;
 
-        Ok(Self { _scale: scale })
+        self._scale = Some(scale);
+        Ok(())
     }
 
     fn update(&mut self) -> Result<(), WidgetError> {
@@ -45,4 +46,4 @@ impl View for WidgetScale1 {
     }
 }
 
-oxivgl_examples_common::example_main!(WidgetScale1);
+oxivgl_examples_common::example_main!(WidgetScale1::default());

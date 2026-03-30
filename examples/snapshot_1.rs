@@ -14,35 +14,35 @@ use oxivgl::{
     layout::{FlexAlign, FlexFlow},
     snapshot::Snapshot,
     view::View,
-    widgets::{Image, Obj, Part, Screen, WidgetError},
+    widgets::{Image, Obj, Part, WidgetError},
 };
 
+#[derive(Default)]
 struct Snapshot1 {
-    _snapshot_img: Image<'static>,
-    _container: Obj<'static>,
-    _item0: Obj<'static>,
-    _item1: Obj<'static>,
-    _item2: Obj<'static>,
-    _item3: Obj<'static>,
+    _snapshot_img: Option<Image<'static>>,
+    _container: Option<Obj<'static>>,
+    _item0: Option<Obj<'static>>,
+    _item1: Option<Obj<'static>>,
+    _item2: Option<Obj<'static>>,
+    _item3: Option<Obj<'static>>,
     // snapshot declared LAST → dropped last, satisfying LVGL's
     // pointer-lifetime requirement (spec §3.1).
-    _snapshot: Snapshot,
+    _snapshot: Option<Snapshot>,
 }
 
 /// Colors for the four squares inside the container.
 const ITEM_COLORS: [u32; 4] = [0xe74c3c, 0x2ecc71, 0x3498db, 0xf39c12];
 
 impl View for Snapshot1 {
-    fn create() -> Result<Self, WidgetError> {
-        let screen = Screen::active().ok_or(WidgetError::LvglNullPointer)?;
-        screen.bg_color(0xadd8e6).bg_opa(255);
+    fn create(&mut self, container: &Obj<'static>) -> Result<(), WidgetError> {
+        container.bg_color(0xadd8e6).bg_opa(255);
 
         // Image widget that will display the snapshot (source set later).
-        let snapshot_img = Image::new(&screen)?;
+        let snapshot_img = Image::new(container)?;
         snapshot_img.center();
 
         // Container: 180×180, centered, flex row-wrap, radius 50.
-        let container = Obj::new(&screen)?;
+        let container = Obj::new(container)?;
         container
             .size(180, 180)
             .center()
@@ -72,15 +72,14 @@ impl View for Snapshot1 {
         snapshot_img.set_rotation(300);
         snapshot_img.center();
 
-        Ok(Self {
-            _snapshot_img: snapshot_img,
-            _container: container,
-            _item0: item0,
-            _item1: item1,
-            _item2: item2,
-            _item3: item3,
-            _snapshot: snapshot,
-        })
+                self._snapshot_img = Some(snapshot_img);
+        self._container = Some(container);
+        self._item0 = Some(item0);
+        self._item1 = Some(item1);
+        self._item2 = Some(item2);
+        self._item3 = Some(item3);
+        self._snapshot = Some(snapshot);
+        Ok(())
     }
 
     fn update(&mut self) -> Result<(), WidgetError> {
@@ -88,4 +87,4 @@ impl View for Snapshot1 {
     }
 }
 
-oxivgl_examples_common::example_main!(Snapshot1);
+oxivgl_examples_common::example_main!(Snapshot1::default());

@@ -18,27 +18,29 @@ use oxivgl::{
     event::Event,
     style::{color_white, palette_darken, palette_main, Palette},
     view::{register_event_on, View},
-    widgets::{Align, Buttonmatrix, Part, Screen, WidgetError},
+    widgets::{Obj, Align, Buttonmatrix, Part, WidgetError},
 };
 
+#[derive(Default)]
 struct WidgetButtonmatrix2 {
-    _screen: Screen,
-    btnm: Buttonmatrix<'static>,
+    btnm: Option<Buttonmatrix<'static>>,
 }
 
 impl View for WidgetButtonmatrix2 {
-    fn create() -> Result<Self, WidgetError> {
-        let screen = Screen::active().ok_or(WidgetError::LvglNullPointer)?;
+    fn create(&mut self, container: &Obj<'static>) -> Result<(), WidgetError> {
 
-        let btnm = Buttonmatrix::new(&screen)?;
+        let btnm = Buttonmatrix::new(container)?;
         btnm.center();
         btnm.send_draw_task_events();
 
-        Ok(Self { _screen: screen, btnm })
+        self.btnm = Some(btnm);
+        Ok(())
     }
 
     fn register_events(&mut self) {
-        register_event_on(self, self.btnm.handle());
+        if let Some(ref btnm) = self.btnm {
+            register_event_on(self, btnm.handle());
+        }
     }
 
     fn on_event(&mut self, event: &Event) {
@@ -51,8 +53,11 @@ impl View for WidgetButtonmatrix2 {
             return;
         }
 
-        let pressed = self.btnm.get_selected_button() == base.id1
-            && self.btnm.has_state(ObjState::PRESSED);
+        let pressed = if let Some(ref btnm) = self.btnm {
+            btnm.get_selected_button() == base.id1 && btnm.has_state(ObjState::PRESSED)
+        } else {
+            false
+        };
 
         if base.id1 == 1 {
             // Blue fill, no radius, shadow, white label.
@@ -115,4 +120,4 @@ impl View for WidgetButtonmatrix2 {
     }
 }
 
-oxivgl_examples_common::example_main!(WidgetButtonmatrix2);
+oxivgl_examples_common::example_main!(WidgetButtonmatrix2::default());

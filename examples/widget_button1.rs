@@ -13,22 +13,22 @@ use oxivgl::{
     enums::{EventCode, ObjFlag, ObjState},
     event::Event,
     view::{register_event_on, View},
-    widgets::{Align, Button, Label, Screen, WidgetError},
+    widgets::{Obj, Align, Button, Label, WidgetError},
 };
 
+#[derive(Default)]
 struct WidgetButton1 {
-    btn1: Button<'static>,
-    btn2: Button<'static>,
-    label1: Label<'static>,
-    label2: Label<'static>,
+    btn1: Option<Button<'static>>,
+    btn2: Option<Button<'static>>,
+    label1: Option<Label<'static>>,
+    label2: Option<Label<'static>>,
     cnt: u32,
 }
 
 impl View for WidgetButton1 {
-    fn create() -> Result<Self, WidgetError> {
-        let screen = Screen::active().ok_or(WidgetError::LvglNullPointer)?;
+    fn create(&mut self, container: &Obj<'static>) -> Result<(), WidgetError> {
 
-        let btn1 = Button::new(&screen)?;
+        let btn1 = Button::new(container)?;
         btn1.align(Align::Center, 0, -40);
         btn1.remove_flag(ObjFlag::PRESS_LOCK);
         btn1.bubble_events();
@@ -36,7 +36,7 @@ impl View for WidgetButton1 {
         let label1 = Label::new(&btn1)?;
         label1.text("Button").center();
 
-        let btn2 = Button::new(&screen)?;
+        let btn2 = Button::new(container)?;
         btn2.align(Align::Center, 0, 40);
         btn2.add_flag(ObjFlag::CHECKABLE);
         btn2.bubble_events();
@@ -44,32 +44,37 @@ impl View for WidgetButton1 {
         let label2 = Label::new(&btn2)?;
         label2.text("Toggle").center();
 
-        Ok(Self {
-            btn1,
-            btn2,
-            label1,
-            label2,
-            cnt: 0,
-        })
+                self.btn1 = Some(btn1);
+        self.btn2 = Some(btn2);
+        self.label1 = Some(label1);
+        self.label2 = Some(label2);
+        self.cnt = 0;
+        Ok(())
     }
 
     fn register_events(&mut self) {
-        register_event_on(self, self.btn1.handle());
-        register_event_on(self, self.btn2.handle());
+        if let Some(ref btn1) = self.btn1 { register_event_on(self, btn1.handle()); }
+        if let Some(ref btn2) = self.btn2 { register_event_on(self, btn2.handle()); }
     }
 
     fn on_event(&mut self, event: &Event) {
-        if event.matches(&self.btn1, EventCode::CLICKED) {
-            self.cnt += 1;
-            let mut buf = heapless::String::<16>::new();
-            let _ = core::fmt::Write::write_fmt(&mut buf, format_args!("Button: {}", self.cnt));
-            self.label1.text(&buf);
+        if let Some(ref btn1) = self.btn1 {
+            if event.matches(btn1, EventCode::CLICKED) {
+                self.cnt += 1;
+                let mut buf = heapless::String::<16>::new();
+                let _ = core::fmt::Write::write_fmt(&mut buf, format_args!("Button: {}", self.cnt));
+                if let Some(ref label1) = self.label1 { label1.text(&buf); }
+            }
         }
-        if event.matches(&self.btn2, EventCode::VALUE_CHANGED) {
-            if self.btn2.has_state(ObjState::CHECKED) {
-                self.label2.text("ON");
-            } else {
-                self.label2.text("OFF");
+        if let Some(ref btn2) = self.btn2 {
+            if event.matches(btn2, EventCode::VALUE_CHANGED) {
+                if let Some(ref label2) = self.label2 {
+                    if btn2.has_state(ObjState::CHECKED) {
+                        label2.text("ON");
+                    } else {
+                        label2.text("OFF");
+                    }
+                }
             }
         }
     }
@@ -79,4 +84,4 @@ impl View for WidgetButton1 {
     }
 }
 
-oxivgl_examples_common::example_main!(WidgetButton1);
+oxivgl_examples_common::example_main!(WidgetButton1::default());

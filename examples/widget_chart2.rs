@@ -11,19 +11,18 @@
 
 use oxivgl::{
     view::View,
-    widgets::{Chart, ChartAxis, ChartType, Screen, WidgetError},
+    widgets::{Obj, Chart, ChartAxis, ChartType, WidgetError},
 };
 
+#[derive(Default)]
 struct WidgetChart2 {
-    _screen: Screen,
-    _chart: Chart<'static>,
+    _chart: Option<Chart<'static>>,
 }
 
 impl View for WidgetChart2 {
-    fn create() -> Result<Self, WidgetError> {
-        let screen = Screen::active().ok_or(WidgetError::LvglNullPointer)?;
+    fn create(&mut self, container: &Obj<'static>) -> Result<(), WidgetError> {
 
-        let chart = Chart::new(&screen)?;
+        let chart = Chart::new(container)?;
         chart.size(200, 150);
         chart.center();
         chart.set_type(ChartType::Bar);
@@ -43,10 +42,8 @@ impl View for WidgetChart2 {
             chart.set_next_value(&ser2, v);
         }
 
-        Ok(Self {
-            _screen: screen,
-            _chart: chart,
-        })
+                self._chart = Some(chart);
+        Ok(())
     }
 
     fn update(&mut self) -> Result<(), WidgetError> {
@@ -54,4 +51,4 @@ impl View for WidgetChart2 {
     }
 }
 
-oxivgl_examples_common::example_main!(WidgetChart2);
+oxivgl_examples_common::example_main!(WidgetChart2::default());

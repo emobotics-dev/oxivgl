@@ -11,19 +11,19 @@
 
 use oxivgl::{
     view::View,
-    widgets::{Label, Menu, Screen, WidgetError},
+    widgets::{Obj, Label, Menu, WidgetError},
 };
 
+#[derive(Default)]
 struct WidgetMenu3 {
-    _menu: Menu<'static>,
-    _back_label: Label<'static>,
+    _menu: Option<Menu<'static>>,
+    _back_label: Option<Label<'static>>,
 }
 
 impl View for WidgetMenu3 {
-    fn create() -> Result<Self, WidgetError> {
-        let screen = Screen::active().ok_or(WidgetError::LvglNullPointer)?;
+    fn create(&mut self, container: &Obj<'static>) -> Result<(), WidgetError> {
 
-        let menu = Menu::new(&screen)?;
+        let menu = Menu::new(container)?;
         menu.size(320, 240).center();
 
         // Modify the header back button — add "Back" text
@@ -73,10 +73,9 @@ impl View for WidgetMenu3 {
 
         menu.set_page(&main_page);
 
-        Ok(Self {
-            _menu: menu,
-            _back_label: back_label,
-        })
+                self._menu = Some(menu);
+        self._back_label = Some(back_label);
+        Ok(())
     }
 
     fn update(&mut self) -> Result<(), WidgetError> {
@@ -84,4 +83,4 @@ impl View for WidgetMenu3 {
     }
 }
 
-oxivgl_examples_common::example_main!(WidgetMenu3);
+oxivgl_examples_common::example_main!(WidgetMenu3::default());

@@ -21,7 +21,7 @@ use oxivgl::{
     timer::Timer,
     view::View,
     widgets::{
-        Align, Arc, AsLvHandle, Button, Child, Label, Screen, Spinner, Subject, Win,
+        Obj, Align, Arc, AsLvHandle, Button, Child, Label, Screen, Spinner, Subject, Win,
         WidgetError,
     },
 };
@@ -35,9 +35,10 @@ const STATE_DOWNLOADING: i32 = 3;
 const STATE_CANCEL: i32 = 4;
 const STATE_READY: i32 = 5;
 
+#[derive(Default)]
 struct Observer5 {
-    start_btn: Button<'static>,
-    _start_label: Child<Label<'static>>,
+    start_btn: Option<Button<'static>>,
+    _start_label: Option<Child<Label<'static>>>,
 
     // Dynamic window state (None = closed)
     win: Option<Win<'static>>,
@@ -52,40 +53,43 @@ struct Observer5 {
     download_timer: Option<Timer>,
 
     // Subjects — must be last so they drop after all widgets that observe them
-    download_pct_subject: Subject,
-    status_subject: Subject,
+    download_pct_subject: Option<Subject>,
+    status_subject: Option<Subject>,
 }
 
 impl View for Observer5 {
-    fn create() -> Result<Self, WidgetError> {
-        let screen = Screen::active().ok_or(WidgetError::LvglNullPointer)?;
+    fn create(&mut self, container: &Obj<'static>) -> Result<(), WidgetError> {
 
         let download_pct_subject = Subject::new_int(0);
         let status_subject = Subject::new_int(STATE_IDLE);
 
-        // Start button, centered on screen.
-        let start_btn = Button::new(&screen)?;
+        // Start button, centered on container.
+        let start_btn = Button::new(container)?;
         start_btn.center();
         let start_label = Child::new(Label::new(&start_btn)?);
         start_label.text("Firmware update").center();
 
-        Ok(Self {
-            start_btn,
-            _start_label: start_label,
-            win: None,
-            close_btn_handle: null_mut(),
-            restart_btn_handle: null_mut(),
-            last_state: STATE_IDLE,
-            connect_timer: None,
-            download_timer: None,
-            download_pct_subject,
-            status_subject,
-        })
+                self.start_btn = Some(start_btn);
+        self._start_label = Some(start_label);
+        self.win = None;
+        self.close_btn_handle = null_mut();
+        self.restart_btn_handle = null_mut();
+        self.last_state = STATE_IDLE;
+        self.connect_timer = None;
+        self.download_timer = None;
+        self.download_pct_subject = Some(download_pct_subject);
+        self.status_subject = Some(status_subject);
+        Ok(())
     }
 
     fn on_event(&mut self, event: &Event) {
         // Start button — open the firmware update window.
-        if event.matches(&self.start_btn, EventCode::CLICKED) && self.win.is_none() {
+        let start_clicked = if let Some(ref start_btn) = self.start_btn {
+            event.matches(start_btn, EventCode::CLICKED)
+        } else {
+            false
+        };
+        if start_clicked && self.win.is_none() {
             let screen = match Screen::active() {
                 Some(s) => s,
                 None => return,
@@ -113,7 +117,9 @@ impl View for Observer5 {
             self.win = Some(win);
 
             // Kick off the state machine.
-            self.status_subject.set_int(STATE_IDLE);
+            if let Some(ref status_subject) = self.status_subject {
+                status_subject.set_int(STATE_IDLE);
+            }
             self.last_state = -1; // force re-entry into IDLE handling
         }
 
@@ -122,7 +128,9 @@ impl View for Observer5 {
             && event.target_handle() as *mut c_void == self.close_btn_handle
             && event.code() == EventCode::CLICKED
         {
-            self.status_subject.set_int(STATE_CANCEL);
+            if let Some(ref status_subject) = self.status_subject {
+                status_subject.set_int(STATE_CANCEL);
+            }
         }
 
         // Restart button — close window and return to idle.
@@ -135,13 +143,18 @@ impl View for Observer5 {
             self.close_btn_handle = null_mut();
             self.restart_btn_handle = null_mut();
             self.win = None;
-            self.status_subject.set_int(STATE_IDLE);
+            if let Some(ref status_subject) = self.status_subject {
+                status_subject.set_int(STATE_IDLE);
+            }
             self.last_state = STATE_IDLE;
         }
     }
 
     fn update(&mut self) -> Result<(), WidgetError> {
-        let status = self.status_subject.get_int();
+        let status = match self.status_subject.as_ref() {
+            Some(s) => s.get_int(),
+            None => return Ok(()),
+        };
 
         // Detect state transitions.
         if status != self.last_state {
@@ -157,7 +170,9 @@ impl View for Observer5 {
                     if self.win.is_some() {
                         self.show_connecting()?;
                     }
-                    self.status_subject.set_int(STATE_CONNECTING);
+                    if let Some(ref status_subject) = self.status_subject {
+                        status_subject.set_int(STATE_CONNECTING);
+                    }
                     self.last_state = STATE_CONNECTING;
                 }
 
@@ -170,14 +185,20 @@ impl View for Observer5 {
 
                 STATE_CONNECTED => {
                     // Reset progress and move immediately to downloading.
-                    self.download_pct_subject.set_int(0);
-                    self.status_subject.set_int(STATE_DOWNLOADING);
+                    if let Some(ref download_pct_subject) = self.download_pct_subject {
+                        download_pct_subject.set_int(0);
+                    }
+                    if let Some(ref status_subject) = self.status_subject {
+                        status_subject.set_int(STATE_DOWNLOADING);
+                    }
                     self.last_state = STATE_DOWNLOADING;
                 }
 
                 STATE_DOWNLOADING => {
                     // Replace window content with arc + percentage label.
-                    if let Some(ref win) = self.win {
+                    if let (Some(win), Some(download_pct_subject)) =
+                        (&self.win, &self.download_pct_subject)
+                    {
                         let content = win.get_content();
                         content.clean();
                         // Child wrappers suppress Rust Drop — LVGL parent owns these.
@@ -185,10 +206,10 @@ impl View for Observer5 {
                         arc.size(130, 130).center();
                         arc.set_range_raw(0, 100)
                             .remove_flag(ObjFlag::CLICKABLE);
-                        arc.bind_value(&self.download_pct_subject);
+                        arc.bind_value(download_pct_subject);
                         let pct_label = Child::new(Label::new(&*content)?);
                         pct_label.center();
-                        pct_label.bind_text(&self.download_pct_subject, c"%d %%");
+                        pct_label.bind_text(download_pct_subject, c"%d %%");
                     }
                     // 50 ms repeating timer to increment progress.
                     self.download_timer = Some(Timer::new(50)?);
@@ -232,7 +253,9 @@ impl View for Observer5 {
             if let Some(ref timer) = self.connect_timer {
                 if timer.triggered() {
                     self.connect_timer = None;
-                    self.status_subject.set_int(STATE_CONNECTED);
+                    if let Some(ref status_subject) = self.status_subject {
+                        status_subject.set_int(STATE_CONNECTED);
+                    }
                 }
             }
         }
@@ -241,14 +264,20 @@ impl View for Observer5 {
         if status == STATE_DOWNLOADING {
             if let Some(ref timer) = self.download_timer {
                 if timer.triggered() {
-                    let pct = self.download_pct_subject.get_int();
+                    let pct = self.download_pct_subject.as_ref().map_or(0, |s| s.get_int());
                     let next = pct + 1;
                     if next >= 100 {
                         self.download_timer = None;
-                        self.download_pct_subject.set_int(100);
-                        self.status_subject.set_int(STATE_READY);
+                        if let Some(ref download_pct_subject) = self.download_pct_subject {
+                            download_pct_subject.set_int(100);
+                        }
+                        if let Some(ref status_subject) = self.status_subject {
+                            status_subject.set_int(STATE_READY);
+                        }
                     } else {
-                        self.download_pct_subject.set_int(next);
+                        if let Some(ref download_pct_subject) = self.download_pct_subject {
+                            download_pct_subject.set_int(next);
+                        }
                     }
                 }
             }
@@ -275,4 +304,4 @@ impl Observer5 {
     }
 }
 
-oxivgl_examples_common::example_main!(Observer5);
+oxivgl_examples_common::example_main!(Observer5::default());

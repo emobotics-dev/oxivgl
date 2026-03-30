@@ -10,23 +10,23 @@ use oxivgl::{
     anim::{anim_set_pad_column, anim_set_pad_row, Anim, ANIM_REPEAT_INFINITE},
     layout::{GridAlign, GridCell, GRID_TEMPLATE_LAST},
     view::View,
-    widgets::{Label, Obj, Screen, WidgetError},
+    widgets::{Label, Obj, WidgetError},
 };
 
 static COL_DSC: [i32; 4] = [60, 60, 60, GRID_TEMPLATE_LAST];
 static ROW_DSC: [i32; 4] = [45, 45, 45, GRID_TEMPLATE_LAST];
 
+#[derive(Default)]
 struct Grid5 {
-    _cont: Obj<'static>,
+    _cont: Option<Obj<'static>>,
     _items: heapless::Vec<Obj<'static>, 9>,
     _labels: heapless::Vec<Label<'static>, 9>,
 }
 
 impl View for Grid5 {
-    fn create() -> Result<Self, WidgetError> {
-        let screen = Screen::active().ok_or(WidgetError::LvglNullPointer)?;
+    fn create(&mut self, container: &Obj<'static>) -> Result<(), WidgetError> {
 
-        let cont = Obj::new(&screen)?;
+        let cont = Obj::new(container)?;
         cont.size(300, 220).center();
         cont.set_grid_dsc_array(&COL_DSC, &ROW_DSC);
 
@@ -68,11 +68,10 @@ impl View for Grid5 {
             .set_reverse_duration(3000);
         a.start();
 
-        Ok(Self {
-            _cont: cont,
-            _items: items,
-            _labels: labels,
-        })
+                self._cont = Some(cont);
+        self._items = items;
+        self._labels = labels;
+        Ok(())
     }
 
     fn update(&mut self) -> Result<(), WidgetError> {
@@ -80,4 +79,4 @@ impl View for Grid5 {
     }
 }
 
-oxivgl_examples_common::example_main!(Grid5);
+oxivgl_examples_common::example_main!(Grid5::default());

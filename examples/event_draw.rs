@@ -16,32 +16,36 @@ use oxivgl::{
     event::Event,
     style::color_make,
     view::{register_event_on, View},
-    widgets::{Align, Obj, Part, Screen, WidgetError},
+    widgets::{Align, Obj, Part, WidgetError},
 };
 
+#[derive(Default)]
 struct EventDraw {
-    cont: Obj<'static>,
+    cont: Option<Obj<'static>>,
     size: i32,
     size_dec: bool,
 }
 
 impl View for EventDraw {
-    fn create() -> Result<Self, WidgetError> {
-        let screen = Screen::active().ok_or(WidgetError::LvglNullPointer)?;
+    fn create(&mut self, container: &Obj<'static>) -> Result<(), WidgetError> {
 
-        let cont = Obj::new(&screen)?;
+        let cont = Obj::new(container)?;
         cont.size(200, 200).center();
         cont.send_draw_task_events();
 
-        Ok(Self { cont, size: 0, size_dec: false })
+                self.cont = Some(cont);
+        self.size = 0;
+        self.size_dec = false;
+        Ok(())
     }
 
     fn register_events(&mut self) {
-        register_event_on(self, self.cont.handle());
+        if let Some(ref cont) = self.cont { register_event_on(self, cont.handle()); }
     }
 
     fn on_event(&mut self, event: &Event) {
-        if !event.matches(&self.cont, EventCode::DRAW_TASK_ADDED) {
+        let Some(ref cont) = self.cont else { return };
+        if !event.matches(cont, EventCode::DRAW_TASK_ADDED) {
             return;
         }
         let Some(task) = event.draw_task() else { return };
@@ -50,7 +54,7 @@ impl View for EventDraw {
             return;
         }
         let Some(layer) = task.layer() else { return };
-        let obj_coords = self.cont.get_coords();
+        let obj_coords = cont.get_coords();
         let mut a = Area { x1: 0, y1: 0, x2: self.size, y2: self.size };
         a.align_to_area(obj_coords, Align::Center, 0, 0);
         let mut dsc = DrawRectDsc::new();
@@ -76,9 +80,11 @@ impl View for EventDraw {
                 self.size_dec = true;
             }
         }
-        self.cont.invalidate();
+        if let Some(ref cont) = self.cont {
+            cont.invalidate();
+        }
         Ok(())
     }
 }
 
-oxivgl_examples_common::example_main!(EventDraw);
+oxivgl_examples_common::example_main!(EventDraw::default());

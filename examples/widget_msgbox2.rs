@@ -14,24 +14,23 @@ use oxivgl::{
     layout::FlexFlow,
     style::Selector,
     view::View,
-    widgets::{Child, Label, Msgbox, Screen, Slider, WidgetError},
+    widgets::{Obj, Child, Label, Msgbox, Slider, WidgetError},
 };
 
+#[derive(Default)]
 struct WidgetMsgbox2 {
-    _screen: Screen,
-    _mbox: Msgbox<'static>,
-    _lbl_bright: Child<Label<'static>>,
-    _slider_bright: Child<Slider<'static>>,
-    _lbl_speed: Child<Label<'static>>,
-    _slider_speed: Child<Slider<'static>>,
+    _mbox: Option<Msgbox<'static>>,
+    _lbl_bright: Option<Child<Label<'static>>>,
+    _slider_bright: Option<Child<Slider<'static>>>,
+    _lbl_speed: Option<Child<Label<'static>>>,
+    _slider_speed: Option<Child<Slider<'static>>>,
 }
 
 impl View for WidgetMsgbox2 {
-    fn create() -> Result<Self, WidgetError> {
-        let screen = Screen::active().ok_or(WidgetError::LvglNullPointer)?;
+    fn create(&mut self, container: &Obj<'static>) -> Result<(), WidgetError> {
 
         // Non-modal msgbox (parent = screen)
-        let mbox = Msgbox::new(Some(&screen))?;
+        let mbox = Msgbox::new(Some(container))?;
         mbox.size(300, 200);
         mbox.center();
         mbox.style_clip_corner(true, Selector::DEFAULT);
@@ -77,14 +76,12 @@ impl View for WidgetMsgbox2 {
         footer.style_bg_color(indigo, Selector::DEFAULT);
         footer.bg_opa(255);
 
-        Ok(Self {
-            _screen: screen,
-            _mbox: mbox,
-            _lbl_bright: lbl_bright,
-            _slider_bright: slider_bright,
-            _lbl_speed: lbl_speed,
-            _slider_speed: slider_speed,
-        })
+        self._mbox = Some(mbox);
+        self._lbl_bright = Some(lbl_bright);
+        self._slider_bright = Some(slider_bright);
+        self._lbl_speed = Some(lbl_speed);
+        self._slider_speed = Some(slider_speed);
+        Ok(())
     }
 
     fn update(&mut self) -> Result<(), WidgetError> {
@@ -92,4 +89,4 @@ impl View for WidgetMsgbox2 {
     }
 }
 
-oxivgl_examples_common::example_main!(WidgetMsgbox2);
+oxivgl_examples_common::example_main!(WidgetMsgbox2::default());

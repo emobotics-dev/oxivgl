@@ -11,20 +11,20 @@ use oxivgl::{
     style::LV_SIZE_CONTENT,
     view::View,
     layout::FlexFlow,
-    widgets::{Label, Obj, Screen, WidgetError},
+    widgets::{Label, Obj, WidgetError},
 };
 
+#[derive(Default)]
 struct Flex5 {
-    _cont: Obj<'static>,
+    _cont: Option<Obj<'static>>,
     _items: heapless::Vec<Obj<'static>, 9>,
     _labels: heapless::Vec<Label<'static>, 9>,
 }
 
 impl View for Flex5 {
-    fn create() -> Result<Self, WidgetError> {
-        let screen = Screen::active().ok_or(WidgetError::LvglNullPointer)?;
+    fn create(&mut self, container: &Obj<'static>) -> Result<(), WidgetError> {
 
-        let cont = Obj::new(&screen)?;
+        let cont = Obj::new(container)?;
         cont.size(300, 220).center();
         cont.set_flex_flow(FlexFlow::RowWrap);
 
@@ -60,11 +60,10 @@ impl View for Flex5 {
             .set_reverse_duration(3000);
         a.start();
 
-        Ok(Self {
-            _cont: cont,
-            _items: items,
-            _labels: labels,
-        })
+                self._cont = Some(cont);
+        self._items = items;
+        self._labels = labels;
+        Ok(())
     }
 
     fn update(&mut self) -> Result<(), WidgetError> {
@@ -72,4 +71,4 @@ impl View for Flex5 {
     }
 }
 
-oxivgl_examples_common::example_main!(Flex5);
+oxivgl_examples_common::example_main!(Flex5::default());

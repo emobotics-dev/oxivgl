@@ -14,19 +14,19 @@ extern crate alloc;
 use oxivgl::{
     style::{palette_lighten, palette_main, Palette, Selector, Style, StyleBuilder},
     view::View,
-    widgets::{Image, Screen, WidgetError},
+    widgets::{Obj, Image, WidgetError},
 };
 
 oxivgl::image_declare!(img_cogwheel_argb);
 
+#[derive(Default)]
 struct Style6 {
-    _style: Style,
-    _img: Image<'static>,
+    _style: Option<Style>,
+    _img: Option<Image<'static>>,
 }
 
 impl View for Style6 {
-    fn create() -> Result<Self, WidgetError> {
-        let screen = Screen::active().ok_or(WidgetError::LvglNullPointer)?;
+    fn create(&mut self, container: &Obj<'static>) -> Result<(), WidgetError> {
 
         let mut builder = StyleBuilder::new();
         builder
@@ -40,15 +40,14 @@ impl View for Style6 {
             .transform_rotation(300);
         let style = builder.build();
 
-        let img = Image::new(&screen)?;
+        let img = Image::new(container)?;
         img.add_style(&style, Selector::DEFAULT);
         img.set_src(img_cogwheel_argb());
         img.center();
 
-        Ok(Self {
-            _style: style,
-            _img: img,
-        })
+                self._style = Some(style);
+        self._img = Some(img);
+        Ok(())
     }
 
     fn update(&mut self) -> Result<(), WidgetError> {
@@ -56,4 +55,4 @@ impl View for Style6 {
     }
 }
 
-oxivgl_examples_common::example_main!(Style6);
+oxivgl_examples_common::example_main!(Style6::default());

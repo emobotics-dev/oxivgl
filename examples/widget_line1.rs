@@ -11,7 +11,7 @@
 use oxivgl::{
     style::{palette_main, Palette, Selector, Style, StyleBuilder},
     view::View,
-    widgets::{lv_point_precise_t, Line, Screen, WidgetError},
+    widgets::{Obj, lv_point_precise_t, Line, WidgetError},
 };
 
 static LINE_POINTS: [lv_point_precise_t; 5] = [
@@ -34,14 +34,14 @@ static LINE_POINTS: [lv_point_precise_t; 5] = [
     },
 ];
 
+#[derive(Default)]
 struct WidgetLine1 {
-    _line: Line<'static>,
-    _style: Style,
+    _line: Option<Line<'static>>,
+    _style: Option<Style>,
 }
 
 impl View for WidgetLine1 {
-    fn create() -> Result<Self, WidgetError> {
-        let screen = Screen::active().ok_or(WidgetError::LvglNullPointer)?;
+    fn create(&mut self, container: &Obj<'static>) -> Result<(), WidgetError> {
 
         let mut sb = StyleBuilder::new();
         sb.line_width(8)
@@ -49,15 +49,14 @@ impl View for WidgetLine1 {
             .line_rounded(true);
         let style = sb.build();
 
-        let line = Line::new(&screen)?;
+        let line = Line::new(container)?;
         line.set_points(&LINE_POINTS);
         line.add_style(&style, Selector::DEFAULT);
         line.center();
 
-        Ok(Self {
-            _line: line,
-            _style: style,
-        })
+                self._line = Some(line);
+        self._style = Some(style);
+        Ok(())
     }
 
     fn update(&mut self) -> Result<(), WidgetError> {
@@ -65,4 +64,4 @@ impl View for WidgetLine1 {
     }
 }
 
-oxivgl_examples_common::example_main!(WidgetLine1);
+oxivgl_examples_common::example_main!(WidgetLine1::default());

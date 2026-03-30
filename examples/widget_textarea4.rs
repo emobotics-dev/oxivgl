@@ -13,21 +13,21 @@ use oxivgl::{
     enums::ObjState,
     style::{palette_main, BorderSide, GradDir, Palette, Style, StyleBuilder},
     view::View,
-    widgets::{Align, Part, Screen, Textarea, WidgetError},
+    widgets::{Obj, Align, Part, Textarea, WidgetError},
 };
 
+#[derive(Default)]
 struct WidgetTextarea4 {
-    _ta1: Textarea<'static>,
-    _ta2: Textarea<'static>,
-    _ta3: Textarea<'static>,
-    _style_simple: Style,
-    _style_underline: Style,
-    _style_block: Style,
+    _ta1: Option<Textarea<'static>>,
+    _ta2: Option<Textarea<'static>>,
+    _ta3: Option<Textarea<'static>>,
+    _style_simple: Option<Style>,
+    _style_underline: Option<Style>,
+    _style_block: Option<Style>,
 }
 
 impl View for WidgetTextarea4 {
-    fn create() -> Result<Self, WidgetError> {
-        let screen = Screen::active().ok_or(WidgetError::LvglNullPointer)?;
+    fn create(&mut self, container: &Obj<'static>) -> Result<(), WidgetError> {
 
         // Thin left bar cursor (simple) — red border
         let style_simple = {
@@ -66,7 +66,7 @@ impl View for WidgetTextarea4 {
 
         let cursor_focused = Part::Cursor | ObjState::FOCUSED;
 
-        let ta1 = Textarea::new(&screen)?;
+        let ta1 = Textarea::new(container)?;
         ta1.set_text("This is a simple red cursor");
         ta1.width(280).align(Align::TopMid, 0, 10);
         ta1.set_one_line(true);
@@ -74,7 +74,7 @@ impl View for WidgetTextarea4 {
         ta1.add_style(&style_simple, cursor_focused);
         ta1.set_cursor_pos(0);
 
-        let ta2 = Textarea::new(&screen)?;
+        let ta2 = Textarea::new(container)?;
         ta2.set_text("This is an underline blue cursor");
         ta2.width(280).align(Align::TopMid, 0, 110);
         ta2.set_one_line(true);
@@ -82,7 +82,7 @@ impl View for WidgetTextarea4 {
         ta2.add_style(&style_underline, cursor_focused);
         ta2.set_cursor_pos(0);
 
-        let ta3 = Textarea::new(&screen)?;
+        let ta3 = Textarea::new(container)?;
         ta3.set_text("This is a complex block cursor");
         ta3.width(280).align(Align::TopMid, 0, 60);
         ta3.set_one_line(true);
@@ -90,14 +90,13 @@ impl View for WidgetTextarea4 {
         ta3.add_style(&style_block, cursor_focused);
         ta3.set_cursor_pos(0);
 
-        Ok(Self {
-            _ta1: ta1,
-            _ta2: ta2,
-            _ta3: ta3,
-            _style_simple: style_simple,
-            _style_underline: style_underline,
-            _style_block: style_block,
-        })
+                self._ta1 = Some(ta1);
+        self._ta2 = Some(ta2);
+        self._ta3 = Some(ta3);
+        self._style_simple = Some(style_simple);
+        self._style_underline = Some(style_underline);
+        self._style_block = Some(style_block);
+        Ok(())
     }
 
     fn update(&mut self) -> Result<(), WidgetError> {
@@ -105,4 +104,4 @@ impl View for WidgetTextarea4 {
     }
 }
 
-oxivgl_examples_common::example_main!(WidgetTextarea4);
+oxivgl_examples_common::example_main!(WidgetTextarea4::default());

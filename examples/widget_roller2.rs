@@ -15,22 +15,22 @@ use oxivgl::{
     fonts::MONTSERRAT_20,
     style::{GradDir, Selector, Style, StyleBuilder},
     view::View,
-    widgets::{Align, Part, Roller, RollerMode, Screen, TextAlign, WidgetError},
+    widgets::{Obj, Align, Part, Roller, RollerMode, TextAlign, WidgetError},
 };
 
+#[derive(Default)]
 struct WidgetRoller2 {
-    _r1: Roller<'static>,
-    _r2: Roller<'static>,
-    _r3: Roller<'static>,
-    _style_sel: Style,
-    _style_green: Style,
+    _r1: Option<Roller<'static>>,
+    _r2: Option<Roller<'static>>,
+    _r3: Option<Roller<'static>>,
+    _style_sel: Option<Style>,
+    _style_green: Option<Style>,
 }
 
 const OPTS: &str = "1\n2\n3\n4\n5\n6\n7\n8\n9\n10";
 
 impl View for WidgetRoller2 {
-    fn create() -> Result<Self, WidgetError> {
-        let screen = Screen::active().ok_or(WidgetError::LvglNullPointer)?;
+    fn create(&mut self, container: &Obj<'static>) -> Result<(), WidgetError> {
 
         // Selected-row style: larger font, pink bg, red border
         let mut sb = StyleBuilder::new();
@@ -49,7 +49,7 @@ impl View for WidgetRoller2 {
         let style_green = sb_green.build();
 
         // Left roller: left-aligned text, green gradient, 2 visible rows
-        let r1 = Roller::new(&screen)?;
+        let r1 = Roller::new(container)?;
         r1.set_options(OPTS, RollerMode::Normal);
         r1.set_visible_row_count(2);
         r1.width(100);
@@ -60,7 +60,7 @@ impl View for WidgetRoller2 {
         r1.set_selected(2, false);
 
         // Center roller: default alignment, 3 visible rows
-        let r2 = Roller::new(&screen)?;
+        let r2 = Roller::new(container)?;
         r2.set_options(OPTS, RollerMode::Normal);
         r2.set_visible_row_count(3);
         r2.add_style(&style_sel, Selector::from(Part::Selected));
@@ -68,7 +68,7 @@ impl View for WidgetRoller2 {
         r2.set_selected(5, false);
 
         // Right roller: right-aligned text, 4 visible rows
-        let r3 = Roller::new(&screen)?;
+        let r3 = Roller::new(container)?;
         r3.set_options(OPTS, RollerMode::Normal);
         r3.set_visible_row_count(4);
         r3.width(80);
@@ -77,13 +77,12 @@ impl View for WidgetRoller2 {
         r3.align(Align::RightMid, -10, 0);
         r3.set_selected(8, false);
 
-        Ok(Self {
-            _r1: r1,
-            _r2: r2,
-            _r3: r3,
-            _style_sel: style_sel,
-            _style_green: style_green,
-        })
+                self._r1 = Some(r1);
+        self._r2 = Some(r2);
+        self._r3 = Some(r3);
+        self._style_sel = Some(style_sel);
+        self._style_green = Some(style_green);
+        Ok(())
     }
 
     fn update(&mut self) -> Result<(), WidgetError> {
@@ -91,4 +90,4 @@ impl View for WidgetRoller2 {
     }
 }
 
-oxivgl_examples_common::example_main!(WidgetRoller2);
+oxivgl_examples_common::example_main!(WidgetRoller2::default());

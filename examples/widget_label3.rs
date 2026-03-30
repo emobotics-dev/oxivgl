@@ -13,21 +13,21 @@ use oxivgl::{
     fonts,
     view::View,
     style::Selector,
-    widgets::{Align, BaseDir, Label, Screen, WidgetError},
+    widgets::{Obj, Align, BaseDir, Label, WidgetError},
 };
 
+#[derive(Default)]
 struct WidgetLabel3 {
-    _ltr_label: Label<'static>,
-    _rtl_label: Label<'static>,
-    _cjk_label: Label<'static>,
+    _ltr_label: Option<Label<'static>>,
+    _rtl_label: Option<Label<'static>>,
+    _cjk_label: Option<Label<'static>>,
 }
 
 impl View for WidgetLabel3 {
-    fn create() -> Result<Self, WidgetError> {
-        let screen = Screen::active().ok_or(WidgetError::LvglNullPointer)?;
+    fn create(&mut self, container: &Obj<'static>) -> Result<(), WidgetError> {
 
         // LTR English label
-        let ltr_label = Label::new(&screen)?;
+        let ltr_label = Label::new(container)?;
         ltr_label.text_long(
             "In modern terminology, a microcontroller is similar to a \
              system on a chip (SoC).",
@@ -37,7 +37,7 @@ impl View for WidgetLabel3 {
         ltr_label.align(Align::TopLeft, 5, 5);
 
         // RTL Hebrew label
-        let rtl_label = Label::new(&screen)?;
+        let rtl_label = Label::new(container)?;
         rtl_label.text_long(
             "\u{05DE}\u{05E2}\u{05D1}\u{05D3}, \u{05D0}\u{05D5} \
              \u{05D1}\u{05E9}\u{05DE}\u{05D5} \u{05D4}\u{05DE}\u{05DC}\u{05D0} \
@@ -52,7 +52,7 @@ impl View for WidgetLabel3 {
         rtl_label.align(Align::LeftMid, 5, 0);
 
         // Chinese label
-        let cjk_label = Label::new(&screen)?;
+        let cjk_label = Label::new(container)?;
         cjk_label.text_long(
             "\u{5D4C}\u{5165}\u{5F0F}\u{7CFB}\u{7EDF}\u{FF08}Embedded System\u{FF09}\u{FF0C}\n\
              \u{662F}\u{4E00}\u{79CD}\u{5D4C}\u{5165}\u{673A}\u{68B0}\u{6216}\u{7535}\u{6C14}\
@@ -64,11 +64,10 @@ impl View for WidgetLabel3 {
         cjk_label.width(310);
         cjk_label.align(Align::BottomLeft, 5, -5);
 
-        Ok(Self {
-            _ltr_label: ltr_label,
-            _rtl_label: rtl_label,
-            _cjk_label: cjk_label,
-        })
+                self._ltr_label = Some(ltr_label);
+        self._rtl_label = Some(rtl_label);
+        self._cjk_label = Some(cjk_label);
+        Ok(())
     }
 
     fn update(&mut self) -> Result<(), WidgetError> {
@@ -76,4 +75,4 @@ impl View for WidgetLabel3 {
     }
 }
 
-oxivgl_examples_common::example_main!(WidgetLabel3);
+oxivgl_examples_common::example_main!(WidgetLabel3::default());

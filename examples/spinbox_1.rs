@@ -15,20 +15,20 @@ use oxivgl::{
     style::Selector,
     symbols,
     view::View,
-    widgets::{Align, Button, Screen, Spinbox, WidgetError},
+    widgets::{Obj, Align, Button, Spinbox, WidgetError},
 };
 
+#[derive(Default)]
 struct Spinbox1 {
-    spinbox: Spinbox<'static>,
-    btn_plus: Button<'static>,
-    btn_minus: Button<'static>,
+    spinbox: Option<Spinbox<'static>>,
+    btn_plus: Option<Button<'static>>,
+    btn_minus: Option<Button<'static>>,
 }
 
 impl View for Spinbox1 {
-    fn create() -> Result<Self, WidgetError> {
-        let screen = Screen::active().ok_or(WidgetError::LvglNullPointer)?;
+    fn create(&mut self, container: &Obj<'static>) -> Result<(), WidgetError> {
 
-        let spinbox = Spinbox::new(&screen)?;
+        let spinbox = Spinbox::new(container)?;
         spinbox
             .set_range(-1000, 25000)
             .set_digit_format(5, 2)
@@ -37,25 +37,32 @@ impl View for Spinbox1 {
 
         let h = spinbox.get_height();
 
-        let btn_plus = Button::new(&screen)?;
+        let btn_plus = Button::new(container)?;
         btn_plus.size(h, h).align_to(&spinbox, Align::OutRightMid, 5, 0);
         btn_plus.style_bg_image_src_symbol(&symbols::PLUS, Selector::DEFAULT);
         btn_plus.bubble_events();
 
-        let btn_minus = Button::new(&screen)?;
+        let btn_minus = Button::new(container)?;
         btn_minus.size(h, h).align_to(&spinbox, Align::OutLeftMid, -5, 0);
         btn_minus.style_bg_image_src_symbol(&symbols::MINUS, Selector::DEFAULT);
         btn_minus.bubble_events();
 
-        Ok(Self { spinbox, btn_plus, btn_minus })
+                self.spinbox = Some(spinbox);
+        self.btn_plus = Some(btn_plus);
+        self.btn_minus = Some(btn_minus);
+        Ok(())
     }
 
     fn on_event(&mut self, event: &Event) {
-        if event.matches(&self.btn_plus, EventCode::SHORT_CLICKED) {
-            self.spinbox.increment();
+        if let (Some(btn_plus), Some(spinbox)) = (&self.btn_plus, &self.spinbox) {
+            if event.matches(btn_plus, EventCode::SHORT_CLICKED) {
+                spinbox.increment();
+            }
         }
-        if event.matches(&self.btn_minus, EventCode::SHORT_CLICKED) {
-            self.spinbox.decrement();
+        if let (Some(btn_minus), Some(spinbox)) = (&self.btn_minus, &self.spinbox) {
+            if event.matches(btn_minus, EventCode::SHORT_CLICKED) {
+                spinbox.decrement();
+            }
         }
     }
 
@@ -64,4 +71,4 @@ impl View for Spinbox1 {
     }
 }
 
-oxivgl_examples_common::example_main!(Spinbox1);
+oxivgl_examples_common::example_main!(Spinbox1::default());

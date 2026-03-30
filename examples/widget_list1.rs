@@ -15,19 +15,18 @@ use oxivgl::{
     event::Event,
     symbols,
     view::View,
-    widgets::{Button, Child, List, Screen, WidgetError},
+    widgets::{Button, Child, List, Obj, WidgetError},
 };
 
+#[derive(Default)]
 struct WidgetList1 {
-    list: List<'static>,
-    _buttons: [Child<Button<'static>>; 11],
+    list: Option<List<'static>>,
+    _buttons: Option<[Child<Button<'static>>; 11]>,
 }
 
 impl View for WidgetList1 {
-    fn create() -> Result<Self, WidgetError> {
-        let screen = Screen::active().ok_or(WidgetError::LvglNullPointer)?;
-
-        let list = List::new(&screen)?;
+    fn create(&mut self, container: &Obj<'static>) -> Result<(), WidgetError> {
+        let list = List::new(container)?;
         list.size(180, 220).center();
 
         // File section
@@ -61,16 +60,17 @@ impl View for WidgetList1 {
         let b10 = list.add_button(Some(&symbols::CLOSE), "Close");
         b10.bubble_events();
 
-        Ok(Self {
-            list,
-            _buttons: [b0, b1, b2, b3, b4, b5, b6, b7, b8, b9, b10],
-        })
+        self._buttons = Some([b0, b1, b2, b3, b4, b5, b6, b7, b8, b9, b10]);
+        self.list = Some(list);
+        Ok(())
     }
 
     fn on_event(&mut self, event: &Event) {
         if event.code() == EventCode::CLICKED {
-            if let Some(text) = self.list.get_button_text(&event.target()) {
-                let _ = text; // C original logs; we just consume
+            if let Some(ref list) = self.list {
+                if let Some(text) = list.get_button_text(&event.target()) {
+                    let _ = text; // C original logs; we just consume
+                }
             }
         }
     }
@@ -80,4 +80,4 @@ impl View for WidgetList1 {
     }
 }
 
-oxivgl_examples_common::example_main!(WidgetList1);
+oxivgl_examples_common::example_main!(WidgetList1::default());

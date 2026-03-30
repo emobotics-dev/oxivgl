@@ -10,19 +10,19 @@
 
 use oxivgl::{
     view::View,
-    widgets::{Align, Label, LabelLongMode, Screen, TextAlign, WidgetError},
+    widgets::{Obj, Align, Label, LabelLongMode, TextAlign, WidgetError},
 };
 
+#[derive(Default)]
 struct WidgetLabel1 {
-    _label1: Label<'static>,
-    _label2: Label<'static>,
+    _label1: Option<Label<'static>>,
+    _label2: Option<Label<'static>>,
 }
 
 impl View for WidgetLabel1 {
-    fn create() -> Result<Self, WidgetError> {
-        let screen = Screen::active().ok_or(WidgetError::LvglNullPointer)?;
+    fn create(&mut self, container: &Obj<'static>) -> Result<(), WidgetError> {
 
-        let label1 = Label::new(&screen)?;
+        let label1 = Label::new(container)?;
         label1.set_long_mode(LabelLongMode::Wrap);
         label1.text_long(
             "Words of a label, align the lines to the center \
@@ -32,16 +32,15 @@ impl View for WidgetLabel1 {
         label1.text_align(TextAlign::Center);
         label1.align(Align::Center, 0, -40);
 
-        let label2 = Label::new(&screen)?;
+        let label2 = Label::new(container)?;
         label2.set_long_mode(LabelLongMode::ScrollCircular);
         label2.width(150);
         label2.text("It is a circularly scrolling text. ");
         label2.align(Align::Center, 0, 40);
 
-        Ok(Self {
-            _label1: label1,
-            _label2: label2,
-        })
+                self._label1 = Some(label1);
+        self._label2 = Some(label2);
+        Ok(())
     }
 
     fn update(&mut self) -> Result<(), WidgetError> {
@@ -49,4 +48,4 @@ impl View for WidgetLabel1 {
     }
 }
 
-oxivgl_examples_common::example_main!(WidgetLabel1);
+oxivgl_examples_common::example_main!(WidgetLabel1::default());

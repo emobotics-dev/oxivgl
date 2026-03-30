@@ -13,7 +13,7 @@ use oxivgl::{
     style::Selector,
     timer::Timer,
     view::View,
-    widgets::{Chart, ChartAxis, ChartSeries, ChartType, Part, Screen, WidgetError},
+    widgets::{Obj, Chart, ChartAxis, ChartSeries, ChartType, Part, WidgetError},
 };
 
 /// Simple LCG pseudo-random for deterministic scatter data.
@@ -23,19 +23,18 @@ fn pseudo_rand(seed: &mut u32, min: i32, max: i32) -> i32 {
     min + ((*seed >> 16) % range) as i32
 }
 
+#[derive(Default)]
 struct WidgetChart7 {
-    _screen: Screen,
-    chart: Chart<'static>,
-    ser: ChartSeries,
-    timer: Timer,
+    chart: Option<Chart<'static>>,
+    ser: Option<ChartSeries>,
+    timer: Option<Timer>,
     seed: u32,
 }
 
 impl View for WidgetChart7 {
-    fn create() -> Result<Self, WidgetError> {
-        let screen = Screen::active().ok_or(WidgetError::LvglNullPointer)?;
+    fn create(&mut self, container: &Obj<'static>) -> Result<(), WidgetError> {
 
-        let chart = Chart::new(&screen)?;
+        let chart = Chart::new(container)?;
         chart.size(200, 150);
         chart.center();
         chart.set_type(ChartType::Scatter);
@@ -58,17 +57,25 @@ impl View for WidgetChart7 {
 
         let timer = Timer::new(100)?;
 
-        Ok(Self { _screen: screen, chart, ser, timer, seed })
+        self.chart = Some(chart);
+        self.ser = Some(ser);
+        self.timer = Some(timer);
+        self.seed = seed;
+        Ok(())
     }
 
     fn update(&mut self) -> Result<(), WidgetError> {
-        if self.timer.triggered() {
-            let x = pseudo_rand(&mut self.seed, 0, 200);
-            let y = pseudo_rand(&mut self.seed, 0, 1000);
-            self.chart.set_next_value2(&self.ser, x, y);
+        if let Some(ref timer) = self.timer {
+            if timer.triggered() {
+                let x = pseudo_rand(&mut self.seed, 0, 200);
+                let y = pseudo_rand(&mut self.seed, 0, 1000);
+                if let (Some(chart), Some(ser)) = (&self.chart, &self.ser) {
+                    chart.set_next_value2(ser, x, y);
+                }
+            }
         }
         Ok(())
     }
 }
 
-oxivgl_examples_common::example_main!(WidgetChart7);
+oxivgl_examples_common::example_main!(WidgetChart7::default());

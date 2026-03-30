@@ -10,24 +10,25 @@
 
 use oxivgl::{
     view::View,
-    widgets::{Image, Screen, WidgetError},
+    widgets::{Obj, Image, WidgetError},
 };
 
 oxivgl::image_declare!(img_cogwheel_argb);
 
+#[derive(Default)]
 struct WidgetImage1 {
-    _img: Image<'static>,
+    _img: Option<Image<'static>>,
 }
 
 impl View for WidgetImage1 {
-    fn create() -> Result<Self, WidgetError> {
-        let screen = Screen::active().ok_or(WidgetError::LvglNullPointer)?;
+    fn create(&mut self, container: &Obj<'static>) -> Result<(), WidgetError> {
 
-        let img = Image::new(&screen)?;
+        let img = Image::new(container)?;
         img.set_src(img_cogwheel_argb());
         img.center();
 
-        Ok(Self { _img: img })
+                self._img = Some(img);
+        Ok(())
     }
 
     fn update(&mut self) -> Result<(), WidgetError> {
@@ -35,4 +36,4 @@ impl View for WidgetImage1 {
     }
 }
 
-oxivgl_examples_common::example_main!(WidgetImage1);
+oxivgl_examples_common::example_main!(WidgetImage1::default());

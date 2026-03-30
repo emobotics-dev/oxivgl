@@ -13,20 +13,19 @@ use oxivgl::{
     fonts::DEJAVU_16_PERSIAN_HEBREW,
     style::Selector,
     view::View,
-    widgets::{BaseDir, Label, Obj, Screen, WidgetError},
+    widgets::{BaseDir, Label, Obj, WidgetError},
 };
 
+#[derive(Default)]
 struct Scroll5 {
-    _screen: Screen,
-    _cont: Obj<'static>,
-    _label: Label<'static>,
+    _cont: Option<Obj<'static>>,
+    _label: Option<Label<'static>>,
 }
 
 impl View for Scroll5 {
-    fn create() -> Result<Self, WidgetError> {
-        let screen = Screen::active().ok_or(WidgetError::LvglNullPointer)?;
+    fn create(&mut self, container: &Obj<'static>) -> Result<(), WidgetError> {
 
-        let cont = Obj::new(&screen)?;
+        let cont = Obj::new(container)?;
         cont.style_base_dir(BaseDir::Rtl, Selector::DEFAULT);
         cont.size(200, 100);
         cont.center();
@@ -36,7 +35,9 @@ impl View for Scroll5 {
         label.width(400);
         label.style_text_font(DEJAVU_16_PERSIAN_HEBREW, Selector::DEFAULT);
 
-        Ok(Self { _screen: screen, _cont: cont, _label: label })
+        self._cont = Some(cont);
+        self._label = Some(label);
+        Ok(())
     }
 
     fn update(&mut self) -> Result<(), WidgetError> {
@@ -44,4 +45,4 @@ impl View for Scroll5 {
     }
 }
 
-oxivgl_examples_common::example_main!(Scroll5);
+oxivgl_examples_common::example_main!(Scroll5::default());

@@ -13,7 +13,7 @@ use oxivgl::{
     btnmatrix_map,
     view::View,
     widgets::{
-        Align, Buttonmatrix, ButtonmatrixCtrl, ButtonmatrixMap, Screen, WidgetError,
+        Obj, Align, Buttonmatrix, ButtonmatrixCtrl, ButtonmatrixMap, WidgetError,
     },
 };
 
@@ -23,16 +23,15 @@ static MAP: &ButtonmatrixMap = btnmatrix_map!(
     c"Action1", c"Action2"
 );
 
+#[derive(Default)]
 struct WidgetButtonmatrix1 {
-    _screen: Screen,
-    _btnm: Buttonmatrix<'static>,
+    _btnm: Option<Buttonmatrix<'static>>,
 }
 
 impl View for WidgetButtonmatrix1 {
-    fn create() -> Result<Self, WidgetError> {
-        let screen = Screen::active().ok_or(WidgetError::LvglNullPointer)?;
+    fn create(&mut self, container: &Obj<'static>) -> Result<(), WidgetError> {
 
-        let btnm = Buttonmatrix::new(&screen)?;
+        let btnm = Buttonmatrix::new(container)?;
         btnm.set_map(MAP);
         btnm.size(240, 150);
         btnm.align(Align::Center, 0, 0);
@@ -45,10 +44,8 @@ impl View for WidgetButtonmatrix1 {
         btnm.set_button_ctrl(11, ButtonmatrixCtrl::CHECKABLE);
         btnm.set_button_ctrl(11, ButtonmatrixCtrl::CHECKED);
 
-        Ok(Self {
-            _screen: screen,
-            _btnm: btnm,
-        })
+                self._btnm = Some(btnm);
+        Ok(())
     }
 
     fn update(&mut self) -> Result<(), WidgetError> {
@@ -56,4 +53,4 @@ impl View for WidgetButtonmatrix1 {
     }
 }
 
-oxivgl_examples_common::example_main!(WidgetButtonmatrix1);
+oxivgl_examples_common::example_main!(WidgetButtonmatrix1::default());

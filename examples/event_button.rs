@@ -13,38 +13,37 @@ use oxivgl::{
     view::{register_event_on, View},
     enums::EventCode,
     event::Event,
-    widgets::{Button, Label, Screen, WidgetError},
+    widgets::{Obj, Button, Label, WidgetError},
 };
 
+#[derive(Default)]
 struct EventButton {
-    btn: Button<'static>,
-    _btn_label: Label<'static>,
-    info_label: Label<'static>,
+    btn: Option<Button<'static>>,
+    _btn_label: Option<Label<'static>>,
+    info_label: Option<Label<'static>>,
 }
 
 impl View for EventButton {
-    fn create() -> Result<Self, WidgetError> {
-        let screen = Screen::active().ok_or(WidgetError::LvglNullPointer)?;
+    fn create(&mut self, container: &Obj<'static>) -> Result<(), WidgetError> {
 
-        let btn = Button::new(&screen)?;
+        let btn = Button::new(container)?;
         btn.size(100, 50).center();
         btn.bubble_events();
 
         let btn_label = Label::new(&btn)?;
         btn_label.text("Click me!").center();
 
-        let info_label = Label::new(&screen)?;
+        let info_label = Label::new(container)?;
         info_label.text("The last button event:\nNone");
 
-        Ok(Self {
-            btn,
-            _btn_label: btn_label,
-            info_label,
-        })
+                self.btn = Some(btn);
+        self._btn_label = Some(btn_label);
+        self.info_label = Some(info_label);
+        Ok(())
     }
 
     fn register_events(&mut self) {
-        register_event_on(self, self.btn.handle());
+        if let Some(ref btn) = self.btn { register_event_on(self, btn.handle()); }
     }
 
     fn on_event(&mut self, event: &Event) {
@@ -57,7 +56,9 @@ impl View for EventButton {
             }
             _ => return,
         };
-        self.info_label.text(text);
+        if let Some(ref info_label) = self.info_label {
+            info_label.text(text);
+        }
     }
 
     fn update(&mut self) -> Result<(), WidgetError> {
@@ -65,4 +66,4 @@ impl View for EventButton {
     }
 }
 
-oxivgl_examples_common::example_main!(EventButton);
+oxivgl_examples_common::example_main!(EventButton::default());

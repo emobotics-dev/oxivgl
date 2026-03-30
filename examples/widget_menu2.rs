@@ -13,19 +13,18 @@ use oxivgl::{
     enums::EventCode,
     event::Event,
     view::View,
-    widgets::{Label, Menu, Msgbox, Obj, Screen, WidgetError},
+    widgets::{Label, Menu, Msgbox, Obj, WidgetError},
 };
 
+#[derive(Default)]
 struct WidgetMenu2 {
-    menu: Menu<'static>,
-    _labels: [Label<'static>; 4],
+    menu: Option<Menu<'static>>,
+    _labels: Option<[Label<'static>; 4]>,
 }
 
 impl View for WidgetMenu2 {
-    fn create() -> Result<Self, WidgetError> {
-        let screen = Screen::active().ok_or(WidgetError::LvglNullPointer)?;
-
-        let menu = Menu::new(&screen)?;
+    fn create(&mut self, container: &Obj<'static>) -> Result<(), WidgetError> {
+        let menu = Menu::new(container)?;
         menu.set_mode_root_back_button(true);
         menu.bubble_events();
         menu.size(320, 240).center();
@@ -54,26 +53,22 @@ impl View for WidgetMenu2 {
 
         menu.set_page(&main_page);
 
-        Ok(Self {
-            menu,
-            _labels: [
-                l0,
-                l1,
-                l2,
-                l3,
-            ],
-        })
+        self.menu = Some(menu);
+        self._labels = Some([l0, l1, l2, l3]);
+        Ok(())
     }
 
     fn on_event(&mut self, event: &Event) {
         if event.code() == EventCode::CLICKED {
-            if self.menu.back_button_is_root(&event.target()) {
-                let mbox = Msgbox::new(None::<&Obj<'_>>);
-                if let Ok(mbox) = mbox {
-                    mbox.add_title("Hello");
-                    mbox.add_text("Root back btn click.");
-                    mbox.add_close_button();
-                    core::mem::forget(mbox);
+            if let Some(ref menu) = self.menu {
+                if menu.back_button_is_root(&event.target()) {
+                    let mbox = Msgbox::new(None::<&Obj<'_>>);
+                    if let Ok(mbox) = mbox {
+                        mbox.add_title("Hello");
+                        mbox.add_text("Root back btn click.");
+                        mbox.add_close_button();
+                        core::mem::forget(mbox);
+                    }
                 }
             }
         }
@@ -84,4 +79,4 @@ impl View for WidgetMenu2 {
     }
 }
 
-oxivgl_examples_common::example_main!(WidgetMenu2);
+oxivgl_examples_common::example_main!(WidgetMenu2::default());

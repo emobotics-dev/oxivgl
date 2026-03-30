@@ -9,7 +9,7 @@
 use oxivgl::{
     style::{palette_main, Palette, Selector, Style, StyleBuilder},
     view::View,
-    widgets::{lv_point_precise_t, Line, Screen, WidgetError},
+    widgets::{Obj, lv_point_precise_t, Line, WidgetError},
 };
 
 static POINTS: [lv_point_precise_t; 3] = [
@@ -18,14 +18,14 @@ static POINTS: [lv_point_precise_t; 3] = [
     lv_point_precise_t { x: 100.0, y: 0.0 },
 ];
 
+#[derive(Default)]
 struct Style9 {
-    _line: Line<'static>,
-    _style: Style,
+    _line: Option<Line<'static>>,
+    _style: Option<Style>,
 }
 
 impl View for Style9 {
-    fn create() -> Result<Self, WidgetError> {
-        let screen = Screen::active().ok_or(WidgetError::LvglNullPointer)?;
+    fn create(&mut self, container: &Obj<'static>) -> Result<(), WidgetError> {
 
         let mut builder = StyleBuilder::new();
         builder
@@ -34,15 +34,14 @@ impl View for Style9 {
             .line_rounded(true);
         let style = builder.build();
 
-        let line = Line::new(&screen)?;
+        let line = Line::new(container)?;
         line.add_style(&style, Selector::DEFAULT);
         line.set_points(&POINTS);
         line.center();
 
-        Ok(Self {
-            _line: line,
-            _style: style,
-        })
+                self._line = Some(line);
+        self._style = Some(style);
+        Ok(())
     }
 
     fn update(&mut self) -> Result<(), WidgetError> {
@@ -50,4 +49,4 @@ impl View for Style9 {
     }
 }
 
-oxivgl_examples_common::example_main!(Style9);
+oxivgl_examples_common::example_main!(Style9::default());

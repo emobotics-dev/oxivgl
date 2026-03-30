@@ -9,19 +9,22 @@
 use oxivgl::{
     layout::FlexFlow,
     view::View,
-    widgets::{Obj, Screen, WidgetError},
+    widgets::{Obj, WidgetError},
 };
 
+#[derive(Default)]
 struct Flex3 {
-    _cont: Obj<'static>,
-    _items: [Obj<'static>; 4],
+    _cont: Option<Obj<'static>>,
+    _obj0: Option<Obj<'static>>,
+    _obj1: Option<Obj<'static>>,
+    _obj2: Option<Obj<'static>>,
+    _obj3: Option<Obj<'static>>,
 }
 
 impl View for Flex3 {
-    fn create() -> Result<Self, WidgetError> {
-        let screen = Screen::active().ok_or(WidgetError::LvglNullPointer)?;
+    fn create(&mut self, container: &Obj<'static>) -> Result<(), WidgetError> {
 
-        let cont = Obj::new(&screen)?;
+        let cont = Obj::new(container)?;
         cont.size(300, 220).center();
         cont.set_flex_flow(FlexFlow::Row);
 
@@ -39,10 +42,12 @@ impl View for Flex3 {
         let obj3 = Obj::new(&cont)?;
         obj3.size(40, 40);
 
-        Ok(Self {
-            _cont: cont,
-            _items: [obj0, obj1, obj2, obj3],
-        })
+        self._cont = Some(cont);
+        self._obj0 = Some(obj0);
+        self._obj1 = Some(obj1);
+        self._obj2 = Some(obj2);
+        self._obj3 = Some(obj3);
+        Ok(())
     }
 
     fn update(&mut self) -> Result<(), WidgetError> {
@@ -50,4 +55,4 @@ impl View for Flex3 {
     }
 }
 
-oxivgl_examples_common::example_main!(Flex3);
+oxivgl_examples_common::example_main!(Flex3::default());

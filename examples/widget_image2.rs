@@ -11,31 +11,31 @@
 use oxivgl::{
     style::{color_make, palette_main, Palette, Selector},
     view::View,
-    widgets::{Align, Image, Part, Screen, Slider, WidgetError},
+    widgets::{Obj, Align, Image, Part, Slider, WidgetError},
 };
 
 oxivgl::image_declare!(img_cogwheel_argb);
 
+#[derive(Default)]
 struct WidgetImage2 {
-    slider_r: Slider<'static>,
-    slider_g: Slider<'static>,
-    slider_b: Slider<'static>,
-    slider_i: Slider<'static>,
-    img: Image<'static>,
+    slider_r: Option<Slider<'static>>,
+    slider_g: Option<Slider<'static>>,
+    slider_b: Option<Slider<'static>>,
+    slider_i: Option<Slider<'static>>,
+    img: Option<Image<'static>>,
 }
 
 impl View for WidgetImage2 {
-    fn create() -> Result<Self, WidgetError> {
-        let screen = Screen::active().ok_or(WidgetError::LvglNullPointer)?;
+    fn create(&mut self, container: &Obj<'static>) -> Result<(), WidgetError> {
 
         // Create image on the right side
-        let img = Image::new(&screen)?;
+        let img = Image::new(container)?;
         img.set_src(img_cogwheel_argb());
         img.align(Align::RightMid, -80, 0);
 
         // Helper to create a vertical slider
         let make_slider =
-            |parent: &Screen, x: i32, initial: i32| -> Result<Slider<'static>, WidgetError> {
+            |parent: &Obj<'static>, x: i32, initial: i32| -> Result<Slider<'static>, WidgetError> {
                 let s = Slider::new(parent)?;
                 s.set_range(0, 255);
                 s.set_value(initial);
@@ -44,38 +44,40 @@ impl View for WidgetImage2 {
                 Ok(s)
             };
 
-        let slider_r = make_slider(&screen, 20, 51)?;
+        let slider_r = make_slider(container, 20, 51)?;
         slider_r.style_bg_color(palette_main(Palette::Red), Part::Knob);
 
-        let slider_g = make_slider(&screen, 50, 230)?;
+        let slider_g = make_slider(container, 50, 230)?;
         slider_g.style_bg_color(palette_main(Palette::Green), Part::Knob);
 
-        let slider_b = make_slider(&screen, 80, 153)?;
+        let slider_b = make_slider(container, 80, 153)?;
         slider_b.style_bg_color(palette_main(Palette::Blue), Part::Knob);
 
-        let slider_i = make_slider(&screen, 110, 128)?;
+        let slider_i = make_slider(container, 110, 128)?;
 
-        Ok(Self {
-            slider_r,
-            slider_g,
-            slider_b,
-            slider_i,
-            img,
-        })
+                self.slider_r = Some(slider_r);
+        self.slider_g = Some(slider_g);
+        self.slider_b = Some(slider_b);
+        self.slider_i = Some(slider_i);
+        self.img = Some(img);
+        Ok(())
     }
 
     fn update(&mut self) -> Result<(), WidgetError> {
-        let r = self.slider_r.get_value() as u8;
-        let g = self.slider_g.get_value() as u8;
-        let b = self.slider_b.get_value() as u8;
-        let intense = self.slider_i.get_value() as u8;
+        if let (Some(sr), Some(sg), Some(sb), Some(si), Some(img)) = (
+            &self.slider_r, &self.slider_g, &self.slider_b, &self.slider_i, &self.img,
+        ) {
+            let r = sr.get_value() as u8;
+            let g = sg.get_value() as u8;
+            let b = sb.get_value() as u8;
+            let intense = si.get_value() as u8;
 
-        let color = color_make(r, g, b);
-        self.img
-            .style_image_recolor(color, Selector::DEFAULT)
-            .style_image_recolor_opa(intense, Selector::DEFAULT);
+            let color = color_make(r, g, b);
+            img.style_image_recolor(color, Selector::DEFAULT)
+                .style_image_recolor_opa(intense, Selector::DEFAULT);
+        }
         Ok(())
     }
 }
 
-oxivgl_examples_common::example_main!(WidgetImage2);
+oxivgl_examples_common::example_main!(WidgetImage2::default());

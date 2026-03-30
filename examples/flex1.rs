@@ -10,25 +10,25 @@ use oxivgl::{
     style::{lv_pct, LV_SIZE_CONTENT},
     view::View,
     layout::FlexFlow,
-    widgets::{Align, Button, Label, Obj, Screen, WidgetError},
+    widgets::{Align, Button, Label, Obj, WidgetError},
 };
 
+#[derive(Default)]
 struct Flex1 {
-    _cont_row: Obj<'static>,
-    _cont_col: Obj<'static>,
+    _cont_row: Option<Obj<'static>>,
+    _cont_col: Option<Obj<'static>>,
     _buttons: heapless::Vec<Button<'static>, 20>,
     _labels: heapless::Vec<Label<'static>, 20>,
 }
 
 impl View for Flex1 {
-    fn create() -> Result<Self, WidgetError> {
-        let screen = Screen::active().ok_or(WidgetError::LvglNullPointer)?;
+    fn create(&mut self, container: &Obj<'static>) -> Result<(), WidgetError> {
 
-        let cont_row = Obj::new(&screen)?;
+        let cont_row = Obj::new(container)?;
         cont_row.size(300, 75).align(Align::TopMid, 0, 5);
         cont_row.set_flex_flow(FlexFlow::Row);
 
-        let cont_col = Obj::new(&screen)?;
+        let cont_col = Obj::new(container)?;
         cont_col.size(200, 150);
         cont_col.align_to(&cont_row, Align::OutBottomMid, 0, 5);
         cont_col.set_flex_flow(FlexFlow::Column);
@@ -57,12 +57,11 @@ impl View for Flex1 {
             let _ = labels.push(lbl);
         }
 
-        Ok(Self {
-            _cont_row: cont_row,
-            _cont_col: cont_col,
-            _buttons: buttons,
-            _labels: labels,
-        })
+                self._cont_row = Some(cont_row);
+        self._cont_col = Some(cont_col);
+        self._buttons = buttons;
+        self._labels = labels;
+        Ok(())
     }
 
     fn update(&mut self) -> Result<(), WidgetError> {
@@ -70,4 +69,4 @@ impl View for Flex1 {
     }
 }
 
-oxivgl_examples_common::example_main!(Flex1);
+oxivgl_examples_common::example_main!(Flex1::default());

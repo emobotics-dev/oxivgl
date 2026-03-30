@@ -15,24 +15,24 @@ use oxivgl::{
     event::Event,
     timer::Timer,
     view::View,
-    widgets::{Label, Screen, Switch, WidgetError},
+    widgets::{Obj, Label, Switch, WidgetError},
 };
 
+#[derive(Default)]
 struct Anim4 {
-    label: Label<'static>,
-    sw: Switch<'static>,
-    pause_timer: Timer,
+    label: Option<Label<'static>>,
+    sw: Option<Switch<'static>>,
+    pause_timer: Option<Timer>,
     anim_handle: Option<AnimHandle>,
 }
 
 impl View for Anim4 {
-    fn create() -> Result<Self, WidgetError> {
-        let screen = Screen::active().ok_or(WidgetError::LvglNullPointer)?;
+    fn create(&mut self, container: &Obj<'static>) -> Result<(), WidgetError> {
 
-        let label = Label::new(&screen)?;
+        let label = Label::new(container)?;
         label.text("Hello animations!").pos(0, 10);
 
-        let sw = Switch::new(&screen)?;
+        let sw = Switch::new(container)?;
         sw.center();
         sw.add_state(ObjState::CHECKED);
         sw.bubble_events();
@@ -48,50 +48,57 @@ impl View for Anim4 {
             .set_duration(500)
             .set_exec_cb(Some(anim_set_x))
             .set_path_cb(Some(anim_path_overshoot));
-        let anim_handle = Some(a.start());
+        let anim_handle = a.start();
 
-        Ok(Self {
-            label,
-            sw,
-            pause_timer,
-            anim_handle,
-        })
+        self.label = Some(label);
+        self.sw = Some(sw);
+        self.pause_timer = Some(pause_timer);
+        self.anim_handle = Some(anim_handle);
+        Ok(())
     }
 
     fn on_event(&mut self, event: &Event) {
-        if event.matches(&self.sw, EventCode::VALUE_CHANGED) {
-            let checked = self.sw.has_state(ObjState::CHECKED);
+        if let Some(ref sw) = self.sw {
+            if event.matches(sw, EventCode::VALUE_CHANGED) {
+                let checked = sw.has_state(ObjState::CHECKED);
 
-            let mut a = Anim::new();
-            a.set_var(&self.label)
-                .set_duration(500)
-                .set_exec_cb(Some(anim_set_x));
+                if let Some(ref label) = self.label {
+                    let mut a = Anim::new();
+                    a.set_var(label)
+                        .set_duration(500)
+                        .set_exec_cb(Some(anim_set_x));
 
-            if checked {
-                a.set_values(self.label.get_x(), 100)
-                    .set_path_cb(Some(anim_path_overshoot));
-            } else {
-                a.set_values(self.label.get_x(), -self.label.get_width())
-                    .set_path_cb(Some(anim_path_ease_in));
+                    if checked {
+                        a.set_values(label.get_x(), 100)
+                            .set_path_cb(Some(anim_path_overshoot));
+                    } else {
+                        a.set_values(label.get_x(), -label.get_width())
+                            .set_path_cb(Some(anim_path_ease_in));
+                    }
+
+                    self.anim_handle = Some(a.start());
+                }
+
+                // Arm the one-shot 200 ms timer.
+                if let Some(ref pause_timer) = self.pause_timer {
+                    pause_timer.resume().ready();
+                }
             }
-
-            self.anim_handle = Some(a.start());
-
-            // Arm the one-shot 200 ms timer.
-            self.pause_timer.resume().ready();
         }
     }
 
     fn update(&mut self) -> Result<(), WidgetError> {
-        if self.pause_timer.triggered() {
-            if let Some(ref handle) = self.anim_handle {
-                // SAFETY: timer fires at 200ms, animation duration is 500ms,
-                // so the animation is guaranteed to still be running.
-                unsafe { handle.pause_for(1000) };
+        if let Some(ref pause_timer) = self.pause_timer {
+            if pause_timer.triggered() {
+                if let Some(ref handle) = self.anim_handle {
+                    // SAFETY: timer fires at 200ms, animation duration is 500ms,
+                    // so the animation is guaranteed to still be running.
+                    unsafe { handle.pause_for(1000) };
+                }
             }
         }
         Ok(())
     }
 }
 
-oxivgl_examples_common::example_main!(Anim4);
+oxivgl_examples_common::example_main!(Anim4::default());

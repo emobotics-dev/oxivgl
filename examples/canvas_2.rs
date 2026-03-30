@@ -10,19 +10,19 @@ use oxivgl::{
     draw_buf::{ColorFormat, DrawBuf},
     style::color_make,
     view::View,
-    widgets::{Align, Canvas, Screen, WidgetError},
+    widgets::{Obj, Align, Canvas, WidgetError},
 };
 
+#[derive(Default)]
 struct Canvas2 {
-    _canvas: Canvas<'static>,
+    _canvas: Option<Canvas<'static>>,
 }
 
 impl View for Canvas2 {
-    fn create() -> Result<Self, WidgetError> {
-        let screen = Screen::active().ok_or(WidgetError::LvglNullPointer)?;
+    fn create(&mut self, container: &Obj<'static>) -> Result<(), WidgetError> {
         let buf = DrawBuf::create(80, 60, ColorFormat::RGB565)
             .ok_or(WidgetError::LvglNullPointer)?;
-        let canvas = Canvas::new(&screen, buf)?;
+        let canvas = Canvas::new(container, buf)?;
         canvas.fill_bg(color_make(0, 0, 196), 255);
         for y in 10..20_i32 {
             for x in 0..80_i32 {
@@ -40,7 +40,8 @@ impl View for Canvas2 {
             }
         }
         canvas.align(Align::Center, 0, 0);
-        Ok(Self { _canvas: canvas })
+                self._canvas = Some(canvas);
+        Ok(())
     }
 
     fn update(&mut self) -> Result<(), WidgetError> {
@@ -48,4 +49,4 @@ impl View for Canvas2 {
     }
 }
 
-oxivgl_examples_common::example_main!(Canvas2);
+oxivgl_examples_common::example_main!(Canvas2::default());

@@ -13,18 +13,18 @@ use oxivgl::{
     anim::{anim_set_arc_value, Anim, ANIM_REPEAT_INFINITE},
     view::View,
     enums::{ObjFlag, Opa},
-    widgets::{Arc, Part, Screen, WidgetError},
+    widgets::{Obj, Arc, Part, WidgetError},
 };
 
+#[derive(Default)]
 struct WidgetArc2 {
-    _arc: Arc<'static>,
+    _arc: Option<Arc<'static>>,
 }
 
 impl View for WidgetArc2 {
-    fn create() -> Result<Self, WidgetError> {
-        let screen = Screen::active().ok_or(WidgetError::LvglNullPointer)?;
+    fn create(&mut self, container: &Obj<'static>) -> Result<(), WidgetError> {
 
-        let arc = Arc::new(&screen)?;
+        let arc = Arc::new(container)?;
         arc.set_rotation(270);
         arc.set_bg_angles(0, 360);
         arc.set_range_raw(0, 100);
@@ -45,7 +45,8 @@ impl View for WidgetArc2 {
             .set_repeat_delay(500)
             .start();
 
-        Ok(Self { _arc: arc })
+                self._arc = Some(arc);
+        Ok(())
     }
 
     fn update(&mut self) -> Result<(), WidgetError> {
@@ -53,4 +54,4 @@ impl View for WidgetArc2 {
     }
 }
 
-oxivgl_examples_common::example_main!(WidgetArc2);
+oxivgl_examples_common::example_main!(WidgetArc2::default());

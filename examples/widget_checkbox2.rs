@@ -17,29 +17,29 @@ use oxivgl::{
     enums::{EventCode, ObjState},
     event::Event,
     layout::{FlexAlign, FlexFlow},
-    widgets::{Checkbox, Label, Obj, Screen, WidgetError},
+    widgets::{Checkbox, Label, Obj, WidgetError},
 };
 
+#[derive(Default)]
 struct WidgetCheckbox2 {
-    group1: Obj<'static>,
-    group2: Obj<'static>,
-    _checkboxes: Vec<Checkbox<'static>>,
-    _label: Label<'static>,
+    group1: Option<Obj<'static>>,
+    group2: Option<Obj<'static>>,
+    _checkboxes: Option<Vec<Checkbox<'static>>>,
+    _label: Option<Label<'static>>,
 }
 
 impl View for WidgetCheckbox2 {
-    fn create() -> Result<Self, WidgetError> {
-        let screen = Screen::active().ok_or(WidgetError::LvglNullPointer)?;
-        screen.set_flex_flow(FlexFlow::Column);
-        screen.set_flex_align(FlexAlign::Center, FlexAlign::Start, FlexAlign::Center);
+    fn create(&mut self, container: &Obj<'static>) -> Result<(), WidgetError> {
+        container.set_flex_flow(FlexFlow::Column);
+        container.set_flex_align(FlexAlign::Center, FlexAlign::Start, FlexAlign::Center);
 
-        let label = Label::new(&screen)?;
+        let label = Label::new(container)?;
         label.text("Selected: none");
 
         let mut checkboxes = Vec::new();
 
         // Group 1
-        let group1 = Obj::new(&screen)?;
+        let group1 = Obj::new(container)?;
         group1.set_flex_flow(FlexFlow::Column);
 
         let titles1 = ["A1", "A2", "A3"];
@@ -54,7 +54,7 @@ impl View for WidgetCheckbox2 {
         }
 
         // Group 2
-        let group2 = Obj::new(&screen)?;
+        let group2 = Obj::new(container)?;
         group2.set_flex_flow(FlexFlow::Column);
 
         let titles2 = ["B1", "B2", "B3"];
@@ -65,17 +65,20 @@ impl View for WidgetCheckbox2 {
             checkboxes.push(cb);
         }
 
-        Ok(Self {
-            group1,
-            group2,
-            _checkboxes: checkboxes,
-            _label: label,
-        })
+                self.group1 = Some(group1);
+        self.group2 = Some(group2);
+        self._checkboxes = Some(checkboxes);
+        self._label = Some(label);
+        Ok(())
     }
 
     fn register_events(&mut self) {
-        register_event_on(self, self.group1.handle());
-        register_event_on(self, self.group2.handle());
+        if let Some(ref g) = self.group1 {
+            register_event_on(self, g.handle());
+        }
+        if let Some(ref g) = self.group2 {
+            register_event_on(self, g.handle());
+        }
     }
 
     fn on_event(&mut self, event: &Event) {
@@ -91,16 +94,19 @@ impl View for WidgetCheckbox2 {
         }
 
         // Uncheck all children, check only the clicked one
-        let cont_obj = if container == self.group1.handle() {
+        let g1_handle = self.group1.as_ref().map(|g| g.handle());
+        let cont_obj = if Some(container) == g1_handle {
             &self.group1
         } else {
             &self.group2
         };
 
-        let count = cont_obj.get_child_count();
-        for i in 0..count as i32 {
-            if let Some(child) = cont_obj.get_child(i) {
-                child.remove_state(ObjState::CHECKED);
+        if let Some(obj) = cont_obj {
+            let count = obj.get_child_count();
+            for i in 0..count as i32 {
+                if let Some(child) = obj.get_child(i) {
+                    child.remove_state(ObjState::CHECKED);
+                }
             }
         }
 
@@ -114,4 +120,4 @@ impl View for WidgetCheckbox2 {
     }
 }
 
-oxivgl_examples_common::example_main!(WidgetCheckbox2);
+oxivgl_examples_common::example_main!(WidgetCheckbox2::default());

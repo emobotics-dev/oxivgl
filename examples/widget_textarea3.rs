@@ -14,48 +14,54 @@ use oxivgl::{
     enums::EventCode,
     event::Event,
     view::{register_event_on, View},
-    widgets::{Keyboard, KeyboardMode, Screen, Textarea, WidgetError},
+    widgets::{Obj, Keyboard, KeyboardMode, Textarea, WidgetError},
 };
 
+#[derive(Default)]
 struct WidgetTextarea3 {
-    ta: Textarea<'static>,
-    _kb: Keyboard<'static>,
+    ta: Option<Textarea<'static>>,
+    _kb: Option<Keyboard<'static>>,
 }
 
 impl View for WidgetTextarea3 {
-    fn create() -> Result<Self, WidgetError> {
-        let screen = Screen::active().ok_or(WidgetError::LvglNullPointer)?;
+    fn create(&mut self, container: &Obj<'static>) -> Result<(), WidgetError> {
 
-        let ta = Textarea::new(&screen)?;
+        let ta = Textarea::new(container)?;
         ta.set_accepted_chars(c"0123456789:");
         ta.set_max_length(5);
         ta.set_one_line(true);
         ta.set_text("");
         ta.bubble_events();
 
-        let kb = Keyboard::new(&screen)?;
+        let kb = Keyboard::new(container)?;
         kb.size(320, 120);
         kb.set_mode(KeyboardMode::Number);
         kb.set_textarea(&ta);
 
-        Ok(Self { ta, _kb: kb })
+                self.ta = Some(ta);
+        self._kb = Some(kb);
+        Ok(())
     }
 
     fn register_events(&mut self) {
-        register_event_on(self, self.ta.handle());
+        if let Some(ref ta) = self.ta {
+            register_event_on(self, ta.handle());
+        }
     }
 
     fn on_event(&mut self, event: &Event) {
-        if event.matches(&self.ta, EventCode::VALUE_CHANGED) {
-            if let Some(txt) = self.ta.get_text() {
-                let bytes = txt.as_bytes();
-                if bytes.len() >= 2
-                    && bytes[0].is_ascii_digit()
-                    && bytes[1].is_ascii_digit()
-                    && bytes.get(2).copied() != Some(b':')
-                {
-                    self.ta.set_cursor_pos(2);
-                    self.ta.add_char(':');
+        if let Some(ref ta) = self.ta {
+            if event.matches(ta, EventCode::VALUE_CHANGED) {
+                if let Some(txt) = ta.get_text() {
+                    let bytes = txt.as_bytes();
+                    if bytes.len() >= 2
+                        && bytes[0].is_ascii_digit()
+                        && bytes[1].is_ascii_digit()
+                        && bytes.get(2).copied() != Some(b':')
+                    {
+                        ta.set_cursor_pos(2);
+                        ta.add_char(':');
+                    }
                 }
             }
         }
@@ -66,4 +72,4 @@ impl View for WidgetTextarea3 {
     }
 }
 
-oxivgl_examples_common::example_main!(WidgetTextarea3);
+oxivgl_examples_common::example_main!(WidgetTextarea3::default());

@@ -12,18 +12,19 @@
 use oxivgl::{
     style::{GradDsc, Selector, Style, StyleBuilder, color_make, lv_pct},
     view::View,
-    widgets::{Align, Button, Obj, Screen, WidgetError},
+    widgets::{Align, Button, Obj, WidgetError},
 };
 
+#[derive(Default)]
 struct Grad1 {
-    _obj: Obj<'static>,
-    _bullet1: Button<'static>,
-    _bullet2: Button<'static>,
-    _style: Style, // last — drop after widgets that reference it
+    _obj: Option<Obj<'static>>,
+    _bullet1: Option<Button<'static>>,
+    _bullet2: Option<Button<'static>>,
+    _style: Option<Style>, // last — drop after widgets that reference it
 }
 
 impl View for Grad1 {
-    fn create() -> Result<Self, WidgetError> {
+    fn create(&mut self, container: &Obj<'static>) -> Result<(), WidgetError> {
         let colors = [color_make(0xff, 0, 0), color_make(0, 0xff, 0)];
         let opas = [255u8, 0];
         let fracs = [(20u16 * 255 / 100) as u8, (80u16 * 255 / 100) as u8];
@@ -39,9 +40,7 @@ impl View for Grad1 {
             .pad_all(0)
             .radius(12);
         let style = style.build();
-
-        let screen = Screen::active().ok_or(WidgetError::LvglNullPointer)?;
-        let obj = Obj::new(&screen)?;
+        let obj = Obj::new(container)?;
         obj.size(lv_pct(80), lv_pct(80)).center();
         obj.add_style(&style, Selector::DEFAULT);
 
@@ -59,12 +58,11 @@ impl View for Grad1 {
             .align(Align::TopLeft, lv_pct(80), lv_pct(50));
         bullet2.bg_color(0xffff00).bg_opa(255);
 
-        Ok(Self {
-            _style: style,
-            _obj: obj,
-            _bullet1: bullet1,
-            _bullet2: bullet2,
-        })
+                self._style = Some(style);
+        self._obj = Some(obj);
+        self._bullet1 = Some(bullet1);
+        self._bullet2 = Some(bullet2);
+        Ok(())
     }
 
     fn update(&mut self) -> Result<(), WidgetError> {
@@ -72,4 +70,4 @@ impl View for Grad1 {
     }
 }
 
-oxivgl_examples_common::example_main!(Grad1);
+oxivgl_examples_common::example_main!(Grad1::default());

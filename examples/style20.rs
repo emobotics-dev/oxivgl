@@ -12,33 +12,33 @@
 use oxivgl::{
     style::Selector,
     view::View,
-    widgets::{Align, Button, Label, Obj, Screen, WidgetError},
+    widgets::{Align, Button, Label, Obj, WidgetError},
 };
 
+#[derive(Default)]
 struct Style20 {
-    _btn1: Button<'static>,
-    _btn2: Button<'static>,
-    _lbl1: Label<'static>,
-    _lbl2: Label<'static>,
-    _overlay: Obj<'static>,
-    _overlay_label: Label<'static>,
+    _btn1: Option<Button<'static>>,
+    _btn2: Option<Button<'static>>,
+    _lbl1: Option<Label<'static>>,
+    _lbl2: Option<Label<'static>>,
+    _overlay: Option<Obj<'static>>,
+    _overlay_label: Option<Label<'static>>,
 }
 
 impl View for Style20 {
-    fn create() -> Result<Self, WidgetError> {
-        let screen = Screen::active().ok_or(WidgetError::LvglNullPointer)?;
-        screen.bg_color(0xffffff);
-        screen.bg_opa(255);
+    fn create(&mut self, container: &Obj<'static>) -> Result<(), WidgetError> {
+        container.bg_color(0xffffff);
+        container.bg_opa(255);
 
         // Two buttons
-        let btn1 = Button::new(&screen)?;
+        let btn1 = Button::new(container)?;
         btn1.size(120, 50);
         btn1.align(Align::Center, -70, 0);
         let lbl1 = Label::new(&btn1)?;
         lbl1.text("BG Dim");
         lbl1.center();
 
-        let btn2 = Button::new(&screen)?;
+        let btn2 = Button::new(container)?;
         btn2.size(120, 50);
         btn2.align(Align::Center, 70, 0);
         let lbl2 = Label::new(&btn2)?;
@@ -46,7 +46,7 @@ impl View for Style20 {
         lbl2.center();
 
         // Full-screen overlay (visible for screenshot)
-        let overlay = Obj::new(&screen)?;
+        let overlay = Obj::new(container)?;
         overlay.size(320, 240);
         overlay.align(Align::Center, 0, 0);
         overlay.bg_color(0x000000);
@@ -59,14 +59,13 @@ impl View for Style20 {
         overlay_label.center();
         overlay_label.text_color(0xffffff);
 
-        Ok(Self {
-            _btn1: btn1,
-            _btn2: btn2,
-            _lbl1: lbl1,
-            _lbl2: lbl2,
-            _overlay: overlay,
-            _overlay_label: overlay_label,
-        })
+                self._btn1 = Some(btn1);
+        self._btn2 = Some(btn2);
+        self._lbl1 = Some(lbl1);
+        self._lbl2 = Some(lbl2);
+        self._overlay = Some(overlay);
+        self._overlay_label = Some(overlay_label);
+        Ok(())
     }
 
     fn update(&mut self) -> Result<(), WidgetError> {
@@ -74,4 +73,4 @@ impl View for Style20 {
     }
 }
 
-oxivgl_examples_common::example_main!(Style20);
+oxivgl_examples_common::example_main!(Style20::default());

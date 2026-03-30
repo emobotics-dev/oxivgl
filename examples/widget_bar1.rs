@@ -10,23 +10,24 @@
 
 use oxivgl::{
     view::View,
-    widgets::{Bar, Screen, WidgetError},
+    widgets::{Obj, Bar, WidgetError},
 };
 
+#[derive(Default)]
 struct WidgetBar1 {
-    _bar: Bar<'static>,
+    _bar: Option<Bar<'static>>,
 }
 
 impl View for WidgetBar1 {
-    fn create() -> Result<Self, WidgetError> {
-        let screen = Screen::active().ok_or(WidgetError::LvglNullPointer)?;
+    fn create(&mut self, container: &Obj<'static>) -> Result<(), WidgetError> {
 
-        let bar = Bar::new(&screen)?;
+        let bar = Bar::new(container)?;
         bar.size(200, 20).center();
         bar.set_range_raw(0, 100);
         bar.set_value_raw(70, false);
 
-        Ok(Self { _bar: bar })
+                self._bar = Some(bar);
+        Ok(())
     }
 
     fn update(&mut self) -> Result<(), WidgetError> {
@@ -34,4 +35,4 @@ impl View for WidgetBar1 {
     }
 }
 
-oxivgl_examples_common::example_main!(WidgetBar1);
+oxivgl_examples_common::example_main!(WidgetBar1::default());

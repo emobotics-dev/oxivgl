@@ -8,28 +8,27 @@
 
 use oxivgl::{
     view::View,
-    widgets::{Button, Label, Screen, WidgetError},
+    widgets::{Obj, Button, Label, WidgetError},
 };
 
+#[derive(Default)]
 struct GettingStarted2 {
-    _btn: Button<'static>,
-    _label: Label<'static>,
+    _btn: Option<Button<'static>>,
+    _label: Option<Label<'static>>,
 }
 
 impl View for GettingStarted2 {
-    fn create() -> Result<Self, WidgetError> {
-        let screen = Screen::active().ok_or(WidgetError::LvglNullPointer)?;
+    fn create(&mut self, container: &Obj<'static>) -> Result<(), WidgetError> {
 
-        let btn = Button::new(&screen)?;
+        let btn = Button::new(container)?;
         btn.pos(10, 10).size(120, 50);
 
         let label = Label::new(&btn)?;
         label.text("Button").center();
 
-        Ok(Self {
-            _btn: btn,
-            _label: label,
-        })
+                self._btn = Some(btn);
+        self._label = Some(label);
+        Ok(())
     }
 
     fn update(&mut self) -> Result<(), WidgetError> {
@@ -37,4 +36,4 @@ impl View for GettingStarted2 {
     }
 }
 
-oxivgl_examples_common::example_main!(GettingStarted2);
+oxivgl_examples_common::example_main!(GettingStarted2::default());

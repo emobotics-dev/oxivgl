@@ -11,18 +11,18 @@
 use oxivgl::{
     style::lv_pct,
     view::View,
-    widgets::{Part, Scale, ScaleMode, Screen, WidgetError},
+    widgets::{Obj, Part, Scale, ScaleMode, WidgetError},
 };
 
+#[derive(Default)]
 struct WidgetScale2 {
-    _scale: Scale<'static>,
+    _scale: Option<Scale<'static>>,
 }
 
 impl View for WidgetScale2 {
-    fn create() -> Result<Self, WidgetError> {
-        let screen = Screen::active().ok_or(WidgetError::LvglNullPointer)?;
+    fn create(&mut self, container: &Obj<'static>) -> Result<(), WidgetError> {
 
-        let scale = Scale::new(&screen)?;
+        let scale = Scale::new(container)?;
         scale.size(lv_pct(80), 100).center();
         scale
             .set_mode(ScaleMode::HorizontalBottom)
@@ -33,7 +33,8 @@ impl View for WidgetScale2 {
             .set_tick_length(Part::Indicator, 10)
             .set_range(10, 40);
 
-        Ok(Self { _scale: scale })
+                self._scale = Some(scale);
+        Ok(())
     }
 
     fn update(&mut self) -> Result<(), WidgetError> {
@@ -41,4 +42,4 @@ impl View for WidgetScale2 {
     }
 }
 
-oxivgl_examples_common::example_main!(WidgetScale2);
+oxivgl_examples_common::example_main!(WidgetScale2::default());

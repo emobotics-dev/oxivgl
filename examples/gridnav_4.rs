@@ -18,23 +18,22 @@ use oxivgl::{
     style::lv_pct,
     symbols,
     view::{View, register_event_on},
-    widgets::{Align, Button, Label, List, Screen, WidgetError},
+    widgets::{Obj, Align, Button, Label, List, WidgetError},
 };
 
+#[derive(Default)]
 struct Gridnav4 {
-    _screen: Screen,
-    _group: Group,
-    list: List<'static>,
-    _btn: Button<'static>,
-    _btn_label: Label<'static>,
+    _group: Option<Group>,
+    list: Option<List<'static>>,
+    _btn: Option<Button<'static>>,
+    _btn_label: Option<Label<'static>>,
 }
 
 impl View for Gridnav4 {
-    fn create() -> Result<Self, WidgetError> {
-        let screen = Screen::active().ok_or(WidgetError::LvglNullPointer)?;
+    fn create(&mut self, container: &Obj<'static>) -> Result<(), WidgetError> {
 
         // ── List with section separators ──────────────────────────────────
-        let list = List::new(&screen)?;
+        let list = List::new(container)?;
         list.size(lv_pct(60), lv_pct(90))
             .align(Align::LeftMid, 10, 0);
 
@@ -58,7 +57,7 @@ impl View for Gridnav4 {
         }
 
         // ── Standalone button to the right ────────────────────────────────
-        let btn = Button::new(&screen)?;
+        let btn = Button::new(container)?;
         btn.align(Align::RightMid, -10, 0);
 
         let btn_label = Label::new(&btn)?;
@@ -71,17 +70,17 @@ impl View for Gridnav4 {
         group.add_obj(&btn);
         group.assign_to_keyboard_indevs();
 
-        Ok(Self {
-            _screen: screen,
-            _group: group,
-            list,
-            _btn: btn,
-            _btn_label: btn_label,
-        })
+        self._group = Some(group);
+        self.list = Some(list);
+        self._btn = Some(btn);
+        self._btn_label = Some(btn_label);
+        Ok(())
     }
 
     fn register_events(&mut self) {
-        register_event_on(self, self.list.handle());
+        if let Some(ref list) = self.list {
+            register_event_on(self, list.handle());
+        }
     }
 
     fn on_event(&mut self, event: &Event) {
@@ -89,12 +88,13 @@ impl View for Gridnav4 {
             return;
         }
         let target = event.target();
-        // Skip if the list container itself was clicked (not an item).
-        if target.handle() == self.list.handle() {
-            return;
-        }
-        if let Some(text) = self.list.get_button_text(&target) {
-            oxivgl_examples_common::log::info!("Clicked: {}", text);
+        if let Some(ref list) = self.list {
+            if target.handle() == list.handle() {
+                return;
+            }
+            if let Some(text) = list.get_button_text(&target) {
+                oxivgl_examples_common::log::info!("Clicked: {}", text);
+            }
         }
     }
 
@@ -125,7 +125,13 @@ fn main() {
             .keyboard(true)
             .build()
     };
-    let mut _view = Gridnav4::create().expect("view create failed");
+
+    let mut _view = Gridnav4::default();
+    let screen_handle = unsafe { oxivgl_sys::lv_screen_active() };
+    assert!(!screen_handle.is_null(), "no active screen");
+    let container = oxivgl::widgets::Obj::from_raw(screen_handle);
+    _view.create(&container).expect("view create failed");
+    core::mem::forget(container);
     register_view_events(&mut _view);
 
     let src = file!();

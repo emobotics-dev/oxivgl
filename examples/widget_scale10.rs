@@ -15,23 +15,23 @@ use oxivgl::{
     view::View,
     enums::Opa,
     timer::Timer,
-    widgets::{Align, Label, Line, Part, Scale, ScaleMode, Screen, WidgetError, RADIUS_MAX},
+    widgets::{Obj, Align, Label, Line, Part, Scale, ScaleMode, WidgetError, RADIUS_MAX},
 };
 
+#[derive(Default)]
 struct WidgetScale10 {
-    scale: Scale<'static>,
-    needle: Line<'static>,
-    label: Label<'static>,
-    timer: Timer,
+    scale: Option<Scale<'static>>,
+    needle: Option<Line<'static>>,
+    label: Option<Label<'static>>,
+    timer: Option<Timer>,
     hr: i32,
     ascending: bool,
 }
 
 impl View for WidgetScale10 {
-    fn create() -> Result<Self, WidgetError> {
-        let screen = Screen::active().ok_or(WidgetError::LvglNullPointer)?;
+    fn create(&mut self, container: &Obj<'static>) -> Result<(), WidgetError> {
 
-        let scale = Scale::new(&screen)?;
+        let scale = Scale::new(container)?;
         scale.size(200, 200).center();
         scale
             .set_mode(ScaleMode::RoundInner)
@@ -68,18 +68,18 @@ impl View for WidgetScale10 {
 
         let timer = Timer::new(100)?;
 
-        Ok(Self {
-            scale,
-            needle,
-            label,
-            timer,
-            hr: 98,
-            ascending: true,
-        })
+                self.scale = Some(scale);
+        self.needle = Some(needle);
+        self.label = Some(label);
+        self.timer = Some(timer);
+        self.hr = 98;
+        self.ascending = true;
+        Ok(())
     }
 
     fn update(&mut self) -> Result<(), WidgetError> {
-        if self.timer.triggered() {
+        let triggered = self.timer.as_ref().map_or(false, |t| t.triggered());
+        if triggered {
             if self.ascending {
                 self.hr += 1;
                 if self.hr >= 180 {
@@ -92,14 +92,18 @@ impl View for WidgetScale10 {
                 }
             }
 
-            self.scale.set_line_needle_value(&self.needle, 80, self.hr);
+            if let (Some(scale), Some(needle)) = (&self.scale, &self.needle) {
+                scale.set_line_needle_value(needle, 80, self.hr);
+            }
 
             let mut buf = heapless::String::<16>::new();
             let _ = write!(buf, "{} BPM", self.hr);
-            self.label.text(&buf);
+            if let Some(ref label) = self.label {
+                label.text(&buf);
+            }
         }
         Ok(())
     }
 }
 
-oxivgl_examples_common::example_main!(WidgetScale10);
+oxivgl_examples_common::example_main!(WidgetScale10::default());

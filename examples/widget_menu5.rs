@@ -21,15 +21,16 @@ use oxivgl::{
     symbols,
     view::View,
     widgets::{
-        AsLvHandle, Child, Image, Label, LabelLongMode, Menu, Msgbox, Obj, Part, Screen, Slider,
+        AsLvHandle, Child, Image, Label, LabelLongMode, Menu, Msgbox, Obj, Part, Slider,
         Switch, WidgetError,
     },
 };
 
+#[derive(Default)]
 struct WidgetMenu5 {
-    menu: Menu<'static>,
+    menu: Option<Menu<'static>>,
     /// Tracks whether sidebar mode is active (toggled via the switch).
-    sidebar_enabled: core::cell::Cell<bool>,
+    sidebar_enabled: bool,
 }
 
 /// Create a menu container with an optional icon and text label.
@@ -104,10 +105,9 @@ fn create_switch(parent: &impl AsLvHandle, icon: &symbols::Symbol, txt: &str, ch
 }
 
 impl View for WidgetMenu5 {
-    fn create() -> Result<Self, WidgetError> {
-        let screen = Screen::active().ok_or(WidgetError::LvglNullPointer)?;
+    fn create(&mut self, container: &Obj<'static>) -> Result<(), WidgetError> {
 
-        let menu = Menu::new(&screen)?;
+        let menu = Menu::new(container)?;
 
         // Darken menu background slightly (theme detection)
         let bg = menu.get_style_bg_color(Part::Main);
@@ -216,45 +216,46 @@ impl View for WidgetMenu5 {
             }
         }
 
-        Ok(Self {
-            menu,
-            sidebar_enabled: core::cell::Cell::new(true),
-        })
+        self.menu = Some(menu);
+        self.sidebar_enabled = true;
+        Ok(())
     }
 
     fn on_event(&mut self, event: &Event) {
-        // Root back button → show message box
-        if event.code() == EventCode::CLICKED
-            && self.menu.back_button_is_root(&event.target())
-        {
-            if let Ok(mbox) = Msgbox::new(None::<&Obj<'_>>) {
-                mbox.add_title("Hello");
-                mbox.add_text("Root back btn click.");
-                mbox.add_close_button();
-                core::mem::forget(mbox);
+        if let Some(ref menu) = self.menu {
+            // Root back button → show message box
+            if event.code() == EventCode::CLICKED
+                && menu.back_button_is_root(&event.target())
+            {
+                if let Ok(mbox) = Msgbox::new(None::<&Obj<'_>>) {
+                    mbox.add_title("Hello");
+                    mbox.add_text("Root back btn click.");
+                    mbox.add_close_button();
+                    core::mem::forget(mbox);
+                }
             }
-        }
 
-        // Sidebar toggle switch
-        if event.code() == EventCode::VALUE_CHANGED {
-            let target = event.target();
-            let checked = target.has_state(ObjState::CHECKED);
+            // Sidebar toggle switch
+            if event.code() == EventCode::VALUE_CHANGED {
+                let target = event.target();
+                let checked = target.has_state(ObjState::CHECKED);
 
-            if checked && !self.sidebar_enabled.get() {
-                self.sidebar_enabled.set(true);
-                self.menu.clear_page();
-                // Re-activate sidebar: click first item
-                if let Some(sidebar) = self.menu.get_cur_sidebar_page() {
-                    if let Some(first_section) = sidebar.get_child(0) {
-                        if let Some(first_cont) = first_section.get_child(0) {
-                            first_cont.send_event(EventCode::CLICKED);
+                if checked && !self.sidebar_enabled {
+                    self.sidebar_enabled = true;
+                    menu.clear_page();
+                    // Re-activate sidebar: click first item
+                    if let Some(sidebar) = menu.get_cur_sidebar_page() {
+                        if let Some(first_section) = sidebar.get_child(0) {
+                            if let Some(first_cont) = first_section.get_child(0) {
+                                first_cont.send_event(EventCode::CLICKED);
+                            }
                         }
                     }
+                } else if !checked && self.sidebar_enabled {
+                    self.sidebar_enabled = false;
+                    menu.clear_sidebar();
+                    menu.clear_history();
                 }
-            } else if !checked && self.sidebar_enabled.get() {
-                self.sidebar_enabled.set(false);
-                self.menu.clear_sidebar();
-                self.menu.clear_history();
             }
         }
     }
@@ -264,4 +265,4 @@ impl View for WidgetMenu5 {
     }
 }
 
-oxivgl_examples_common::example_main!(WidgetMenu5);
+oxivgl_examples_common::example_main!(WidgetMenu5::default());

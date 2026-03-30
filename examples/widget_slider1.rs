@@ -10,38 +10,41 @@
 
 use oxivgl::{
     view::View,
-    widgets::{Align, Label, Screen, Slider, WidgetError},
+    widgets::{Obj, Align, Label, Slider, WidgetError},
 };
 
+#[derive(Default)]
 struct WidgetSlider1 {
-    slider: Slider<'static>,
-    label: Label<'static>,
+    slider: Option<Slider<'static>>,
+    label: Option<Label<'static>>,
 }
 
 impl View for WidgetSlider1 {
-    fn create() -> Result<Self, WidgetError> {
-        let screen = Screen::active().ok_or(WidgetError::LvglNullPointer)?;
+    fn create(&mut self, container: &Obj<'static>) -> Result<(), WidgetError> {
 
-        let slider = Slider::new(&screen)?;
+        let slider = Slider::new(container)?;
         slider.center();
 
-        let label = Label::new(&screen)?;
+        let label = Label::new(container)?;
         label.text("0");
         label.align_to(&slider, Align::OutBottomMid, 0, 10);
 
-        Ok(Self { slider, label })
+                self.slider = Some(slider);
+        self.label = Some(label);
+        Ok(())
     }
 
     fn update(&mut self) -> Result<(), WidgetError> {
         use core::fmt::Write;
-        let val = self.slider.get_value();
-        let mut buf = heapless::String::<8>::new();
-        let _ = write!(buf, "{}", val);
-        self.label.text(&buf);
-        self.label
-            .align_to(&self.slider, Align::OutBottomMid, 0, 10);
+        if let (Some(slider), Some(label)) = (&self.slider, &self.label) {
+            let val = slider.get_value();
+            let mut buf = heapless::String::<8>::new();
+            let _ = write!(buf, "{}", val);
+            label.text(&buf);
+            label.align_to(slider, Align::OutBottomMid, 0, 10);
+        }
         Ok(())
     }
 }
 
-oxivgl_examples_common::example_main!(WidgetSlider1);
+oxivgl_examples_common::example_main!(WidgetSlider1::default());

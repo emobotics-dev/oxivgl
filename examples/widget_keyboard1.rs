@@ -14,30 +14,29 @@ use oxivgl::{
     enums::EventCode,
     event::Event,
     view::View,
-    widgets::{Align, Keyboard, Screen, Textarea, WidgetError},
+    widgets::{Obj, Align, Keyboard, Textarea, WidgetError},
 };
 
+#[derive(Default)]
 struct WidgetKeyboard1 {
-    _screen: Screen,
-    ta1: Textarea<'static>,
-    ta2: Textarea<'static>,
-    kb: Keyboard<'static>,
+    ta1: Option<Textarea<'static>>,
+    ta2: Option<Textarea<'static>>,
+    kb: Option<Keyboard<'static>>,
 }
 
 impl View for WidgetKeyboard1 {
-    fn create() -> Result<Self, WidgetError> {
-        let screen = Screen::active().ok_or(WidgetError::LvglNullPointer)?;
+    fn create(&mut self, container: &Obj<'static>) -> Result<(), WidgetError> {
 
-        let kb = Keyboard::new(&screen)?;
+        let kb = Keyboard::new(container)?;
         kb.align(Align::BottomMid, 0, 0);
 
-        let ta1 = Textarea::new(&screen)?;
+        let ta1 = Textarea::new(container)?;
         ta1.size(140, 80);
         ta1.align(Align::TopLeft, 10, 10);
         ta1.set_placeholder_text("Hello");
         ta1.bubble_events();
 
-        let ta2 = Textarea::new(&screen)?;
+        let ta2 = Textarea::new(container)?;
         ta2.size(140, 80);
         ta2.align(Align::TopRight, -10, 10);
         ta2.set_placeholder_text("Hello");
@@ -45,14 +44,21 @@ impl View for WidgetKeyboard1 {
 
         kb.set_textarea(&ta1);
 
-        Ok(Self { _screen: screen, ta1, ta2, kb })
+        self.ta1 = Some(ta1);
+        self.ta2 = Some(ta2);
+        self.kb = Some(kb);
+        Ok(())
     }
 
     fn on_event(&mut self, event: &Event) {
-        if event.matches(&self.ta1, EventCode::FOCUSED) {
-            self.kb.set_textarea(&self.ta1);
-        } else if event.matches(&self.ta2, EventCode::FOCUSED) {
-            self.kb.set_textarea(&self.ta2);
+        if let (Some(kb), Some(ta1), Some(ta2)) =
+            (&self.kb, &self.ta1, &self.ta2)
+        {
+            if event.matches(ta1, EventCode::FOCUSED) {
+                kb.set_textarea(ta1);
+            } else if event.matches(ta2, EventCode::FOCUSED) {
+                kb.set_textarea(ta2);
+            }
         }
     }
 
@@ -61,4 +67,4 @@ impl View for WidgetKeyboard1 {
     }
 }
 
-oxivgl_examples_common::example_main!(WidgetKeyboard1);
+oxivgl_examples_common::example_main!(WidgetKeyboard1::default());

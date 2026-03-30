@@ -16,25 +16,26 @@
 use oxivgl::{
     fonts,
     view::View,
-    widgets::{Align, Calendar, Screen, WidgetError},
+    widgets::{Obj, Align, Calendar, WidgetError},
 };
 
+#[derive(Default)]
 struct Calendar2 {
-    _cal: Calendar<'static>,
+    _cal: Option<Calendar<'static>>,
 }
 
 impl View for Calendar2 {
-    fn create() -> Result<Self, WidgetError> {
-        let screen = Screen::active().ok_or(WidgetError::LvglNullPointer)?;
+    fn create(&mut self, container: &Obj<'static>) -> Result<(), WidgetError> {
 
-        let cal = Calendar::new(&screen)?;
+        let cal = Calendar::new(container)?;
         cal.size(320, 240).align(Align::TopLeft, 0, 0);
         cal.set_today_date(2024, 3, 22)
             .set_month_shown(2024, 3);
         cal.set_chinese_mode(true, fonts::SOURCE_HAN_SANS_SC_14_CJK);
         cal.add_header_dropdown();
 
-        Ok(Self { _cal: cal })
+                self._cal = Some(cal);
+        Ok(())
     }
 
     fn update(&mut self) -> Result<(), WidgetError> {
@@ -42,4 +43,4 @@ impl View for Calendar2 {
     }
 }
 
-oxivgl_examples_common::example_main!(Calendar2);
+oxivgl_examples_common::example_main!(Calendar2::default());
