@@ -10,6 +10,7 @@
 //! current value as text: white inside the indicator when wide, black outside
 //! when the indicator is short.
 
+use oxivgl::view::NavAction;
 use oxivgl::{
     anim::{anim_set_bar_value, Anim, AnimHandle, ANIM_REPEAT_INFINITE},
     draw::{Area, DrawLabelDscOwned},
@@ -61,15 +62,15 @@ impl View for WidgetBar6 {
         }
     }
 
-    fn on_event(&mut self, event: &Event) {
-        let Some(ref bar) = self.bar else { return };
+    fn on_event(&mut self, event: &Event) -> NavAction {
+        let Some(ref bar) = self.bar else { return NavAction::None };
         if !event.matches(bar, EventCode::DRAW_MAIN_END) {
-            return;
+            return NavAction::None;
         }
-        let Some(layer) = event.layer() else { return };
+        let Some(layer) = event.layer() else { return NavAction::None };
         let value = bar.get_value_raw();
         if value == 0 {
-            return;
+            return NavAction::None;
         }
         let mut buf = heapless::String::<8>::new();
         let _ = core::fmt::Write::write_fmt(&mut buf, format_args!("{}", value));
@@ -88,10 +89,11 @@ impl View for WidgetBar6 {
             dsc.set_color(color_make(0, 0, 0));
         }
         layer.draw_label(&dsc, txt_area, &buf);
+        NavAction::None
     }
 
-    fn update(&mut self) -> Result<(), WidgetError> {
-        Ok(())
+    fn update(&mut self) -> Result<NavAction, WidgetError> {
+        Ok(NavAction::None)
     }
 }
 

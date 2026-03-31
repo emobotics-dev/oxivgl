@@ -15,6 +15,7 @@
 //! - A "LOG OUT" button clears the auth state.
 //! - A "START ENGINE" checkable button is two-way bound to `engine_subject`.
 
+use oxivgl::view::NavAction;
 use oxivgl::{
     enums::{EventCode, ObjFlag, ObjState},
     event::Event,
@@ -110,7 +111,7 @@ impl View for Observer2 {
         if let Some(ref btn_logout) = self.btn_logout { register_event_on(self, btn_logout.handle()); }
     }
 
-    fn on_event(&mut self, event: &Event) {
+    fn on_event(&mut self, event: &Event) -> NavAction {
         if let Some(ref ta) = self.ta {
             if event.matches(ta, EventCode::READY) {
                 if ta.get_text() == Some("hello") {
@@ -125,10 +126,11 @@ impl View for Observer2 {
                 if let Some(ref auth) = self.auth_state_subject { auth.set_int(LOGGED_OUT); }
             }
         }
+        NavAction::None
     }
 
-    fn update(&mut self) -> Result<(), WidgetError> {
-        Ok(())
+    fn update(&mut self) -> Result<NavAction, WidgetError> {
+        Ok(NavAction::None)
     }
 }
 

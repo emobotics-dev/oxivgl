@@ -17,7 +17,7 @@ use oxivgl::{
     group::{Group, group_remove_obj},
     layout::FlexFlow,
     style::{LV_SIZE_CONTENT, Palette, lv_pct, palette_lighten},
-    view::View,
+    view::{NavAction, View},
     widgets::{Align, Button, Checkbox, Label, Obj, Switch, Textarea, WidgetError},
 };
 
@@ -129,8 +129,8 @@ impl View for Gridnav1 {
         Ok(())
     }
 
-    fn update(&mut self) -> Result<(), WidgetError> {
-        Ok(())
+    fn update(&mut self) -> Result<NavAction, WidgetError> {
+        Ok(NavAction::None)
     }
 }
 

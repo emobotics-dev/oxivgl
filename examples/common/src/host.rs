@@ -92,7 +92,7 @@ macro_rules! host_main {
             );
 
             // Always capture a screenshot (call update once first for animated views).
-            _view.update().expect("update failed");
+            let _ = _view.update().expect("update failed");
             pump(&driver, 10);
             capture(&driver, name, &dir);
 
@@ -105,7 +105,10 @@ macro_rules! host_main {
 
             // Interactive loop: drive update() at ~30 fps (every 4 × 8 ms).
             loop {
-                _view.update().unwrap_or_else(|e| eprintln!("update: {e:?}"));
+                let _ = _view.update().unwrap_or_else(|e| {
+                    eprintln!("update: {e:?}");
+                    $crate::oxivgl::view::NavAction::None
+                });
                 for _ in 0..4 {
                     driver.timer_handler();
                     std::thread::sleep(std::time::Duration::from_millis(8));

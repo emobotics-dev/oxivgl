@@ -10,7 +10,7 @@
 //! navigates to a sub-page.
 
 use oxivgl::{
-    view::View,
+    view::{NavAction, View},
     widgets::{Label, Menu, Obj, WidgetError},
 };
 
@@ -54,8 +54,8 @@ impl View for WidgetMenu1 {
         Ok(())
     }
 
-    fn update(&mut self) -> Result<(), WidgetError> {
-        Ok(())
+    fn update(&mut self) -> Result<NavAction, WidgetError> {
+        Ok(NavAction::None)
     }
 }
 

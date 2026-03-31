@@ -9,6 +9,7 @@
 //! A button that displays which event was last triggered (PRESSED, CLICKED,
 //! LONG_PRESSED, LONG_PRESSED_REPEAT) in an info label.
 
+use oxivgl::view::NavAction;
 use oxivgl::{
     view::{register_event_on, View},
     enums::EventCode,
@@ -46,7 +47,7 @@ impl View for EventButton {
         if let Some(ref btn) = self.btn { register_event_on(self, btn.handle()); }
     }
 
-    fn on_event(&mut self, event: &Event) {
+    fn on_event(&mut self, event: &Event) -> NavAction {
         let text = match event.code() {
             EventCode::PRESSED => "The last button event:\nLV_EVENT_PRESSED",
             EventCode::CLICKED => "The last button event:\nLV_EVENT_CLICKED",
@@ -54,15 +55,16 @@ impl View for EventButton {
             EventCode::LONG_PRESSED_REPEAT => {
                 "The last button event:\nLV_EVENT_LONG_PRESSED_REPEAT"
             }
-            _ => return,
+            _ => return NavAction::None,
         };
         if let Some(ref info_label) = self.info_label {
             info_label.text(text);
         }
+        NavAction::None
     }
 
-    fn update(&mut self) -> Result<(), WidgetError> {
-        Ok(())
+    fn update(&mut self) -> Result<NavAction, WidgetError> {
+        Ok(NavAction::None)
     }
 }
 

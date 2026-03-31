@@ -9,6 +9,7 @@
 //! A base object that follows the pointer when pressed, using
 //! `Indev::active().get_vect()` to read the movement delta.
 
+use oxivgl::view::NavAction;
 use oxivgl::{
     enums::EventCode,
     event::Event,
@@ -43,7 +44,7 @@ impl View for WidgetObj2 {
         }
     }
 
-    fn on_event(&mut self, event: &Event) {
+    fn on_event(&mut self, event: &Event) -> NavAction {
         if let Some(ref obj) = self.obj {
             if event.matches(obj, EventCode::PRESSING) {
                 if let Some(indev) = Indev::active() {
@@ -54,10 +55,11 @@ impl View for WidgetObj2 {
                 }
             }
         }
+        NavAction::None
     }
 
-    fn update(&mut self) -> Result<(), WidgetError> {
-        Ok(())
+    fn update(&mut self) -> Result<NavAction, WidgetError> {
+        Ok(NavAction::None)
     }
 }
 

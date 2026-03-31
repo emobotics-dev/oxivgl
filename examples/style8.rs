@@ -10,7 +10,7 @@ extern crate alloc;
 
 use oxivgl::{
     style::{palette_lighten, palette_main, Palette, Selector, Style, StyleBuilder, TextDecor},
-    view::View,
+    view::{NavAction, View},
     widgets::{Obj, Label, WidgetError},
 };
 
@@ -47,8 +47,8 @@ impl View for Style8 {
         Ok(())
     }
 
-    fn update(&mut self) -> Result<(), WidgetError> {
-        Ok(())
+    fn update(&mut self) -> Result<NavAction, WidgetError> {
+        Ok(NavAction::None)
     }
 }
 

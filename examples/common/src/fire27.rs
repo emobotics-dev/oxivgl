@@ -204,12 +204,12 @@ macro_rules! fire27_main {
                 self.inner.create(container)
             }
 
-            fn update(&mut self) -> Result<(), $crate::oxivgl::widgets::WidgetError> {
+            fn update(&mut self) -> Result<$crate::oxivgl::view::NavAction, $crate::oxivgl::widgets::WidgetError> {
                 self.inner.update()
             }
 
-            fn on_event(&mut self, event: &$crate::oxivgl::event::Event) {
-                self.inner.on_event(event);
+            fn on_event(&mut self, event: &$crate::oxivgl::event::Event) -> $crate::oxivgl::view::NavAction {
+                self.inner.on_event(event)
             }
 
             fn register_events(&mut self) {

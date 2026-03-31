@@ -15,7 +15,7 @@ use oxivgl::{
         color_make, palette_darken, palette_main, props, Palette, Selector, Style, StyleBuilder,
         TransitionDsc,
     },
-    view::View,
+    view::{NavAction, View},
     enums::ObjState,
     widgets::{Obj, Part, Slider, WidgetError, RADIUS_MAX},
 };
@@ -97,8 +97,8 @@ impl View for WidgetSlider2 {
         Ok(())
     }
 
-    fn update(&mut self) -> Result<(), WidgetError> {
-        Ok(())
+    fn update(&mut self) -> Result<NavAction, WidgetError> {
+        Ok(NavAction::None)
     }
 }
 

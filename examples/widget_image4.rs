@@ -12,7 +12,7 @@ extern crate alloc;
 
 use oxivgl::{
     style::{color_black, palette_main, Palette, Selector, Style, StyleBuilder},
-    view::View,
+    view::{NavAction, View},
     widgets::{Obj, Image, WidgetError},
 };
 
@@ -49,7 +49,7 @@ impl View for WidgetImage4 {
         Ok(())
     }
 
-    fn update(&mut self) -> Result<(), WidgetError> {
+    fn update(&mut self) -> Result<NavAction, WidgetError> {
         self.offset_y += self.direction;
         if self.offset_y >= 100 || self.offset_y <= 0 {
             self.direction = -self.direction;
@@ -57,7 +57,7 @@ impl View for WidgetImage4 {
         if let Some(ref img) = self.img {
             img.set_offset_y(self.offset_y);
         }
-        Ok(())
+        Ok(NavAction::None)
     }
 }
 

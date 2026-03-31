@@ -13,7 +13,7 @@
 use oxivgl::{
     layout::FlexFlow,
     style::Selector,
-    view::View,
+    view::{NavAction, View},
     widgets::{Obj, Child, Label, Msgbox, Slider, WidgetError},
 };
 
@@ -84,8 +84,8 @@ impl View for WidgetMsgbox2 {
         Ok(())
     }
 
-    fn update(&mut self) -> Result<(), WidgetError> {
-        Ok(())
+    fn update(&mut self) -> Result<NavAction, WidgetError> {
+        Ok(NavAction::None)
     }
 }
 

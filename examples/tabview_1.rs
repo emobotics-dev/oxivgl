@@ -10,7 +10,7 @@
 //! view on creation via `scroll_to_view_recursive`.
 
 use oxivgl::{
-    view::View,
+    view::{NavAction, View},
     widgets::{Obj, Label, LabelLongMode, Tabview, WidgetError},
 };
 
@@ -45,8 +45,8 @@ impl View for Tabview1 {
         Ok(())
     }
 
-    fn update(&mut self) -> Result<(), WidgetError> {
-        Ok(())
+    fn update(&mut self) -> Result<NavAction, WidgetError> {
+        Ok(NavAction::None)
     }
 }
 

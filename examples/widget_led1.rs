@@ -10,7 +10,7 @@
 
 use oxivgl::{
     style::{palette_main, Palette},
-    view::View,
+    view::{NavAction, View},
     widgets::{Obj, Align, Led, WidgetError},
 };
 
@@ -43,8 +43,8 @@ impl View for WidgetLed1 {
         Ok(())
     }
 
-    fn update(&mut self) -> Result<(), WidgetError> {
-        Ok(())
+    fn update(&mut self) -> Result<NavAction, WidgetError> {
+        Ok(NavAction::None)
     }
 }
 

@@ -5,6 +5,8 @@
 //! lifecycle: `create` → `update` → `on_event` → `will_hide`, cycling
 //! on each navigation transition. See `docs/spec-navigation.md`.
 
+use alloc::boxed::Box;
+use core::cell::UnsafeCell;
 use core::ffi::c_void;
 
 use embassy_time::{Duration, Timer};
@@ -16,7 +18,7 @@ use crate::{
     driver::LvglDriver,
     enums::EventCode,
     event::Event,
-    widgets::{Obj, WidgetError},
+    widgets::{Obj, ScreenAnim, WidgetError},
 };
 
 /// A single view of UI (one screen or modal in a navigation stack).
@@ -39,7 +41,7 @@ use crate::{
 /// For nested widget trees (e.g. buttons inside a container), override
 /// [`register_events`](View::register_events) to add event handlers on
 /// intermediate objects via [`register_event_on`].
-pub trait View: Sized {
+pub trait View: Sized + 'static {
     /// Build all LVGL widgets for this view into `container`.
     ///
     /// Called each time this view becomes the active (topmost) view —
@@ -48,12 +50,19 @@ pub trait View: Sized {
     fn create(&mut self, container: &Obj<'static>) -> Result<(), WidgetError>;
 
     /// Refresh widget values from application state. Called every render tick.
-    fn update(&mut self) -> Result<(), WidgetError> {
-        Ok(())
+    ///
+    /// Return [`NavAction::None`] to stay on this view, or a navigation
+    /// action to trigger a transition. This is the primary integration
+    /// point for external events — poll channels/shared state here.
+    fn update(&mut self) -> Result<NavAction, WidgetError> {
+        Ok(NavAction::None)
     }
 
-    /// Handle a bubbled LVGL event. Default is a no-op.
-    fn on_event(&mut self, _event: &Event) {}
+    /// Handle a bubbled LVGL event. Return [`NavAction::None`] to stay on
+    /// this view, or a navigation action to trigger a transition.
+    fn on_event(&mut self, _event: &Event) -> NavAction {
+        NavAction::None
+    }
 
     /// Register event handlers. Called once after [`create`](View::create).
     /// Default registers on the active screen only. Override to register on
@@ -72,6 +81,145 @@ pub trait View: Sized {
     fn did_show(&mut self) {}
 }
 
+// ---------------------------------------------------------------------------
+// NavAction
+// ---------------------------------------------------------------------------
+
+/// Navigation action requested by a view.
+///
+/// Returned from [`View::update`] and [`View::on_event`]. The render loop
+/// (or [`Navigator`](crate::navigator::Navigator)) processes the action
+/// after the method returns.
+pub enum NavAction {
+    /// No navigation requested.
+    None,
+    /// Push a new view onto the stack.
+    Push(Box<dyn AnyView>, Option<ScreenAnim>),
+    /// Pop the current view (return to previous).
+    Pop(Option<ScreenAnim>),
+    /// Replace the current view (non-reversible transition).
+    Replace(Box<dyn AnyView>, Option<ScreenAnim>),
+    /// Show a modal overlay on top of the current view.
+    Modal(Box<dyn AnyView>),
+    /// Dismiss the current modal overlay.
+    DismissModal,
+}
+
+impl NavAction {
+    /// Convenience: push a view with an optional animation.
+    pub fn push(view: impl View, anim: Option<ScreenAnim>) -> Self {
+        Self::Push(Box::new(view), anim)
+    }
+
+    /// Convenience: replace the current view.
+    pub fn replace(view: impl View, anim: Option<ScreenAnim>) -> Self {
+        Self::Replace(Box::new(view), anim)
+    }
+
+    /// Convenience: show a modal overlay.
+    pub fn modal(view: impl View) -> Self {
+        Self::Modal(Box::new(view))
+    }
+
+    /// Returns `true` if this is [`NavAction::None`].
+    pub fn is_none(&self) -> bool {
+        matches!(self, Self::None)
+    }
+}
+
+// ---------------------------------------------------------------------------
+// AnyView — object-safe trait for type-erased views
+// ---------------------------------------------------------------------------
+
+/// Object-safe trait for type-erased views stored in a
+/// [`Navigator`](crate::navigator::Navigator) stack.
+///
+/// Implemented automatically for all [`View`] types via blanket impl.
+/// Users should implement [`View`], never `AnyView` directly.
+pub trait AnyView: 'static {
+    /// Build widgets into `container`. See [`View::create`].
+    fn create(&mut self, container: &Obj<'static>) -> Result<(), WidgetError>;
+    /// Per-tick update. See [`View::update`].
+    fn update(&mut self) -> Result<NavAction, WidgetError>;
+    /// Handle a bubbled LVGL event. See [`View::on_event`].
+    fn on_event(&mut self, event: &Event) -> NavAction;
+    /// Register event handlers. See [`View::register_events`].
+    fn register_events(&mut self);
+    /// Called before widget teardown. See [`View::will_hide`].
+    fn will_hide(&mut self);
+    /// Called after view becomes visible again. See [`View::did_show`].
+    fn did_show(&mut self);
+}
+
+impl<T: View> AnyView for T {
+    fn create(&mut self, container: &Obj<'static>) -> Result<(), WidgetError> {
+        View::create(self, container)
+    }
+
+    fn update(&mut self) -> Result<NavAction, WidgetError> {
+        View::update(self)
+    }
+
+    fn on_event(&mut self, event: &Event) -> NavAction {
+        View::on_event(self, event)
+    }
+
+    fn register_events(&mut self) {
+        View::register_events(self)
+    }
+
+    fn will_hide(&mut self) {
+        View::will_hide(self)
+    }
+
+    fn did_show(&mut self) {
+        View::did_show(self)
+    }
+}
+
+// ---------------------------------------------------------------------------
+// NavigationError
+// ---------------------------------------------------------------------------
+
+/// Errors from navigation operations.
+#[derive(Debug)]
+pub enum NavigationError {
+    /// Cannot pop the root view — the stack has only one entry.
+    StackEmpty,
+    /// No modal is currently active.
+    NoActiveModal,
+    /// View creation failed during a navigation transition.
+    CreateFailed(WidgetError),
+}
+
+impl core::fmt::Display for NavigationError {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        match self {
+            Self::StackEmpty => write!(f, "cannot pop the root view"),
+            Self::NoActiveModal => write!(f, "no active modal to dismiss"),
+            Self::CreateFailed(e) => write!(f, "view creation failed: {:?}", e),
+        }
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Pending event action (single-threaded stash for trampoline → navigator)
+// ---------------------------------------------------------------------------
+
+/// SAFETY: LVGL runs on a single task. This cell is only written by the
+/// event trampoline (during `lv_timer_handler`) and read by the render
+/// loop — never concurrently.
+struct SyncCell(UnsafeCell<Option<NavAction>>);
+unsafe impl Sync for SyncCell {}
+
+static PENDING_EVENT_ACTION: SyncCell = SyncCell(UnsafeCell::new(None));
+
+/// Take the pending event action stashed by the trampoline, if any.
+pub(crate) fn take_pending_event_action() -> Option<NavAction> {
+    // SAFETY: single-threaded access — see SyncCell doc.
+    unsafe { (*PENDING_EVENT_ACTION.0.get()).take() }
+}
+
 /// Register event handlers for the view. Calls [`View::register_events`],
 /// which by default registers on the active screen. Override the trait method
 /// to register on additional objects.
@@ -81,6 +229,7 @@ pub trait View: Sized {
 pub fn register_view_events<V: View>(view: &mut V) {
     view.register_events();
 }
+
 
 /// Register the view's event trampoline on a specific LVGL object.
 /// Use this from [`View::register_events`] to catch events on containers
@@ -113,7 +262,15 @@ unsafe extern "C" fn view_event_trampoline<V: View>(e: *mut lv_event_t) {
         let view = lv_event_get_user_data(e) as *mut V;
         if !view.is_null() {
             let event = Event::from_raw(e);
-            (*view).on_event(&event);
+            let action = (*view).on_event(&event);
+            if !action.is_none() {
+                // Stash the action for the render loop to process.
+                // First action per tick wins (subsequent are dropped).
+                let slot = &mut *PENDING_EVENT_ACTION.0.get();
+                if slot.is_none() {
+                    *slot = Some(action);
+                }
+            }
         }
     }
 }
@@ -167,8 +324,8 @@ pub async fn run_app<V: View, const BYTES: usize>(
 
     loop {
         debug!("Rendering UI loop iteration");
-        view.update()
-            .unwrap_or_else(|e| warn!("Failed to update widgets: {:?}", e));
+        let _action = view.update()
+            .unwrap_or_else(|e| { warn!("Failed to update widgets: {:?}", e); NavAction::None });
 
         // Drive lv_timer_handler 4× per update cycle (once per refresh period)
         // so LVGL animations stay smooth while update() is called at ~30fps.
@@ -177,5 +334,12 @@ pub async fn run_app<V: View, const BYTES: usize>(
             driver.timer_handler();
             Timer::after(Duration::from_millis(LVGL_TIMER_DELAY)).await;
         }
+
+        // Drain any pending event action (stashed by on_event trampoline).
+        let _event_action = take_pending_event_action();
+
+        // Note: NavAction processing is handled by Navigator (see
+        // navigator::Navigator). This simple run_app ignores actions —
+        // use Navigator::run_app for multi-screen applications.
     }
 }

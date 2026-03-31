@@ -12,6 +12,7 @@
 extern crate alloc;
 use alloc::vec::Vec;
 
+use oxivgl::view::NavAction;
 use oxivgl::{
     anim::{anim_set_x, anim_set_y, Anim},
     enums::{EventCode, ObjFlag},
@@ -161,20 +162,20 @@ impl View for WidgetArc3 {
         }
     }
 
-    fn on_event(&mut self, event: &Event) {
+    fn on_event(&mut self, event: &Event) -> NavAction {
         if event.code() != EventCode::CLICKED {
-            return;
+            return NavAction::None;
         }
         let target = event.target_handle();
 
-        let Some(ref arcs) = self.arcs else { return };
+        let Some(ref arcs) = self.arcs else { return NavAction::None };
 
         // Find which slice was clicked
         let Some(idx) = arcs.iter().position(|a| a.handle() == target) else {
-            return;
+            return NavAction::None;
         };
 
-        let Some(ref mut slices) = self.slices else { return };
+        let Some(ref mut slices) = self.slices else { return NavAction::None };
 
         // If another slice is currently out, animate it back
         if let Some(prev) = self.active {
@@ -186,7 +187,7 @@ impl View for WidgetArc3 {
             }
         }
 
-        let Some(ref mut slices) = self.slices else { return };
+        let Some(ref mut slices) = self.slices else { return NavAction::None };
         let info = &slices[idx];
         if info.out {
             let home_x = info.home_x;
@@ -204,10 +205,11 @@ impl View for WidgetArc3 {
             if let Some(ref mut slices) = self.slices { slices[idx].out = true; }
             self.active = Some(idx);
         }
+        NavAction::None
     }
 
-    fn update(&mut self) -> Result<(), WidgetError> {
-        Ok(())
+    fn update(&mut self) -> Result<NavAction, WidgetError> {
+        Ok(NavAction::None)
     }
 }
 

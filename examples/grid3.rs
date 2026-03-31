@@ -8,7 +8,7 @@
 
 use oxivgl::{
     layout::{grid_fr, GridAlign, GridCell, GRID_TEMPLATE_LAST},
-    view::View,
+    view::{NavAction, View},
     widgets::{Label, Obj, WidgetError},
 };
 
@@ -57,8 +57,8 @@ impl View for Grid3 {
         Ok(())
     }
 
-    fn update(&mut self) -> Result<(), WidgetError> {
-        Ok(())
+    fn update(&mut self) -> Result<NavAction, WidgetError> {
+        Ok(NavAction::None)
     }
 }
 

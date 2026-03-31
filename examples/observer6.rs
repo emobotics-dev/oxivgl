@@ -23,7 +23,7 @@ use oxivgl::{
     event::Event,
     layout::{FlexAlign, FlexFlow},
     style::{GradDir, Selector, StyleBuilder, color_make, lv_pct},
-    view::View,
+    view::{NavAction, View},
     widgets::{
         Obj, Align, AsLvHandle, Button, Child, Label, Part, Subject, WidgetError,
         RADIUS_MAX,
@@ -186,9 +186,9 @@ impl View for Observer6 {
         Ok(())
     }
 
-    fn on_event(&mut self, event: &Event) {
+    fn on_event(&mut self, event: &Event) -> NavAction {
         if event.code() != EventCode::CLICKED {
-            return;
+            return NavAction::None;
         }
         let target = event.target_handle() as *mut c_void;
         for &handle in self.btn_handles.iter() {
@@ -201,13 +201,14 @@ impl View for Observer6 {
                         theme_subject.set_int(0);
                     }
                 }
-                return;
+                return NavAction::None;
             }
         }
+        NavAction::None
     }
 
-    fn update(&mut self) -> Result<(), WidgetError> {
-        Ok(())
+    fn update(&mut self) -> Result<NavAction, WidgetError> {
+        Ok(NavAction::None)
     }
 }
 

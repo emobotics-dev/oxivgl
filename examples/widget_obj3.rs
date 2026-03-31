@@ -11,7 +11,7 @@
 //! Resets and repeats at 2.0.
 
 use oxivgl::{
-    view::View,
+    view::{NavAction, View},
     widgets::{Matrix, Obj, WidgetError},
 };
 
@@ -32,7 +32,7 @@ impl View for WidgetObj3 {
         Ok(())
     }
 
-    fn update(&mut self) -> Result<(), WidgetError> {
+    fn update(&mut self) -> Result<NavAction, WidgetError> {
         self.value += 0.01;
 
         if let Some(ref obj) = self.obj {
@@ -46,7 +46,7 @@ impl View for WidgetObj3 {
             }
         }
 
-        Ok(())
+        Ok(NavAction::None)
     }
 }
 

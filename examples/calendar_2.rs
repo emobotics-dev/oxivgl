@@ -15,7 +15,7 @@
 
 use oxivgl::{
     fonts,
-    view::View,
+    view::{NavAction, View},
     widgets::{Obj, Align, Calendar, WidgetError},
 };
 
@@ -38,8 +38,8 @@ impl View for Calendar2 {
         Ok(())
     }
 
-    fn update(&mut self) -> Result<(), WidgetError> {
-        Ok(())
+    fn update(&mut self) -> Result<NavAction, WidgetError> {
+        Ok(NavAction::None)
     }
 }
 

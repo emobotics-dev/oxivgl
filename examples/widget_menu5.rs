@@ -19,7 +19,7 @@ use oxivgl::{
     event::Event,
     style::{color_brightness, color_darken, Selector},
     symbols,
-    view::View,
+    view::{NavAction, View},
     widgets::{
         AsLvHandle, Child, Image, Label, LabelLongMode, Menu, Msgbox, Obj, Part, Slider,
         Switch, WidgetError,
@@ -221,7 +221,7 @@ impl View for WidgetMenu5 {
         Ok(())
     }
 
-    fn on_event(&mut self, event: &Event) {
+    fn on_event(&mut self, event: &Event) -> NavAction {
         if let Some(ref menu) = self.menu {
             // Root back button → show message box
             if event.code() == EventCode::CLICKED
@@ -258,10 +258,11 @@ impl View for WidgetMenu5 {
                 }
             }
         }
+        NavAction::None
     }
 
-    fn update(&mut self) -> Result<(), WidgetError> {
-        Ok(())
+    fn update(&mut self) -> Result<NavAction, WidgetError> {
+        Ok(NavAction::None)
     }
 }
 

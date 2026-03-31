@@ -11,7 +11,7 @@
 
 use oxivgl::{
     fonts,
-    view::View,
+    view::{NavAction, View},
     style::Selector,
     widgets::{Obj, Align, BaseDir, Label, WidgetError},
 };
@@ -70,8 +70,8 @@ impl View for WidgetLabel3 {
         Ok(())
     }
 
-    fn update(&mut self) -> Result<(), WidgetError> {
-        Ok(())
+    fn update(&mut self) -> Result<NavAction, WidgetError> {
+        Ok(NavAction::None)
     }
 }
 

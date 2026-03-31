@@ -15,6 +15,7 @@
 //! Both lists are added to a group; the item list uses gridnav so arrow
 //! keys navigate items without individual items entering the group.
 
+use oxivgl::view::NavAction;
 use oxivgl::{
     enums::{EventCode, ObjState},
     event::Event,
@@ -128,27 +129,27 @@ impl View for List2 {
         }
     }
 
-    fn on_event(&mut self, event: &Event) {
+    fn on_event(&mut self, event: &Event) -> NavAction {
         let code = event.code();
         let is_action = code == EventCode::CLICKED || code == EventCode::LONG_PRESSED_REPEAT;
         if !is_action {
-            return;
+            return NavAction::None;
         }
 
         let target_handle = event.target().handle();
 
         let list1_handle = match self.list1 {
             Some(ref l) => l.handle(),
-            None => return,
+            None => return NavAction::None,
         };
         let list2_handle = match self.list2 {
             Some(ref l) => l.handle(),
-            None => return,
+            None => return NavAction::None,
         };
 
         if target_handle == list1_handle || target_handle == list2_handle {
             // Event on the container itself — ignore.
-            return;
+            return NavAction::None;
         }
 
         let list1 = self.list1.as_ref().unwrap();
@@ -191,17 +192,17 @@ impl View for List2 {
                     }
                 }
             }
-            return;
+            return NavAction::None;
         }
 
         // ── Control button: identify by text ──────────────────────────────
         let cur_idx = match self.current_idx {
             Some(i) => i,
-            None => return,
+            None => return NavAction::None,
         };
         let cur = match list1.get_child(cur_idx) {
             Some(c) => c,
-            None => return,
+            None => return NavAction::None,
         };
         let btn_text = list2.get_button_text(&event.target());
 
@@ -260,10 +261,11 @@ impl View for List2 {
             }
             _ => {}
         }
+        NavAction::None
     }
 
-    fn update(&mut self) -> Result<(), WidgetError> {
-        Ok(())
+    fn update(&mut self) -> Result<NavAction, WidgetError> {
+        Ok(NavAction::None)
     }
 }
 

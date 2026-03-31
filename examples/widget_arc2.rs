@@ -11,7 +11,7 @@
 
 use oxivgl::{
     anim::{anim_set_arc_value, Anim, ANIM_REPEAT_INFINITE},
-    view::View,
+    view::{NavAction, View},
     enums::{ObjFlag, Opa},
     widgets::{Obj, Arc, Part, WidgetError},
 };
@@ -49,8 +49,8 @@ impl View for WidgetArc2 {
         Ok(())
     }
 
-    fn update(&mut self) -> Result<(), WidgetError> {
-        Ok(())
+    fn update(&mut self) -> Result<NavAction, WidgetError> {
+        Ok(NavAction::None)
     }
 }
 

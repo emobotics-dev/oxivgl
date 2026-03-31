@@ -12,6 +12,7 @@
 extern crate alloc;
 
 use alloc::vec::Vec;
+use oxivgl::view::NavAction;
 use oxivgl::{
     view::{register_event_on, View},
     enums::{EventCode, ObjState},
@@ -81,16 +82,16 @@ impl View for WidgetCheckbox2 {
         }
     }
 
-    fn on_event(&mut self, event: &Event) {
+    fn on_event(&mut self, event: &Event) -> NavAction {
         if event.code() != EventCode::CLICKED {
-            return;
+            return NavAction::None;
         }
         let target = event.target_handle();
         let container = event.current_target_handle();
 
         // Ignore clicks on the container itself
         if target == container {
-            return;
+            return NavAction::None;
         }
 
         // Uncheck all children, check only the clicked one
@@ -113,10 +114,11 @@ impl View for WidgetCheckbox2 {
         // Check the clicked target
         let target_obj = event.target();
         target_obj.add_state(ObjState::CHECKED);
+        NavAction::None
     }
 
-    fn update(&mut self) -> Result<(), WidgetError> {
-        Ok(())
+    fn update(&mut self) -> Result<NavAction, WidgetError> {
+        Ok(NavAction::None)
     }
 }
 

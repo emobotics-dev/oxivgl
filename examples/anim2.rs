@@ -9,7 +9,7 @@
 use oxivgl::{
     anim::{anim_path_ease_in_out, anim_set_size, anim_set_x, Anim, ANIM_REPEAT_INFINITE},
     style::{palette_main, Palette, Selector},
-    view::View,
+    view::{NavAction, View},
     widgets::{Align, Obj, WidgetError, RADIUS_MAX},
 };
 
@@ -48,8 +48,8 @@ impl View for Anim2 {
         Ok(())
     }
 
-    fn update(&mut self) -> Result<(), WidgetError> {
-        Ok(())
+    fn update(&mut self) -> Result<NavAction, WidgetError> {
+        Ok(NavAction::None)
     }
 }
 

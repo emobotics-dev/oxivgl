@@ -20,7 +20,7 @@ use oxivgl::{
     draw_buf::{ColorFormat, DrawBuf},
     fonts,
     style::{GradDir, Selector, color_black, color_make, color_white},
-    view::View,
+    view::{NavAction, View},
     widgets::{Canvas, Obj, TextAlign, WidgetError},
 };
 
@@ -95,8 +95,8 @@ impl View for WidgetLabel4 {
         Ok(())
     }
 
-    fn update(&mut self) -> Result<(), WidgetError> {
-        Ok(())
+    fn update(&mut self) -> Result<NavAction, WidgetError> {
+        Ok(NavAction::None)
     }
 }
 

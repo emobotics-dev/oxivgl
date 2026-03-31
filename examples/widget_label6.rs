@@ -12,7 +12,7 @@
 
 use oxivgl::{
     fonts::{FixedWidthFont, MONTSERRAT_20},
-    view::View,
+    view::{NavAction, View},
     widgets::{Obj, Label, WidgetError},
 };
 
@@ -46,8 +46,8 @@ impl View for WidgetLabel6 {
         Ok(())
     }
 
-    fn update(&mut self) -> Result<(), WidgetError> {
-        Ok(())
+    fn update(&mut self) -> Result<NavAction, WidgetError> {
+        Ok(NavAction::None)
     }
 }
 

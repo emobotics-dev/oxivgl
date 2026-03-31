@@ -15,7 +15,7 @@ use oxivgl::{
         color_white, palette_darken, palette_main, props, GradDir, Palette, Selector, Style,
         StyleBuilder, TransitionDsc, LV_SIZE_CONTENT,
     },
-    view::View,
+    view::{NavAction, View},
     enums::ObjState,
     widgets::{Obj, Button, Label, WidgetError},
 };
@@ -86,8 +86,8 @@ impl View for WidgetButton2 {
         Ok(())
     }
 
-    fn update(&mut self) -> Result<(), WidgetError> {
-        Ok(())
+    fn update(&mut self) -> Result<NavAction, WidgetError> {
+        Ok(NavAction::None)
     }
 }
 

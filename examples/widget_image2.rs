@@ -10,7 +10,7 @@
 
 use oxivgl::{
     style::{color_make, palette_main, Palette, Selector},
-    view::View,
+    view::{NavAction, View},
     widgets::{Obj, Align, Image, Part, Slider, WidgetError},
 };
 
@@ -63,7 +63,7 @@ impl View for WidgetImage2 {
         Ok(())
     }
 
-    fn update(&mut self) -> Result<(), WidgetError> {
+    fn update(&mut self) -> Result<NavAction, WidgetError> {
         if let (Some(sr), Some(sg), Some(sb), Some(si), Some(img)) = (
             &self.slider_r, &self.slider_g, &self.slider_b, &self.slider_i, &self.img,
         ) {
@@ -76,7 +76,7 @@ impl View for WidgetImage2 {
             img.style_image_recolor(color, Selector::DEFAULT)
                 .style_image_recolor_opa(intense, Selector::DEFAULT);
         }
-        Ok(())
+        Ok(NavAction::None)
     }
 }
 

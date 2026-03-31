@@ -8,7 +8,7 @@
 
 use oxivgl::{
     style::{Selector, Style, StyleBuilder, LV_SIZE_CONTENT},
-    view::View,
+    view::{NavAction, View},
     enums::ObjFlag,
     layout::{FlexAlign, FlexFlow, Layout},
     widgets::{Label, Obj, WidgetError},
@@ -60,8 +60,8 @@ impl View for Flex2 {
         Ok(())
     }
 
-    fn update(&mut self) -> Result<(), WidgetError> {
-        Ok(())
+    fn update(&mut self) -> Result<NavAction, WidgetError> {
+        Ok(NavAction::None)
     }
 }
 

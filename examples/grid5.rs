@@ -9,7 +9,7 @@
 use oxivgl::{
     anim::{anim_set_pad_column, anim_set_pad_row, Anim, ANIM_REPEAT_INFINITE},
     layout::{GridAlign, GridCell, GRID_TEMPLATE_LAST},
-    view::View,
+    view::{NavAction, View},
     widgets::{Label, Obj, WidgetError},
 };
 
@@ -74,8 +74,8 @@ impl View for Grid5 {
         Ok(())
     }
 
-    fn update(&mut self) -> Result<(), WidgetError> {
-        Ok(())
+    fn update(&mut self) -> Result<NavAction, WidgetError> {
+        Ok(NavAction::None)
     }
 }
 

@@ -10,7 +10,7 @@
 //! percentage and follows the arc's edge.
 
 use oxivgl::{
-    view::View,
+    view::{NavAction, View},
     enums::EventCode,
     event::Event,
     widgets::{Obj, Arc, Label, WidgetError},
@@ -46,7 +46,7 @@ impl View for WidgetArc1 {
         Ok(())
     }
 
-    fn on_event(&mut self, event: &Event) {
+    fn on_event(&mut self, event: &Event) -> NavAction {
         if let Some(ref arc) = self.arc {
             if event.matches(arc, EventCode::VALUE_CHANGED) {
                 let v = arc.get_value_raw();
@@ -58,10 +58,11 @@ impl View for WidgetArc1 {
                 }
             }
         }
+        NavAction::None
     }
 
-    fn update(&mut self) -> Result<(), WidgetError> {
-        Ok(())
+    fn update(&mut self) -> Result<NavAction, WidgetError> {
+        Ok(NavAction::None)
     }
 }
 

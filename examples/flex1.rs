@@ -8,7 +8,7 @@
 
 use oxivgl::{
     style::{lv_pct, LV_SIZE_CONTENT},
-    view::View,
+    view::{NavAction, View},
     layout::FlexFlow,
     widgets::{Align, Button, Label, Obj, WidgetError},
 };
@@ -64,8 +64,8 @@ impl View for Flex1 {
         Ok(())
     }
 
-    fn update(&mut self) -> Result<(), WidgetError> {
-        Ok(())
+    fn update(&mut self) -> Result<NavAction, WidgetError> {
+        Ok(NavAction::None)
     }
 }
 

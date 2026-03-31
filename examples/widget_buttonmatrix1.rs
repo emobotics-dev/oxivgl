@@ -11,7 +11,7 @@
 
 use oxivgl::{
     btnmatrix_map,
-    view::View,
+    view::{NavAction, View},
     widgets::{
         Obj, Align, Buttonmatrix, ButtonmatrixCtrl, ButtonmatrixMap, WidgetError,
     },
@@ -48,8 +48,8 @@ impl View for WidgetButtonmatrix1 {
         Ok(())
     }
 
-    fn update(&mut self) -> Result<(), WidgetError> {
-        Ok(())
+    fn update(&mut self) -> Result<NavAction, WidgetError> {
+        Ok(NavAction::None)
     }
 }
 

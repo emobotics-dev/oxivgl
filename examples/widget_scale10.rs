@@ -12,7 +12,7 @@ use core::fmt::Write;
 
 use oxivgl::{
     style::{color_make, Selector, StyleBuilder},
-    view::View,
+    view::{NavAction, View},
     enums::Opa,
     timer::Timer,
     widgets::{Obj, Align, Label, Line, Part, Scale, ScaleMode, WidgetError, RADIUS_MAX},
@@ -77,7 +77,7 @@ impl View for WidgetScale10 {
         Ok(())
     }
 
-    fn update(&mut self) -> Result<(), WidgetError> {
+    fn update(&mut self) -> Result<NavAction, WidgetError> {
         let triggered = self.timer.as_ref().map_or(false, |t| t.triggered());
         if triggered {
             if self.ascending {
@@ -102,7 +102,7 @@ impl View for WidgetScale10 {
                 label.text(&buf);
             }
         }
-        Ok(())
+        Ok(NavAction::None)
     }
 }
 

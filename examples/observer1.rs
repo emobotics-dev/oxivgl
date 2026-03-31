@@ -7,7 +7,7 @@
 //! Observer 1 — Slider bound to a temperature label via a Subject
 
 use oxivgl::{
-    view::View,
+    view::{NavAction, View},
     widgets::{Obj, Align, Label, Slider, Subject, WidgetError},
 };
 
@@ -46,8 +46,8 @@ impl View for Observer1 {
         Ok(())
     }
 
-    fn update(&mut self) -> Result<(), WidgetError> {
-        Ok(())
+    fn update(&mut self) -> Result<NavAction, WidgetError> {
+        Ok(NavAction::None)
     }
 }
 

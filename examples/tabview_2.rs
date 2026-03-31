@@ -8,7 +8,7 @@
 //! changed programmatically.
 
 use oxivgl::{
-    view::View,
+    view::{NavAction, View},
     widgets::{Obj, DdDir, Label, Tabview, WidgetError},
 };
 
@@ -47,8 +47,8 @@ impl View for Tabview2 {
         Ok(())
     }
 
-    fn update(&mut self) -> Result<(), WidgetError> {
-        Ok(())
+    fn update(&mut self) -> Result<NavAction, WidgetError> {
+        Ok(NavAction::None)
     }
 }
 

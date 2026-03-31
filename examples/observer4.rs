@@ -24,7 +24,7 @@ use oxivgl::{
     event::Event,
     layout::{FlexAlign, FlexFlow},
     style::{Selector, lv_pct},
-    view::View,
+    view::{NavAction, View},
     widgets::{Align, AsLvHandle, Button, Child, Dropdown, Label, Obj, Roller, RollerMode, Slider, Subject, WidgetError},
 };
 
@@ -141,9 +141,9 @@ impl View for Observer4 {
         Ok(())
     }
 
-    fn on_event(&mut self, event: &Event) {
+    fn on_event(&mut self, event: &Event) -> NavAction {
         if event.code() != EventCode::CLICKED {
-            return;
+            return NavAction::None;
         }
         let target = event.target_handle() as *mut c_void;
         for (i, &handle) in self.btn_handles.iter().enumerate() {
@@ -151,19 +151,20 @@ impl View for Observer4 {
                 if let Some(ref tab_subject) = self.tab_subject {
                     tab_subject.set_int(i as i32);
                 }
-                return;
+                return NavAction::None;
             }
         }
+        NavAction::None
     }
 
-    fn update(&mut self) -> Result<(), WidgetError> {
-        let tab = if let Some(ref ts) = self.tab_subject { ts.get_int() } else { return Ok(()); };
+    fn update(&mut self) -> Result<NavAction, WidgetError> {
+        let tab = if let Some(ref ts) = self.tab_subject { ts.get_int() } else { return Ok(NavAction::None); };
         if tab == self.last_tab {
-            return Ok(());
+            return Ok(NavAction::None);
         }
         self.last_tab = tab;
 
-        let Some(ref cont) = self.cont else { return Ok(()); };
+        let Some(ref cont) = self.cont else { return Ok(NavAction::None); };
         // Remove old content and rebuild for the active tab.
         cont.clean();
 
@@ -226,7 +227,7 @@ impl View for Observer4 {
             }
         }
 
-        Ok(())
+        Ok(NavAction::None)
     }
 }
 

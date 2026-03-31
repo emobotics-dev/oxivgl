@@ -13,7 +13,7 @@
 use oxivgl::{
     style::Selector,
     timer::Timer,
-    view::View,
+    view::{NavAction, View},
     widgets::{Obj, Chart, ChartAxis, ChartSeries, ChartType, ChartUpdateMode, Part, WidgetError, CHART_POINT_NONE},
 };
 
@@ -60,7 +60,7 @@ impl View for WidgetChart8 {
         Ok(())
     }
 
-    fn update(&mut self) -> Result<(), WidgetError> {
+    fn update(&mut self) -> Result<NavAction, WidgetError> {
         if let Some(ref timer) = self.timer {
             if timer.triggered() {
                 if let (Some(chart), Some(ser)) = (&self.chart, &self.ser) {
@@ -77,7 +77,7 @@ impl View for WidgetChart8 {
                 }
             }
         }
-        Ok(())
+        Ok(NavAction::None)
     }
 }
 

@@ -9,7 +9,7 @@
 //! Vertical bar filling top-to-bottom via reversed range (100→0), at 70%.
 
 use oxivgl::{
-    view::View,
+    view::{NavAction, View},
     widgets::{Obj, Align, Bar, Label, WidgetError},
 };
 
@@ -37,8 +37,8 @@ impl View for WidgetBar7 {
         Ok(())
     }
 
-    fn update(&mut self) -> Result<(), WidgetError> {
-        Ok(())
+    fn update(&mut self) -> Result<NavAction, WidgetError> {
+        Ok(NavAction::None)
     }
 }
 

@@ -13,7 +13,7 @@ use oxivgl::{
     enums::{EventCode, ObjFlag, ObjState, ScrollSnap},
     event::Event,
     layout::FlexFlow,
-    view::View,
+    view::{NavAction, View},
     widgets::{Align, Button, Label, Obj, Switch, WidgetError},
 };
 
@@ -78,7 +78,7 @@ impl View for Scroll2 {
         Ok(())
     }
 
-    fn on_event(&mut self, event: &Event) {
+    fn on_event(&mut self, event: &Event) -> NavAction {
         if let (Some(sw), Some(panel)) = (&self.sw, &self.panel) {
             if event.matches(sw, EventCode::VALUE_CHANGED) {
                 if sw.has_state(ObjState::CHECKED) {
@@ -88,10 +88,11 @@ impl View for Scroll2 {
                 }
             }
         }
+        NavAction::None
     }
 
-    fn update(&mut self) -> Result<(), WidgetError> {
-        Ok(())
+    fn update(&mut self) -> Result<NavAction, WidgetError> {
+        Ok(NavAction::None)
     }
 }
 

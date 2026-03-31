@@ -14,7 +14,7 @@ use oxivgl::{
     enums::{EventCode, ObjState},
     event::Event,
     timer::Timer,
-    view::View,
+    view::{NavAction, View},
     widgets::{Obj, Label, Switch, WidgetError},
 };
 
@@ -57,7 +57,7 @@ impl View for Anim4 {
         Ok(())
     }
 
-    fn on_event(&mut self, event: &Event) {
+    fn on_event(&mut self, event: &Event) -> NavAction {
         if let Some(ref sw) = self.sw {
             if event.matches(sw, EventCode::VALUE_CHANGED) {
                 let checked = sw.has_state(ObjState::CHECKED);
@@ -85,9 +85,10 @@ impl View for Anim4 {
                 }
             }
         }
+        NavAction::None
     }
 
-    fn update(&mut self) -> Result<(), WidgetError> {
+    fn update(&mut self) -> Result<NavAction, WidgetError> {
         if let Some(ref pause_timer) = self.pause_timer {
             if pause_timer.triggered() {
                 if let Some(ref handle) = self.anim_handle {
@@ -95,7 +96,7 @@ impl View for Anim4 {
                 }
             }
         }
-        Ok(())
+        Ok(NavAction::None)
     }
 }
 

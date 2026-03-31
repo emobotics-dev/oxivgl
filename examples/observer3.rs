@@ -25,7 +25,7 @@ use oxivgl::{
     event::Event,
     fonts::MONTSERRAT_30,
     style::{LV_SIZE_CONTENT, lv_pct},
-    view::View,
+    view::{NavAction, View},
     widgets::{Align, AsLvHandle, Button, Child, Dropdown, Label, Obj, Roller, RollerMode, Screen, Subject, WidgetError},
 };
 
@@ -104,7 +104,7 @@ impl View for Observer3 {
         Ok(())
     }
 
-    fn on_event(&mut self, event: &Event) {
+    fn on_event(&mut self, event: &Event) -> NavAction {
         // Set button clicked — open settings panel.
         let set_btn_match = if let Some(ref btn) = self.set_btn {
             event.matches(btn, EventCode::CLICKED)
@@ -118,12 +118,12 @@ impl View for Observer3 {
 
             let screen = match Screen::active() {
                 Some(s) => s,
-                None => return,
+                None => return NavAction::None,
             };
 
             let cont = match Obj::new(&screen) {
                 Ok(o) => o,
-                Err(_) => return,
+                Err(_) => return NavAction::None,
             };
             cont.size(lv_pct(100), LV_SIZE_CONTENT)
                 .align(Align::BottomMid, 0, 0);
@@ -131,7 +131,7 @@ impl View for Observer3 {
             // Hour roller — options updated on format change.
             let hour_roller = match Roller::new(&cont) {
                 Ok(r) => Child::new(r),
-                Err(_) => return,
+                Err(_) => return NavAction::None,
             };
             hour_roller
                 .add_flag(ObjFlag::FLEX_IN_NEW_TRACK)
@@ -144,7 +144,7 @@ impl View for Observer3 {
             // Minute roller.
             let min_roller = match Roller::new(&cont) {
                 Ok(r) => Child::new(r),
-                Err(_) => return,
+                Err(_) => return NavAction::None,
             };
             min_roller
                 .set_options(MINUTE_OPTIONS, RollerMode::Normal)
@@ -155,7 +155,7 @@ impl View for Observer3 {
             // Format dropdown (12/24).
             let format_dd = match Dropdown::new(&cont) {
                 Ok(d) => Child::new(d),
-                Err(_) => return,
+                Err(_) => return NavAction::None,
             };
             format_dd.set_options("12\n24").pos(128, 0).size(80, 40);
             if let Some(ref subj) = self.format_subject { format_dd.bind_value(subj); }
@@ -163,7 +163,7 @@ impl View for Observer3 {
             // AM/PM dropdown — disabled in 24-hour mode.
             let ampm_dd = match Dropdown::new(&cont) {
                 Ok(d) => Child::new(d),
-                Err(_) => return,
+                Err(_) => return NavAction::None,
             };
             ampm_dd
                 .set_options("am\npm")
@@ -175,12 +175,12 @@ impl View for Observer3 {
             // Close button — bubbles CLICKED to screen for on_event matching.
             let close_btn = match Button::new(&cont) {
                 Ok(b) => Child::new(b),
-                Err(_) => return,
+                Err(_) => return NavAction::None,
             };
             close_btn.align(Align::TopRight, 0, 0).bubble_events();
             let close_lbl = match Label::new(&*close_btn) {
                 Ok(l) => Child::new(l),
-                Err(_) => return,
+                Err(_) => return NavAction::None,
             };
             close_lbl.text("X");
 
@@ -201,9 +201,10 @@ impl View for Observer3 {
             self.panel = None;
             if let Some(ref btn) = self.set_btn { btn.remove_state(ObjState::DISABLED); }
         }
+        NavAction::None
     }
 
-    fn update(&mut self) -> Result<(), WidgetError> {
+    fn update(&mut self) -> Result<NavAction, WidgetError> {
         // Format time label by polling subjects.
         let hour = self.hour_subject.as_ref().map(|s| s.get_int()).unwrap_or(0);
         let minute = self.minute_subject.as_ref().map(|s| s.get_int()).unwrap_or(0);
@@ -238,7 +239,7 @@ impl View for Observer3 {
             }
         }
 
-        Ok(())
+        Ok(NavAction::None)
     }
 }
 

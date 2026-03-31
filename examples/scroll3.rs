@@ -14,7 +14,7 @@ use oxivgl::{
     event::Event,
     style::Selector,
     symbols,
-    view::View,
+    view::{NavAction, View},
     widgets::{Obj, Align, Button, List, Part, WidgetError, RADIUS_MAX},
 };
 
@@ -54,7 +54,7 @@ impl View for Scroll3 {
         Ok(())
     }
 
-    fn on_event(&mut self, event: &Event) {
+    fn on_event(&mut self, event: &Event) -> NavAction {
         if let Some(ref float_btn) = self.float_btn {
             if event.matches(float_btn, EventCode::CLICKED) {
                 self.btn_cnt += 1;
@@ -69,10 +69,11 @@ impl View for Scroll3 {
                 }
             }
         }
+        NavAction::None
     }
 
-    fn update(&mut self) -> Result<(), WidgetError> {
-        Ok(())
+    fn update(&mut self) -> Result<NavAction, WidgetError> {
+        Ok(NavAction::None)
     }
 }
 

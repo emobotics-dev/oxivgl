@@ -10,7 +10,7 @@
 
 use oxivgl::{
     style::{color_make, Selector, StyleBuilder},
-    view::View,
+    view::{NavAction, View},
     enums::Opa,
     widgets::{Obj, Line, Part, Scale, ScaleMode, WidgetError, RADIUS_MAX},
 };
@@ -64,7 +64,7 @@ impl View for WidgetScale3 {
         Ok(())
     }
 
-    fn update(&mut self) -> Result<(), WidgetError> {
+    fn update(&mut self) -> Result<NavAction, WidgetError> {
         if self.ascending {
             self.value += 1;
             if self.value >= 100 {
@@ -79,7 +79,7 @@ impl View for WidgetScale3 {
         if let (Some(scale), Some(needle)) = (&self.scale, &self.needle) {
             scale.set_line_needle_value(needle, 80, self.value);
         }
-        Ok(())
+        Ok(NavAction::None)
     }
 }
 

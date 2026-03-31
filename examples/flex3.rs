@@ -8,7 +8,7 @@
 
 use oxivgl::{
     layout::FlexFlow,
-    view::View,
+    view::{NavAction, View},
     widgets::{Obj, WidgetError},
 };
 
@@ -50,8 +50,8 @@ impl View for Flex3 {
         Ok(())
     }
 
-    fn update(&mut self) -> Result<(), WidgetError> {
-        Ok(())
+    fn update(&mut self) -> Result<NavAction, WidgetError> {
+        Ok(NavAction::None)
     }
 }
 

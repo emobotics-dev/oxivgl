@@ -7,7 +7,7 @@
 //! Grid 4 — Demonstrate track placement
 
 use oxivgl::{
-    view::View,
+    view::{NavAction, View},
     layout::{GridAlign, GridCell, GRID_TEMPLATE_LAST},
     widgets::{Label, Obj, WidgetError},
 };
@@ -58,8 +58,8 @@ impl View for Grid4 {
         Ok(())
     }
 
-    fn update(&mut self) -> Result<(), WidgetError> {
-        Ok(())
+    fn update(&mut self) -> Result<NavAction, WidgetError> {
+        Ok(NavAction::None)
     }
 }
 

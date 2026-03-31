@@ -15,7 +15,7 @@ use oxivgl::{
     fonts,
     math::{trigo_cos, trigo_sin},
     style::{color_hsv, color_make},
-    view::View,
+    view::{NavAction, View},
     widgets::{Obj, Align, Canvas, WidgetError},
 };
 
@@ -49,7 +49,7 @@ impl View for Canvas12 {
         Ok(())
     }
 
-    fn update(&mut self) -> Result<(), WidgetError> {
+    fn update(&mut self) -> Result<NavAction, WidgetError> {
         let cx = SIZE / 2;
         let cy = SIZE / 2;
         let n = TXT.len() as i32;
@@ -78,7 +78,7 @@ impl View for Canvas12 {
             }
         }
         self.tick = (self.tick + 1) % 360;
-        Ok(())
+        Ok(NavAction::None)
     }
 }
 

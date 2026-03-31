@@ -8,6 +8,7 @@
 //! - `DRAW_TASK_ADDED`: highlights checked rows with a blue tint.
 //! - `VALUE_CHANGED`: toggles the `CUSTOM_1` bit on the selected row.
 
+use oxivgl::view::NavAction;
 use oxivgl::{
     draw::DrawTask,
     enums::EventCode,
@@ -73,7 +74,7 @@ impl View for Table2 {
         }
     }
 
-    fn on_event(&mut self, event: &Event) {
+    fn on_event(&mut self, event: &Event) -> NavAction {
         if event.code() == EventCode::DRAW_TASK_ADDED {
             if let Some(draw_task) = event.draw_task() {
                 self.handle_draw_task(&draw_task);
@@ -89,10 +90,11 @@ impl View for Table2 {
                 }
             }
         }
+        NavAction::None
     }
 
-    fn update(&mut self) -> Result<(), WidgetError> {
-        Ok(())
+    fn update(&mut self) -> Result<NavAction, WidgetError> {
+        Ok(NavAction::None)
     }
 }
 

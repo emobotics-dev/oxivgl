@@ -17,7 +17,7 @@
 use oxivgl::{
     layout::FlexFlow,
     style::{LV_SIZE_CONTENT, Palette, Selector, StyleBuilder, color_make, palette_main},
-    view::View,
+    view::{NavAction, View},
     widgets::{Align, Child, Dropdown, Label, Obj, Part, Slider, Subject, WidgetError},
 };
 
@@ -156,8 +156,8 @@ impl View for Observer7 {
         Ok(())
     }
 
-    fn update(&mut self) -> Result<(), WidgetError> {
-        Ok(())
+    fn update(&mut self) -> Result<NavAction, WidgetError> {
+        Ok(NavAction::None)
     }
 }
 

@@ -15,7 +15,7 @@ use oxivgl::{
     enums::EventCode,
     event::Event,
     style::{BorderSide, Selector, StyleBuilder},
-    view::View,
+    view::{NavAction, View},
     widgets::{
         Obj, Align, Buttonmatrix, ButtonmatrixCtrl, ButtonmatrixMap, Part, RADIUS_MAX,
         WidgetError,
@@ -80,8 +80,8 @@ impl View for WidgetButtonmatrix3 {
         Ok(())
     }
 
-    fn on_event(&mut self, event: &Event) {
-        let Some(ref btnm) = self.btnm else { return };
+    fn on_event(&mut self, event: &Event) -> NavAction {
+        let Some(ref btnm) = self.btnm else { return NavAction::None };
         if event.matches(btnm, EventCode::VALUE_CHANGED) {
             let id = btnm.get_selected_button();
             let prev = id == 0;
@@ -104,10 +104,11 @@ impl View for WidgetButtonmatrix3 {
                 btnm.set_button_ctrl(target, ButtonmatrixCtrl::CHECKED);
             }
         }
+        NavAction::None
     }
 
-    fn update(&mut self) -> Result<(), WidgetError> {
-        Ok(())
+    fn update(&mut self) -> Result<NavAction, WidgetError> {
+        Ok(NavAction::None)
     }
 }
 

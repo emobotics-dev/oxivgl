@@ -12,7 +12,7 @@ extern crate alloc;
 
 use oxivgl::{
     style::{palette_main, Palette, Selector, Style, StyleBuilder},
-    view::View,
+    view::{NavAction, View},
     widgets::{Obj, Align, Image, ImageAlign, WidgetError},
 };
 
@@ -59,8 +59,8 @@ impl View for WidgetImage5 {
         Ok(())
     }
 
-    fn update(&mut self) -> Result<(), WidgetError> {
-        Ok(())
+    fn update(&mut self) -> Result<NavAction, WidgetError> {
+        Ok(NavAction::None)
     }
 }
 

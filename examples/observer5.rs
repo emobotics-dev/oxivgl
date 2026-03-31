@@ -19,7 +19,7 @@ use oxivgl::{
     event::Event,
     style::{Selector, color_make},
     timer::Timer,
-    view::View,
+    view::{NavAction, View},
     widgets::{
         Obj, Align, Arc, AsLvHandle, Button, Child, Label, Screen, Spinner, Subject, Win,
         WidgetError,
@@ -82,7 +82,7 @@ impl View for Observer5 {
         Ok(())
     }
 
-    fn on_event(&mut self, event: &Event) {
+    fn on_event(&mut self, event: &Event) -> NavAction {
         // Start button — open the firmware update window.
         let start_clicked = if let Some(ref start_btn) = self.start_btn {
             event.matches(start_btn, EventCode::CLICKED)
@@ -92,12 +92,12 @@ impl View for Observer5 {
         if start_clicked && self.win.is_none() {
             let screen = match Screen::active() {
                 Some(s) => s,
-                None => return,
+                None => return NavAction::None,
             };
 
             let win = match Win::new(&screen) {
                 Ok(w) => w,
-                Err(_) => return,
+                Err(_) => return NavAction::None,
             };
 
             // Style: rounded corners + drop shadow.
@@ -148,12 +148,13 @@ impl View for Observer5 {
             }
             self.last_state = STATE_IDLE;
         }
+        NavAction::None
     }
 
-    fn update(&mut self) -> Result<(), WidgetError> {
+    fn update(&mut self) -> Result<NavAction, WidgetError> {
         let status = match self.status_subject.as_ref() {
             Some(s) => s.get_int(),
-            None => return Ok(()),
+            None => return Ok(NavAction::None),
         };
 
         // Detect state transitions.
@@ -283,7 +284,7 @@ impl View for Observer5 {
             }
         }
 
-        Ok(())
+        Ok(NavAction::None)
     }
 }
 

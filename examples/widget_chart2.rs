@@ -10,7 +10,7 @@
 //! Simplified from the LVGL C example (scale ticks omitted for clarity).
 
 use oxivgl::{
-    view::View,
+    view::{NavAction, View},
     widgets::{Obj, Chart, ChartAxis, ChartType, WidgetError},
 };
 
@@ -46,8 +46,8 @@ impl View for WidgetChart2 {
         Ok(())
     }
 
-    fn update(&mut self) -> Result<(), WidgetError> {
-        Ok(())
+    fn update(&mut self) -> Result<NavAction, WidgetError> {
+        Ok(NavAction::None)
     }
 }
 

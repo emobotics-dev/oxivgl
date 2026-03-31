@@ -14,6 +14,7 @@
 //! `Button` widgets; they are visual-only here — scroll events are caught on
 //! the container via `SCROLL`, not on the buttons themselves.
 
+use oxivgl::view::NavAction;
 use oxivgl::{
     enums::{EventCode, ScrollDir, ScrollSnap, ScrollbarMode},
     event::Event,
@@ -66,16 +67,16 @@ impl View for Scroll6 {
         }
     }
 
-    fn on_event(&mut self, event: &Event) {
+    fn on_event(&mut self, event: &Event) -> NavAction {
         if event.code() != EventCode::SCROLL {
-            return;
+            return NavAction::None;
         }
         let cont = match self.cont.as_ref() {
             Some(c) => c,
-            None => return,
+            None => return NavAction::None,
         };
         if event.current_target_handle() != cont.handle() {
-            return;
+            return NavAction::None;
         }
         let coords = cont.get_coords();
         let cont_y_center = coords.y1 + coords.height() / 2;
@@ -98,10 +99,11 @@ impl View for Scroll6 {
             let opa = map(x, 0, r, 0, 255) as u8;
             child.style_opa(255 - opa, Selector::DEFAULT);
         }
+        NavAction::None
     }
 
-    fn update(&mut self) -> Result<(), WidgetError> {
-        Ok(())
+    fn update(&mut self) -> Result<NavAction, WidgetError> {
+        Ok(NavAction::None)
     }
 }
 

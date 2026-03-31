@@ -12,7 +12,7 @@
 use oxivgl::{
     style::Selector,
     timer::Timer,
-    view::View,
+    view::{NavAction, View},
     widgets::{Obj, Chart, ChartAxis, ChartSeries, ChartType, Part, WidgetError},
 };
 
@@ -64,7 +64,7 @@ impl View for WidgetChart7 {
         Ok(())
     }
 
-    fn update(&mut self) -> Result<(), WidgetError> {
+    fn update(&mut self) -> Result<NavAction, WidgetError> {
         if let Some(ref timer) = self.timer {
             if timer.triggered() {
                 let x = pseudo_rand(&mut self.seed, 0, 200);
@@ -74,7 +74,7 @@ impl View for WidgetChart7 {
                 }
             }
         }
-        Ok(())
+        Ok(NavAction::None)
     }
 }
 

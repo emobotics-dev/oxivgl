@@ -9,7 +9,7 @@
 use oxivgl::{
     draw_buf::{ColorFormat, DrawBuf},
     style::color_make,
-    view::View,
+    view::{NavAction, View},
     widgets::{Obj, Align, Canvas, WidgetError},
 };
 
@@ -32,7 +32,7 @@ impl View for Canvas10 {
         Ok(())
     }
 
-    fn update(&mut self) -> Result<(), WidgetError> {
+    fn update(&mut self) -> Result<NavAction, WidgetError> {
         use oxivgl::draw::DrawLetterDsc;
         use oxivgl::math::trigo_sin;
         use oxivgl::style::color_hsv;
@@ -54,7 +54,7 @@ impl View for Canvas10 {
             }
         }
         self.counter += 1;
-        Ok(())
+        Ok(NavAction::None)
     }
 }
 

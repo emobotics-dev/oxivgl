@@ -12,6 +12,7 @@
 //!
 //! Requires `LV_USE_TRANSLATION = 1` in `lv_conf.h`.
 
+use oxivgl::view::NavAction;
 use oxivgl::{
     enums::EventCode,
     event::Event,
@@ -89,7 +90,7 @@ impl View for WidgetLabel7 {
         if let Some(ref dd) = self.dd { register_event_on(self, dd.handle()); }
     }
 
-    fn on_event(&mut self, event: &Event) {
+    fn on_event(&mut self, event: &Event) -> NavAction {
         if event.code() == EventCode::VALUE_CHANGED {
             if let Some(ref dd) = self.dd {
                 let idx = dd.get_selected() as usize;
@@ -98,10 +99,11 @@ impl View for WidgetLabel7 {
                 }
             }
         }
+        NavAction::None
     }
 
-    fn update(&mut self) -> Result<(), WidgetError> {
-        Ok(())
+    fn update(&mut self) -> Result<NavAction, WidgetError> {
+        Ok(NavAction::None)
     }
 }
 

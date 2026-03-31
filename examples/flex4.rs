@@ -8,7 +8,7 @@
 
 use oxivgl::{
     layout::FlexFlow,
-    view::View,
+    view::{NavAction, View},
     widgets::{Label, Obj, WidgetError},
 };
 
@@ -48,8 +48,8 @@ impl View for Flex4 {
         Ok(())
     }
 
-    fn update(&mut self) -> Result<(), WidgetError> {
-        Ok(())
+    fn update(&mut self) -> Result<NavAction, WidgetError> {
+        Ok(NavAction::None)
     }
 }
 

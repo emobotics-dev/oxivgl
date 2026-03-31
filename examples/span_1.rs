@@ -11,7 +11,7 @@
 
 use oxivgl::{
     style::{palette_main, LV_SIZE_CONTENT, Palette, Selector, StyleBuilder, TextDecor},
-    view::View,
+    view::{NavAction, View},
     widgets::{Obj, Align, Spangroup, SpanOverflow, WidgetError},
 };
 
@@ -66,8 +66,8 @@ impl View for Span1 {
         Ok(())
     }
 
-    fn update(&mut self) -> Result<(), WidgetError> {
-        Ok(())
+    fn update(&mut self) -> Result<NavAction, WidgetError> {
+        Ok(NavAction::None)
     }
 }
 

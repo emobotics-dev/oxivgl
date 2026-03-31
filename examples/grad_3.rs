@@ -11,7 +11,7 @@
 
 use oxivgl::{
     style::{GradDsc, GradExtend, Selector, Style, StyleBuilder, color_make, lv_pct},
-    view::View,
+    view::{NavAction, View},
     widgets::{Button, Obj, WidgetError},
 };
 
@@ -62,8 +62,8 @@ impl View for Grad3 {
         Ok(())
     }
 
-    fn update(&mut self) -> Result<(), WidgetError> {
-        Ok(())
+    fn update(&mut self) -> Result<NavAction, WidgetError> {
+        Ok(NavAction::None)
     }
 }
 

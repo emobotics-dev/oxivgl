@@ -9,7 +9,7 @@
 //! 100×100 spinner with a 10 s animation cycle and 200° arc.
 
 use oxivgl::{
-    view::View,
+    view::{NavAction, View},
     widgets::{Obj, Spinner, WidgetError},
 };
 
@@ -29,8 +29,8 @@ impl View for Spinner1 {
         Ok(())
     }
 
-    fn update(&mut self) -> Result<(), WidgetError> {
-        Ok(())
+    fn update(&mut self) -> Result<NavAction, WidgetError> {
+        Ok(NavAction::None)
     }
 }
 

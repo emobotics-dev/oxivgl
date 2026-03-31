@@ -15,7 +15,7 @@ extern crate alloc;
 
 use oxivgl::{
     anim::ANIM_REPEAT_INFINITE,
-    view::View,
+    view::{NavAction, View},
     widgets::{Obj, AnimImg, WidgetError},
 };
 
@@ -50,8 +50,8 @@ impl View for AnimImg1 {
         Ok(())
     }
 
-    fn update(&mut self) -> Result<(), WidgetError> {
-        Ok(())
+    fn update(&mut self) -> Result<NavAction, WidgetError> {
+        Ok(NavAction::None)
     }
 }
 

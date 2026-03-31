@@ -10,6 +10,7 @@
 //! button turns it red — the container's single event handler catches all
 //! bubbled CLICKED events.
 
+use oxivgl::view::NavAction;
 use oxivgl::{
     style::{palette_main, Palette, Selector},
     view::{register_event_on, View},
@@ -62,21 +63,22 @@ impl View for EventBubble {
         }
     }
 
-    fn on_event(&mut self, event: &Event) {
+    fn on_event(&mut self, event: &Event) -> NavAction {
         if event.code() != EventCode::CLICKED {
-            return;
+            return NavAction::None;
         }
         let target = event.target_handle();
         if let Some(ref cont) = self.cont {
             if target == cont.handle() {
-                return;
+                return NavAction::None;
             }
         }
         event.target_style_bg_color(palette_main(Palette::Red), Selector::DEFAULT);
+        NavAction::None
     }
 
-    fn update(&mut self) -> Result<(), WidgetError> {
-        Ok(())
+    fn update(&mut self) -> Result<NavAction, WidgetError> {
+        Ok(NavAction::None)
     }
 }
 

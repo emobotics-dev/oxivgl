@@ -13,7 +13,7 @@ use oxivgl::{
     enums::EventCode,
     event::Event,
     indev::Indev,
-    view::View,
+    view::{NavAction, View},
     widgets::{Obj, Button, Label, WidgetError},
 };
 
@@ -43,8 +43,8 @@ impl View for EventStreak {
         Ok(())
     }
 
-    fn on_event(&mut self, event: &Event) {
-        let Some(ref btn) = self.btn else { return };
+    fn on_event(&mut self, event: &Event) -> NavAction {
+        let Some(ref btn) = self.btn else { return NavAction::None };
         if event.matches(btn, EventCode::SHORT_CLICKED) {
             if let Some(indev) = Indev::active() {
                 let cnt = indev.short_click_streak();
@@ -70,10 +70,11 @@ impl View for EventStreak {
                 btn_label.text("Triple clicked");
             }
         }
+        NavAction::None
     }
 
-    fn update(&mut self) -> Result<(), WidgetError> {
-        Ok(())
+    fn update(&mut self) -> Result<NavAction, WidgetError> {
+        Ok(NavAction::None)
     }
 }
 

@@ -9,6 +9,7 @@
 //! One-line textarea with a custom numeric button matrix keypad.
 //! Pressing a digit appends it; backspace deletes; newline sends READY.
 
+use oxivgl::view::NavAction;
 use oxivgl::{
     btnmatrix_map,
     enums::{EventCode, ObjFlag, ObjState},
@@ -63,7 +64,7 @@ impl View for WidgetTextarea1 {
         }
     }
 
-    fn on_event(&mut self, event: &Event) {
+    fn on_event(&mut self, event: &Event) -> NavAction {
         if let Some(ref btnm) = self.btnm {
             if event.matches(btnm, EventCode::VALUE_CHANGED) {
                 let btn_id = btnm.get_selected_button();
@@ -80,10 +81,11 @@ impl View for WidgetTextarea1 {
                 }
             }
         }
+        NavAction::None
     }
 
-    fn update(&mut self) -> Result<(), WidgetError> {
-        Ok(())
+    fn update(&mut self) -> Result<NavAction, WidgetError> {
+        Ok(NavAction::None)
     }
 }
 

@@ -9,7 +9,7 @@
 //! Range-mode slider with two handles and a label showing min–max values.
 
 use oxivgl::{
-    view::View,
+    view::{NavAction, View},
     widgets::{Obj, Align, Label, Slider, SliderMode, WidgetError},
 };
 
@@ -39,7 +39,7 @@ impl View for WidgetSlider3 {
         Ok(())
     }
 
-    fn update(&mut self) -> Result<(), WidgetError> {
+    fn update(&mut self) -> Result<NavAction, WidgetError> {
         use core::fmt::Write;
         if let (Some(slider), Some(label)) = (&self.slider, &self.label) {
             let left = slider.get_left_value();
@@ -49,7 +49,7 @@ impl View for WidgetSlider3 {
             label.text(&buf);
             label.align_to(slider, Align::OutBottomMid, 0, 10);
         }
-        Ok(())
+        Ok(NavAction::None)
     }
 }
 

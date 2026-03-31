@@ -14,7 +14,7 @@ use oxivgl::{
         anim_path_ease_out, anim_path_linear, anim_path_overshoot, anim_set_height,
         anim_set_slider_value, anim_set_width, Anim, AnimTimeline, ANIM_TIMELINE_PROGRESS_MAX,
     },
-    view::View,
+    view::{NavAction, View},
     enums::{EventCode, ObjFlag, ObjState, ScrollbarMode},
     event::Event,
     layout::{FlexAlign, FlexFlow},
@@ -159,7 +159,7 @@ impl View for AnimTimeline1 {
         Ok(())
     }
 
-    fn on_event(&mut self, event: &Event) {
+    fn on_event(&mut self, event: &Event) -> NavAction {
         if let Some(ref btn_start) = self.btn_start {
             if event.matches(btn_start, EventCode::VALUE_CHANGED) {
                 let reverse = btn_start.has_state(ObjState::CHECKED);
@@ -167,7 +167,7 @@ impl View for AnimTimeline1 {
                     timeline.set_reverse(reverse);
                     timeline.start();
                 }
-                return;
+                return NavAction::None;
             }
         }
         if let Some(ref btn_pause) = self.btn_pause {
@@ -175,7 +175,7 @@ impl View for AnimTimeline1 {
                 if let Some(ref mut timeline) = self.timeline {
                     timeline.pause();
                 }
-                return;
+                return NavAction::None;
             }
         }
         if let Some(ref slider) = self.slider {
@@ -186,10 +186,11 @@ impl View for AnimTimeline1 {
                 }
             }
         }
+        NavAction::None
     }
 
-    fn update(&mut self) -> Result<(), WidgetError> {
-        Ok(())
+    fn update(&mut self) -> Result<NavAction, WidgetError> {
+        Ok(NavAction::None)
     }
 }
 

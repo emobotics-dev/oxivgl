@@ -11,7 +11,7 @@
 
 use oxivgl::{
     symbols,
-    view::View,
+    view::{NavAction, View},
     widgets::{Obj, Label, WidgetError, Win},
 };
 
@@ -51,8 +51,8 @@ impl View for Win1 {
         Ok(())
     }
 
-    fn update(&mut self) -> Result<(), WidgetError> {
-        Ok(())
+    fn update(&mut self) -> Result<NavAction, WidgetError> {
+        Ok(NavAction::None)
     }
 }
 

@@ -11,7 +11,7 @@
 //! `set_state` and a child label is added for visual feedback.
 
 use oxivgl::{
-    view::View,
+    view::{NavAction, View},
     widgets::{Obj, Imagebutton, ImagebuttonState, Label, WidgetError},
 };
 
@@ -37,8 +37,8 @@ impl View for Imagebutton1 {
         Ok(())
     }
 
-    fn update(&mut self) -> Result<(), WidgetError> {
-        Ok(())
+    fn update(&mut self) -> Result<NavAction, WidgetError> {
+        Ok(NavAction::None)
     }
 }
 

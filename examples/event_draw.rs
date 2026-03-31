@@ -10,6 +10,7 @@
 //! size counter 0→50→0. The draw handler draws a filled circle (RADIUS_CIRCLE)
 //! that grows and shrinks, centered in the container.
 
+use oxivgl::view::NavAction;
 use oxivgl::{
     draw::{Area, DrawRectDsc, RADIUS_CIRCLE},
     enums::EventCode,
@@ -43,17 +44,17 @@ impl View for EventDraw {
         if let Some(ref cont) = self.cont { register_event_on(self, cont.handle()); }
     }
 
-    fn on_event(&mut self, event: &Event) {
-        let Some(ref cont) = self.cont else { return };
+    fn on_event(&mut self, event: &Event) -> NavAction {
+        let Some(ref cont) = self.cont else { return NavAction::None };
         if !event.matches(cont, EventCode::DRAW_TASK_ADDED) {
-            return;
+            return NavAction::None;
         }
-        let Some(task) = event.draw_task() else { return };
+        let Some(task) = event.draw_task() else { return NavAction::None };
         let base = task.base();
         if base.part != Part::Main {
-            return;
+            return NavAction::None;
         }
-        let Some(layer) = task.layer() else { return };
+        let Some(layer) = task.layer() else { return NavAction::None };
         let obj_coords = cont.get_coords();
         let mut a = Area { x1: 0, y1: 0, x2: self.size, y2: self.size };
         a.align_to_area(obj_coords, Align::Center, 0, 0);
@@ -66,9 +67,10 @@ impl View for EventDraw {
             .outline_width(2)
             .outline_pad(3);
         layer.draw_rect(&dsc, a);
+        NavAction::None
     }
 
-    fn update(&mut self) -> Result<(), WidgetError> {
+    fn update(&mut self) -> Result<NavAction, WidgetError> {
         if self.size_dec {
             self.size -= 1;
             if self.size <= 0 {
@@ -83,7 +85,7 @@ impl View for EventDraw {
         if let Some(ref cont) = self.cont {
             cont.invalidate();
         }
-        Ok(())
+        Ok(NavAction::None)
     }
 }
 

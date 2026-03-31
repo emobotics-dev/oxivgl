@@ -9,7 +9,7 @@
 //! Cogwheel image rotating continuously via `update()`.
 
 use oxivgl::{
-    view::View,
+    view::{NavAction, View},
     widgets::{Obj, Image, WidgetError},
 };
 
@@ -34,10 +34,10 @@ impl View for WidgetImage3 {
         Ok(())
     }
 
-    fn update(&mut self) -> Result<(), WidgetError> {
+    fn update(&mut self) -> Result<NavAction, WidgetError> {
         self.angle = (self.angle + 30) % 3600;
         if let Some(ref img) = self.img { img.set_rotation(self.angle); }
-        Ok(())
+        Ok(NavAction::None)
     }
 }
 

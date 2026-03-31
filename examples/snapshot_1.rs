@@ -13,7 +13,7 @@
 use oxivgl::{
     layout::{FlexAlign, FlexFlow},
     snapshot::Snapshot,
-    view::View,
+    view::{NavAction, View},
     widgets::{Image, Obj, Part, WidgetError},
 };
 
@@ -82,8 +82,8 @@ impl View for Snapshot1 {
         Ok(())
     }
 
-    fn update(&mut self) -> Result<(), WidgetError> {
-        Ok(())
+    fn update(&mut self) -> Result<NavAction, WidgetError> {
+        Ok(NavAction::None)
     }
 }
 

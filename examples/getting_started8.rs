@@ -8,7 +8,7 @@
 
 use oxivgl::{
     style::{color_make, lv_pct, GradDsc, GradExtend, Selector, Style, StyleBuilder},
-    view::View,
+    view::{NavAction, View},
     widgets::{Obj, WidgetError},
 };
 
@@ -49,8 +49,8 @@ impl View for GettingStarted8 {
         Ok(())
     }
 
-    fn update(&mut self) -> Result<(), WidgetError> {
-        Ok(())
+    fn update(&mut self) -> Result<NavAction, WidgetError> {
+        Ok(NavAction::None)
     }
 }
 

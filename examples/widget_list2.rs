@@ -10,6 +10,7 @@
 //! Top/Up/Center/Down/Bottom/Shuffle buttons to reorder the selected item.
 //! Shuffle uses a deterministic permutation (no `lv_rand` in safe API).
 
+use oxivgl::view::NavAction;
 use oxivgl::{
     enums::{EventCode, ObjFlag, ObjState},
     event::Event,
@@ -98,11 +99,11 @@ impl View for WidgetList2 {
         if let Some(ref list2) = self._list2 { register_event_on(self, list2.lv_handle()); }
     }
 
-    fn on_event(&mut self, event: &Event) {
+    fn on_event(&mut self, event: &Event) -> NavAction {
         let code = event.code();
         let target = event.target_handle();
 
-        let Some(ref list1) = self.list1 else { return };
+        let Some(ref list1) = self.list1 else { return NavAction::None };
 
         // Item click in list1 — toggle selection
         if code == EventCode::CLICKED && event.current_target_handle() == list1.lv_handle() {
@@ -122,15 +123,15 @@ impl View for WidgetList2 {
                     }
                 }
             }
-            return;
+            return NavAction::None;
         }
 
-        let Some(cur) = self.current else { return };
+        let Some(cur) = self.current else { return NavAction::None };
         let cur_obj = Obj::from_raw_non_owning(cur);
 
         // Control buttons check code for CLICKED or LONG_PRESSED_REPEAT
         if code != EventCode::CLICKED && code != EventCode::LONG_PRESSED_REPEAT {
-            return;
+            return NavAction::None;
         }
 
         let btn_top_h = self.btn_top.as_ref().map(|b| b.lv_handle());
@@ -170,10 +171,11 @@ impl View for WidgetList2 {
                 cur_obj.scroll_to_view(true);
             }
         }
+        NavAction::None
     }
 
-    fn update(&mut self) -> Result<(), WidgetError> {
-        Ok(())
+    fn update(&mut self) -> Result<NavAction, WidgetError> {
+        Ok(NavAction::None)
     }
 }
 
