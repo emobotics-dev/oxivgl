@@ -163,6 +163,9 @@ impl Screen {
     /// Same lifetime contract as [`add_style`](Self::add_style) — the style Rc
     /// clone is intentionally leaked on drop because the LVGL screen outlives
     /// this non-owning handle.
+    ///
+    /// The subject should outlive the screen. Both drop orders are safe
+    /// (see [`Subject`](super::subject::Subject) docs).
     pub fn bind_style(
         &self,
         style: &Style,

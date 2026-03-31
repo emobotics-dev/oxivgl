@@ -66,16 +66,15 @@ impl Navigator {
     pub fn push_root(&mut self, view: impl View) {
         let mut boxed: Box<dyn AnyView> = Box::new(view);
 
-        // Use the default active screen as the container.
+        // Use the default active screen as the container. Child suppresses
+        // Drop so the LVGL screen is never deleted by Rust.
         let screen_handle = unsafe { lv_screen_active() };
         assert!(!screen_handle.is_null(), "no active screen");
-        let container = Obj::from_raw(screen_handle);
+        let container = Obj::from_raw_non_owning(screen_handle);
 
         boxed
             .create(&container)
             .expect("root view create failed");
-        // Don't delete the default LVGL screen.
-        core::mem::forget(container);
 
         // register_events() default calls register_event_on(self, lv_screen_active()).
         // lv_screen_active() is the default screen — correct at this point.
@@ -108,6 +107,18 @@ impl Navigator {
             top.view.will_hide();
         }
 
+        // Capture the old screen handle BEFORE loading the new screen,
+        // because lv_screen_active() will change after Screen::load.
+        let old_screen_h = self.stack.last().map(|top| {
+            top.screen
+                .as_ref()
+                .map(|s| s.lv_handle())
+                .unwrap_or_else(|| {
+                    // Root view uses the LVGL default screen.
+                    unsafe { lv_screen_active() }
+                })
+        });
+
         // Create a new screen for the incoming view.
         let new_screen = Screen::create();
 
@@ -129,19 +140,13 @@ impl Navigator {
 
         // Clean the old screen's children (widget tree) to free memory,
         // but keep the screen object alive for potential pop animation.
-        if let Some(top) = self.stack.last() {
-            let old_screen_h = top
-                .screen
-                .as_ref()
-                .map(|s| s.lv_handle())
-                .unwrap_or_else(|| {
-                    // Root view uses the LVGL default screen. After loading
-                    // the new screen, the default screen is no longer active.
-                    // We need its handle — get it from the display.
-                    unsafe { lv_display_get_screen_active(lv_display_get_default()) }
-                });
-            // SAFETY: old_screen_h is a valid screen object.
-            unsafe { lv_obj_clean(old_screen_h) };
+        // SAFETY: old_screen_h was captured above while still valid. The old
+        // screen object is still alive (just no longer active). lv_obj_clean
+        // deletes all children but keeps the screen itself. Note: any Obj
+        // wrappers held by the old view now contain stale pointers — their
+        // Drop uses lv_obj_is_valid() as a guard (see spec-memory-lifetime §8.1).
+        if let Some(h) = old_screen_h {
+            unsafe { lv_obj_clean(h) };
         }
 
         boxed.did_show();
@@ -164,36 +169,45 @@ impl Navigator {
         // Remove the top view — will_hide + drop.
         let mut popped = self.stack.pop().unwrap();
         popped.view.will_hide();
-        // popped.screen is dropped here, deleting the LVGL screen object.
-        drop(popped);
 
         // Rebuild the now-top view's widgets.
         let top = self.stack.last_mut().unwrap();
 
-        // Load the restored screen first so lv_screen_active() is correct
-        // during create/register_events.
-        if let Some(ref top_screen) = top.screen {
+        // Load the restored screen BEFORE dropping the popped screen.
+        // This ensures lv_screen_active() returns the correct screen
+        // during create/register_events, and avoids the undefined state
+        // of having no active screen.
+        let container_handle = if let Some(ref top_screen) = top.screen {
             if let Some(ref a) = anim {
                 Screen::load(top_screen, a, false);
             } else {
                 Screen::load_instant(top_screen);
             }
-        }
-        // If top.screen is None (root view), the default screen becomes
-        // active automatically when the popped screen is deleted.
+            top_screen.lv_handle()
+        } else {
+            // Root view: load the default LVGL screen. We must get its
+            // handle BEFORE dropping popped (which deletes popped.screen).
+            // SAFETY: lv_display_get_default/lv_display_get_screen returns
+            // the LVGL default screen (index 0), which is always valid.
+            let default_screen = unsafe {
+                let disp = lv_display_get_default();
+                lv_display_get_screen_active(disp)
+            };
+            // The default screen may be behind the popped screen. Load it
+            // before dropping so it becomes active.
+            Screen::load_instant(&Obj::from_raw_non_owning(default_screen));
+            default_screen
+        };
 
-        let container_handle = top
-            .screen
-            .as_ref()
-            .map(|s| s.lv_handle())
-            .unwrap_or_else(|| unsafe { lv_screen_active() });
+        // Now safe to drop the popped view and its screen.
+        drop(popped);
 
-        let container = Obj::from_raw(container_handle);
+        // Non-owning handle — the screen is owned by the ViewEntry, not
+        // this temporary. Child suppresses Drop so no screen deletion.
+        let container = Obj::from_raw_non_owning(container_handle);
         top.view
             .create(&container)
             .map_err(NavigationError::CreateFailed)?;
-        // Don't delete the screen when container drops.
-        core::mem::forget(container);
 
         top.view.register_events();
         top.view.did_show();
@@ -210,18 +224,22 @@ impl Navigator {
 
     /// Replace with a boxed view.
     fn replace_boxed(&mut self, mut boxed: Box<dyn AnyView>, anim: Option<ScreenAnim>) {
-        // Drop the current top (no will_hide — permanently removed).
-        self.stack.pop();
+        // Notify the view being replaced so it can save state if needed.
+        if let Some(top) = self.stack.last_mut() {
+            top.view.will_hide();
+        }
 
-        // Create a new screen.
+        // Create a new screen and load it BEFORE dropping the old view,
+        // ensuring there is always a valid active screen.
         let new_screen = Screen::create();
-
-        // Load first so lv_screen_active() is correct.
         if let Some(ref a) = anim {
             Screen::load(&new_screen, a, false);
         } else {
             Screen::load_instant(&new_screen);
         }
+
+        // Now safe to drop the old view and its screen.
+        self.stack.pop();
 
         boxed
             .create(&new_screen)
@@ -273,10 +291,15 @@ impl Navigator {
     pub fn dismiss_modal(&mut self) -> Result<(), NavigationError> {
         if let Some(mut modal) = self.modal.take() {
             modal.will_hide();
-            // Clean all children of lv_layer_top.
+            // SAFETY: lv_layer_top() returns the global overlay object (valid
+            // after lv_init). lv_obj_clean deletes all children. Any Obj
+            // wrappers in the modal view now hold stale pointers — their Drop
+            // uses lv_obj_is_valid() as a guard (spec-memory-lifetime §8.1).
+            // We clean before dropping the modal so LVGL removes its widgets
+            // from the display immediately.
             let layer = unsafe { lv_layer_top() };
             unsafe { lv_obj_clean(layer) };
-            // modal is dropped here.
+            // modal is dropped here — Obj::drop guards prevent double-free.
             Ok(())
         } else {
             Err(NavigationError::NoActiveModal)

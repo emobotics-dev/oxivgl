@@ -42,7 +42,7 @@ LVGL function that stores the pointer beyond the call's duration.
 | `lv_indev_t`                  | LVGL --- `lv_indev_create` | User --- `lv_indev_delete` | Application lifetime typically | Global indev list |
 | `lv_group_t`                  | LVGL --- `lv_group_create` | User --- `lv_group_delete` | Until explicitly deleted | User holds the pointer |
 | `lv_theme_t`                  | User or LVGL --- `lv_theme_create` (v9.5) | User --- `lv_theme_delete` | Must outlive all widgets styled by it | Display's theme chain |
-| `lv_subject_t`                | User --- `lv_subject_init_*` | User --- `lv_subject_deinit` | Must outlive all observers and bound widgets | Observer linked list; widget bindings |
+| `lv_subject_t`                | User --- `lv_subject_init_*` | User --- `lv_subject_deinit` | Should outlive observers/widgets; both drop orders safe (`lv_subject_deinit` / `lv_obj_delete` each clean up linkage) | Observer linked list; widget bindings |
 | `lv_observer_t`               | LVGL --- `lv_subject_add_observer` / `lv_*_bind_*` | LVGL --- on widget delete, or User --- `lv_observer_remove` | Until widget deleted or manually removed | Subject's observer list |
 | `lv_draw_buf_t`               | User --- `lv_draw_buf_create` | User --- `lv_draw_buf_destroy` | Until explicitly destroyed | Canvas widget; snapshot callers |
 | `lv_event_t`                  | LVGL (stack frame) | LVGL --- automatic | Duration of the event callback only | Stack frame in `lv_event_send` |

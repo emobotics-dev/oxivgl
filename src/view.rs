@@ -206,9 +206,15 @@ impl core::fmt::Display for NavigationError {
 // Pending event action (single-threaded stash for trampoline → navigator)
 // ---------------------------------------------------------------------------
 
-/// SAFETY: LVGL runs on a single task. This cell is only written by the
-/// event trampoline (during `lv_timer_handler`) and read by the render
-/// loop — never concurrently.
+/// SAFETY: LVGL runs on a single task — the event trampoline (which writes
+/// to this cell during `lv_timer_handler`) and the render loop (which reads
+/// it) execute sequentially within the same async task. No concurrent
+/// access occurs. `NavAction` contains `Box<dyn AnyView>` which is `!Send`,
+/// but that is fine because the cell never crosses task/thread boundaries.
+///
+/// This invariant would break if LVGL were driven from multiple threads.
+/// The single-task requirement is enforced architecturally (run_app / run_app_nav
+/// own both the render loop and the timer handler).
 struct SyncCell(UnsafeCell<Option<NavAction>>);
 unsafe impl Sync for SyncCell {}
 
@@ -235,15 +241,22 @@ pub fn register_view_events<V: View>(view: &mut V) {
 /// Use this from [`View::register_events`] to catch events on containers
 /// or other intermediate objects that don't bubble to the screen.
 ///
-/// # Safety requirement (not enforced by the type system)
+/// # Address stability (not enforced by the type system)
 ///
 /// `view` must remain at a stable address for the LVGL display lifetime.
-/// This is guaranteed by `run_app` (async frame pin) and `host_main!`
-/// (stack-local before infinite loop). Do not call on a local that may move.
+/// This is guaranteed by:
+/// - `run_app`: view lives in the async task frame (pinned by the executor)
+/// - `host_main!`: view is stack-local before the infinite loop
+/// - `Navigator`: views live inside `Box<dyn AnyView>` (heap-stable)
+///
+/// Do not call this on a view that may be moved after registration.
 pub fn register_event_on<V: View>(view: &mut V, obj: *mut lv_obj_t) {
+    assert!(!obj.is_null(), "register_event_on: obj must not be null");
     let view_ptr = view as *mut V as *mut c_void;
-    // SAFETY: obj must be a valid LVGL object; view_ptr remains valid for the
-    // LVGL display lifetime (guaranteed by run_app / host_main!).
+    // SAFETY: obj non-null (asserted above); view_ptr remains valid for the
+    // LVGL display lifetime (see address stability guarantee in doc comment).
+    // The view lives behind Box indirection (navigator) or in a pinned async
+    // frame (run_app), so the pointer survives Vec reallocations.
     unsafe {
         lv_obj_add_event_cb(
             obj,
@@ -254,6 +267,10 @@ pub fn register_event_on<V: View>(view: &mut V, obj: *mut lv_obj_t) {
     };
 }
 
+/// SAFETY: `user_data` is a `*mut V` set by `register_event_on`. The pointer
+/// remains valid because the view lives behind Box indirection (navigator) or
+/// in a pinned async frame (run_app), so address stability is guaranteed even
+/// if the navigator's Vec reallocates. See `register_event_on` doc comment.
 unsafe extern "C" fn view_event_trampoline<V: View>(e: *mut lv_event_t) {
     if e.is_null() {
         return;
@@ -302,21 +319,18 @@ pub async fn run_app<V: View, const BYTES: usize>(
     DISPLAY_READY.wait().await;
     info!("Display ready");
 
-    // Wrap the active screen in a non-owning Obj for the container parameter.
+    // Wrap the active screen in a non-owning handle (Child suppresses Drop,
+    // so the LVGL screen is never deleted by Rust).
     let screen_handle = unsafe { lv_screen_active() };
     assert!(!screen_handle.is_null(), "no active screen after display init");
-    let container = Obj::from_raw(screen_handle);
+    let container = Obj::from_raw_non_owning(screen_handle);
 
     if let Err(e) = view.create(&container) {
         warn!("Could not create LVGL widgets: {:?}, disabling UI", e);
-        // Forget container so we don't delete the LVGL screen.
-        core::mem::forget(container);
         loop {
             Timer::after(Duration::from_secs(60)).await;
         }
     }
-    // Forget container — the LVGL screen must not be deleted.
-    core::mem::forget(container);
 
     register_view_events(&mut view);
 
@@ -339,7 +353,75 @@ pub async fn run_app<V: View, const BYTES: usize>(
         let _event_action = take_pending_event_action();
 
         // Note: NavAction processing is handled by Navigator (see
-        // navigator::Navigator). This simple run_app ignores actions —
-        // use Navigator::run_app for multi-screen applications.
+        // run_app_nav). This simple run_app ignores actions —
+        // use run_app_nav for multi-screen applications.
+    }
+}
+
+/// Run the LVGL render loop with navigation support.
+///
+/// Like [`run_app`], but creates a [`Navigator`](crate::navigator::Navigator)
+/// that processes [`NavAction`] values from `update()` and `on_event()`.
+/// Use this for multi-screen applications that need push/pop/replace/modal.
+///
+/// `initial` is the root view. Never returns.
+pub async fn run_app_nav<const BYTES: usize>(
+    w: i32,
+    h: i32,
+    bufs: &'static mut LvglBuffers<BYTES>,
+    initial: impl View,
+) -> ! {
+    info!("UI task started (navigator)");
+    let driver = LvglDriver::init(w, h);
+    // SAFETY: lv_init() has been called inside LvglDriver::init() above.
+    unsafe { lvgl_disp_init(w, h, bufs) };
+
+    DISPLAY_READY.wait().await;
+    info!("Display ready");
+
+    let mut nav = crate::navigator::Navigator::new();
+    nav.push_root(initial);
+
+    const LVGL_TIMER_DELAY: u64 = LV_DEF_REFR_PERIOD as u64 / 4;
+
+    loop {
+        // Update active view — polls app state, returns NavAction.
+        let action = nav
+            .active_view_mut()
+            .map(|v| v.update())
+            .unwrap_or(Ok(NavAction::None))
+            .unwrap_or_else(|e| {
+                warn!("view update: {:?}", e);
+                NavAction::None
+            });
+
+        // Update modal if present.
+        let modal_action = nav
+            .active_modal_mut()
+            .map(|m| m.update())
+            .unwrap_or(Ok(NavAction::None))
+            .unwrap_or_else(|e| {
+                warn!("modal update: {:?}", e);
+                NavAction::None
+            });
+
+        // Drive lv_timer_handler 4× per update cycle.
+        for _ in 0..4 {
+            driver.timer_handler();
+            Timer::after(Duration::from_millis(LVGL_TIMER_DELAY)).await;
+        }
+
+        // Process navigation: event actions (from on_event trampoline)
+        // take priority over update actions.
+        nav.process_pending_event_action();
+        if action.is_none() {
+            // No event action was pending, try update action.
+        }
+        if !action.is_none() {
+            nav.process_action(action);
+        }
+        if !modal_action.is_none() {
+            nav.process_action(modal_action);
+        }
     }
 }

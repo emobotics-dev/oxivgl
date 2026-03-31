@@ -76,6 +76,9 @@ impl Timer {
     /// cycle return `false`. This is intentional for single-poll usage.
     pub fn triggered(&self) -> bool {
         // SAFETY: flag is heap-allocated and valid for Timer's lifetime.
+        // Cell<bool> is not Sync, but this is safe because LVGL's timer
+        // callback (which writes to the flag) and this read both execute
+        // on the single LVGL task — never concurrently.
         let flag = unsafe { &*self.flag };
         if flag.get() {
             flag.set(false);
@@ -128,7 +131,8 @@ impl Drop for Timer {
         // SAFETY: ptr created by lv_timer_create; flag by Box::into_raw.
         // Delete timer first (removes LVGL's reference to flag), then
         // reclaim the flag allocation. Order matters: LVGL must not
-        // reference the flag after it's freed.
+        // reference the flag after it's freed. Safe because LVGL's
+        // timer handler and drop both run on the single LVGL task.
         unsafe {
             lv_timer_delete(self.ptr);
             drop(Box::from_raw(self.flag));
