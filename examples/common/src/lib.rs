@@ -67,7 +67,9 @@ macro_rules! example_main {
 #[macro_export]
 macro_rules! example_main_nav {
     ($view_expr:expr) => {
-        // TODO: add fire27_main_nav! for ESP32 when needed.
+        #[cfg(target_arch = "xtensa")]
+        $crate::fire27_main_nav!($view_expr);
+
         #[cfg(not(target_arch = "xtensa"))]
         $crate::host_main_nav!($view_expr);
     };

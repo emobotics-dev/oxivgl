@@ -23,9 +23,32 @@
 #[macro_export]
 macro_rules! fire27_main {
     ($view_expr:expr) => {
+        $crate::fire27_body!($view_expr, single);
+    };
+}
+
+/// Like [`fire27_main!`] but uses [`run_app_nav`] for multi-screen navigation.
+///
+/// The root view is still wrapped in `Fire27View` so the keypad input device
+/// is registered on first create. Pushed/popped views managed by the Navigator
+/// inherit the keypad input automatically (LVGL routes keypad events to the
+/// active screen's focused group).
+#[macro_export]
+macro_rules! fire27_main_nav {
+    ($view_expr:expr) => {
+        $crate::fire27_body!($view_expr, nav);
+    };
+}
+
+/// Internal: shared Fire27 hardware setup body. Do not call directly.
+///
+/// `$mode` is either `single` (uses `run_app`) or `nav` (uses `run_app_nav`).
+#[macro_export]
+#[doc(hidden)]
+macro_rules! fire27_body {
+    ($view_expr:expr, $mode:ident) => {
         // Crate aliases for proc-macro attributes (#[embassy_executor::task], etc.)
         use $crate::esp_hal as esp_hal;
-
 
         use $crate::embassy_embedded_hal::shared_bus::asynch::spi::SpiDeviceWithConfig;
         use embassy_executor::Spawner;
@@ -55,7 +78,6 @@ macro_rules! fire27_main {
         use $crate::log::info;
         use $crate::oxivgl::flush_pipeline::{DisplayOutput, UiError, flush_frame_buffer};
         use $crate::oxivgl::display::LvglBuffers;
-        use $crate::oxivgl::view::run_app;
         use $crate::static_cell::{StaticCell, make_static};
 
         esp_bootloader_esp_idf::esp_app_desc!();
@@ -294,9 +316,23 @@ macro_rules! fire27_main {
             let bufs = unsafe { &mut *core::ptr::addr_of_mut!(LVGL_BUFS) };
 
             let wrapper = Fire27View { inner: $view_expr, indev_registered: false };
-            run_app::<Fire27View<_>, LVGL_BUF_BYTES>(
-                SCREEN_W.into(), SCREEN_H.into(), bufs, wrapper,
-            ).await;
+            $crate::fire27_launch!(wrapper, bufs, $mode);
         }
+    };
+}
+
+/// Internal: launch the render loop. Do not call directly.
+#[macro_export]
+#[doc(hidden)]
+macro_rules! fire27_launch {
+    ($wrapper:ident, $bufs:ident, single) => {
+        $crate::oxivgl::view::run_app::<Fire27View<_>, LVGL_BUF_BYTES>(
+            SCREEN_W.into(), SCREEN_H.into(), $bufs, $wrapper,
+        ).await
+    };
+    ($wrapper:ident, $bufs:ident, nav) => {
+        $crate::oxivgl::view::run_app_nav::<LVGL_BUF_BYTES>(
+            SCREEN_W.into(), SCREEN_H.into(), $bufs, $wrapper,
+        ).await
     };
 }
