@@ -62,6 +62,9 @@ impl AnimHandle {
 pub struct Anim<'w> {
     pub(crate) inner: lv_anim_t,
     _widget: PhantomData<&'w ()>,
+    /// Tracks whether `user_data` holds a bezier pair Box allocation
+    /// that must be freed on repeated `set_bezier3_path` calls.
+    has_bezier_user_data: bool,
 }
 
 impl<'w> core::fmt::Debug for Anim<'w> {
@@ -79,7 +82,7 @@ impl<'w> Anim<'w> {
         // SAFETY: lv_anim_init writes default field values into the zeroed
         // struct. No other LVGL state is required.
         unsafe { lv_anim_init(&mut inner) };
-        Self { inner, _widget: PhantomData }
+        Self { inner, _widget: PhantomData, has_bezier_user_data: false }
     }
 
     /// Set the animated variable (the raw `lv_obj_t*` pointer).
@@ -166,9 +169,9 @@ impl<'w> Anim<'w> {
         p2: &'static AtomicI32,
     ) -> &mut Self {
         // Free any previous bezier pair allocation from a prior call.
-        if !self.inner.user_data.is_null() {
-            // SAFETY: user_data was set by a prior set_bezier3_path call
-            // to a Box::into_raw allocation of [*const AtomicI32; 2].
+        if self.has_bezier_user_data {
+            // SAFETY: has_bezier_user_data is only set when user_data
+            // points to a Box::into_raw allocation of [*const AtomicI32; 2].
             unsafe {
                 drop(alloc::boxed::Box::from_raw(
                     self.inner.user_data as *mut [*const AtomicI32; 2],
@@ -186,6 +189,7 @@ impl<'w> Anim<'w> {
             p2 as *const AtomicI32,
         ]));
         self.inner.user_data = pair as *mut c_void;
+        self.has_bezier_user_data = true;
         unsafe { lv_anim_set_path_cb(&mut self.inner, Some(bezier3_path_cb)) };
         self
     }

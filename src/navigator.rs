@@ -349,9 +349,13 @@ impl Navigator {
     }
 
     /// Process any pending event action stashed by the on_event trampoline.
-    pub fn process_pending_event_action(&mut self) {
+    /// Returns `true` if an event action was processed.
+    pub fn process_pending_event_action(&mut self) -> bool {
         if let Some(action) = take_pending_event_action() {
             self.process_action(action);
+            true
+        } else {
+            false
         }
     }
 }

@@ -118,12 +118,15 @@ macro_rules! host_main_nav {
                 }
 
                 // Event actions (from on_event) take priority.
-                nav.process_pending_event_action();
-                if !action.is_none() {
-                    nav.process_action(action);
-                }
-                if !modal_action.is_none() {
-                    nav.process_action(modal_action);
+                // Only process update/modal actions if no event action fired.
+                let event_handled = nav.process_pending_event_action();
+                if !event_handled {
+                    if !action.is_none() {
+                        nav.process_action(action);
+                    }
+                    if !modal_action.is_none() {
+                        nav.process_action(modal_action);
+                    }
                 }
             }
         }
@@ -155,13 +158,12 @@ macro_rules! host_main {
 
             let mut _view = $view_expr;
 
-            // Wrap the active screen as a non-owning container.
+            // Wrap the active screen as a non-owning container (Child
+            // suppresses Drop, so the LVGL screen is never deleted).
             let screen_handle = unsafe { oxivgl_sys::lv_screen_active() };
             assert!(!screen_handle.is_null(), "no active screen");
-            let container = $crate::oxivgl::widgets::Obj::from_raw(screen_handle);
+            let container = $crate::oxivgl::widgets::Obj::from_raw_non_owning(screen_handle);
             _view.create(&container).expect("view create failed");
-            // Don't delete the LVGL screen when container drops.
-            core::mem::forget(container);
 
             $crate::oxivgl::view::register_view_events(&mut _view);
 

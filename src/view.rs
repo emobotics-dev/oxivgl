@@ -21,6 +21,10 @@ use crate::{
     widgets::{Obj, ScreenAnim, WidgetError},
 };
 
+/// LVGL timer tick interval (ms). `LV_DEF_REFR_PERIOD / 4` yields ~4 ticks
+/// per refresh cycle, keeping animations smooth at ~30 fps.
+const LVGL_TICK_MS: u64 = LV_DEF_REFR_PERIOD as u64 / 4;
+
 /// A single view of UI (one screen or modal in a navigation stack).
 ///
 /// The lifecycle is:
@@ -334,19 +338,18 @@ pub async fn run_app<V: View, const BYTES: usize>(
 
     register_view_events(&mut view);
 
-    const LVGL_TIMER_DELAY: u64 = LV_DEF_REFR_PERIOD as u64 / 4;
-
     loop {
         debug!("Rendering UI loop iteration");
-        let _action = view.update()
+        let action = view.update()
             .unwrap_or_else(|e| { warn!("Failed to update widgets: {:?}", e); NavAction::None });
+        debug_assert!(action.is_none(), "NavAction ignored in run_app — use run_app_nav for navigation");
 
         // Drive lv_timer_handler 4× per update cycle (once per refresh period)
         // so LVGL animations stay smooth while update() is called at ~30fps.
         for _ in 0..4 {
             debug!("LVGL tick/timer handler");
             driver.timer_handler();
-            Timer::after(Duration::from_millis(LVGL_TIMER_DELAY)).await;
+            Timer::after(Duration::from_millis(LVGL_TICK_MS)).await;
         }
 
         // Drain any pending event action (stashed by on_event trampoline).
@@ -382,10 +385,8 @@ pub async fn run_app_nav<const BYTES: usize>(
     let mut nav = crate::navigator::Navigator::new();
     nav.push_root(initial);
 
-    const LVGL_TIMER_DELAY: u64 = LV_DEF_REFR_PERIOD as u64 / 4;
-
     loop {
-        // Update active view — polls app state, returns NavAction.
+        // Poll active view and modal for NavActions.
         let action = nav
             .active_view_mut()
             .map(|v| v.update())
@@ -395,7 +396,6 @@ pub async fn run_app_nav<const BYTES: usize>(
                 NavAction::None
             });
 
-        // Update modal if present.
         let modal_action = nav
             .active_modal_mut()
             .map(|m| m.update())
@@ -408,20 +408,19 @@ pub async fn run_app_nav<const BYTES: usize>(
         // Drive lv_timer_handler 4× per update cycle.
         for _ in 0..4 {
             driver.timer_handler();
-            Timer::after(Duration::from_millis(LVGL_TIMER_DELAY)).await;
+            Timer::after(Duration::from_millis(LVGL_TICK_MS)).await;
         }
 
-        // Process navigation: event actions (from on_event trampoline)
-        // take priority over update actions.
-        nav.process_pending_event_action();
-        if action.is_none() {
-            // No event action was pending, try update action.
-        }
-        if !action.is_none() {
-            nav.process_action(action);
-        }
-        if !modal_action.is_none() {
-            nav.process_action(modal_action);
+        // Event actions (from on_event trampoline) take priority.
+        // Only process update/modal actions if no event action fired.
+        let event_handled = nav.process_pending_event_action();
+        if !event_handled {
+            if !action.is_none() {
+                nav.process_action(action);
+            }
+            if !modal_action.is_none() {
+                nav.process_action(modal_action);
+            }
         }
     }
 }
