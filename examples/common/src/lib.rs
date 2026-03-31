@@ -59,3 +59,16 @@ macro_rules! example_main {
         $crate::host_main!($view_expr);
     };
 }
+
+/// Generate a `main` function for a **multi-screen navigation** example.
+///
+/// Like [`example_main!`] but uses a [`Navigator`] to process
+/// [`NavAction`] values, enabling push/pop/replace/modal transitions.
+#[macro_export]
+macro_rules! example_main_nav {
+    ($view_expr:expr) => {
+        // TODO: add fire27_main_nav! for ESP32 when needed.
+        #[cfg(not(target_arch = "xtensa"))]
+        $crate::host_main_nav!($view_expr);
+    };
+}
