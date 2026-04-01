@@ -10,6 +10,7 @@
 //! scrolls. Labels on the left show the current range of loaded item numbers.
 //! A checkbox toggles scrollbar visibility.
 
+use oxivgl::view::NavAction;
 use oxivgl::{
     enums::{EventCode, ObjState},
     event::Event,
@@ -159,13 +160,13 @@ impl View for Scroll7 {
         if let Some(ref cb) = self.checkbox { register_event_on(self, cb.handle()); }
     }
 
-    fn on_event(&mut self, event: &Event) {
+    fn on_event(&mut self, event: &Event) -> NavAction {
         if let Some(ref cont) = self.cont {
             if event.code() == EventCode::SCROLL
                 && event.current_target_handle() == cont.handle()
             {
                 self.update_scroll();
-                return;
+                return NavAction::None;
             }
         }
         if let Some(ref checkbox) = self.checkbox {
@@ -177,10 +178,11 @@ impl View for Scroll7 {
                 }
             }
         }
+        NavAction::None
     }
 
-    fn update(&mut self) -> Result<(), WidgetError> {
-        Ok(())
+    fn update(&mut self) -> Result<NavAction, WidgetError> {
+        Ok(NavAction::None)
     }
 }
 

@@ -12,7 +12,7 @@
 use oxivgl::{
     enums::ObjState,
     style::{palette_main, BorderSide, GradDir, Palette, Style, StyleBuilder},
-    view::View,
+    view::{NavAction, View},
     widgets::{Obj, Align, Part, Textarea, WidgetError},
 };
 
@@ -99,8 +99,8 @@ impl View for WidgetTextarea4 {
         Ok(())
     }
 
-    fn update(&mut self) -> Result<(), WidgetError> {
-        Ok(())
+    fn update(&mut self) -> Result<NavAction, WidgetError> {
+        Ok(NavAction::None)
     }
 }
 

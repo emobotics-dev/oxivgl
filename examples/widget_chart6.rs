@@ -12,7 +12,7 @@
 use oxivgl::{
     enums::EventCode,
     event::Event,
-    view::View,
+    view::{NavAction, View},
     widgets::{Obj, Align, Chart, ChartAxis, ChartCursor, ChartSeries, ChartType, Label, WidgetError},
 };
 
@@ -53,7 +53,7 @@ impl View for WidgetChart6 {
         Ok(())
     }
 
-    fn on_event(&mut self, event: &Event) {
+    fn on_event(&mut self, event: &Event) -> NavAction {
         if let (Some(chart), Some(cursor)) = (&self.chart, &self.cursor) {
             if event.matches(chart, EventCode::VALUE_CHANGED) {
                 if let Some(id) = chart.get_pressed_point() {
@@ -61,10 +61,11 @@ impl View for WidgetChart6 {
                 }
             }
         }
+        NavAction::None
     }
 
-    fn update(&mut self) -> Result<(), WidgetError> {
-        Ok(())
+    fn update(&mut self) -> Result<NavAction, WidgetError> {
+        Ok(NavAction::None)
     }
 }
 

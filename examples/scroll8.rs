@@ -10,6 +10,7 @@
 //! infinitely: when the scroll reaches either end, the last/first item
 //! is moved to the opposite end and the scroll position is adjusted.
 
+use oxivgl::view::NavAction;
 use oxivgl::{
     enums::{EventCode, ScrollbarMode},
     event::Event,
@@ -166,9 +167,9 @@ impl View for Scroll8 {
         }
     }
 
-    fn on_event(&mut self, event: &Event) {
+    fn on_event(&mut self, event: &Event) -> NavAction {
         if event.code() != EventCode::SCROLL {
-            return;
+            return NavAction::None;
         }
         let row_handle = self.cont_row.as_ref().map(|c| c.handle());
         let col_handle = self.cont_col.as_ref().map(|c| c.handle());
@@ -177,10 +178,11 @@ impl View for Scroll8 {
         } else if col_handle == Some(event.current_target_handle()) {
             self.handle_col_scroll();
         }
+        NavAction::None
     }
 
-    fn update(&mut self) -> Result<(), WidgetError> {
-        Ok(())
+    fn update(&mut self) -> Result<NavAction, WidgetError> {
+        Ok(NavAction::None)
     }
 }
 

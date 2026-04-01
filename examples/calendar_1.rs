@@ -13,7 +13,7 @@
 use oxivgl::{
     enums::EventCode,
     event::Event,
-    view::View,
+    view::{NavAction, View},
     widgets::{Obj, Align, Calendar, CalendarDate, Label, WidgetError},
 };
 
@@ -46,7 +46,7 @@ impl View for Calendar1 {
         Ok(())
     }
 
-    fn on_event(&mut self, event: &Event) {
+    fn on_event(&mut self, event: &Event) -> NavAction {
         if let Some(ref cal) = self.cal {
             if event.matches(cal, EventCode::VALUE_CHANGED) {
                 if let Some(date) = cal.get_pressed_date() {
@@ -61,10 +61,11 @@ impl View for Calendar1 {
                 }
             }
         }
+        NavAction::None
     }
 
-    fn update(&mut self) -> Result<(), WidgetError> {
-        Ok(())
+    fn update(&mut self) -> Result<NavAction, WidgetError> {
+        Ok(NavAction::None)
     }
 }
 

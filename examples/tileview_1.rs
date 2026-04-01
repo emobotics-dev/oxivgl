@@ -13,7 +13,7 @@
 use oxivgl::{
     enums::ScrollDir,
     style::lv_pct,
-    view::View,
+    view::{NavAction, View},
     widgets::{Obj, Button, Label, List, Tileview, WidgetError},
 };
 
@@ -52,8 +52,8 @@ impl View for Tileview1 {
         Ok(())
     }
 
-    fn update(&mut self) -> Result<(), WidgetError> {
-        Ok(())
+    fn update(&mut self) -> Result<NavAction, WidgetError> {
+        Ok(NavAction::None)
     }
 }
 

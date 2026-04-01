@@ -12,7 +12,7 @@
 use oxivgl::{
     anim::{anim_path_ease_in_out, anim_path_overshoot},
     style::{props, Selector, Style, StyleBuilder, TransitionDsc},
-    view::View,
+    view::{NavAction, View},
     enums::ObjState,
     widgets::{Obj, Align, Button, Label, WidgetError},
 };
@@ -69,8 +69,8 @@ impl View for WidgetButton3 {
         Ok(())
     }
 
-    fn update(&mut self) -> Result<(), WidgetError> {
-        Ok(())
+    fn update(&mut self) -> Result<NavAction, WidgetError> {
+        Ok(NavAction::None)
     }
 }
 

@@ -9,7 +9,7 @@
 //! A button that counts clicks and displays the count as the label text.
 
 use oxivgl::{
-    view::View,
+    view::{NavAction, View},
     enums::EventCode,
     event::Event,
     widgets::{Obj, Button, Label, WidgetError},
@@ -38,7 +38,7 @@ impl View for EventClick {
         Ok(())
     }
 
-    fn on_event(&mut self, event: &Event) {
+    fn on_event(&mut self, event: &Event) -> NavAction {
         if let Some(ref btn) = self.btn {
             if event.matches(btn, EventCode::CLICKED) {
                 self.cnt += 1;
@@ -49,10 +49,11 @@ impl View for EventClick {
                 }
             }
         }
+        NavAction::None
     }
 
-    fn update(&mut self) -> Result<(), WidgetError> {
-        Ok(())
+    fn update(&mut self) -> Result<NavAction, WidgetError> {
+        Ok(NavAction::None)
     }
 }
 

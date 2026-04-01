@@ -14,7 +14,7 @@ use oxivgl::{
     event::Event,
     layout::FlexFlow,
     style::{color_make, Selector},
-    view::View,
+    view::{NavAction, View},
     widgets::{Align, Arc, Label, Obj, Slider, WidgetError},
 };
 
@@ -130,7 +130,7 @@ impl View for Style21 {
         Ok(())
     }
 
-    fn on_event(&mut self, event: &Event) {
+    fn on_event(&mut self, event: &Event) -> NavAction {
         if let Some(ref arc) = self.arc {
             if event.matches(arc, EventCode::VALUE_CHANGED) {
                 let angle = arc.get_value_raw();
@@ -151,10 +151,11 @@ impl View for Style21 {
                 }
             }
         }
+        NavAction::None
     }
 
-    fn update(&mut self) -> Result<(), WidgetError> {
-        Ok(())
+    fn update(&mut self) -> Result<NavAction, WidgetError> {
+        Ok(NavAction::None)
     }
 }
 

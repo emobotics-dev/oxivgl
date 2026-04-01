@@ -11,7 +11,7 @@ use oxivgl::{
         darken_filter_cb, palette_lighten, palette_main, ColorFilter, GradDir, Palette, Selector,
         Style, StyleBuilder,
     },
-    view::View,
+    view::{NavAction, View},
     enums::{ObjState, Opa},
     widgets::{Obj, Button, Label, WidgetError, RADIUS_MAX},
 };
@@ -82,8 +82,8 @@ impl View for GettingStarted3 {
         Ok(())
     }
 
-    fn update(&mut self) -> Result<(), WidgetError> {
-        Ok(())
+    fn update(&mut self) -> Result<NavAction, WidgetError> {
+        Ok(NavAction::None)
     }
 }
 

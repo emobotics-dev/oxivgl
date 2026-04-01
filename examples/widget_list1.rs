@@ -14,7 +14,7 @@ use oxivgl::{
     enums::EventCode,
     event::Event,
     symbols,
-    view::View,
+    view::{NavAction, View},
     widgets::{Button, Child, List, Obj, WidgetError},
 };
 
@@ -65,7 +65,7 @@ impl View for WidgetList1 {
         Ok(())
     }
 
-    fn on_event(&mut self, event: &Event) {
+    fn on_event(&mut self, event: &Event) -> NavAction {
         if event.code() == EventCode::CLICKED {
             if let Some(ref list) = self.list {
                 if let Some(text) = list.get_button_text(&event.target()) {
@@ -73,10 +73,11 @@ impl View for WidgetList1 {
                 }
             }
         }
+        NavAction::None
     }
 
-    fn update(&mut self) -> Result<(), WidgetError> {
-        Ok(())
+    fn update(&mut self) -> Result<NavAction, WidgetError> {
+        Ok(NavAction::None)
     }
 }
 

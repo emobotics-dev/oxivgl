@@ -9,6 +9,7 @@
 //! Two buttons: a standard button with a click counter and a checkable toggle
 //! button whose label reflects ON/OFF state.
 
+use oxivgl::view::NavAction;
 use oxivgl::{
     enums::{EventCode, ObjFlag, ObjState},
     event::Event,
@@ -57,7 +58,7 @@ impl View for WidgetButton1 {
         if let Some(ref btn2) = self.btn2 { register_event_on(self, btn2.handle()); }
     }
 
-    fn on_event(&mut self, event: &Event) {
+    fn on_event(&mut self, event: &Event) -> NavAction {
         if let Some(ref btn1) = self.btn1 {
             if event.matches(btn1, EventCode::CLICKED) {
                 self.cnt += 1;
@@ -77,10 +78,11 @@ impl View for WidgetButton1 {
                 }
             }
         }
+        NavAction::None
     }
 
-    fn update(&mut self) -> Result<(), WidgetError> {
-        Ok(())
+    fn update(&mut self) -> Result<NavAction, WidgetError> {
+        Ok(NavAction::None)
     }
 }
 

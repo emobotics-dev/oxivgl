@@ -8,7 +8,7 @@
 
 use oxivgl::{
     anim::{anim_path_ease_in, anim_path_overshoot, anim_set_x, Anim},
-    view::View,
+    view::{NavAction, View},
     enums::{EventCode, ObjState},
     event::Event,
     widgets::{Obj, Label, Switch, WidgetError},
@@ -36,7 +36,7 @@ impl View for Anim1 {
         Ok(())
     }
 
-    fn on_event(&mut self, event: &Event) {
+    fn on_event(&mut self, event: &Event) -> NavAction {
         if let (Some(sw), Some(label)) = (&self.sw, &self.label) {
             if event.matches(sw, EventCode::VALUE_CHANGED) {
                 let checked = sw.has_state(ObjState::CHECKED);
@@ -56,10 +56,11 @@ impl View for Anim1 {
                 a.start();
             }
         }
+        NavAction::None
     }
 
-    fn update(&mut self) -> Result<(), WidgetError> {
-        Ok(())
+    fn update(&mut self) -> Result<NavAction, WidgetError> {
+        Ok(NavAction::None)
     }
 }
 

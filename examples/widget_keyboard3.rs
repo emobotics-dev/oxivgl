@@ -12,6 +12,7 @@
 
 oxivgl::image_declare!(img_star);
 
+use oxivgl::view::NavAction;
 use oxivgl::{
     draw::{Area, DrawImageDsc, image_header_info},
     enums::EventCode,
@@ -71,14 +72,14 @@ impl View for WidgetKeyboard3 {
         }
     }
 
-    fn on_event(&mut self, event: &Event) {
+    fn on_event(&mut self, event: &Event) -> NavAction {
         if event.code() != EventCode::DRAW_TASK_ADDED {
-            return;
+            return NavAction::None;
         }
-        let Some(task) = event.draw_task() else { return };
+        let Some(task) = event.draw_task() else { return NavAction::None };
         let base = task.base();
         if base.part != Part::Items {
-            return;
+            return NavAction::None;
         }
 
         let palette = palette_for(base.id1);
@@ -115,10 +116,11 @@ impl View for WidgetKeyboard3 {
                 dsc.set_color(palette_lighten(palette, 4));
             }
         });
+        NavAction::None
     }
 
-    fn update(&mut self) -> Result<(), WidgetError> {
-        Ok(())
+    fn update(&mut self) -> Result<NavAction, WidgetError> {
+        Ok(NavAction::None)
     }
 }
 

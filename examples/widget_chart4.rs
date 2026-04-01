@@ -10,6 +10,7 @@
 //! green (high) based on its Y value. Uses `DRAW_TASK_ADDED` events with
 //! `with_fill_dsc` to recolor bars during rendering.
 
+use oxivgl::view::NavAction;
 use oxivgl::{
     enums::EventCode,
     event::Event,
@@ -66,14 +67,14 @@ impl View for WidgetChart4 {
         if let Some(ref chart) = self.chart { register_event_on(self, chart.handle()); }
     }
 
-    fn on_event(&mut self, event: &Event) {
+    fn on_event(&mut self, event: &Event) -> NavAction {
         if event.code() != EventCode::DRAW_TASK_ADDED {
-            return;
+            return NavAction::None;
         }
-        let Some(task) = event.draw_task() else { return };
+        let Some(task) = event.draw_task() else { return NavAction::None };
         let base = task.base();
         if base.part != Part::Items {
-            return;
+            return NavAction::None;
         }
         let idx = base.id2 as usize;
         if idx < NUM_POINTS {
@@ -85,10 +86,11 @@ impl View for WidgetChart4 {
                 dsc.set_color(color_mix(green, red, ratio));
             });
         }
+        NavAction::None
     }
 
-    fn update(&mut self) -> Result<(), WidgetError> {
-        Ok(())
+    fn update(&mut self) -> Result<NavAction, WidgetError> {
+        Ok(NavAction::None)
     }
 }
 

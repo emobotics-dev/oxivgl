@@ -10,6 +10,7 @@
 //! tick label with a rainbow palette and reformats the numeric text as a
 //! one-decimal float.
 
+use oxivgl::view::NavAction;
 use oxivgl::{
     draw::DrawTask,
     enums::EventCode,
@@ -98,16 +99,17 @@ impl View for WidgetScale7 {
         if let Some(ref scale) = self.scale { register_event_on(self, scale.handle()); }
     }
 
-    fn on_event(&mut self, event: &Event) {
+    fn on_event(&mut self, event: &Event) -> NavAction {
         if event.code() == EventCode::DRAW_TASK_ADDED {
             if let Some(draw_task) = event.draw_task() {
                 self.handle_draw_task(&draw_task);
             }
         }
+        NavAction::None
     }
 
-    fn update(&mut self) -> Result<(), WidgetError> {
-        Ok(())
+    fn update(&mut self) -> Result<NavAction, WidgetError> {
+        Ok(NavAction::None)
     }
 }
 

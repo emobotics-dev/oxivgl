@@ -15,7 +15,7 @@ use oxivgl::{
     draw::{Area, DrawRectDsc},
     draw_buf::{ColorFormat, DrawBuf},
     style::{GradDir, Selector, StyleBuilder, color_black, color_white},
-    view::View,
+    view::{NavAction, View},
     widgets::{Obj, Canvas, Part, Roller, RollerMode, WidgetError},
 };
 
@@ -102,8 +102,8 @@ impl View for WidgetRoller3 {
         Ok(())
     }
 
-    fn update(&mut self) -> Result<(), WidgetError> {
-        Ok(())
+    fn update(&mut self) -> Result<NavAction, WidgetError> {
+        Ok(NavAction::None)
     }
 }
 

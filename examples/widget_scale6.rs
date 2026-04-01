@@ -12,7 +12,7 @@ use oxivgl::{
     scale_labels,
     style::{color_black, color_white, palette_main, Palette, Selector, StyleBuilder},
     timer::Timer,
-    view::View,
+    view::{NavAction, View},
     widgets::{Obj, Line, Part, Scale, ScaleLabels, ScaleMode, WidgetError, RADIUS_MAX,
     },
 };
@@ -110,7 +110,7 @@ impl View for WidgetScale6 {
         Ok(())
     }
 
-    fn update(&mut self) -> Result<(), WidgetError> {
+    fn update(&mut self) -> Result<NavAction, WidgetError> {
         if let Some(ref timer) = self.timer {
             if timer.triggered() {
                 self.minute += 1;
@@ -129,7 +129,7 @@ impl View for WidgetScale6 {
                 }
             }
         }
-        Ok(())
+        Ok(NavAction::None)
     }
 }
 

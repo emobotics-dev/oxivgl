@@ -14,7 +14,7 @@ use oxivgl::{
     event::Event,
     style::Selector,
     symbols,
-    view::View,
+    view::{NavAction, View},
     widgets::{Obj, Align, Button, Label, Menu, WidgetError, RADIUS_MAX},
 };
 
@@ -64,7 +64,7 @@ impl View for WidgetMenu4 {
         Ok(())
     }
 
-    fn on_event(&mut self, event: &Event) {
+    fn on_event(&mut self, event: &Event) -> NavAction {
         if let (Some(float_btn), Some(menu)) = (&self.float_btn, &self.menu) {
             if event.matches(float_btn, EventCode::CLICKED) {
                 self.btn_cnt += 1;
@@ -99,10 +99,11 @@ impl View for WidgetMenu4 {
                 }
             }
         }
+        NavAction::None
     }
 
-    fn update(&mut self) -> Result<(), WidgetError> {
-        Ok(())
+    fn update(&mut self) -> Result<NavAction, WidgetError> {
+        Ok(NavAction::None)
     }
 }
 

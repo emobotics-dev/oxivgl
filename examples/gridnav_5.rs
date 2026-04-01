@@ -12,6 +12,7 @@
 //! On every KEY event, slider values are synced to the matching roller and
 //! vice-versa, so both controls always reflect the same selection.
 
+use oxivgl::view::NavAction;
 use oxivgl::{
     enums::EventCode,
     event::Event,
@@ -98,9 +99,9 @@ impl View for Gridnav5 {
         if let Some(ref cb) = self._cont_bot { register_event_on(self, cb.handle()); }
     }
 
-    fn on_event(&mut self, event: &Event) {
+    fn on_event(&mut self, event: &Event) -> NavAction {
         if event.code() != EventCode::KEY {
-            return;
+            return NavAction::None;
         }
         let target = event.target();
         let target_handle = target.handle();
@@ -117,10 +118,11 @@ impl View for Gridnav5 {
                 self.sliders[i].set_value_animated(sel, true);
             }
         }
+        NavAction::None
     }
 
-    fn update(&mut self) -> Result<(), WidgetError> {
-        Ok(())
+    fn update(&mut self) -> Result<NavAction, WidgetError> {
+        Ok(NavAction::None)
     }
 }
 

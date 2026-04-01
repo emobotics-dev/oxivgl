@@ -10,7 +10,7 @@
 
 use oxivgl::{
     style::{lv_pct, palette_lighten, Palette, Selector, StyleBuilder},
-    view::View,
+    view::{NavAction, View},
     widgets::{Obj, Align, Line, Part, Scale, ScaleMode, WidgetError, RADIUS_MAX,
         SCALE_LABEL_ROTATE_KEEP_UPRIGHT, SCALE_LABEL_ROTATE_MATCH_TICKS,
     },
@@ -73,8 +73,8 @@ impl View for WidgetScale8 {
         Ok(())
     }
 
-    fn update(&mut self) -> Result<(), WidgetError> {
-        Ok(())
+    fn update(&mut self) -> Result<NavAction, WidgetError> {
+        Ok(NavAction::None)
     }
 }
 

@@ -12,7 +12,7 @@
 use oxivgl::{
     enums::EventCode,
     event::Event,
-    view::View,
+    view::{NavAction, View},
     widgets::{Label, Menu, Msgbox, Obj, WidgetError},
 };
 
@@ -58,7 +58,7 @@ impl View for WidgetMenu2 {
         Ok(())
     }
 
-    fn on_event(&mut self, event: &Event) {
+    fn on_event(&mut self, event: &Event) -> NavAction {
         if event.code() == EventCode::CLICKED {
             if let Some(ref menu) = self.menu {
                 if menu.back_button_is_root(&event.target()) {
@@ -72,10 +72,11 @@ impl View for WidgetMenu2 {
                 }
             }
         }
+        NavAction::None
     }
 
-    fn update(&mut self) -> Result<(), WidgetError> {
-        Ok(())
+    fn update(&mut self) -> Result<NavAction, WidgetError> {
+        Ok(NavAction::None)
     }
 }
 

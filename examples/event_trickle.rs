@@ -12,7 +12,7 @@
 
 use oxivgl::{
     style::{color_black, color_white, Style, StyleBuilder},
-    view::View,
+    view::{NavAction, View},
     enums::{ObjFlag, ObjState},
     layout::FlexFlow,
     widgets::{Label, Obj, WidgetError},
@@ -65,8 +65,8 @@ impl View for EventTrickle {
         Ok(())
     }
 
-    fn update(&mut self) -> Result<(), WidgetError> {
-        Ok(())
+    fn update(&mut self) -> Result<NavAction, WidgetError> {
+        Ok(NavAction::None)
     }
 }
 

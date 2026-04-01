@@ -10,7 +10,7 @@
 
 use oxivgl::{
     style::Selector,
-    view::View,
+    view::{NavAction, View},
     widgets::{Obj, Align, Bar, BaseDir, Label, WidgetError},
 };
 
@@ -55,8 +55,8 @@ impl View for WidgetBar5 {
         Ok(())
     }
 
-    fn update(&mut self) -> Result<(), WidgetError> {
-        Ok(())
+    fn update(&mut self) -> Result<NavAction, WidgetError> {
+        Ok(NavAction::None)
     }
 }
 

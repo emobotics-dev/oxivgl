@@ -9,7 +9,7 @@
 //! A 200×20 bar centered on screen, set to 70%.
 
 use oxivgl::{
-    view::View,
+    view::{NavAction, View},
     widgets::{Obj, Bar, WidgetError},
 };
 
@@ -30,8 +30,8 @@ impl View for WidgetBar1 {
         Ok(())
     }
 
-    fn update(&mut self) -> Result<(), WidgetError> {
-        Ok(())
+    fn update(&mut self) -> Result<NavAction, WidgetError> {
+        Ok(NavAction::None)
     }
 }
 

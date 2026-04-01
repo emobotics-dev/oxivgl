@@ -44,6 +44,95 @@ pub fn capture(driver: &LvglDriver, name: &str, dir: &str) {
     println!("Screenshot: {}", path.display());
 }
 
+/// Generate a host `main` function for a **multi-screen** navigation example.
+///
+/// Like [`host_main!`] but creates a [`Navigator`] that processes
+/// [`NavAction`] values returned from `update()` and `on_event()`.
+/// Use this for examples that demonstrate push/pop/replace/modal.
+#[macro_export]
+macro_rules! host_main_nav {
+    ($view_expr:expr) => {
+        fn main() {
+            use $crate::host::{H, W, capture, pump};
+            use $crate::oxivgl::driver::LvglDriver;
+            use $crate::oxivgl::view::{View, NavAction};
+            use $crate::oxivgl::navigator::Navigator;
+            $crate::env_logger::init();
+            let screenshot_only =
+                std::env::var("SCREENSHOT_ONLY").as_deref() == Ok("1");
+            let driver = if screenshot_only {
+                LvglDriver::init(W, H)
+            } else {
+                LvglDriver::sdl(W, H).title(c"oxivgl").mouse(true).keyboard(true).build()
+            };
+
+            let mut nav = Navigator::new();
+            nav.push_root($view_expr);
+
+            // Derive screenshot name from source file path.
+            let src = file!();
+            let name = std::path::Path::new(src)
+                .file_stem()
+                .and_then(|s| s.to_str())
+                .unwrap_or("screenshot");
+
+            let dir = format!(
+                "{}/examples/doc/screenshots",
+                env!("CARGO_MANIFEST_DIR")
+            );
+
+            // Always capture a screenshot (call update once first).
+            if let Some(v) = nav.active_view_mut() {
+                let _ = v.update();
+            }
+            pump(&driver, 10);
+            capture(&driver, name, &dir);
+
+            if screenshot_only {
+                std::process::exit(0);
+            }
+
+            // Interactive loop with navigation.
+            loop {
+                let action = nav
+                    .active_view_mut()
+                    .map(|v| v.update())
+                    .unwrap_or(Ok(NavAction::None))
+                    .unwrap_or_else(|e| {
+                        eprintln!("update: {e:?}");
+                        NavAction::None
+                    });
+
+                let modal_action = nav
+                    .active_modal_mut()
+                    .map(|m| m.update())
+                    .unwrap_or(Ok(NavAction::None))
+                    .unwrap_or_else(|e| {
+                        eprintln!("modal update: {e:?}");
+                        NavAction::None
+                    });
+
+                for _ in 0..4 {
+                    driver.timer_handler();
+                    std::thread::sleep(std::time::Duration::from_millis(8));
+                }
+
+                // Event actions (from on_event) take priority.
+                // Only process update/modal actions if no event action fired.
+                let event_handled = nav.process_pending_event_action();
+                if !event_handled {
+                    if !action.is_none() {
+                        nav.process_action(action);
+                    }
+                    if !modal_action.is_none() {
+                        nav.process_action(modal_action);
+                    }
+                }
+            }
+        }
+    };
+}
+
 /// Generate a host `main` function for the given [`oxivgl::view::View`].
 ///
 /// The generated main:
@@ -69,13 +158,12 @@ macro_rules! host_main {
 
             let mut _view = $view_expr;
 
-            // Wrap the active screen as a non-owning container.
+            // Wrap the active screen as a non-owning container (Child
+            // suppresses Drop, so the LVGL screen is never deleted).
             let screen_handle = unsafe { oxivgl_sys::lv_screen_active() };
             assert!(!screen_handle.is_null(), "no active screen");
-            let container = $crate::oxivgl::widgets::Obj::from_raw(screen_handle);
+            let container = $crate::oxivgl::widgets::Obj::from_raw_non_owning(screen_handle);
             _view.create(&container).expect("view create failed");
-            // Don't delete the LVGL screen when container drops.
-            core::mem::forget(container);
 
             $crate::oxivgl::view::register_view_events(&mut _view);
 
@@ -92,7 +180,7 @@ macro_rules! host_main {
             );
 
             // Always capture a screenshot (call update once first for animated views).
-            _view.update().expect("update failed");
+            let _ = _view.update().expect("update failed");
             pump(&driver, 10);
             capture(&driver, name, &dir);
 
@@ -105,7 +193,10 @@ macro_rules! host_main {
 
             // Interactive loop: drive update() at ~30 fps (every 4 × 8 ms).
             loop {
-                _view.update().unwrap_or_else(|e| eprintln!("update: {e:?}"));
+                let _ = _view.update().unwrap_or_else(|e| {
+                    eprintln!("update: {e:?}");
+                    $crate::oxivgl::view::NavAction::None
+                });
                 for _ in 0..4 {
                     driver.timer_handler();
                     std::thread::sleep(std::time::Duration::from_millis(8));

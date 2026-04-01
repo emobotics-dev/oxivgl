@@ -9,7 +9,7 @@
 //! Four dropdowns opening in each cardinal direction.
 
 use oxivgl::{
-    view::View,
+    view::{NavAction, View},
     widgets::{Obj, Align, DdDir, Dropdown, WidgetError},
 };
 
@@ -56,8 +56,8 @@ impl View for WidgetDropdown2 {
         Ok(())
     }
 
-    fn update(&mut self) -> Result<(), WidgetError> {
-        Ok(())
+    fn update(&mut self) -> Result<NavAction, WidgetError> {
+        Ok(NavAction::None)
     }
 }
 

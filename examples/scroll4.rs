@@ -14,7 +14,7 @@ use oxivgl::{
     style::{
         palette_darken, palette_main, props, Palette, Style, StyleBuilder, TransitionDsc,
     },
-    view::View,
+    view::{NavAction, View},
     enums::{ObjState, ScrollbarMode},
     widgets::{Label, Obj, Part, WidgetError},
 };
@@ -93,8 +93,8 @@ impl View for Scroll4 {
         Ok(())
     }
 
-    fn update(&mut self) -> Result<(), WidgetError> {
-        Ok(())
+    fn update(&mut self) -> Result<NavAction, WidgetError> {
+        Ok(NavAction::None)
     }
 }
 

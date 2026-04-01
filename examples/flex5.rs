@@ -9,7 +9,7 @@
 use oxivgl::{
     anim::{anim_set_pad_column, anim_set_pad_row, Anim, ANIM_REPEAT_INFINITE},
     style::LV_SIZE_CONTENT,
-    view::View,
+    view::{NavAction, View},
     layout::FlexFlow,
     widgets::{Label, Obj, WidgetError},
 };
@@ -66,8 +66,8 @@ impl View for Flex5 {
         Ok(())
     }
 
-    fn update(&mut self) -> Result<(), WidgetError> {
-        Ok(())
+    fn update(&mut self) -> Result<NavAction, WidgetError> {
+        Ok(NavAction::None)
     }
 }
 

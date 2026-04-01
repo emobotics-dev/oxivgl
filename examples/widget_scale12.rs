@@ -16,7 +16,7 @@ use oxivgl::{
     style::{
         Palette, Selector, StyleBuilder, color_white, palette_darken, palette_main,
     },
-    view::View,
+    view::{NavAction, View},
     widgets::{
         Align, Label, Line, Obj, Part, Scale, ScaleLabels, ScaleMode, WidgetError,
         SCALE_LABEL_ROTATE_KEEP_UPRIGHT, SCALE_LABEL_ROTATE_MATCH_TICKS,
@@ -117,8 +117,8 @@ impl View for WidgetScale12 {
         Ok(())
     }
 
-    fn update(&mut self) -> Result<(), WidgetError> {
-        Ok(())
+    fn update(&mut self) -> Result<NavAction, WidgetError> {
+        Ok(NavAction::None)
     }
 }
 

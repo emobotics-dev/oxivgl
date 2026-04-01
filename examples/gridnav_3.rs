@@ -14,6 +14,7 @@
 //! Only the containers are in the group; buttons are removed so gridnav
 //! controls focus inside each container.
 
+use oxivgl::view::NavAction;
 use oxivgl::{
     enums::{EventCode, Key, ObjState},
     event::Event,
@@ -142,14 +143,14 @@ impl View for Gridnav3 {
         }
     }
 
-    fn on_event(&mut self, event: &Event) {
+    fn on_event(&mut self, event: &Event) -> NavAction {
         if event.code() != EventCode::KEY {
-            return;
+            return NavAction::None;
         }
         // Only handle events from cont_sub2.
         if let Some(ref cont_sub2) = self.cont_sub2 {
             if event.target_handle() != cont_sub2.handle() {
-                return;
+                return NavAction::None;
             }
             match event.key() {
                 Some(Key::ENTER) => {
@@ -165,10 +166,11 @@ impl View for Gridnav3 {
                 _ => {}
             }
         }
+        NavAction::None
     }
 
-    fn update(&mut self) -> Result<(), WidgetError> {
-        Ok(())
+    fn update(&mut self) -> Result<NavAction, WidgetError> {
+        Ok(NavAction::None)
     }
 }
 

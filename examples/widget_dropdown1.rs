@@ -9,6 +9,7 @@
 //! A centered dropdown with fruit options and a label showing the selected
 //! item, updated via VALUE_CHANGED event.
 
+use oxivgl::view::NavAction;
 use oxivgl::{
     enums::EventCode,
     event::Event,
@@ -53,7 +54,7 @@ impl View for WidgetDropdown1 {
         if let Some(ref dd) = self.dd { register_event_on(self, dd.handle()); }
     }
 
-    fn on_event(&mut self, event: &Event) {
+    fn on_event(&mut self, event: &Event) -> NavAction {
         if event.code() == EventCode::VALUE_CHANGED {
             if let (Some(dd), Some(label)) = (&self.dd, &self.label) {
                 let mut buf = [0u8; 32];
@@ -62,10 +63,11 @@ impl View for WidgetDropdown1 {
                 }
             }
         }
+        NavAction::None
     }
 
-    fn update(&mut self) -> Result<(), WidgetError> {
-        Ok(())
+    fn update(&mut self) -> Result<NavAction, WidgetError> {
+        Ok(NavAction::None)
     }
 }
 

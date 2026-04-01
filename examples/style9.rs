@@ -8,7 +8,7 @@
 
 use oxivgl::{
     style::{palette_main, Palette, Selector, Style, StyleBuilder},
-    view::View,
+    view::{NavAction, View},
     widgets::{Obj, lv_point_precise_t, Line, WidgetError},
 };
 
@@ -44,8 +44,8 @@ impl View for Style9 {
         Ok(())
     }
 
-    fn update(&mut self) -> Result<(), WidgetError> {
-        Ok(())
+    fn update(&mut self) -> Result<NavAction, WidgetError> {
+        Ok(NavAction::None)
     }
 }
 

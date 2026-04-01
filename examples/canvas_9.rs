@@ -10,7 +10,7 @@ use oxivgl::{
     draw::DrawTriangleDsc,
     draw_buf::{ColorFormat, DrawBuf},
     style::{color_make, GradDir},
-    view::View,
+    view::{NavAction, View},
     widgets::{Obj, Align, Canvas, WidgetError},
 };
 
@@ -42,8 +42,8 @@ impl View for Canvas9 {
         Ok(())
     }
 
-    fn update(&mut self) -> Result<(), WidgetError> {
-        Ok(())
+    fn update(&mut self) -> Result<NavAction, WidgetError> {
+        Ok(NavAction::None)
     }
 }
 

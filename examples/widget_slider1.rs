@@ -9,7 +9,7 @@
 //! A centered slider with a label below that shows the current value.
 
 use oxivgl::{
-    view::View,
+    view::{NavAction, View},
     widgets::{Obj, Align, Label, Slider, WidgetError},
 };
 
@@ -34,7 +34,7 @@ impl View for WidgetSlider1 {
         Ok(())
     }
 
-    fn update(&mut self) -> Result<(), WidgetError> {
+    fn update(&mut self) -> Result<NavAction, WidgetError> {
         use core::fmt::Write;
         if let (Some(slider), Some(label)) = (&self.slider, &self.label) {
             let val = slider.get_value();
@@ -43,7 +43,7 @@ impl View for WidgetSlider1 {
             label.text(&buf);
             label.align_to(slider, Align::OutBottomMid, 0, 10);
         }
-        Ok(())
+        Ok(NavAction::None)
     }
 }
 

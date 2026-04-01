@@ -19,7 +19,7 @@ use oxivgl::{
     layout::{GridAlign, GridCell, GRID_TEMPLATE_LAST, grid_fr},
     math::bezier3,
     style::{Palette, Selector, palette_main},
-    view::View,
+    view::{NavAction, View},
     widgets::{Button, Chart, ChartAxis, ChartSeries, ChartType, Label, Obj, Part,
         Slider, WidgetError,
     },
@@ -155,7 +155,7 @@ impl View for Anim3 {
         Ok(())
     }
 
-    fn on_event(&mut self, event: &Event) {
+    fn on_event(&mut self, event: &Event) -> NavAction {
         if let Some(ref p1_slider) = self.p1_slider {
             if event.matches(p1_slider, EventCode::VALUE_CHANGED) {
                 let val = p1_slider.get_value();
@@ -166,7 +166,7 @@ impl View for Anim3 {
                     p1_label.text(&buf);
                 }
                 self.update_chart();
-                return;
+                return NavAction::None;
             }
         }
         if let Some(ref p2_slider) = self.p2_slider {
@@ -179,7 +179,7 @@ impl View for Anim3 {
                     p2_label.text(&buf);
                 }
                 self.update_chart();
-                return;
+                return NavAction::None;
             }
         }
         if let Some(ref run_btn) = self.run_btn {
@@ -195,10 +195,11 @@ impl View for Anim3 {
                 }
             }
         }
+        NavAction::None
     }
 
-    fn update(&mut self) -> Result<(), WidgetError> {
-        Ok(())
+    fn update(&mut self) -> Result<NavAction, WidgetError> {
+        Ok(NavAction::None)
     }
 }
 

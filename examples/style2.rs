@@ -12,7 +12,7 @@ use oxivgl::{
     style::{
         palette_lighten, palette_main, GradDir, GradDsc, Palette, Selector, Style, StyleBuilder,
     },
-    view::View,
+    view::{NavAction, View},
     widgets::{Obj, WidgetError},
 };
 
@@ -52,8 +52,8 @@ impl View for Style2 {
         Ok(())
     }
 
-    fn update(&mut self) -> Result<(), WidgetError> {
-        Ok(())
+    fn update(&mut self) -> Result<NavAction, WidgetError> {
+        Ok(NavAction::None)
     }
 }
 

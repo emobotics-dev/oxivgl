@@ -11,6 +11,7 @@
 //! - First column (col 0, non-header): right-aligned text.
 //! - Even non-header rows: light grey tint.
 
+use oxivgl::view::NavAction;
 use oxivgl::{
     draw::DrawTask,
     enums::EventCode,
@@ -86,16 +87,17 @@ impl View for Table1 {
         }
     }
 
-    fn on_event(&mut self, event: &Event) {
+    fn on_event(&mut self, event: &Event) -> NavAction {
         if event.code() == EventCode::DRAW_TASK_ADDED {
             if let Some(draw_task) = event.draw_task() {
                 self.handle_draw_task(&draw_task);
             }
         }
+        NavAction::None
     }
 
-    fn update(&mut self) -> Result<(), WidgetError> {
-        Ok(())
+    fn update(&mut self) -> Result<NavAction, WidgetError> {
+        Ok(NavAction::None)
     }
 }
 

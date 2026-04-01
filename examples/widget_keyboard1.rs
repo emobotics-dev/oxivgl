@@ -13,7 +13,7 @@
 use oxivgl::{
     enums::EventCode,
     event::Event,
-    view::View,
+    view::{NavAction, View},
     widgets::{Obj, Align, Keyboard, Textarea, WidgetError},
 };
 
@@ -50,7 +50,7 @@ impl View for WidgetKeyboard1 {
         Ok(())
     }
 
-    fn on_event(&mut self, event: &Event) {
+    fn on_event(&mut self, event: &Event) -> NavAction {
         if let (Some(kb), Some(ta1), Some(ta2)) =
             (&self.kb, &self.ta1, &self.ta2)
         {
@@ -60,10 +60,11 @@ impl View for WidgetKeyboard1 {
                 kb.set_textarea(ta2);
             }
         }
+        NavAction::None
     }
 
-    fn update(&mut self) -> Result<(), WidgetError> {
-        Ok(())
+    fn update(&mut self) -> Result<NavAction, WidgetError> {
+        Ok(NavAction::None)
     }
 }
 

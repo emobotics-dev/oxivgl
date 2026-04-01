@@ -12,7 +12,7 @@
 use oxivgl::{
     enums::EventCode,
     event::Event,
-    view::View,
+    view::{NavAction, View},
     widgets::{Align, Button, Label, Obj, WidgetError},
 };
 
@@ -85,12 +85,12 @@ impl View for Scroll1 {
         Ok(())
     }
 
-    fn on_event(&mut self, event: &Event) {
+    fn on_event(&mut self, event: &Event) -> NavAction {
         if let (Some(save_btn), Some(panel)) = (&self.save_btn, &self.panel) {
             if event.matches(save_btn, EventCode::CLICKED) {
                 self.saved_x = panel.get_scroll_x();
                 self.saved_y = panel.get_scroll_y();
-                return;
+                return NavAction::None;
             }
         }
         if let (Some(restore_btn), Some(panel)) = (&self.restore_btn, &self.panel) {
@@ -98,10 +98,11 @@ impl View for Scroll1 {
                 panel.scroll_to(self.saved_x, self.saved_y, true);
             }
         }
+        NavAction::None
     }
 
-    fn update(&mut self) -> Result<(), WidgetError> {
-        Ok(())
+    fn update(&mut self) -> Result<NavAction, WidgetError> {
+        Ok(NavAction::None)
     }
 }
 

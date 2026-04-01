@@ -9,6 +9,7 @@
 //! A centered slider with a label above showing the current value, updated
 //! via VALUE_CHANGED event.
 
+use oxivgl::view::NavAction;
 use oxivgl::{
     enums::EventCode,
     event::Event,
@@ -42,7 +43,7 @@ impl View for GettingStarted4 {
         if let Some(ref slider) = self.slider { register_event_on(self, slider.handle()); }
     }
 
-    fn on_event(&mut self, event: &Event) {
+    fn on_event(&mut self, event: &Event) -> NavAction {
         if event.code() == EventCode::VALUE_CHANGED {
             if let (Some(slider), Some(label)) = (&self.slider, &self.label) {
                 let val = slider.get_value();
@@ -52,10 +53,11 @@ impl View for GettingStarted4 {
                 label.align_to(slider, Align::OutTopMid, 0, -15);
             }
         }
+        NavAction::None
     }
 
-    fn update(&mut self) -> Result<(), WidgetError> {
-        Ok(())
+    fn update(&mut self) -> Result<NavAction, WidgetError> {
+        Ok(NavAction::None)
     }
 }
 

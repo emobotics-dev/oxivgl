@@ -9,7 +9,7 @@
 //! Label with scroll-circular long mode — text scrolls in a continuous loop.
 
 use oxivgl::{
-    view::View,
+    view::{NavAction, View},
     widgets::{Obj, Align, Label, LabelLongMode, WidgetError},
 };
 
@@ -31,8 +31,8 @@ impl View for WidgetLabel5 {
         Ok(())
     }
 
-    fn update(&mut self) -> Result<(), WidgetError> {
-        Ok(())
+    fn update(&mut self) -> Result<NavAction, WidgetError> {
+        Ok(NavAction::None)
     }
 }
 

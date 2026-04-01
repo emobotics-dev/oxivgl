@@ -9,7 +9,7 @@
 //! Four switches in a column: default, checked, disabled, checked+disabled.
 
 use oxivgl::{
-    view::View,
+    view::{NavAction, View},
     enums::ObjState,
     layout::{FlexAlign, FlexFlow},
     widgets::{Obj, Switch, WidgetError},
@@ -46,8 +46,8 @@ impl View for WidgetSwitch1 {
         Ok(())
     }
 
-    fn update(&mut self) -> Result<(), WidgetError> {
-        Ok(())
+    fn update(&mut self) -> Result<NavAction, WidgetError> {
+        Ok(NavAction::None)
     }
 }
 

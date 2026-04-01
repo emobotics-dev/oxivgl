@@ -9,7 +9,7 @@
 //! Four checkboxes in a column: unchecked, checked, disabled, checked+disabled.
 
 use oxivgl::{
-    view::View,
+    view::{NavAction, View},
     enums::ObjState,
     layout::{FlexAlign, FlexFlow},
     widgets::{Obj, Checkbox, WidgetError},
@@ -50,8 +50,8 @@ impl View for WidgetCheckbox1 {
         Ok(())
     }
 
-    fn update(&mut self) -> Result<(), WidgetError> {
-        Ok(())
+    fn update(&mut self) -> Result<NavAction, WidgetError> {
+        Ok(NavAction::None)
     }
 }
 

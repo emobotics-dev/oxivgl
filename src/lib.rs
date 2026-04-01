@@ -29,6 +29,8 @@ pub mod prelude;
 pub mod timer;
 /// View trait and LVGL render loop.
 pub mod view;
+/// Navigation stack: push/pop/replace/modal view management.
+pub mod navigator;
 /// General LVGL enum types (event codes, object flags, states, opacity, scroll).
 pub mod enums;
 /// Layout types: flex flow/alignment, grid alignment/cells, layout engine.

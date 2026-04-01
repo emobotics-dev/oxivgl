@@ -12,7 +12,7 @@
 
 use oxivgl::{
     style::Selector,
-    view::View,
+    view::{NavAction, View},
     widgets::{Obj, Chart, ChartAxis, ChartType, Part, WidgetError},
 };
 
@@ -57,8 +57,8 @@ impl View for WidgetChart1 {
         Ok(())
     }
 
-    fn update(&mut self) -> Result<(), WidgetError> {
-        Ok(())
+    fn update(&mut self) -> Result<NavAction, WidgetError> {
+        Ok(NavAction::None)
     }
 }
 

@@ -10,6 +10,7 @@
 //! After typing two digits, ':' is auto-inserted. A numeric keyboard
 //! is shown below.
 
+use oxivgl::view::NavAction;
 use oxivgl::{
     enums::EventCode,
     event::Event,
@@ -49,7 +50,7 @@ impl View for WidgetTextarea3 {
         }
     }
 
-    fn on_event(&mut self, event: &Event) {
+    fn on_event(&mut self, event: &Event) -> NavAction {
         if let Some(ref ta) = self.ta {
             if event.matches(ta, EventCode::VALUE_CHANGED) {
                 if let Some(txt) = ta.get_text() {
@@ -65,10 +66,11 @@ impl View for WidgetTextarea3 {
                 }
             }
         }
+        NavAction::None
     }
 
-    fn update(&mut self) -> Result<(), WidgetError> {
-        Ok(())
+    fn update(&mut self) -> Result<NavAction, WidgetError> {
+        Ok(NavAction::None)
     }
 }
 

@@ -14,7 +14,7 @@ use oxivgl::{
     event::Event,
     style::Selector,
     symbols,
-    view::View,
+    view::{NavAction, View},
     widgets::{Obj, Align, Button, Spinbox, WidgetError},
 };
 
@@ -53,7 +53,7 @@ impl View for Spinbox1 {
         Ok(())
     }
 
-    fn on_event(&mut self, event: &Event) {
+    fn on_event(&mut self, event: &Event) -> NavAction {
         if let (Some(btn_plus), Some(spinbox)) = (&self.btn_plus, &self.spinbox) {
             if event.matches(btn_plus, EventCode::SHORT_CLICKED) {
                 spinbox.increment();
@@ -64,10 +64,11 @@ impl View for Spinbox1 {
                 spinbox.decrement();
             }
         }
+        NavAction::None
     }
 
-    fn update(&mut self) -> Result<(), WidgetError> {
-        Ok(())
+    fn update(&mut self) -> Result<NavAction, WidgetError> {
+        Ok(NavAction::None)
     }
 }
 

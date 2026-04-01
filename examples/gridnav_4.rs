@@ -10,6 +10,7 @@
 //! text headers. Clicking any item logs its label text. A standalone button
 //! sits to the right. Arrow keys navigate the list; Tab moves to the button.
 
+use oxivgl::view::NavAction;
 use oxivgl::{
     enums::EventCode,
     event::Event,
@@ -83,23 +84,24 @@ impl View for Gridnav4 {
         }
     }
 
-    fn on_event(&mut self, event: &Event) {
+    fn on_event(&mut self, event: &Event) -> NavAction {
         if event.code() != EventCode::CLICKED {
-            return;
+            return NavAction::None;
         }
         let target = event.target();
         if let Some(ref list) = self.list {
             if target.handle() == list.handle() {
-                return;
+                return NavAction::None;
             }
             if let Some(text) = list.get_button_text(&target) {
                 oxivgl_examples_common::log::info!("Clicked: {}", text);
             }
         }
+        NavAction::None
     }
 
-    fn update(&mut self) -> Result<(), WidgetError> {
-        Ok(())
+    fn update(&mut self) -> Result<NavAction, WidgetError> {
+        Ok(NavAction::None)
     }
 }
 

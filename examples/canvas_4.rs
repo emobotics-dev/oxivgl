@@ -10,7 +10,7 @@ use oxivgl::{
     draw::{Area, DrawLabelDscOwned},
     draw_buf::{ColorFormat, DrawBuf},
     style::color_make,
-    view::View,
+    view::{NavAction, View},
     widgets::{Obj, Align, Canvas, WidgetError},
 };
 
@@ -37,8 +37,8 @@ impl View for Canvas4 {
         Ok(())
     }
 
-    fn update(&mut self) -> Result<(), WidgetError> {
-        Ok(())
+    fn update(&mut self) -> Result<NavAction, WidgetError> {
+        Ok(NavAction::None)
     }
 }
 

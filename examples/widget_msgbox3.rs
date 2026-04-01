@@ -16,7 +16,7 @@
 
 use oxivgl::{
     style::Selector,
-    view::View,
+    view::{NavAction, View},
     widgets::{Align, Label, Msgbox, Obj, Screen, WidgetError},
 };
 
@@ -66,8 +66,8 @@ impl View for WidgetMsgbox3 {
         Ok(())
     }
 
-    fn update(&mut self) -> Result<(), WidgetError> {
-        Ok(())
+    fn update(&mut self) -> Result<NavAction, WidgetError> {
+        Ok(NavAction::None)
     }
 }
 

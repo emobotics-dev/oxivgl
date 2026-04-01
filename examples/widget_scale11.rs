@@ -9,6 +9,7 @@
 //! Round scale with custom hour labels, day/night colored sections, and a
 //! `DRAW_TASK_ADDED` handler that highlights 06/12/18/24 labels white.
 
+use oxivgl::view::NavAction;
 use oxivgl::{
     draw::DrawTask,
     enums::EventCode,
@@ -179,16 +180,17 @@ impl View for WidgetScale11 {
         }
     }
 
-    fn on_event(&mut self, event: &Event) {
+    fn on_event(&mut self, event: &Event) -> NavAction {
         if event.code() == EventCode::DRAW_TASK_ADDED {
             if let Some(draw_task) = event.draw_task() {
                 Self::handle_draw_task(&draw_task);
             }
         }
+        NavAction::None
     }
 
-    fn update(&mut self) -> Result<(), WidgetError> {
-        Ok(())
+    fn update(&mut self) -> Result<NavAction, WidgetError> {
+        Ok(NavAction::None)
     }
 }
 

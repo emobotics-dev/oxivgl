@@ -10,6 +10,7 @@
 //! on-screen keyboard at the bottom. Clicking either textarea switches
 //! the keyboard focus.
 
+use oxivgl::view::NavAction;
 use oxivgl::{
     enums::EventCode,
     event::Event,
@@ -77,13 +78,13 @@ impl View for WidgetTextarea2 {
         }
     }
 
-    fn on_event(&mut self, event: &Event) {
+    fn on_event(&mut self, event: &Event) -> NavAction {
         let code = event.code();
         if code == EventCode::CLICKED || code == EventCode::FOCUSED {
             if let (Some(pwd_ta), Some(kb)) = (&self.pwd_ta, &self.kb) {
                 if event.target_handle() == pwd_ta.handle() {
                     kb.set_textarea(pwd_ta);
-                    return;
+                    return NavAction::None;
                 }
             }
             if let (Some(text_ta), Some(kb)) = (&self.text_ta, &self.kb) {
@@ -92,10 +93,11 @@ impl View for WidgetTextarea2 {
                 }
             }
         }
+        NavAction::None
     }
 
-    fn update(&mut self) -> Result<(), WidgetError> {
-        Ok(())
+    fn update(&mut self) -> Result<NavAction, WidgetError> {
+        Ok(NavAction::None)
     }
 }
 

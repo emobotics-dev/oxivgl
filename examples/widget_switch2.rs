@@ -10,7 +10,7 @@
 //! pre-checked.
 
 use oxivgl::{
-    view::View,
+    view::{NavAction, View},
     enums::ObjState,
     layout::{FlexAlign, FlexFlow},
     widgets::{Obj, Switch, SwitchOrientation, WidgetError},
@@ -39,8 +39,8 @@ impl View for WidgetSwitch2 {
         Ok(())
     }
 
-    fn update(&mut self) -> Result<(), WidgetError> {
-        Ok(())
+    fn update(&mut self) -> Result<NavAction, WidgetError> {
+        Ok(NavAction::None)
     }
 }
 

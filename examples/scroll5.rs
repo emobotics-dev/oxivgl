@@ -12,7 +12,7 @@
 use oxivgl::{
     fonts::DEJAVU_16_PERSIAN_HEBREW,
     style::Selector,
-    view::View,
+    view::{NavAction, View},
     widgets::{BaseDir, Label, Obj, WidgetError},
 };
 
@@ -40,8 +40,8 @@ impl View for Scroll5 {
         Ok(())
     }
 
-    fn update(&mut self) -> Result<(), WidgetError> {
-        Ok(())
+    fn update(&mut self) -> Result<NavAction, WidgetError> {
+        Ok(NavAction::None)
     }
 }
 
