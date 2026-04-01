@@ -23,36 +23,36 @@ use oxivgl::{
     event::Event,
     layout::{FlexAlign, FlexFlow},
     style::{GradDir, Selector, StyleBuilder, color_make, lv_pct},
-    view::View,
+    view::{NavAction, View},
     widgets::{
-        Align, AsLvHandle, Button, Child, Label, Obj, Part, Screen, Subject, WidgetError,
+        Obj, Align, AsLvHandle, Button, Child, Label, Part, Subject, WidgetError,
         RADIUS_MAX,
     },
 };
 
+#[derive(Default)]
 struct Observer6 {
     // Panel stored as a top-level widget — owns children in LVGL.
-    _panel: Obj<'static>,
+    _panel: Option<Obj<'static>>,
     // Raw handles for event matching (10 buttons).
     btn_handles: [*mut c_void; 10],
 
     // Styles kept alive via Rc refcount inside Style.
-    _panel_base: oxivgl::style::Style,
-    _panel_dark: oxivgl::style::Style,
-    _scrollbar_base: oxivgl::style::Style,
-    _scrollbar_dark: oxivgl::style::Style,
-    _btn_base: oxivgl::style::Style,
-    _btn_dark: oxivgl::style::Style,
-    _btn_pressed_light: oxivgl::style::Style,
-    _btn_pressed_dark: oxivgl::style::Style,
+    _panel_base: Option<oxivgl::style::Style>,
+    _panel_dark: Option<oxivgl::style::Style>,
+    _scrollbar_base: Option<oxivgl::style::Style>,
+    _scrollbar_dark: Option<oxivgl::style::Style>,
+    _btn_base: Option<oxivgl::style::Style>,
+    _btn_dark: Option<oxivgl::style::Style>,
+    _btn_pressed_light: Option<oxivgl::style::Style>,
+    _btn_pressed_dark: Option<oxivgl::style::Style>,
 
     // Subject dropped last so observer linkage outlives all widgets.
-    theme_subject: Subject,
+    theme_subject: Option<Subject>,
 }
 
 impl View for Observer6 {
-    fn create() -> Result<Self, WidgetError> {
-        let screen = Screen::active().ok_or(WidgetError::LvglNullPointer)?;
+    fn create(&mut self, container: &Obj<'static>) -> Result<(), WidgetError> {
 
         // ── Theme subject (initial: 1 = dark) ──────────────────────────────
         let theme_subject = Subject::new_int(1);
@@ -128,7 +128,7 @@ impl View for Observer6 {
         let btn_pressed_dark = b.build();
 
         // ── Panel ──────────────────────────────────────────────────────────
-        let panel = Obj::new(&screen)?;
+        let panel = Obj::new(container)?;
         panel
             .remove_style_all()
             .size(lv_pct(90), lv_pct(90))
@@ -172,42 +172,44 @@ impl View for Observer6 {
         // Force initial theme application (subject starts at 1 = dark).
         theme_subject.notify();
 
-        Ok(Self {
-            _panel: panel,
-            btn_handles,
-            _panel_base: panel_base,
-            _panel_dark: panel_dark,
-            _scrollbar_base: scrollbar_base,
-            _scrollbar_dark: scrollbar_dark,
-            _btn_base: btn_base,
-            _btn_dark: btn_dark,
-            _btn_pressed_light: btn_pressed_light,
-            _btn_pressed_dark: btn_pressed_dark,
-            theme_subject,
-        })
+                self._panel = Some(panel);
+        self.btn_handles = btn_handles;
+        self._panel_base = Some(panel_base);
+        self._panel_dark = Some(panel_dark);
+        self._scrollbar_base = Some(scrollbar_base);
+        self._scrollbar_dark = Some(scrollbar_dark);
+        self._btn_base = Some(btn_base);
+        self._btn_dark = Some(btn_dark);
+        self._btn_pressed_light = Some(btn_pressed_light);
+        self._btn_pressed_dark = Some(btn_pressed_dark);
+        self.theme_subject = Some(theme_subject);
+        Ok(())
     }
 
-    fn on_event(&mut self, event: &Event) {
+    fn on_event(&mut self, event: &Event) -> NavAction {
         if event.code() != EventCode::CLICKED {
-            return;
+            return NavAction::None;
         }
         let target = event.target_handle() as *mut c_void;
         for &handle in self.btn_handles.iter() {
             if !handle.is_null() && target == handle {
                 // Toggle between light (0) and dark (1).
-                if self.theme_subject.get_int() == 0 {
-                    self.theme_subject.set_int(1);
-                } else {
-                    self.theme_subject.set_int(0);
+                if let Some(ref theme_subject) = self.theme_subject {
+                    if theme_subject.get_int() == 0 {
+                        theme_subject.set_int(1);
+                    } else {
+                        theme_subject.set_int(0);
+                    }
                 }
-                return;
+                return NavAction::None;
             }
         }
+        NavAction::None
     }
 
-    fn update(&mut self) -> Result<(), WidgetError> {
-        Ok(())
+    fn update(&mut self) -> Result<NavAction, WidgetError> {
+        Ok(NavAction::None)
     }
 }
 
-oxivgl_examples_common::example_main!(Observer6);
+oxivgl_examples_common::example_main!(Observer6::default());

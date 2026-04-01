@@ -262,7 +262,7 @@ impl<'p> Obj<'p> {
     }
 
     /// Wrap a raw LVGL pointer. `ptr` must be non-null and owned by the caller.
-    pub(crate) fn from_raw(ptr: *mut lv_obj_t) -> Self {
+    pub fn from_raw(ptr: *mut lv_obj_t) -> Self {
         Obj {
             handle: ptr,
             _styles: RefCell::new(Vec::new()),
@@ -824,6 +824,10 @@ impl<'p> Obj<'p> {
     /// child).
     ///
     /// No-op if the index is out of range.
+    ///
+    /// **Warning:** If the caller holds a Rust `Obj` wrapper for the
+    /// deleted child, that wrapper becomes stale. See [`clean`](Self::clean)
+    /// for details.
     pub fn delete_child(&self, idx: i32) {
         assert_ne!(self.handle, null_mut());
         // SAFETY: handle non-null (asserted above); lv_obj_get_child returns
@@ -864,37 +868,43 @@ impl<'p> Obj<'p> {
 
     /// Get the right edge X coordinate of the object.
     pub fn get_x2(&self) -> i32 {
-        // SAFETY: handle non-null (checked in new/from_raw).
+        assert_ne!(self.handle, null_mut());
+        // SAFETY: handle non-null (asserted above).
         unsafe { lv_obj_get_x2(self.handle) }
     }
 
     /// Get the bottom edge Y coordinate of the object.
     pub fn get_y2(&self) -> i32 {
-        // SAFETY: handle non-null (checked in new/from_raw).
+        assert_ne!(self.handle, null_mut());
+        // SAFETY: handle non-null (asserted above).
         unsafe { lv_obj_get_y2(self.handle) }
     }
 
     /// Get the inner (content) width excluding padding.
     pub fn get_content_width(&self) -> i32 {
-        // SAFETY: handle non-null (checked in new/from_raw).
+        assert_ne!(self.handle, null_mut());
+        // SAFETY: handle non-null (asserted above).
         unsafe { lv_obj_get_content_width(self.handle) }
     }
 
     /// Get the inner (content) height excluding padding.
     pub fn get_content_height(&self) -> i32 {
-        // SAFETY: handle non-null (checked in new/from_raw).
+        assert_ne!(self.handle, null_mut());
+        // SAFETY: handle non-null (asserted above).
         unsafe { lv_obj_get_content_height(self.handle) }
     }
 
     /// Get the self-reported natural width of the object.
     pub fn get_self_width(&self) -> i32 {
-        // SAFETY: handle non-null (checked in new/from_raw).
+        assert_ne!(self.handle, null_mut());
+        // SAFETY: handle non-null (asserted above).
         unsafe { lv_obj_get_self_width(self.handle) }
     }
 
     /// Get the self-reported natural height of the object.
     pub fn get_self_height(&self) -> i32 {
-        // SAFETY: handle non-null (checked in new/from_raw).
+        assert_ne!(self.handle, null_mut());
+        // SAFETY: handle non-null (asserted above).
         unsafe { lv_obj_get_self_height(self.handle) }
     }
 
@@ -929,6 +939,10 @@ impl<'p> Obj<'p> {
     // ── Observer / subject bindings ───────────────────────────────────────
 
     /// Bind a state: set `state` when `subject == ref_value`, clear otherwise.
+    ///
+    /// The subject must outlive this widget. Both drop orders are safe
+    /// (see [`Subject`](super::subject::Subject) docs), but prefer
+    /// declaring subjects after widgets in view structs.
     pub fn bind_state_if_eq(
         &self,
         subject: &super::subject::Subject,
@@ -943,6 +957,8 @@ impl<'p> Obj<'p> {
     }
 
     /// Bind a state: set `state` when `subject != ref_value`, clear otherwise.
+    ///
+    /// See [`bind_state_if_eq`](Self::bind_state_if_eq) for lifetime notes.
     pub fn bind_state_if_not_eq(
         &self,
         subject: &super::subject::Subject,
@@ -961,6 +977,7 @@ impl<'p> Obj<'p> {
     ///
     /// This is the observer-driven equivalent of `add_style` — the style is
     /// automatically added or removed whenever the subject value changes.
+    /// See [`bind_state_if_eq`](Self::bind_state_if_eq) for lifetime notes.
     pub fn bind_style(
         &self,
         style: &crate::style::Style,
@@ -983,6 +1000,7 @@ impl<'p> Obj<'p> {
     /// Two-way bind: checked state ↔ integer subject (0/1).
     ///
     /// The widget must have `ObjFlag::CHECKABLE` set.
+    /// See [`bind_state_if_eq`](Self::bind_state_if_eq) for lifetime notes.
     pub fn bind_checked(&self, subject: &super::subject::Subject) -> &Self {
         // SAFETY: handle non-null; subject pinned.
         unsafe { lv_obj_bind_checked(self.handle, subject.as_ptr()) };
@@ -990,6 +1008,14 @@ impl<'p> Obj<'p> {
     }
 
     /// Remove all children of this object without deleting the object itself.
+    ///
+    /// **Warning:** After this call, any Rust `Obj` wrappers referencing
+    /// deleted children hold stale pointers. Their `Drop` uses
+    /// `lv_obj_is_valid()` as a guard against double-free, but calling
+    /// methods on stale wrappers is undefined behaviour. Callers must
+    /// ensure no child wrappers are used after this call (see
+    /// `spec-memory-lifetime.md` §8.1). Set `Option<Widget>` fields to
+    /// `None` after calling `clean`.
     pub fn clean(&self) -> &Self {
         // SAFETY: handle non-null (checked in new/from_raw).
         unsafe { lv_obj_clean(self.handle) };

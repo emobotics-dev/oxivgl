@@ -8,24 +8,24 @@
 
 use oxivgl::{
     style::{palette_darken, palette_main, Palette, StyleBuilder, Theme},
-    view::View,
-    widgets::{Align, Button, Label, Screen, WidgetError},
+    view::{NavAction, View},
+    widgets::{Obj, Align, Button, Label, WidgetError},
 };
 
+#[derive(Default)]
 struct Style14 {
-    _theme: Theme,
-    _label2: Label<'static>,
-    _btn2: Button<'static>,
-    _label1: Label<'static>,
-    _btn1: Button<'static>,
+    _theme: Option<Theme>,
+    _label2: Option<Label<'static>>,
+    _btn2: Option<Button<'static>>,
+    _label1: Option<Label<'static>>,
+    _btn1: Option<Button<'static>>,
 }
 
 impl View for Style14 {
-    fn create() -> Result<Self, WidgetError> {
-        let screen = Screen::active().ok_or(WidgetError::LvglNullPointer)?;
+    fn create(&mut self, container: &Obj<'static>) -> Result<(), WidgetError> {
 
         // Button created before the theme extension — uses the default theme.
-        let btn1 = Button::new(&screen)?;
+        let btn1 = Button::new(container)?;
         btn1.align(Align::TopMid, 0, 20);
         let label1 = Label::new(&btn1)?;
         label1.text("Original theme").center();
@@ -39,23 +39,22 @@ impl View for Style14 {
         let theme = Theme::extend_current(style.build())?;
 
         // Button created after the theme extension — receives the green style.
-        let btn2 = Button::new(&screen)?;
+        let btn2 = Button::new(container)?;
         btn2.align(Align::BottomMid, 0, -20);
         let label2 = Label::new(&btn2)?;
         label2.text("New theme").center();
 
-        Ok(Self {
-            _theme: theme,
-            _label2: label2,
-            _btn2: btn2,
-            _label1: label1,
-            _btn1: btn1,
-        })
+                self._theme = Some(theme);
+        self._label2 = Some(label2);
+        self._btn2 = Some(btn2);
+        self._label1 = Some(label1);
+        self._btn1 = Some(btn1);
+        Ok(())
     }
 
-    fn update(&mut self) -> Result<(), WidgetError> {
-        Ok(())
+    fn update(&mut self) -> Result<NavAction, WidgetError> {
+        Ok(NavAction::None)
     }
 }
 
-oxivgl_examples_common::example_main!(Style14);
+oxivgl_examples_common::example_main!(Style14::default());

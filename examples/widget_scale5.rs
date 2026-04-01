@@ -10,20 +10,27 @@
 
 use oxivgl::{
     style::{lv_pct, palette_darken, palette_lighten, Palette, Style, StyleBuilder},
-    view::View,
-    widgets::{Part, Scale, ScaleMode, Screen, WidgetError},
+    view::{NavAction, View},
+    widgets::{Obj, Part, Scale, ScaleMode, WidgetError},
 };
 
 struct WidgetScale5 {
-    _scale: Scale<'static>,
+    _scale: Option<Scale<'static>>,
     _styles: [Style; 6],
 }
 
-impl View for WidgetScale5 {
-    fn create() -> Result<Self, WidgetError> {
-        let screen = Screen::active().ok_or(WidgetError::LvglNullPointer)?;
+impl WidgetScale5 {
+    fn new() -> Self {
+        Self {
+            _scale: None,
+            _styles: core::array::from_fn(|_| StyleBuilder::new().build()),
+        }
+    }
+}
 
-        let scale = Scale::new(&screen)?;
+impl View for WidgetScale5 {
+    fn create(&mut self, container: &Obj<'static>) -> Result<(), WidgetError> {
+        let scale = Scale::new(container)?;
         scale.size(lv_pct(80), 100).center();
         scale
             .set_mode(ScaleMode::HorizontalBottom)
@@ -81,22 +88,21 @@ impl View for WidgetScale5 {
             .set_indicator_style(&blue_label)
             .set_items_style(&blue_ticks);
 
-        Ok(Self {
-            _scale: scale,
-            _styles: [
-                indicator_style,
-                items_style,
-                red_label,
-                red_ticks,
-                blue_label,
-                blue_ticks,
-            ],
-        })
+        self._scale = Some(scale);
+        self._styles = [
+            indicator_style,
+            items_style,
+            red_label,
+            red_ticks,
+            blue_label,
+            blue_ticks,
+        ];
+        Ok(())
     }
 
-    fn update(&mut self) -> Result<(), WidgetError> {
-        Ok(())
+    fn update(&mut self) -> Result<NavAction, WidgetError> {
+        Ok(NavAction::None)
     }
 }
 
-oxivgl_examples_common::example_main!(WidgetScale5);
+oxivgl_examples_common::example_main!(WidgetScale5::new());

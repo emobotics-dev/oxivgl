@@ -11,13 +11,14 @@
 //! - First column (col 0, non-header): right-aligned text.
 //! - Even non-header rows: light grey tint.
 
+use oxivgl::view::NavAction;
 use oxivgl::{
     draw::DrawTask,
     enums::EventCode,
     event::Event,
     style::{color_mix, palette_main, Palette},
     view::{register_event_on, View},
-    widgets::{Align, Part, Screen, Table, TextAlign, WidgetError},
+    widgets::{Obj, Align, Part, Table, TextAlign, WidgetError},
 };
 
 const NAMES: [&str; 8] = ["Name", "Apple", "Banana", "Lemon", "Grape", "Melon", "Peach", "Nuts"];
@@ -25,8 +26,9 @@ const PRICES: [&str; 8] = ["Price", "$7", "$4", "$6", "$2", "$5", "$1", "$9"];
 
 const OPA_COVER: u8 = 255;
 
+#[derive(Default)]
 struct Table1 {
-    table: Table<'static>,
+    table: Option<Table<'static>>,
 }
 
 impl Table1 {
@@ -64,9 +66,8 @@ impl Table1 {
 }
 
 impl View for Table1 {
-    fn create() -> Result<Self, WidgetError> {
-        let screen = Screen::active().ok_or(WidgetError::LvglNullPointer)?;
-        let table = Table::new(&screen)?;
+    fn create(&mut self, container: &Obj<'static>) -> Result<(), WidgetError> {
+        let table = Table::new(container)?;
 
         for (row, (name, price)) in NAMES.iter().zip(PRICES.iter()).enumerate() {
             table.set_cell_value(row as u32, 0, name);
@@ -76,24 +77,28 @@ impl View for Table1 {
         table.height(200).align(Align::Center, 0, 0);
         table.send_draw_task_events();
 
-        Ok(Self { table })
+                self.table = Some(table);
+        Ok(())
     }
 
     fn register_events(&mut self) {
-        register_event_on(self, self.table.handle());
+        if let Some(ref table) = self.table {
+            register_event_on(self, table.handle());
+        }
     }
 
-    fn on_event(&mut self, event: &Event) {
+    fn on_event(&mut self, event: &Event) -> NavAction {
         if event.code() == EventCode::DRAW_TASK_ADDED {
             if let Some(draw_task) = event.draw_task() {
                 self.handle_draw_task(&draw_task);
             }
         }
+        NavAction::None
     }
 
-    fn update(&mut self) -> Result<(), WidgetError> {
-        Ok(())
+    fn update(&mut self) -> Result<NavAction, WidgetError> {
+        Ok(NavAction::None)
     }
 }
 
-oxivgl_examples_common::example_main!(Table1);
+oxivgl_examples_common::example_main!(Table1::default());

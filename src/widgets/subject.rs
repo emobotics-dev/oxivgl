@@ -19,10 +19,12 @@ use super::obj::AsLvHandle;
 ///
 /// # Drop order
 ///
-/// Subjects should outlive any widgets bound to them.  Both drop orders are
-/// safe (LVGL handles cleanup in either case), but dropping a subject first
-/// calls `lv_subject_deinit`, which removes all observer linkage before the
-/// widget is deleted.
+/// Both drop orders are safe: dropping a widget first removes its observer
+/// linkage via `lv_obj_delete`; dropping a subject first removes all
+/// observer linkage via `lv_subject_deinit`. Prefer declaring subjects
+/// after widgets in view structs (Rust drops fields in declaration order)
+/// so subjects outlive their bindings — this avoids a brief window where
+/// observers reference a deinitialized subject.
 ///
 /// # Thread safety
 ///
@@ -65,7 +67,11 @@ impl Subject {
     /// Create a group subject that notifies observers when any member changes.
     ///
     /// The group holds a stable pointer array referencing each member subject.
-    /// Member subjects must outlive the group subject.
+    /// Member subjects must outlive the group subject — dropping a member
+    /// first leaves a dangling pointer in the group's internal array.
+    /// Declare members before the group in your struct to ensure correct
+    /// drop order (Rust drops fields in declaration order, so earlier fields
+    /// are dropped last).
     pub fn new_group(members: &[&Subject]) -> Self {
         let ptrs: Vec<*mut lv_subject_t> = members.iter().map(|s| s.as_ptr()).collect();
         let mut ptrs_box: Box<[*mut lv_subject_t]> = ptrs.into_boxed_slice();

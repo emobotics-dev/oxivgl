@@ -17,35 +17,36 @@
 use oxivgl::{
     layout::FlexFlow,
     style::{LV_SIZE_CONTENT, Palette, Selector, StyleBuilder, color_make, palette_main},
-    view::View,
-    widgets::{Align, Child, Dropdown, Label, Obj, Part, Screen, Slider, Subject, WidgetError},
+    view::{NavAction, View},
+    widgets::{Align, Child, Dropdown, Label, Obj, Part, Slider, Subject, WidgetError},
 };
 
+#[derive(Default)]
 struct Observer7 {
     // Widgets — dropped before subjects.
-    _cont: Obj<'static>,
-    _label: Child<Label<'static>>,
-    _slider: Child<Slider<'static>>,
-    _dropdown: Dropdown<'static>,
+    _cont: Option<Obj<'static>>,
+    _label: Option<Child<Label<'static>>>,
+    _slider: Option<Child<Slider<'static>>>,
+    _dropdown: Option<Dropdown<'static>>,
 
     // Light styles (added unconditionally).
-    _style_screen: oxivgl::style::Style,
-    _style_slider_main: oxivgl::style::Style,
-    _style_slider_indicator: oxivgl::style::Style,
-    _style_slider_knob: oxivgl::style::Style,
+    _style_screen: Option<oxivgl::style::Style>,
+    _style_slider_main: Option<oxivgl::style::Style>,
+    _style_slider_indicator: Option<oxivgl::style::Style>,
+    _style_slider_knob: Option<oxivgl::style::Style>,
 
     // Dark overlay styles (bound conditionally when theme == 1).
-    _style_screen_dark: oxivgl::style::Style,
-    _style_bg_dark: oxivgl::style::Style,
-    _style_yellow: oxivgl::style::Style,
+    _style_screen_dark: Option<oxivgl::style::Style>,
+    _style_bg_dark: Option<oxivgl::style::Style>,
+    _style_yellow: Option<oxivgl::style::Style>,
 
     // Subjects — dropped last so observer linkage outlives widgets.
-    _subject_theme: Subject,
-    _subject_room_temperature: Subject,
+    _subject_theme: Option<Subject>,
+    _subject_room_temperature: Option<Subject>,
 }
 
 impl View for Observer7 {
-    fn create() -> Result<Self, WidgetError> {
+    fn create(&mut self, container: &Obj<'static>) -> Result<(), WidgetError> {
         // ── Subjects ────────────────────────────────────────────────────────
         let subject_theme = Subject::new_int(0);
         let subject_room_temperature = Subject::new_int(25);
@@ -98,12 +99,11 @@ impl View for Observer7 {
         let style_yellow = b.build();
 
         // ── Screen ──────────────────────────────────────────────────────────
-        let screen = Screen::active().ok_or(WidgetError::LvglNullPointer)?;
-        screen.add_style(&style_screen, Selector::DEFAULT);
-        screen.bind_style(&style_screen_dark, Selector::DEFAULT, &subject_theme, 1);
+        container.add_style(&style_screen, Selector::DEFAULT);
+        container.bind_style(&style_screen_dark, Selector::DEFAULT, &subject_theme, 1);
 
         // ── Container ───────────────────────────────────────────────────────
-        let cont = Obj::new(&screen)?;
+        let cont = Obj::new(container)?;
         cont.bind_style(&style_bg_dark, Selector::DEFAULT, &subject_theme, 1)
             .set_flex_flow(FlexFlow::Column)
             .size(LV_SIZE_CONTENT, LV_SIZE_CONTENT)
@@ -129,7 +129,7 @@ impl View for Observer7 {
         slider.bind_style(&style_yellow, Part::Knob, &subject_theme, 1);
 
         // ── Dropdown ─────────────────────────────────────────────────────────
-        let dropdown = Dropdown::new(&screen)?;
+        let dropdown = Dropdown::new(container)?;
         dropdown
             .set_options("Light\nDark")
             .align(Align::TopMid, 0, 120);
@@ -140,26 +140,25 @@ impl View for Observer7 {
         let list = dropdown.get_list();
         list.bind_style(&style_bg_dark, Selector::DEFAULT, &subject_theme, 1);
 
-        Ok(Self {
-            _cont: cont,
-            _label: label,
-            _slider: slider,
-            _dropdown: dropdown,
-            _style_screen: style_screen,
-            _style_slider_main: style_slider_main,
-            _style_slider_indicator: style_slider_indicator,
-            _style_slider_knob: style_slider_knob,
-            _style_screen_dark: style_screen_dark,
-            _style_bg_dark: style_bg_dark,
-            _style_yellow: style_yellow,
-            _subject_theme: subject_theme,
-            _subject_room_temperature: subject_room_temperature,
-        })
+                self._cont = Some(cont);
+        self._label = Some(label);
+        self._slider = Some(slider);
+        self._dropdown = Some(dropdown);
+        self._style_screen = Some(style_screen);
+        self._style_slider_main = Some(style_slider_main);
+        self._style_slider_indicator = Some(style_slider_indicator);
+        self._style_slider_knob = Some(style_slider_knob);
+        self._style_screen_dark = Some(style_screen_dark);
+        self._style_bg_dark = Some(style_bg_dark);
+        self._style_yellow = Some(style_yellow);
+        self._subject_theme = Some(subject_theme);
+        self._subject_room_temperature = Some(subject_room_temperature);
+        Ok(())
     }
 
-    fn update(&mut self) -> Result<(), WidgetError> {
-        Ok(())
+    fn update(&mut self) -> Result<NavAction, WidgetError> {
+        Ok(NavAction::None)
     }
 }
 
-oxivgl_examples_common::example_main!(Observer7);
+oxivgl_examples_common::example_main!(Observer7::default());

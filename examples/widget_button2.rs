@@ -15,16 +15,17 @@ use oxivgl::{
         color_white, palette_darken, palette_main, props, GradDir, Palette, Selector, Style,
         StyleBuilder, TransitionDsc, LV_SIZE_CONTENT,
     },
-    view::View,
+    view::{NavAction, View},
     enums::ObjState,
-    widgets::{Button, Label, Screen, WidgetError},
+    widgets::{Obj, Button, Label, WidgetError},
 };
 
+#[derive(Default)]
 struct WidgetButton2 {
-    _btn: Button<'static>,
-    _label: Label<'static>,
-    _style: Style,
-    _style_pr: Style,
+    _btn: Option<Button<'static>>,
+    _label: Option<Label<'static>>,
+    _style: Option<Style>,
+    _style_pr: Option<Style>,
 }
 
 /// Transition property list: outline width + outline opacity + sentinel.
@@ -32,8 +33,7 @@ static TRANS_PROPS: [props::lv_style_prop_t; 3] =
     [props::OUTLINE_WIDTH, props::OUTLINE_OPA, props::LAST];
 
 impl View for WidgetButton2 {
-    fn create() -> Result<Self, WidgetError> {
-        let screen = Screen::active().ok_or(WidgetError::LvglNullPointer)?;
+    fn create(&mut self, container: &Obj<'static>) -> Result<(), WidgetError> {
 
         // Default state style
         let mut style = StyleBuilder::new();
@@ -69,7 +69,7 @@ impl View for WidgetButton2 {
             .transition(trans);
         let style_pr = style_pr.build();
 
-        let btn = Button::new(&screen)?;
+        let btn = Button::new(container)?;
         btn.remove_style_all();
         btn.add_style(&style, Selector::DEFAULT);
         btn.add_style(&style_pr, ObjState::PRESSED);
@@ -79,17 +79,16 @@ impl View for WidgetButton2 {
         let label = Label::new(&btn)?;
         label.text("Button").center();
 
-        Ok(Self {
-            _btn: btn,
-            _label: label,
-            _style: style,
-            _style_pr: style_pr,
-        })
+                self._btn = Some(btn);
+        self._label = Some(label);
+        self._style = Some(style);
+        self._style_pr = Some(style_pr);
+        Ok(())
     }
 
-    fn update(&mut self) -> Result<(), WidgetError> {
-        Ok(())
+    fn update(&mut self) -> Result<NavAction, WidgetError> {
+        Ok(NavAction::None)
     }
 }
 
-oxivgl_examples_common::example_main!(WidgetButton2);
+oxivgl_examples_common::example_main!(WidgetButton2::default());

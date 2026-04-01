@@ -9,30 +9,31 @@
 //! Label with scroll-circular long mode — text scrolls in a continuous loop.
 
 use oxivgl::{
-    view::View,
-    widgets::{Align, Label, LabelLongMode, Screen, WidgetError},
+    view::{NavAction, View},
+    widgets::{Obj, Align, Label, LabelLongMode, WidgetError},
 };
 
+#[derive(Default)]
 struct WidgetLabel5 {
-    _label: Label<'static>,
+    _label: Option<Label<'static>>,
 }
 
 impl View for WidgetLabel5 {
-    fn create() -> Result<Self, WidgetError> {
-        let screen = Screen::active().ok_or(WidgetError::LvglNullPointer)?;
+    fn create(&mut self, container: &Obj<'static>) -> Result<(), WidgetError> {
 
-        let label = Label::new(&screen)?;
+        let label = Label::new(container)?;
         label.set_long_mode(LabelLongMode::ScrollCircular);
         label.width(150);
         label.text("It is a circularly scrolling text. ");
         label.align(Align::Center, 0, 0);
 
-        Ok(Self { _label: label })
+                self._label = Some(label);
+        Ok(())
     }
 
-    fn update(&mut self) -> Result<(), WidgetError> {
-        Ok(())
+    fn update(&mut self) -> Result<NavAction, WidgetError> {
+        Ok(NavAction::None)
     }
 }
 
-oxivgl_examples_common::example_main!(WidgetLabel5);
+oxivgl_examples_common::example_main!(WidgetLabel5::default());

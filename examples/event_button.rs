@@ -9,45 +9,45 @@
 //! A button that displays which event was last triggered (PRESSED, CLICKED,
 //! LONG_PRESSED, LONG_PRESSED_REPEAT) in an info label.
 
+use oxivgl::view::NavAction;
 use oxivgl::{
     view::{register_event_on, View},
     enums::EventCode,
     event::Event,
-    widgets::{Button, Label, Screen, WidgetError},
+    widgets::{Obj, Button, Label, WidgetError},
 };
 
+#[derive(Default)]
 struct EventButton {
-    btn: Button<'static>,
-    _btn_label: Label<'static>,
-    info_label: Label<'static>,
+    btn: Option<Button<'static>>,
+    _btn_label: Option<Label<'static>>,
+    info_label: Option<Label<'static>>,
 }
 
 impl View for EventButton {
-    fn create() -> Result<Self, WidgetError> {
-        let screen = Screen::active().ok_or(WidgetError::LvglNullPointer)?;
+    fn create(&mut self, container: &Obj<'static>) -> Result<(), WidgetError> {
 
-        let btn = Button::new(&screen)?;
+        let btn = Button::new(container)?;
         btn.size(100, 50).center();
         btn.bubble_events();
 
         let btn_label = Label::new(&btn)?;
         btn_label.text("Click me!").center();
 
-        let info_label = Label::new(&screen)?;
+        let info_label = Label::new(container)?;
         info_label.text("The last button event:\nNone");
 
-        Ok(Self {
-            btn,
-            _btn_label: btn_label,
-            info_label,
-        })
+                self.btn = Some(btn);
+        self._btn_label = Some(btn_label);
+        self.info_label = Some(info_label);
+        Ok(())
     }
 
     fn register_events(&mut self) {
-        register_event_on(self, self.btn.handle());
+        if let Some(ref btn) = self.btn { register_event_on(self, btn.handle()); }
     }
 
-    fn on_event(&mut self, event: &Event) {
+    fn on_event(&mut self, event: &Event) -> NavAction {
         let text = match event.code() {
             EventCode::PRESSED => "The last button event:\nLV_EVENT_PRESSED",
             EventCode::CLICKED => "The last button event:\nLV_EVENT_CLICKED",
@@ -55,14 +55,17 @@ impl View for EventButton {
             EventCode::LONG_PRESSED_REPEAT => {
                 "The last button event:\nLV_EVENT_LONG_PRESSED_REPEAT"
             }
-            _ => return,
+            _ => return NavAction::None,
         };
-        self.info_label.text(text);
+        if let Some(ref info_label) = self.info_label {
+            info_label.text(text);
+        }
+        NavAction::None
     }
 
-    fn update(&mut self) -> Result<(), WidgetError> {
-        Ok(())
+    fn update(&mut self) -> Result<NavAction, WidgetError> {
+        Ok(NavAction::None)
     }
 }
 
-oxivgl_examples_common::example_main!(EventButton);
+oxivgl_examples_common::example_main!(EventButton::default());

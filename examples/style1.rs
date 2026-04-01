@@ -10,19 +10,19 @@ extern crate alloc;
 
 use oxivgl::{
     style::{lv_pct, Selector, Style, StyleBuilder, LV_SIZE_CONTENT},
-    view::View,
-    widgets::{Label, Obj, Screen, WidgetError},
+    view::{NavAction, View},
+    widgets::{Label, Obj, WidgetError},
 };
 
+#[derive(Default)]
 struct Style1 {
-    _label: Label<'static>,
-    _obj: Obj<'static>,
-    _style: Style,
+    _label: Option<Label<'static>>,
+    _obj: Option<Obj<'static>>,
+    _style: Option<Style>,
 }
 
 impl View for Style1 {
-    fn create() -> Result<Self, WidgetError> {
-        let screen = Screen::active().ok_or(WidgetError::LvglNullPointer)?;
+    fn create(&mut self, container: &Obj<'static>) -> Result<(), WidgetError> {
 
         let mut builder = StyleBuilder::new();
         builder
@@ -35,22 +35,21 @@ impl View for Style1 {
             .y(80);
         let style = builder.build();
 
-        let obj = Obj::new(&screen)?;
+        let obj = Obj::new(container)?;
         obj.add_style(&style, Selector::DEFAULT);
 
         let label = Label::new(&obj)?;
         label.text("Hello");
 
-        Ok(Self {
-            _label: label,
-            _obj: obj,
-            _style: style,
-        })
+                self._label = Some(label);
+        self._obj = Some(obj);
+        self._style = Some(style);
+        Ok(())
     }
 
-    fn update(&mut self) -> Result<(), WidgetError> {
-        Ok(())
+    fn update(&mut self) -> Result<NavAction, WidgetError> {
+        Ok(NavAction::None)
     }
 }
 
-oxivgl_examples_common::example_main!(Style1);
+oxivgl_examples_common::example_main!(Style1::default());

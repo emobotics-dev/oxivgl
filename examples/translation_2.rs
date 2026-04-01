@@ -12,13 +12,14 @@
 //!
 //! Requires `LV_USE_TRANSLATION = 1` in `lv_conf.h`.
 
+use oxivgl::view::NavAction;
 use oxivgl::{
     enums::EventCode,
     event::Event,
     layout::{FlexAlign, FlexFlow},
     translation::{self, StaticCStr as S},
     view::{register_event_on, View},
-    widgets::{Dropdown, Label, Screen, WidgetError},
+    widgets::{Obj, Dropdown, Label, WidgetError},
 };
 
 // Language tag strings used for index-based language switching.
@@ -54,20 +55,20 @@ static TRANSLATIONS: [S; 12] = [
     S::from_cstr(c"El Elefante"),
 ];
 
+#[derive(Default)]
 struct Translation2 {
-    dd: Dropdown<'static>,
-    _lbl_tiger: Label<'static>,
-    _lbl_lion: Label<'static>,
-    _lbl_rabbit: Label<'static>,
-    _lbl_elephant: Label<'static>,
+    dd: Option<Dropdown<'static>>,
+    _lbl_tiger: Option<Label<'static>>,
+    _lbl_lion: Option<Label<'static>>,
+    _lbl_rabbit: Option<Label<'static>>,
+    _lbl_elephant: Option<Label<'static>>,
 }
 
 impl View for Translation2 {
-    fn create() -> Result<Self, WidgetError> {
-        let screen = Screen::active().ok_or(WidgetError::LvglNullPointer)?;
+    fn create(&mut self, container: &Obj<'static>) -> Result<(), WidgetError> {
 
-        // Arrange screen items in a centered column.
-        screen
+        // Arrange container items in a centered column.
+        container
             .set_flex_flow(FlexFlow::Column)
             .set_flex_align(FlexAlign::Center, FlexAlign::Center, FlexAlign::Center);
 
@@ -75,51 +76,55 @@ impl View for Translation2 {
         translation::add_static(&LANGUAGES, &TAGS, &TRANSLATIONS);
 
         // Language selector dropdown.
-        let dd = Dropdown::new(&screen)?;
+        let dd = Dropdown::new(container)?;
         dd.set_options("English\nDeutsch\nEspanol");
         dd.bubble_events();
 
         // Labels with translation tags — auto-update on language change.
-        let lbl_tiger = Label::new(&screen)?;
+        let lbl_tiger = Label::new(container)?;
         lbl_tiger.set_translation_tag("tiger");
 
-        let lbl_lion = Label::new(&screen)?;
+        let lbl_lion = Label::new(container)?;
         lbl_lion.set_translation_tag("lion");
 
-        let lbl_rabbit = Label::new(&screen)?;
+        let lbl_rabbit = Label::new(container)?;
         lbl_rabbit.set_translation_tag("rabbit");
 
-        let lbl_elephant = Label::new(&screen)?;
+        let lbl_elephant = Label::new(container)?;
         lbl_elephant.set_translation_tag("elephant");
 
         // Set initial language to English.
         translation::set_language(c"English");
 
-        Ok(Self {
-            dd,
-            _lbl_tiger: lbl_tiger,
-            _lbl_lion: lbl_lion,
-            _lbl_rabbit: lbl_rabbit,
-            _lbl_elephant: lbl_elephant,
-        })
+                self.dd = Some(dd);
+        self._lbl_tiger = Some(lbl_tiger);
+        self._lbl_lion = Some(lbl_lion);
+        self._lbl_rabbit = Some(lbl_rabbit);
+        self._lbl_elephant = Some(lbl_elephant);
+        Ok(())
     }
 
     fn register_events(&mut self) {
-        register_event_on(self, self.dd.handle());
-    }
-
-    fn on_event(&mut self, event: &Event) {
-        if event.code() == EventCode::VALUE_CHANGED {
-            let idx = self.dd.get_selected() as usize;
-            if idx < LANG_CSTR.len() {
-                translation::set_language(LANG_CSTR[idx]);
-            }
+        if let Some(ref dd) = self.dd {
+            register_event_on(self, dd.handle());
         }
     }
 
-    fn update(&mut self) -> Result<(), WidgetError> {
-        Ok(())
+    fn on_event(&mut self, event: &Event) -> NavAction {
+        if event.code() == EventCode::VALUE_CHANGED {
+            if let Some(ref dd) = self.dd {
+                let idx = dd.get_selected() as usize;
+                if idx < LANG_CSTR.len() {
+                    translation::set_language(LANG_CSTR[idx]);
+                }
+            }
+        }
+        NavAction::None
+    }
+
+    fn update(&mut self) -> Result<NavAction, WidgetError> {
+        Ok(NavAction::None)
     }
 }
 
-oxivgl_examples_common::example_main!(Translation2);
+oxivgl_examples_common::example_main!(Translation2::default());

@@ -15,9 +15,9 @@ use oxivgl::{
     enums::EventCode,
     event::Event,
     style::{BorderSide, Selector, StyleBuilder},
-    view::View,
+    view::{NavAction, View},
     widgets::{
-        Align, Buttonmatrix, ButtonmatrixCtrl, ButtonmatrixMap, Part, RADIUS_MAX, Screen,
+        Obj, Align, Buttonmatrix, ButtonmatrixCtrl, ButtonmatrixMap, Part, RADIUS_MAX,
         WidgetError,
     },
 };
@@ -26,16 +26,15 @@ static MAP: &ButtonmatrixMap = btnmatrix_map!(
     c"\xEF\x81\x93", c"1", c"2", c"3", c"4", c"5", c"\xEF\x81\x94"
 );
 
+#[derive(Default)]
 struct WidgetButtonmatrix3 {
-    _screen: Screen,
-    btnm: Buttonmatrix<'static>,
-    _style_bg: oxivgl::style::Style,
-    _style_btn: oxivgl::style::Style,
+    btnm: Option<Buttonmatrix<'static>>,
+    _style_bg: Option<oxivgl::style::Style>,
+    _style_btn: Option<oxivgl::style::Style>,
 }
 
 impl View for WidgetButtonmatrix3 {
-    fn create() -> Result<Self, WidgetError> {
-        let screen = Screen::active().ok_or(WidgetError::LvglNullPointer)?;
+    fn create(&mut self, container: &Obj<'static>) -> Result<(), WidgetError> {
 
         let mut style_bg = StyleBuilder::new();
         style_bg
@@ -53,7 +52,7 @@ impl View for WidgetButtonmatrix3 {
             .border_side(BorderSide::INTERNAL);
         let style_btn = style_btn.build();
 
-        let btnm = Buttonmatrix::new(&screen)?;
+        let btnm = Buttonmatrix::new(container)?;
         btnm.set_map(MAP);
         btnm.add_style(&style_bg, Selector::DEFAULT);
         btnm.add_style(&style_btn, Selector::from(Part::Items));
@@ -75,24 +74,22 @@ impl View for WidgetButtonmatrix3 {
 
         btnm.bubble_events();
 
-        Ok(Self {
-            _screen: screen,
-            btnm,
-            _style_bg: style_bg,
-            _style_btn: style_btn,
-        })
+        self.btnm = Some(btnm);
+        self._style_bg = Some(style_bg);
+        self._style_btn = Some(style_btn);
+        Ok(())
     }
 
-    fn on_event(&mut self, event: &Event) {
-        if event.matches(&self.btnm, EventCode::VALUE_CHANGED) {
-            let id = self.btnm.get_selected_button();
+    fn on_event(&mut self, event: &Event) -> NavAction {
+        let Some(ref btnm) = self.btnm else { return NavAction::None };
+        if event.matches(btnm, EventCode::VALUE_CHANGED) {
+            let id = btnm.get_selected_button();
             let prev = id == 0;
             let next = id == 6;
             if prev || next {
-                // Find currently checked page (buttons 1-5)
                 let mut current = 1u32;
                 for i in 1..=5 {
-                    if self.btnm.has_button_ctrl(i, ButtonmatrixCtrl::CHECKED) {
+                    if btnm.has_button_ctrl(i, ButtonmatrixCtrl::CHECKED) {
                         current = i;
                         break;
                     }
@@ -104,14 +101,15 @@ impl View for WidgetButtonmatrix3 {
                 } else {
                     current
                 };
-                self.btnm.set_button_ctrl(target, ButtonmatrixCtrl::CHECKED);
+                btnm.set_button_ctrl(target, ButtonmatrixCtrl::CHECKED);
             }
         }
+        NavAction::None
     }
 
-    fn update(&mut self) -> Result<(), WidgetError> {
-        Ok(())
+    fn update(&mut self) -> Result<NavAction, WidgetError> {
+        Ok(NavAction::None)
     }
 }
 
-oxivgl_examples_common::example_main!(WidgetButtonmatrix3);
+oxivgl_examples_common::example_main!(WidgetButtonmatrix3::default());

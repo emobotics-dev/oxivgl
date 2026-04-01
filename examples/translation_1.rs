@@ -14,8 +14,8 @@
 
 use oxivgl::{
     translation::{self, StaticCStr as S},
-    view::View,
-    widgets::{Align, Label, Screen, WidgetError},
+    view::{NavAction, View},
+    widgets::{Obj, Align, Label, WidgetError},
 };
 
 // Static pack: languages and animal tags (NULL-terminated).
@@ -48,14 +48,14 @@ static TRANSLATIONS: [S; 12] = [
     S::from_cstr(c"El Elefante"),
 ];
 
+#[derive(Default)]
 struct Translation1 {
-    _lbl_tiger: Label<'static>,
-    _lbl_chair: Label<'static>,
+    _lbl_tiger: Option<Label<'static>>,
+    _lbl_chair: Option<Label<'static>>,
 }
 
 impl View for Translation1 {
-    fn create() -> Result<Self, WidgetError> {
-        let screen = Screen::active().ok_or(WidgetError::LvglNullPointer)?;
+    fn create(&mut self, container: &Obj<'static>) -> Result<(), WidgetError> {
 
         // Register the static pack (animals, three languages).
         translation::add_static(&LANGUAGES, &TAGS, &TRANSLATIONS);
@@ -77,26 +77,25 @@ impl View for Translation1 {
         translation::set_language(c"de");
 
         // Label showing the translated animal name.
-        let lbl_tiger = Label::new(&screen)?;
+        let lbl_tiger = Label::new(container)?;
         lbl_tiger
             .text(translation::translate(c"tiger").to_str().unwrap_or("tiger"))
             .align(Align::Center, 0, -25);
 
         // Label showing the translated furniture name from the dynamic pack.
-        let lbl_chair = Label::new(&screen)?;
+        let lbl_chair = Label::new(container)?;
         lbl_chair
             .text(translation::translate(c"chair").to_str().unwrap_or("chair"))
             .align(Align::Center, 0, 25);
 
-        Ok(Self {
-            _lbl_tiger: lbl_tiger,
-            _lbl_chair: lbl_chair,
-        })
+                self._lbl_tiger = Some(lbl_tiger);
+        self._lbl_chair = Some(lbl_chair);
+        Ok(())
     }
 
-    fn update(&mut self) -> Result<(), WidgetError> {
-        Ok(())
+    fn update(&mut self) -> Result<NavAction, WidgetError> {
+        Ok(NavAction::None)
     }
 }
 
-oxivgl_examples_common::example_main!(Translation1);
+oxivgl_examples_common::example_main!(Translation1::default());

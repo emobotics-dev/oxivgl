@@ -12,28 +12,28 @@ use oxivgl::{
     scale_labels,
     style::{color_black, color_white, palette_main, Palette, Selector, StyleBuilder},
     timer::Timer,
-    view::View,
-    widgets::{Line, Part, Scale, ScaleLabels, ScaleMode, Screen, WidgetError, RADIUS_MAX,
+    view::{NavAction, View},
+    widgets::{Obj, Line, Part, Scale, ScaleLabels, ScaleMode, WidgetError, RADIUS_MAX,
     },
 };
 
 static HOUR_LABELS: &ScaleLabels =
     scale_labels!(c"12", c"1", c"2", c"3", c"4", c"5", c"6", c"7", c"8", c"9", c"10", c"11");
 
+#[derive(Default)]
 struct WidgetScale6 {
-    scale: Scale<'static>,
-    minute_hand: Line<'static>,
-    hour_hand: Line<'static>,
-    timer: Timer,
+    scale: Option<Scale<'static>>,
+    minute_hand: Option<Line<'static>>,
+    hour_hand: Option<Line<'static>>,
+    timer: Option<Timer>,
     minute: i32,
     hour: i32,
 }
 
 impl View for WidgetScale6 {
-    fn create() -> Result<Self, WidgetError> {
-        let screen = Screen::active().ok_or(WidgetError::LvglNullPointer)?;
+    fn create(&mut self, container: &Obj<'static>) -> Result<(), WidgetError> {
 
-        let scale = Scale::new(&screen)?;
+        let scale = Scale::new(container)?;
         scale.size(150, 150).center();
         scale
             .set_mode(ScaleMode::RoundInner)
@@ -101,33 +101,36 @@ impl View for WidgetScale6 {
         let timer = Timer::new(250)?;
         timer.ready();
 
-        Ok(Self {
-            scale,
-            minute_hand,
-            hour_hand,
-            timer,
-            minute,
-            hour,
-        })
+                self.scale = Some(scale);
+        self.minute_hand = Some(minute_hand);
+        self.hour_hand = Some(hour_hand);
+        self.timer = Some(timer);
+        self.minute = minute;
+        self.hour = hour;
+        Ok(())
     }
 
-    fn update(&mut self) -> Result<(), WidgetError> {
-        if self.timer.triggered() {
-            self.minute += 1;
-            if self.minute > 59 {
-                self.minute = 0;
-                self.hour += 1;
-                if self.hour > 11 {
-                    self.hour = 0;
+    fn update(&mut self) -> Result<NavAction, WidgetError> {
+        if let Some(ref timer) = self.timer {
+            if timer.triggered() {
+                self.minute += 1;
+                if self.minute > 59 {
+                    self.minute = 0;
+                    self.hour += 1;
+                    if self.hour > 11 {
+                        self.hour = 0;
+                    }
+                }
+                if let (Some(scale), Some(minute_hand), Some(hour_hand)) =
+                    (&self.scale, &self.minute_hand, &self.hour_hand)
+                {
+                    scale.set_line_needle_value(minute_hand, 60, self.minute);
+                    scale.set_line_needle_value(hour_hand, 40, self.hour * 5 + self.minute / 12);
                 }
             }
-            self.scale
-                .set_line_needle_value(&self.minute_hand, 60, self.minute);
-            self.scale
-                .set_line_needle_value(&self.hour_hand, 40, self.hour * 5 + self.minute / 12);
         }
-        Ok(())
+        Ok(NavAction::None)
     }
 }
 
-oxivgl_examples_common::example_main!(WidgetScale6);
+oxivgl_examples_common::example_main!(WidgetScale6::default());

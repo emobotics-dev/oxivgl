@@ -15,17 +15,16 @@
 //! the object (it remains valid until the close button fires).
 
 use oxivgl::{
-    view::View,
-    widgets::{Msgbox, Obj, Screen, WidgetError},
+    view::{NavAction, View},
+    widgets::{Msgbox, Obj, WidgetError},
 };
 
+#[derive(Default)]
 struct WidgetMsgbox1 {
-    _screen: Screen,
 }
 
 impl View for WidgetMsgbox1 {
-    fn create() -> Result<Self, WidgetError> {
-        let screen = Screen::active().ok_or(WidgetError::LvglNullPointer)?;
+    fn create(&mut self, _container: &Obj<'static>) -> Result<(), WidgetError> {
 
         let mbox = Msgbox::new(None::<&Obj<'_>>)?;
         mbox.add_title("Hello");
@@ -36,12 +35,12 @@ impl View for WidgetMsgbox1 {
         // still holds the object.
         core::mem::forget(mbox);
 
-        Ok(Self { _screen: screen })
+                Ok(())
     }
 
-    fn update(&mut self) -> Result<(), WidgetError> {
-        Ok(())
+    fn update(&mut self) -> Result<NavAction, WidgetError> {
+        Ok(NavAction::None)
     }
 }
 
-oxivgl_examples_common::example_main!(WidgetMsgbox1);
+oxivgl_examples_common::example_main!(WidgetMsgbox1::default());

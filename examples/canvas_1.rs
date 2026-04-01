@@ -10,23 +10,23 @@ use oxivgl::{
     draw::{Area, DrawImageDsc, DrawLabelDscOwned, DrawRectDsc},
     draw_buf::{ColorFormat, DrawBuf},
     style::color_make,
-    view::View,
-    widgets::{Align, Canvas, Screen, WidgetError},
+    view::{NavAction, View},
+    widgets::{Obj, Align, Canvas, WidgetError},
 };
 
+#[derive(Default)]
 struct Canvas1 {
-    _canvas1: Canvas<'static>,
-    _canvas2: Canvas<'static>,
+    _canvas1: Option<Canvas<'static>>,
+    _canvas2: Option<Canvas<'static>>,
 }
 
 impl View for Canvas1 {
-    fn create() -> Result<Self, WidgetError> {
-        let screen = Screen::active().ok_or(WidgetError::LvglNullPointer)?;
+    fn create(&mut self, container: &Obj<'static>) -> Result<(), WidgetError> {
 
         // Canvas 1: RGB565, gradient rect + label
         let buf1 = DrawBuf::create(100, 70, ColorFormat::RGB565)
             .ok_or(WidgetError::LvglNullPointer)?;
-        let canvas1 = Canvas::new(&screen, buf1)?;
+        let canvas1 = Canvas::new(container, buf1)?;
         canvas1.fill_bg(color_make(0xcc, 0xcc, 0xcc), 255);
         canvas1.align(Align::TopMid, 0, 5);
         {
@@ -45,7 +45,7 @@ impl View for Canvas1 {
         // Canvas 2: RGB565, rotated snapshot of canvas1
         let buf2 = DrawBuf::create(100, 70, ColorFormat::RGB565)
             .ok_or(WidgetError::LvglNullPointer)?;
-        let canvas2 = Canvas::new(&screen, buf2)?;
+        let canvas2 = Canvas::new(container, buf2)?;
         canvas2.fill_bg(color_make(0x80, 0x80, 0x80), 255);
         canvas2.align(Align::BottomMid, 0, -5);
         {
@@ -56,15 +56,17 @@ impl View for Canvas1 {
             layer.draw_image(&dsc, Area { x1: 0, y1: 0, x2: 99, y2: 69 });
         }
 
-        Ok(Self { _canvas1: canvas1, _canvas2: canvas2 })
+        self._canvas1 = Some(canvas1);
+        self._canvas2 = Some(canvas2);
+        Ok(())
     }
 
     fn register_events(&mut self) {}
-    fn on_event(&mut self, _: &oxivgl::event::Event) {}
+    fn on_event(&mut self, _: &oxivgl::event::Event) -> NavAction { NavAction::None }
 
-    fn update(&mut self) -> Result<(), WidgetError> {
-        Ok(())
+    fn update(&mut self) -> Result<NavAction, WidgetError> {
+        Ok(NavAction::None)
     }
 }
 
-oxivgl_examples_common::example_main!(Canvas1);
+oxivgl_examples_common::example_main!(Canvas1::default());

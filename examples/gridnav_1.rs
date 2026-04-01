@@ -17,32 +17,31 @@ use oxivgl::{
     group::{Group, group_remove_obj},
     layout::FlexFlow,
     style::{LV_SIZE_CONTENT, Palette, lv_pct, palette_lighten},
-    view::View,
-    widgets::{Align, Button, Checkbox, Label, Screen, Switch, Textarea, WidgetError},
+    view::{NavAction, View},
+    widgets::{Align, Button, Checkbox, Label, Obj, Switch, Textarea, WidgetError},
 };
 
+#[derive(Default)]
 struct Gridnav1 {
-    _screen: Screen,
-    _group: Group,
-    _label1: Label<'static>,
+    _group: Option<Group>,
+    _label1: Option<Label<'static>>,
     _buttons: heapless::Vec<Button<'static>, 10>,
     _btn_labels: heapless::Vec<Label<'static>, 10>,
-    _label2: Label<'static>,
-    _ta: Textarea<'static>,
-    _cb: Checkbox<'static>,
-    _sw1: Switch<'static>,
-    _sw2: Switch<'static>,
+    _label2: Option<Label<'static>>,
+    _ta: Option<Textarea<'static>>,
+    _cb: Option<Checkbox<'static>>,
+    _sw1: Option<Switch<'static>>,
+    _sw2: Option<Switch<'static>>,
     // containers kept alive
-    _cont1: oxivgl::widgets::Obj<'static>,
-    _cont2: oxivgl::widgets::Obj<'static>,
+    _cont1: Option<oxivgl::widgets::Obj<'static>>,
+    _cont2: Option<oxivgl::widgets::Obj<'static>>,
 }
 
 impl View for Gridnav1 {
-    fn create() -> Result<Self, WidgetError> {
-        let screen = Screen::active().ok_or(WidgetError::LvglNullPointer)?;
+    fn create(&mut self, container: &Obj<'static>) -> Result<(), WidgetError> {
 
         // ── Container 1: buttons, no rollover ──────────────────────────────
-        let cont1 = oxivgl::widgets::Obj::new(&screen)?;
+        let cont1 = oxivgl::widgets::Obj::new(container)?;
         cont1
             .set_flex_flow(FlexFlow::RowWrap)
             .style_bg_color(
@@ -78,7 +77,7 @@ impl View for Gridnav1 {
         }
 
         // ── Container 2: textarea/checkbox/switches, rollover ──────────────
-        let cont2 = oxivgl::widgets::Obj::new(&screen)?;
+        let cont2 = oxivgl::widgets::Obj::new(container)?;
         cont2
             .style_bg_color(
                 palette_lighten(Palette::Blue, 5),
@@ -116,68 +115,23 @@ impl View for Gridnav1 {
         group.add_obj(&cont2);
         group.assign_to_keyboard_indevs();
 
-        Ok(Self {
-            _screen: screen,
-            _group: group,
-            _label1: label1,
-            _buttons: buttons,
-            _btn_labels: btn_labels,
-            _label2: label2,
-            _ta: ta,
-            _cb: cb,
-            _sw1: sw1,
-            _sw2: sw2,
-            _cont1: cont1,
-            _cont2: cont2,
-        })
-    }
-
-    fn update(&mut self) -> Result<(), WidgetError> {
+        self._group = Some(group);
+        self._label1 = Some(label1);
+        self._buttons = buttons;
+        self._btn_labels = btn_labels;
+        self._label2 = Some(label2);
+        self._ta = Some(ta);
+        self._cb = Some(cb);
+        self._sw1 = Some(sw1);
+        self._sw2 = Some(sw2);
+        self._cont1 = Some(cont1);
+        self._cont2 = Some(cont2);
         Ok(())
     }
-}
 
-// ── Platform entry points ──────────────────────────────────────────────────
-
-#[cfg(target_arch = "xtensa")]
-oxivgl_examples_common::fire27_main!(Gridnav1);
-
-#[cfg(not(target_arch = "xtensa"))]
-fn main() {
-    use oxivgl_examples_common::host::{H, W, capture, pump};
-    use oxivgl::driver::LvglDriver;
-    use oxivgl::view::{View, register_view_events};
-
-    oxivgl_examples_common::env_logger::init();
-    let screenshot_only = std::env::var("SCREENSHOT_ONLY").as_deref() == Ok("1");
-    let driver = if screenshot_only {
-        LvglDriver::init(W, H)
-    } else {
-        LvglDriver::sdl(W, H).title(c"oxivgl — gridnav").mouse(true).keyboard(true).build()
-    };
-    let mut _view = Gridnav1::create().expect("view create failed");
-    register_view_events(&mut _view);
-
-    let src = file!();
-    let name = std::path::Path::new(src)
-        .file_stem()
-        .and_then(|s| s.to_str())
-        .unwrap_or("screenshot");
-    let dir = format!("{}/examples/doc/screenshots", env!("CARGO_MANIFEST_DIR"));
-
-    _view.update().expect("update failed");
-    pump(&driver, 10);
-    capture(&driver, name, &dir);
-
-    if screenshot_only {
-        std::process::exit(0);
-    }
-
-    loop {
-        _view.update().unwrap_or_else(|e| eprintln!("update: {e:?}"));
-        for _ in 0..4 {
-            driver.timer_handler();
-            std::thread::sleep(std::time::Duration::from_millis(8));
-        }
+    fn update(&mut self) -> Result<NavAction, WidgetError> {
+        Ok(NavAction::None)
     }
 }
+
+oxivgl_examples_common::example_main!(Gridnav1::default());

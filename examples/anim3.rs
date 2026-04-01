@@ -19,8 +19,8 @@ use oxivgl::{
     layout::{GridAlign, GridCell, GRID_TEMPLATE_LAST, grid_fr},
     math::bezier3,
     style::{Palette, Selector, palette_main},
-    view::View,
-    widgets::{Button, Chart, ChartAxis, ChartSeries, ChartType, Label, Obj, Part, Screen,
+    view::{NavAction, View},
+    widgets::{Button, Chart, ChartAxis, ChartSeries, ChartType, Label, Obj, Part,
         Slider, WidgetError,
     },
 };
@@ -34,37 +34,38 @@ static ROW_DSC: [i32; 5] = [30, 10, 10, grid_fr(1), GRID_TEMPLATE_LAST];
 static P1: AtomicI32 = AtomicI32::new(0);
 static P2: AtomicI32 = AtomicI32::new(0);
 
+#[derive(Default)]
 struct Anim3 {
-    _cont: Obj<'static>,
-    anim_obj: Obj<'static>,
-    chart: Chart<'static>,
-    series: ChartSeries,
-    p1_slider: Slider<'static>,
-    p1_label: Label<'static>,
-    p2_slider: Slider<'static>,
-    p2_label: Label<'static>,
-    run_btn: Button<'static>,
-    _btn_label: Label<'static>,
+    _cont: Option<Obj<'static>>,
+    anim_obj: Option<Obj<'static>>,
+    chart: Option<Chart<'static>>,
+    series: Option<ChartSeries>,
+    p1_slider: Option<Slider<'static>>,
+    p1_label: Option<Label<'static>>,
+    p2_slider: Option<Slider<'static>>,
+    p2_label: Option<Label<'static>>,
+    run_btn: Option<Button<'static>>,
+    _btn_label: Option<Label<'static>>,
     anim_end: i32,
 }
 
 impl Anim3 {
     fn update_chart(&self) {
-        for i in 0..CHART_POINTS {
-            let t = (i * (1024 / CHART_POINTS)) as i32;
-            let step = bezier3(t, 0, P1.load(Relaxed) as u32, P2.load(Relaxed), 1024);
-            self.chart
-                .set_series_value_by_id2(&self.series, i, t, step);
+        if let (Some(chart), Some(series)) = (&self.chart, &self.series) {
+            for i in 0..CHART_POINTS {
+                let t = (i * (1024 / CHART_POINTS)) as i32;
+                let step = bezier3(t, 0, P1.load(Relaxed) as u32, P2.load(Relaxed), 1024);
+                chart.set_series_value_by_id2(series, i, t, step);
+            }
+            chart.refresh();
         }
-        self.chart.refresh();
     }
 }
 
 impl View for Anim3 {
-    fn create() -> Result<Self, WidgetError> {
-        let screen = Screen::active().ok_or(WidgetError::LvglNullPointer)?;
+    fn create(&mut self, container: &Obj<'static>) -> Result<(), WidgetError> {
 
-        let cont = Obj::new(&screen)?;
+        let cont = Obj::new(container)?;
         cont.pad(2);
         cont.style_pad_column(10, Selector::DEFAULT);
         cont.style_pad_row(10, Selector::DEFAULT);
@@ -139,52 +140,67 @@ impl View for Anim3 {
         // Compute animation end value (container width - obj width - margin).
         let anim_end = 320 - 30 - 10;
 
-        let view = Self {
-            _cont: cont,
-            anim_obj,
-            chart,
-            series,
-            p1_slider,
-            p1_label,
-            p2_slider,
-            p2_label,
-            run_btn,
-            _btn_label: btn_label,
-            anim_end,
-        };
-        view.update_chart();
-        Ok(view)
-    }
-
-    fn on_event(&mut self, event: &Event) {
-        if event.matches(&self.p1_slider, EventCode::VALUE_CHANGED) {
-            let val = self.p1_slider.get_value();
-            P1.store(val, Relaxed);
-            let mut buf = heapless::String::<16>::new();
-            let _ = core::fmt::Write::write_fmt(&mut buf, format_args!("p1:{}", val));
-            self.p1_label.text(&buf);
-            self.update_chart();
-        } else if event.matches(&self.p2_slider, EventCode::VALUE_CHANGED) {
-            let val = self.p2_slider.get_value();
-            P2.store(val, Relaxed);
-            let mut buf = heapless::String::<16>::new();
-            let _ = core::fmt::Write::write_fmt(&mut buf, format_args!("p2:{}", val));
-            self.p2_label.text(&buf);
-            self.update_chart();
-        } else if event.matches(&self.run_btn, EventCode::CLICKED) {
-            let mut a = Anim::new();
-            a.set_var(&self.anim_obj)
-                .set_values(5, self.anim_end)
-                .set_duration(2000)
-                .set_exec_cb(Some(anim_set_translate_x))
-                .set_bezier3_path(&P1, &P2);
-            a.start();
-        }
-    }
-
-    fn update(&mut self) -> Result<(), WidgetError> {
+        self._cont = Some(cont);
+        self.anim_obj = Some(anim_obj);
+        self.chart = Some(chart);
+        self.series = Some(series);
+        self.p1_slider = Some(p1_slider);
+        self.p1_label = Some(p1_label);
+        self.p2_slider = Some(p2_slider);
+        self.p2_label = Some(p2_label);
+        self.run_btn = Some(run_btn);
+        self._btn_label = Some(btn_label);
+        self.anim_end = anim_end;
+        self.update_chart();
         Ok(())
+    }
+
+    fn on_event(&mut self, event: &Event) -> NavAction {
+        if let Some(ref p1_slider) = self.p1_slider {
+            if event.matches(p1_slider, EventCode::VALUE_CHANGED) {
+                let val = p1_slider.get_value();
+                P1.store(val, Relaxed);
+                let mut buf = heapless::String::<16>::new();
+                let _ = core::fmt::Write::write_fmt(&mut buf, format_args!("p1:{}", val));
+                if let Some(ref p1_label) = self.p1_label {
+                    p1_label.text(&buf);
+                }
+                self.update_chart();
+                return NavAction::None;
+            }
+        }
+        if let Some(ref p2_slider) = self.p2_slider {
+            if event.matches(p2_slider, EventCode::VALUE_CHANGED) {
+                let val = p2_slider.get_value();
+                P2.store(val, Relaxed);
+                let mut buf = heapless::String::<16>::new();
+                let _ = core::fmt::Write::write_fmt(&mut buf, format_args!("p2:{}", val));
+                if let Some(ref p2_label) = self.p2_label {
+                    p2_label.text(&buf);
+                }
+                self.update_chart();
+                return NavAction::None;
+            }
+        }
+        if let Some(ref run_btn) = self.run_btn {
+            if event.matches(run_btn, EventCode::CLICKED) {
+                if let Some(ref anim_obj) = self.anim_obj {
+                    let mut a = Anim::new();
+                    a.set_var(anim_obj)
+                        .set_values(5, self.anim_end)
+                        .set_duration(2000)
+                        .set_exec_cb(Some(anim_set_translate_x))
+                        .set_bezier3_path(&P1, &P2);
+                    a.start();
+                }
+            }
+        }
+        NavAction::None
+    }
+
+    fn update(&mut self) -> Result<NavAction, WidgetError> {
+        Ok(NavAction::None)
     }
 }
 
-oxivgl_examples_common::example_main!(Anim3);
+oxivgl_examples_common::example_main!(Anim3::default());

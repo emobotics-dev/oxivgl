@@ -10,23 +10,23 @@
 
 use oxivgl::{
     style::{color_make, Selector, StyleBuilder},
-    view::View,
+    view::{NavAction, View},
     enums::Opa,
-    widgets::{Line, Part, Scale, ScaleMode, Screen, WidgetError, RADIUS_MAX},
+    widgets::{Obj, Line, Part, Scale, ScaleMode, WidgetError, RADIUS_MAX},
 };
 
+#[derive(Default)]
 struct WidgetScale3 {
-    scale: Scale<'static>,
-    needle: Line<'static>,
+    scale: Option<Scale<'static>>,
+    needle: Option<Line<'static>>,
     value: i32,
     ascending: bool,
 }
 
 impl View for WidgetScale3 {
-    fn create() -> Result<Self, WidgetError> {
-        let screen = Screen::active().ok_or(WidgetError::LvglNullPointer)?;
+    fn create(&mut self, container: &Obj<'static>) -> Result<(), WidgetError> {
 
-        let scale = Scale::new(&screen)?;
+        let scale = Scale::new(container)?;
         scale.size(200, 200).center();
         scale
             .set_mode(ScaleMode::RoundInner)
@@ -57,15 +57,14 @@ impl View for WidgetScale3 {
         // Initial needle position
         scale.set_line_needle_value(&needle, 80, 50);
 
-        Ok(Self {
-            scale,
-            needle,
-            value: 50,
-            ascending: true,
-        })
+        self.scale = Some(scale);
+        self.needle = Some(needle);
+        self.value = 50;
+        self.ascending = true;
+        Ok(())
     }
 
-    fn update(&mut self) -> Result<(), WidgetError> {
+    fn update(&mut self) -> Result<NavAction, WidgetError> {
         if self.ascending {
             self.value += 1;
             if self.value >= 100 {
@@ -77,10 +76,11 @@ impl View for WidgetScale3 {
                 self.ascending = true;
             }
         }
-        self.scale
-            .set_line_needle_value(&self.needle, 80, self.value);
-        Ok(())
+        if let (Some(scale), Some(needle)) = (&self.scale, &self.needle) {
+            scale.set_line_needle_value(needle, 80, self.value);
+        }
+        Ok(NavAction::None)
     }
 }
 
-oxivgl_examples_common::example_main!(WidgetScale3);
+oxivgl_examples_common::example_main!(WidgetScale3::default());

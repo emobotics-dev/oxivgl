@@ -9,6 +9,7 @@
 //! Round scale with custom hour labels, day/night colored sections, and a
 //! `DRAW_TASK_ADDED` handler that highlights 06/12/18/24 labels white.
 
+use oxivgl::view::NavAction;
 use oxivgl::{
     draw::DrawTask,
     enums::EventCode,
@@ -19,7 +20,7 @@ use oxivgl::{
         color_white, palette_darken, palette_main, Palette, Selector, Style, StyleBuilder,
     },
     view::{register_event_on, View},
-    widgets::{Align, Label, Obj, Part, Scale, ScaleLabels, ScaleMode, Screen, WidgetError,
+    widgets::{Align, Label, Obj, Part, Scale, ScaleLabels, ScaleMode, WidgetError,
         SCALE_LABEL_ROTATE_KEEP_UPRIGHT, SCALE_LABEL_ROTATE_MATCH_TICKS,
     },
 };
@@ -32,17 +33,18 @@ static HOUR_LABELS: &ScaleLabels = scale_labels!(
     c"21", c"22", c"23", c"24"
 );
 
+#[derive(Default)]
 struct WidgetScale11 {
-    _bg: Obj<'static>,
-    scale: Scale<'static>,
-    _tick_style: Style,
-    _night_style: Style,
-    _day_style: Style,
-    _today: Label<'static>,
-    _sunrise_lbl: Label<'static>,
-    _sunrise_time: Label<'static>,
-    _sunset_lbl: Label<'static>,
-    _sunset_time: Label<'static>,
+    _bg: Option<Obj<'static>>,
+    scale: Option<Scale<'static>>,
+    _tick_style: Option<Style>,
+    _night_style: Option<Style>,
+    _day_style: Option<Style>,
+    _today: Option<Label<'static>>,
+    _sunrise_lbl: Option<Label<'static>>,
+    _sunrise_time: Option<Label<'static>>,
+    _sunset_lbl: Option<Label<'static>>,
+    _sunset_time: Option<Label<'static>>,
 }
 
 impl WidgetScale11 {
@@ -63,11 +65,10 @@ impl WidgetScale11 {
 }
 
 impl View for WidgetScale11 {
-    fn create() -> Result<Self, WidgetError> {
-        let screen = Screen::active().ok_or(WidgetError::LvglNullPointer)?;
+    fn create(&mut self, container: &Obj<'static>) -> Result<(), WidgetError> {
 
         // Dark circular background
-        let bg = Obj::new(&screen)?;
+        let bg = Obj::new(container)?;
         bg.size(210, 210).center();
         bg.radius(i32::MAX, Selector::DEFAULT);
         bg.style_bg_color(palette_darken(Palette::Grey, 4), Selector::DEFAULT);
@@ -160,35 +161,37 @@ impl View for WidgetScale11 {
         sunset_time.style_text_color(color_white(), Selector::DEFAULT);
         sunset_time.align_to(&sunset_lbl, Align::OutBottomMid, 0, 2);
 
-        Ok(Self {
-            _bg: bg,
-            scale,
-            _tick_style: tick_style,
-            _night_style: night_style,
-            _day_style: day_style,
-            _today: today,
-            _sunrise_lbl: sunrise_lbl,
-            _sunrise_time: sunrise_time,
-            _sunset_lbl: sunset_lbl,
-            _sunset_time: sunset_time,
-        })
+                self._bg = Some(bg);
+        self.scale = Some(scale);
+        self._tick_style = Some(tick_style);
+        self._night_style = Some(night_style);
+        self._day_style = Some(day_style);
+        self._today = Some(today);
+        self._sunrise_lbl = Some(sunrise_lbl);
+        self._sunrise_time = Some(sunrise_time);
+        self._sunset_lbl = Some(sunset_lbl);
+        self._sunset_time = Some(sunset_time);
+        Ok(())
     }
 
     fn register_events(&mut self) {
-        register_event_on(self, self.scale.handle());
+        if let Some(ref scale) = self.scale {
+            register_event_on(self, scale.handle());
+        }
     }
 
-    fn on_event(&mut self, event: &Event) {
+    fn on_event(&mut self, event: &Event) -> NavAction {
         if event.code() == EventCode::DRAW_TASK_ADDED {
             if let Some(draw_task) = event.draw_task() {
                 Self::handle_draw_task(&draw_task);
             }
         }
+        NavAction::None
     }
 
-    fn update(&mut self) -> Result<(), WidgetError> {
-        Ok(())
+    fn update(&mut self) -> Result<NavAction, WidgetError> {
+        Ok(NavAction::None)
     }
 }
 
-oxivgl_examples_common::example_main!(WidgetScale11);
+oxivgl_examples_common::example_main!(WidgetScale11::default());

@@ -59,7 +59,7 @@ impl<const BYTES: usize> LvglBuffers<BYTES> {
 }
 
 /// Signalled by the flush task (ESP32) or immediately (host) once the display
-/// driver is ready. [`crate::view::run_lvgl`] waits on this before entering
+/// driver is ready. [`crate::view::run_app`] waits on this before entering
 /// the render loop.
 pub static DISPLAY_READY: Signal<CriticalSectionRawMutex, ()> = Signal::new();
 

@@ -12,13 +12,14 @@
 
 oxivgl::image_declare!(img_star);
 
+use oxivgl::view::NavAction;
 use oxivgl::{
     draw::{Area, DrawImageDsc, image_header_info},
     enums::EventCode,
     event::Event,
     style::{palette_lighten, palette_main, Palette},
     view::{register_event_on, View},
-    widgets::{Align, Keyboard, Part, Screen, WidgetError},
+    widgets::{Obj, Align, Keyboard, Part, WidgetError},
 };
 
 /// Map a button index to a palette cycling through 19 palettes.
@@ -49,34 +50,36 @@ fn palette_for(id: u32) -> Palette {
 // LV_SYMBOL_OK is U+F00C encoded as UTF-8: \xEF\x80\x8C
 const SYMBOL_OK_STR: &str = "\u{F00C}";
 
+#[derive(Default)]
 struct WidgetKeyboard3 {
-    _screen: Screen,
-    kb: Keyboard<'static>,
+    kb: Option<Keyboard<'static>>,
 }
 
 impl View for WidgetKeyboard3 {
-    fn create() -> Result<Self, WidgetError> {
-        let screen = Screen::active().ok_or(WidgetError::LvglNullPointer)?;
+    fn create(&mut self, container: &Obj<'static>) -> Result<(), WidgetError> {
 
-        let kb = Keyboard::new(&screen)?;
+        let kb = Keyboard::new(container)?;
         kb.center();
         kb.send_draw_task_events();
 
-        Ok(Self { _screen: screen, kb })
+        self.kb = Some(kb);
+        Ok(())
     }
 
     fn register_events(&mut self) {
-        register_event_on(self, self.kb.handle());
+        if let Some(ref kb) = self.kb {
+            register_event_on(self, kb.handle());
+        }
     }
 
-    fn on_event(&mut self, event: &Event) {
+    fn on_event(&mut self, event: &Event) -> NavAction {
         if event.code() != EventCode::DRAW_TASK_ADDED {
-            return;
+            return NavAction::None;
         }
-        let Some(task) = event.draw_task() else { return };
+        let Some(task) = event.draw_task() else { return NavAction::None };
         let base = task.base();
         if base.part != Part::Items {
-            return;
+            return NavAction::None;
         }
 
         let palette = palette_for(base.id1);
@@ -113,11 +116,12 @@ impl View for WidgetKeyboard3 {
                 dsc.set_color(palette_lighten(palette, 4));
             }
         });
+        NavAction::None
     }
 
-    fn update(&mut self) -> Result<(), WidgetError> {
-        Ok(())
+    fn update(&mut self) -> Result<NavAction, WidgetError> {
+        Ok(NavAction::None)
     }
 }
 
-oxivgl_examples_common::example_main!(WidgetKeyboard3);
+oxivgl_examples_common::example_main!(WidgetKeyboard3::default());

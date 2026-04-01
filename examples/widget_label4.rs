@@ -20,26 +20,26 @@ use oxivgl::{
     draw_buf::{ColorFormat, DrawBuf},
     fonts,
     style::{GradDir, Selector, color_black, color_make, color_white},
-    view::View,
-    widgets::{Canvas, Obj, Screen, TextAlign, WidgetError},
+    view::{NavAction, View},
+    widgets::{Canvas, Obj, TextAlign, WidgetError},
 };
 
 const MASK_WIDTH: u32 = 150;
 const MASK_HEIGHT: u32 = 60;
 
+#[derive(Default)]
 struct WidgetLabel4 {
-    _mask: DrawBuf,
-    _grad: Obj<'static>,
+    _mask: Option<DrawBuf>,
+    _grad: Option<Obj<'static>>,
 }
 
 impl View for WidgetLabel4 {
-    fn create() -> Result<Self, WidgetError> {
-        let screen = Screen::active().ok_or(WidgetError::LvglNullPointer)?;
+    fn create(&mut self, container: &Obj<'static>) -> Result<(), WidgetError> {
 
         // Step 1: Render text on an ARGB8888 scratch canvas.
         let scratch_buf = DrawBuf::create(MASK_WIDTH, MASK_HEIGHT, ColorFormat::ARGB8888)
             .ok_or(WidgetError::LvglNullPointer)?;
-        let scratch = Canvas::new(&screen, scratch_buf)?;
+        let scratch = Canvas::new(container, scratch_buf)?;
         scratch.fill_bg(color_black(), 255);
         {
             let mut layer = scratch.init_layer();
@@ -80,7 +80,7 @@ impl View for WidgetLabel4 {
         drop(scratch);
 
         // Step 3: Create a gradient object and apply the mask.
-        let grad = Obj::new(&screen)?;
+        let grad = Obj::new(container)?;
         grad.size(MASK_WIDTH as i32, MASK_HEIGHT as i32);
         grad.center();
         grad.border_width(0);
@@ -90,12 +90,14 @@ impl View for WidgetLabel4 {
         // SAFETY: mask is stored in Self._mask (Box) and outlives the grad widget.
         unsafe { grad.style_bitmap_mask_src(&mask, Selector::DEFAULT) };
 
-        Ok(Self { _mask: mask, _grad: grad })
+        self._mask = Some(mask);
+        self._grad = Some(grad);
+        Ok(())
     }
 
-    fn update(&mut self) -> Result<(), WidgetError> {
-        Ok(())
+    fn update(&mut self) -> Result<NavAction, WidgetError> {
+        Ok(NavAction::None)
     }
 }
 
-oxivgl_examples_common::example_main!(WidgetLabel4);
+oxivgl_examples_common::example_main!(WidgetLabel4::default());

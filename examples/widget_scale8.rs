@@ -10,22 +10,22 @@
 
 use oxivgl::{
     style::{lv_pct, palette_lighten, Palette, Selector, StyleBuilder},
-    view::View,
-    widgets::{Align, Line, Part, Scale, ScaleMode, Screen, WidgetError, RADIUS_MAX,
+    view::{NavAction, View},
+    widgets::{Obj, Align, Line, Part, Scale, ScaleMode, WidgetError, RADIUS_MAX,
         SCALE_LABEL_ROTATE_KEEP_UPRIGHT, SCALE_LABEL_ROTATE_MATCH_TICKS,
     },
 };
 
+#[derive(Default)]
 struct WidgetScale8 {
-    _scale: Scale<'static>,
-    _needle: Line<'static>,
+    _scale: Option<Scale<'static>>,
+    _needle: Option<Line<'static>>,
 }
 
 impl View for WidgetScale8 {
-    fn create() -> Result<Self, WidgetError> {
-        let screen = Screen::active().ok_or(WidgetError::LvglNullPointer)?;
+    fn create(&mut self, container: &Obj<'static>) -> Result<(), WidgetError> {
 
-        let scale = Scale::new(&screen)?;
+        let scale = Scale::new(container)?;
         scale.size(150, 150);
         scale.set_mode(ScaleMode::RoundInner);
 
@@ -68,15 +68,14 @@ impl View for WidgetScale8 {
 
         scale.set_line_needle_value(&needle, 60, 33);
 
-        Ok(Self {
-            _scale: scale,
-            _needle: needle,
-        })
+                self._scale = Some(scale);
+        self._needle = Some(needle);
+        Ok(())
     }
 
-    fn update(&mut self) -> Result<(), WidgetError> {
-        Ok(())
+    fn update(&mut self) -> Result<NavAction, WidgetError> {
+        Ok(NavAction::None)
     }
 }
 
-oxivgl_examples_common::example_main!(WidgetScale8);
+oxivgl_examples_common::example_main!(WidgetScale8::default());

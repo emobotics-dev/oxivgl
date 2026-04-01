@@ -12,47 +12,53 @@
 
 oxivgl::image_declare!(img_star);
 
+use oxivgl::view::NavAction;
 use oxivgl::{
     draw::{image_header_info, Area, DrawImageDsc, DRAW_TASK_TYPE_FILL, RADIUS_CIRCLE},
     enums::{EventCode, ObjState},
     event::Event,
     style::{color_white, palette_darken, palette_main, Palette},
     view::{register_event_on, View},
-    widgets::{Align, Buttonmatrix, Part, Screen, WidgetError},
+    widgets::{Obj, Align, Buttonmatrix, Part, WidgetError},
 };
 
+#[derive(Default)]
 struct WidgetButtonmatrix2 {
-    _screen: Screen,
-    btnm: Buttonmatrix<'static>,
+    btnm: Option<Buttonmatrix<'static>>,
 }
 
 impl View for WidgetButtonmatrix2 {
-    fn create() -> Result<Self, WidgetError> {
-        let screen = Screen::active().ok_or(WidgetError::LvglNullPointer)?;
+    fn create(&mut self, container: &Obj<'static>) -> Result<(), WidgetError> {
 
-        let btnm = Buttonmatrix::new(&screen)?;
+        let btnm = Buttonmatrix::new(container)?;
         btnm.center();
         btnm.send_draw_task_events();
 
-        Ok(Self { _screen: screen, btnm })
+        self.btnm = Some(btnm);
+        Ok(())
     }
 
     fn register_events(&mut self) {
-        register_event_on(self, self.btnm.handle());
+        if let Some(ref btnm) = self.btnm {
+            register_event_on(self, btnm.handle());
+        }
     }
 
-    fn on_event(&mut self, event: &Event) {
+    fn on_event(&mut self, event: &Event) -> NavAction {
         if event.code() != EventCode::DRAW_TASK_ADDED {
-            return;
+            return NavAction::None;
         }
-        let Some(task) = event.draw_task() else { return };
+        let Some(task) = event.draw_task() else { return NavAction::None };
         let base = task.base();
         if base.part != Part::Items {
-            return;
+            return NavAction::None;
         }
 
-        let pressed = self.btnm.get_selected_button() == base.id1
-            && self.btnm.has_state(ObjState::PRESSED);
+        let pressed = if let Some(ref btnm) = self.btnm {
+            btnm.get_selected_button() == base.id1 && btnm.has_state(ObjState::PRESSED)
+        } else {
+            false
+        };
 
         if base.id1 == 1 {
             // Blue fill, no radius, shadow, white label.
@@ -108,11 +114,12 @@ impl View for WidgetButtonmatrix2 {
                 }
             }
         }
+        NavAction::None
     }
 
-    fn update(&mut self) -> Result<(), WidgetError> {
-        Ok(())
+    fn update(&mut self) -> Result<NavAction, WidgetError> {
+        Ok(NavAction::None)
     }
 }
 
-oxivgl_examples_common::example_main!(WidgetButtonmatrix2);
+oxivgl_examples_common::example_main!(WidgetButtonmatrix2::default());

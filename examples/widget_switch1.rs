@@ -9,47 +9,46 @@
 //! Four switches in a column: default, checked, disabled, checked+disabled.
 
 use oxivgl::{
-    view::View,
+    view::{NavAction, View},
     enums::ObjState,
     layout::{FlexAlign, FlexFlow},
-    widgets::{Screen, Switch, WidgetError},
+    widgets::{Obj, Switch, WidgetError},
 };
 
+#[derive(Default)]
 struct WidgetSwitch1 {
-    _sw1: Switch<'static>,
-    _sw2: Switch<'static>,
-    _sw3: Switch<'static>,
-    _sw4: Switch<'static>,
+    _sw1: Option<Switch<'static>>,
+    _sw2: Option<Switch<'static>>,
+    _sw3: Option<Switch<'static>>,
+    _sw4: Option<Switch<'static>>,
 }
 
 impl View for WidgetSwitch1 {
-    fn create() -> Result<Self, WidgetError> {
-        let screen = Screen::active().ok_or(WidgetError::LvglNullPointer)?;
-        screen.set_flex_flow(FlexFlow::Column);
-        screen.set_flex_align(FlexAlign::Center, FlexAlign::Center, FlexAlign::Center);
+    fn create(&mut self, container: &Obj<'static>) -> Result<(), WidgetError> {
+        container.set_flex_flow(FlexFlow::Column);
+        container.set_flex_align(FlexAlign::Center, FlexAlign::Center, FlexAlign::Center);
 
-        let sw1 = Switch::new(&screen)?;
+        let sw1 = Switch::new(container)?;
 
-        let sw2 = Switch::new(&screen)?;
+        let sw2 = Switch::new(container)?;
         sw2.add_state(ObjState::CHECKED);
 
-        let sw3 = Switch::new(&screen)?;
+        let sw3 = Switch::new(container)?;
         sw3.add_state(ObjState::DISABLED);
 
-        let sw4 = Switch::new(&screen)?;
+        let sw4 = Switch::new(container)?;
         sw4.add_state(ObjState::CHECKED | ObjState::DISABLED);
 
-        Ok(Self {
-            _sw1: sw1,
-            _sw2: sw2,
-            _sw3: sw3,
-            _sw4: sw4,
-        })
+                self._sw1 = Some(sw1);
+        self._sw2 = Some(sw2);
+        self._sw3 = Some(sw3);
+        self._sw4 = Some(sw4);
+        Ok(())
     }
 
-    fn update(&mut self) -> Result<(), WidgetError> {
-        Ok(())
+    fn update(&mut self) -> Result<NavAction, WidgetError> {
+        Ok(NavAction::None)
     }
 }
 
-oxivgl_examples_common::example_main!(WidgetSwitch1);
+oxivgl_examples_common::example_main!(WidgetSwitch1::default());

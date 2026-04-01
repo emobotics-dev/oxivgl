@@ -10,21 +10,21 @@
 
 use oxivgl::{
     style::{palette_main, Palette, Selector, Style, StyleBuilder},
-    view::View,
-    widgets::{Align, Obj, Screen, WidgetError},
+    view::{NavAction, View},
+    widgets::{Align, Obj, WidgetError},
 };
 
+#[derive(Default)]
 struct WidgetObj1 {
-    _obj1: Obj<'static>,
-    _obj2: Obj<'static>,
-    _style_shadow: Style,
+    _obj1: Option<Obj<'static>>,
+    _obj2: Option<Obj<'static>>,
+    _style_shadow: Option<Style>,
 }
 
 impl View for WidgetObj1 {
-    fn create() -> Result<Self, WidgetError> {
-        let screen = Screen::active().ok_or(WidgetError::LvglNullPointer)?;
+    fn create(&mut self, container: &Obj<'static>) -> Result<(), WidgetError> {
 
-        let obj1 = Obj::new(&screen)?;
+        let obj1 = Obj::new(container)?;
         obj1.size(100, 50);
         obj1.align(Align::Center, -60, -30);
 
@@ -35,20 +35,19 @@ impl View for WidgetObj1 {
             .shadow_color(palette_main(Palette::Blue));
         let style_shadow = style_shadow.build();
 
-        let obj2 = Obj::new(&screen)?;
+        let obj2 = Obj::new(container)?;
         obj2.add_style(&style_shadow, Selector::DEFAULT);
         obj2.align(Align::Center, 60, 30);
 
-        Ok(Self {
-            _obj1: obj1,
-            _obj2: obj2,
-            _style_shadow: style_shadow,
-        })
+                self._obj1 = Some(obj1);
+        self._obj2 = Some(obj2);
+        self._style_shadow = Some(style_shadow);
+        Ok(())
     }
 
-    fn update(&mut self) -> Result<(), WidgetError> {
-        Ok(())
+    fn update(&mut self) -> Result<NavAction, WidgetError> {
+        Ok(NavAction::None)
     }
 }
 
-oxivgl_examples_common::example_main!(WidgetObj1);
+oxivgl_examples_common::example_main!(WidgetObj1::default());

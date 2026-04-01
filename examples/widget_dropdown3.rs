@@ -11,30 +11,31 @@
 extern crate alloc;
 
 use oxivgl::{
-    view::View,
-    widgets::{Align, Dropdown, Screen, WidgetError},
+    view::{NavAction, View},
+    widgets::{Obj, Align, Dropdown, WidgetError},
 };
 
+#[derive(Default)]
 struct WidgetDropdown3 {
-    _dd: Dropdown<'static>,
+    _dd: Option<Dropdown<'static>>,
 }
 
 impl View for WidgetDropdown3 {
-    fn create() -> Result<Self, WidgetError> {
-        let screen = Screen::active().ok_or(WidgetError::LvglNullPointer)?;
+    fn create(&mut self, container: &Obj<'static>) -> Result<(), WidgetError> {
 
-        let dd = Dropdown::new(&screen)?;
+        let dd = Dropdown::new(container)?;
         dd.set_options("New project\nNew file\nSave\nSave as ...\nOpen project\nRecent projects\nPreferences\nExit");
         dd.set_text(c"Menu");
         dd.set_selected_highlight(false);
         dd.align(Align::TopLeft, 10, 10);
 
-        Ok(Self { _dd: dd })
+                self._dd = Some(dd);
+        Ok(())
     }
 
-    fn update(&mut self) -> Result<(), WidgetError> {
-        Ok(())
+    fn update(&mut self) -> Result<NavAction, WidgetError> {
+        Ok(NavAction::None)
     }
 }
 
-oxivgl_examples_common::example_main!(WidgetDropdown3);
+oxivgl_examples_common::example_main!(WidgetDropdown3::default());

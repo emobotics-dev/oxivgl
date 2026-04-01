@@ -11,20 +11,20 @@
 //! `set_state` and a child label is added for visual feedback.
 
 use oxivgl::{
-    view::View,
-    widgets::{Imagebutton, ImagebuttonState, Label, Screen, WidgetError},
+    view::{NavAction, View},
+    widgets::{Obj, Imagebutton, ImagebuttonState, Label, WidgetError},
 };
 
+#[derive(Default)]
 struct Imagebutton1 {
-    _btn: Imagebutton<'static>,
-    _label: Label<'static>,
+    _btn: Option<Imagebutton<'static>>,
+    _label: Option<Label<'static>>,
 }
 
 impl View for Imagebutton1 {
-    fn create() -> Result<Self, WidgetError> {
-        let screen = Screen::active().ok_or(WidgetError::LvglNullPointer)?;
+    fn create(&mut self, container: &Obj<'static>) -> Result<(), WidgetError> {
 
-        let btn = Imagebutton::new(&screen)?;
+        let btn = Imagebutton::new(container)?;
         btn.size(200, 50).center();
         btn.set_state(ImagebuttonState::Released);
 
@@ -32,15 +32,14 @@ impl View for Imagebutton1 {
         label.text("Imagebutton");
         label.center();
 
-        Ok(Self {
-            _btn: btn,
-            _label: label,
-        })
+                self._btn = Some(btn);
+        self._label = Some(label);
+        Ok(())
     }
 
-    fn update(&mut self) -> Result<(), WidgetError> {
-        Ok(())
+    fn update(&mut self) -> Result<NavAction, WidgetError> {
+        Ok(NavAction::None)
     }
 }
 
-oxivgl_examples_common::example_main!(Imagebutton1);
+oxivgl_examples_common::example_main!(Imagebutton1::default());

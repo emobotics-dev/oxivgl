@@ -13,23 +13,23 @@ use oxivgl::{
     style::{
         palette_darken, palette_main, props, Palette, Selector, Style, StyleBuilder, TransitionDsc,
     },
-    view::View,
+    view::{NavAction, View},
     enums::ObjState,
-    widgets::{Obj, Screen, WidgetError},
+    widgets::{Obj, WidgetError},
 };
 
+#[derive(Default)]
 struct Style10 {
-    _obj: Obj<'static>,
-    _style_def: Style,
-    _style_pr: Style,
+    _obj: Option<Obj<'static>>,
+    _style_def: Option<Style>,
+    _style_pr: Option<Style>,
 }
 
 static TRANS_PROPS: [props::lv_style_prop_t; 4] =
     [props::BG_COLOR, props::BORDER_COLOR, props::BORDER_WIDTH, 0];
 
 impl View for Style10 {
-    fn create() -> Result<Self, WidgetError> {
-        let screen = Screen::active().ok_or(WidgetError::LvglNullPointer)?;
+    fn create(&mut self, container: &Obj<'static>) -> Result<(), WidgetError> {
 
         let trans_def = TransitionDsc::new(&TRANS_PROPS, Some(anim_path_linear), 100, 200);
 
@@ -47,21 +47,20 @@ impl View for Style10 {
             .transition(trans_pr);
         let style_pr = builder_pr.build();
 
-        let obj = Obj::new(&screen)?;
+        let obj = Obj::new(container)?;
         obj.add_style(&style_def, Selector::DEFAULT);
         obj.add_style(&style_pr, ObjState::PRESSED);
         obj.center();
 
-        Ok(Self {
-            _obj: obj,
-            _style_def: style_def,
-            _style_pr: style_pr,
-        })
+                self._obj = Some(obj);
+        self._style_def = Some(style_def);
+        self._style_pr = Some(style_pr);
+        Ok(())
     }
 
-    fn update(&mut self) -> Result<(), WidgetError> {
-        Ok(())
+    fn update(&mut self) -> Result<NavAction, WidgetError> {
+        Ok(NavAction::None)
     }
 }
 
-oxivgl_examples_common::example_main!(Style10);
+oxivgl_examples_common::example_main!(Style10::default());

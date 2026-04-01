@@ -13,20 +13,20 @@
 use oxivgl::{
     enums::EventCode,
     event::Event,
-    view::View,
-    widgets::{Align, Calendar, CalendarDate, Label, Screen, WidgetError},
+    view::{NavAction, View},
+    widgets::{Obj, Align, Calendar, CalendarDate, Label, WidgetError},
 };
 
+#[derive(Default)]
 struct Calendar1 {
-    cal: Calendar<'static>,
-    label: Label<'static>,
+    cal: Option<Calendar<'static>>,
+    label: Option<Label<'static>>,
 }
 
 impl View for Calendar1 {
-    fn create() -> Result<Self, WidgetError> {
-        let screen = Screen::active().ok_or(WidgetError::LvglNullPointer)?;
+    fn create(&mut self, container: &Obj<'static>) -> Result<(), WidgetError> {
 
-        let cal = Calendar::new(&screen)?;
+        let cal = Calendar::new(container)?;
         cal.size(185, 230).align(Align::Center, 0, 27);
         cal.set_today_date(2021, 2, 23)
             .set_month_shown(2021, 2)
@@ -38,28 +38,35 @@ impl View for Calendar1 {
         cal.add_header_arrow();
         cal.bubble_events();
 
-        let label = Label::new(&screen)?;
+        let label = Label::new(container)?;
         label.text("Click a day").align(Align::Center, 0, -90);
 
-        Ok(Self { cal, label })
+                self.cal = Some(cal);
+        self.label = Some(label);
+        Ok(())
     }
 
-    fn on_event(&mut self, event: &Event) {
-        if event.matches(&self.cal, EventCode::VALUE_CHANGED) {
-            if let Some(date) = self.cal.get_pressed_date() {
-                let mut buf = heapless::String::<24>::new();
-                let _ = core::fmt::Write::write_fmt(
-                    &mut buf,
-                    format_args!("{:02}/{:02}/{}", date.day, date.month, date.year),
-                );
-                self.label.text(&buf);
+    fn on_event(&mut self, event: &Event) -> NavAction {
+        if let Some(ref cal) = self.cal {
+            if event.matches(cal, EventCode::VALUE_CHANGED) {
+                if let Some(date) = cal.get_pressed_date() {
+                    let mut buf = heapless::String::<24>::new();
+                    let _ = core::fmt::Write::write_fmt(
+                        &mut buf,
+                        format_args!("{:02}/{:02}/{}", date.day, date.month, date.year),
+                    );
+                    if let Some(ref label) = self.label {
+                        label.text(&buf);
+                    }
+                }
             }
         }
+        NavAction::None
     }
 
-    fn update(&mut self) -> Result<(), WidgetError> {
-        Ok(())
+    fn update(&mut self) -> Result<NavAction, WidgetError> {
+        Ok(NavAction::None)
     }
 }
 
-oxivgl_examples_common::example_main!(Calendar1);
+oxivgl_examples_common::example_main!(Calendar1::default());

@@ -12,18 +12,26 @@ use oxivgl::{
     style::{
         palette_lighten, palette_main, GradDir, GradDsc, Palette, Selector, Style, StyleBuilder,
     },
-    view::View,
-    widgets::{Obj, Screen, WidgetError},
+    view::{NavAction, View},
+    widgets::{Obj, WidgetError},
 };
 
 struct Style2 {
-    _obj: Obj<'static>,
+    _obj: Option<Obj<'static>>,
     _style: Style,
 }
 
+impl Style2 {
+    fn new() -> Self {
+        Self {
+            _obj: None,
+            _style: StyleBuilder::new().build(),
+        }
+    }
+}
+
 impl View for Style2 {
-    fn create() -> Result<Self, WidgetError> {
-        let screen = Screen::active().ok_or(WidgetError::LvglNullPointer)?;
+    fn create(&mut self, container: &Obj<'static>) -> Result<(), WidgetError> {
 
         let mut grad = GradDsc::new();
         grad.set_dir(GradDir::Ver)
@@ -35,19 +43,18 @@ impl View for Style2 {
         builder.radius(5).bg_opa(255).bg_grad(grad);
         let style = builder.build();
 
-        let obj = Obj::new(&screen)?;
+        let obj = Obj::new(container)?;
         obj.add_style(&style, Selector::DEFAULT);
         obj.center();
 
-        Ok(Self {
-            _obj: obj,
-            _style: style,
-        })
+                self._obj = Some(obj);
+        self._style = style;
+        Ok(())
     }
 
-    fn update(&mut self) -> Result<(), WidgetError> {
-        Ok(())
+    fn update(&mut self) -> Result<NavAction, WidgetError> {
+        Ok(NavAction::None)
     }
 }
 
-oxivgl_examples_common::example_main!(Style2);
+oxivgl_examples_common::example_main!(Style2::new());

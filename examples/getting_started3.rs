@@ -11,23 +11,24 @@ use oxivgl::{
         darken_filter_cb, palette_lighten, palette_main, ColorFilter, GradDir, Palette, Selector,
         Style, StyleBuilder,
     },
-    view::View,
+    view::{NavAction, View},
     enums::{ObjState, Opa},
-    widgets::{Button, Label, Screen, WidgetError, RADIUS_MAX},
+    widgets::{Obj, Button, Label, WidgetError, RADIUS_MAX},
 };
 
+#[derive(Default)]
 struct GettingStarted3 {
-    _lbl2: Label<'static>,
-    _btn2: Button<'static>,
-    _lbl1: Label<'static>,
-    _btn1: Button<'static>,
-    _style_red: Style,
-    _style_pressed: Style,
-    _style_btn: Style,
+    _lbl2: Option<Label<'static>>,
+    _btn2: Option<Button<'static>>,
+    _lbl1: Option<Label<'static>>,
+    _btn1: Option<Button<'static>>,
+    _style_red: Option<Style>,
+    _style_pressed: Option<Style>,
+    _style_btn: Option<Style>,
 }
 
 impl View for GettingStarted3 {
-    fn create() -> Result<Self, WidgetError> {
+    fn create(&mut self, container: &Obj<'static>) -> Result<(), WidgetError> {
         let color_filter = ColorFilter::new(darken_filter_cb);
 
         let mut style_btn = StyleBuilder::new();
@@ -53,9 +54,7 @@ impl View for GettingStarted3 {
             .bg_grad_color(palette_lighten(Palette::Red, 3));
         let style_red = style_red.build();
 
-        let screen = Screen::active().ok_or(WidgetError::LvglNullPointer)?;
-
-        let btn1 = Button::new(&screen)?;
+        let btn1 = Button::new(container)?;
         btn1.remove_style_all().pos(10, 10).size(120, 50);
         btn1.add_style(&style_btn, Selector::DEFAULT);
         btn1.add_style(&style_pressed, ObjState::PRESSED);
@@ -63,7 +62,7 @@ impl View for GettingStarted3 {
         let lbl1 = Label::new(&btn1)?;
         lbl1.text("Button").center();
 
-        let btn2 = Button::new(&screen)?;
+        let btn2 = Button::new(container)?;
         btn2.remove_style_all().pos(10, 80).size(120, 50);
         btn2.add_style(&style_btn, Selector::DEFAULT);
         btn2.add_style(&style_red, Selector::DEFAULT);
@@ -73,20 +72,19 @@ impl View for GettingStarted3 {
         let lbl2 = Label::new(&btn2)?;
         lbl2.text("Button 2").center();
 
-        Ok(Self {
-            _lbl2: lbl2,
-            _btn2: btn2,
-            _lbl1: lbl1,
-            _btn1: btn1,
-            _style_red: style_red,
-            _style_pressed: style_pressed,
-            _style_btn: style_btn,
-        })
+                self._lbl2 = Some(lbl2);
+        self._btn2 = Some(btn2);
+        self._lbl1 = Some(lbl1);
+        self._btn1 = Some(btn1);
+        self._style_red = Some(style_red);
+        self._style_pressed = Some(style_pressed);
+        self._style_btn = Some(style_btn);
+        Ok(())
     }
 
-    fn update(&mut self) -> Result<(), WidgetError> {
-        Ok(())
+    fn update(&mut self) -> Result<NavAction, WidgetError> {
+        Ok(NavAction::None)
     }
 }
 
-oxivgl_examples_common::example_main!(GettingStarted3);
+oxivgl_examples_common::example_main!(GettingStarted3::default());

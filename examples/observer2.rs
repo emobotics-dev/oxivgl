@@ -15,12 +15,13 @@
 //! - A "LOG OUT" button clears the auth state.
 //! - A "START ENGINE" checkable button is two-way bound to `engine_subject`.
 
+use oxivgl::view::NavAction;
 use oxivgl::{
     enums::{EventCode, ObjFlag, ObjState},
     event::Event,
     view::{View, register_event_on},
     widgets::{
-        Align, Button, Child, Keyboard, KeyboardMode, Label, Screen, Subject, Textarea,
+        Obj, Align, Button, Child, Keyboard, KeyboardMode, Label, Subject, Textarea,
         WidgetError,
     },
 };
@@ -29,26 +30,26 @@ const LOGGED_OUT: i32 = 0;
 const LOGGED_IN: i32 = 1;
 const AUTH_FAILED: i32 = 2;
 
+#[derive(Default)]
 struct Observer2 {
-    ta: Textarea<'static>,
-    btn_logout: Button<'static>,
-    _info_label: Label<'static>,
-    _kb: Keyboard<'static>,
-    _btn_engine: Button<'static>,
+    ta: Option<Textarea<'static>>,
+    btn_logout: Option<Button<'static>>,
+    _info_label: Option<Label<'static>>,
+    _kb: Option<Keyboard<'static>>,
+    _btn_engine: Option<Button<'static>>,
     // Subjects last — drop after widgets so observers are removed before deinit.
-    _engine_subject: Subject,
-    auth_state_subject: Subject,
+    _engine_subject: Option<Subject>,
+    auth_state_subject: Option<Subject>,
 }
 
 impl View for Observer2 {
-    fn create() -> Result<Self, WidgetError> {
-        let screen = Screen::active().ok_or(WidgetError::LvglNullPointer)?;
+    fn create(&mut self, container: &Obj<'static>) -> Result<(), WidgetError> {
 
         let auth_state_subject = Subject::new_int(LOGGED_OUT);
         let engine_subject = Subject::new_int(0);
 
         // Textarea in password mode, disabled when logged in.
-        let ta = Textarea::new(&screen)?;
+        let ta = Textarea::new(container)?;
         ta.set_password_mode(true)
             .set_one_line(true)
             .set_placeholder_text("Password")
@@ -59,12 +60,12 @@ impl View for Observer2 {
         ta.bubble_events();
 
         // Keyboard attached to textarea.
-        let kb = Keyboard::new(&screen)?;
+        let kb = Keyboard::new(container)?;
         kb.set_mode(KeyboardMode::TextLower);
         kb.set_textarea(&ta);
 
         // LOG OUT button — disabled when not logged in.
-        let btn_logout = Button::new(&screen)?;
+        let btn_logout = Button::new(container)?;
         btn_logout.size(120, 40).align(Align::TopLeft, 10, 70);
         let lbl_logout = Child::new(Label::new(&btn_logout)?);
         lbl_logout.text("LOG OUT").center();
@@ -72,7 +73,7 @@ impl View for Observer2 {
         btn_logout.bubble_events();
 
         // Info label — reactively updated via bind_text_map.
-        let info_label = Label::new(&screen)?;
+        let info_label = Label::new(container)?;
         info_label.text("Logged out").align(Align::TopLeft, 10, 120);
         info_label.bind_text_map(&auth_state_subject, |state| match state {
             LOGGED_IN => "Login successful",
@@ -81,7 +82,7 @@ impl View for Observer2 {
         });
 
         // START ENGINE checkable button — two-way bound to engine_subject.
-        let btn_engine = Button::new(&screen)?;
+        let btn_engine = Button::new(container)?;
         btn_engine
             .add_flag(ObjFlag::CHECKABLE)
             .size(160, 40)
@@ -95,38 +96,42 @@ impl View for Observer2 {
             // In a real app, would set/clear a GPIO pin.
         });
 
-        Ok(Self {
-            ta,
-            _kb: kb,
-            btn_logout,
-            _info_label: info_label,
-            _btn_engine: btn_engine,
-            _engine_subject: engine_subject,
-            auth_state_subject,
-        })
+                self.ta = Some(ta);
+        self._kb = Some(kb);
+        self.btn_logout = Some(btn_logout);
+        self._info_label = Some(info_label);
+        self._btn_engine = Some(btn_engine);
+        self._engine_subject = Some(engine_subject);
+        self.auth_state_subject = Some(auth_state_subject);
+        Ok(())
     }
 
     fn register_events(&mut self) {
-        register_event_on(self, self.ta.handle());
-        register_event_on(self, self.btn_logout.handle());
+        if let Some(ref ta) = self.ta { register_event_on(self, ta.handle()); }
+        if let Some(ref btn_logout) = self.btn_logout { register_event_on(self, btn_logout.handle()); }
     }
 
-    fn on_event(&mut self, event: &Event) {
-        if event.matches(&self.ta, EventCode::READY) {
-            if self.ta.get_text() == Some("hello") {
-                self.auth_state_subject.set_int(LOGGED_IN);
-            } else {
-                self.auth_state_subject.set_int(AUTH_FAILED);
+    fn on_event(&mut self, event: &Event) -> NavAction {
+        if let Some(ref ta) = self.ta {
+            if event.matches(ta, EventCode::READY) {
+                if ta.get_text() == Some("hello") {
+                    if let Some(ref auth) = self.auth_state_subject { auth.set_int(LOGGED_IN); }
+                } else {
+                    if let Some(ref auth) = self.auth_state_subject { auth.set_int(AUTH_FAILED); }
+                }
             }
         }
-        if event.matches(&self.btn_logout, EventCode::CLICKED) {
-            self.auth_state_subject.set_int(LOGGED_OUT);
+        if let Some(ref btn_logout) = self.btn_logout {
+            if event.matches(btn_logout, EventCode::CLICKED) {
+                if let Some(ref auth) = self.auth_state_subject { auth.set_int(LOGGED_OUT); }
+            }
         }
+        NavAction::None
     }
 
-    fn update(&mut self) -> Result<(), WidgetError> {
-        Ok(())
+    fn update(&mut self) -> Result<NavAction, WidgetError> {
+        Ok(NavAction::None)
     }
 }
 
-oxivgl_examples_common::example_main!(Observer2);
+oxivgl_examples_common::example_main!(Observer2::default());

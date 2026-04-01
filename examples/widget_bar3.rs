@@ -12,18 +12,18 @@
 use oxivgl::{
     anim::{anim_set_bar_value, Anim, ANIM_REPEAT_INFINITE},
     style::{palette_main, GradDir, Palette, Style, StyleBuilder},
-    view::View,
-    widgets::{Bar, Part, Screen, WidgetError},
+    view::{NavAction, View},
+    widgets::{Obj, Bar, Part, WidgetError},
 };
 
+#[derive(Default)]
 struct WidgetBar3 {
-    _bar: Bar<'static>,
-    _style_indic: Style,
+    _bar: Option<Bar<'static>>,
+    _style_indic: Option<Style>,
 }
 
 impl View for WidgetBar3 {
-    fn create() -> Result<Self, WidgetError> {
-        let screen = Screen::active().ok_or(WidgetError::LvglNullPointer)?;
+    fn create(&mut self, container: &Obj<'static>) -> Result<(), WidgetError> {
 
         let mut style_indic = StyleBuilder::new();
         style_indic
@@ -33,7 +33,7 @@ impl View for WidgetBar3 {
             .bg_grad_dir(GradDir::Ver);
         let style_indic = style_indic.build();
 
-        let bar = Bar::new(&screen)?;
+        let bar = Bar::new(container)?;
         bar.add_style(&style_indic, Part::Indicator);
         bar.size(20, 200).center();
         bar.set_range_raw(-20, 40);
@@ -47,15 +47,14 @@ impl View for WidgetBar3 {
             .set_repeat_count(ANIM_REPEAT_INFINITE)
             .start();
 
-        Ok(Self {
-            _bar: bar,
-            _style_indic: style_indic,
-        })
+                self._bar = Some(bar);
+        self._style_indic = Some(style_indic);
+        Ok(())
     }
 
-    fn update(&mut self) -> Result<(), WidgetError> {
-        Ok(())
+    fn update(&mut self) -> Result<NavAction, WidgetError> {
+        Ok(NavAction::None)
     }
 }
 
-oxivgl_examples_common::example_main!(WidgetBar3);
+oxivgl_examples_common::example_main!(WidgetBar3::default());

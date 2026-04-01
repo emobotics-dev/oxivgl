@@ -14,21 +14,21 @@ use oxivgl::{
     event::Event,
     style::Selector,
     symbols,
-    view::View,
-    widgets::{Align, Button, Label, Menu, Screen, WidgetError, RADIUS_MAX},
+    view::{NavAction, View},
+    widgets::{Obj, Align, Button, Label, Menu, WidgetError, RADIUS_MAX},
 };
 
+#[derive(Default)]
 struct WidgetMenu4 {
-    menu: Menu<'static>,
-    float_btn: Button<'static>,
+    menu: Option<Menu<'static>>,
+    float_btn: Option<Button<'static>>,
     btn_cnt: u32,
 }
 
 impl View for WidgetMenu4 {
-    fn create() -> Result<Self, WidgetError> {
-        let screen = Screen::active().ok_or(WidgetError::LvglNullPointer)?;
+    fn create(&mut self, container: &Obj<'static>) -> Result<(), WidgetError> {
 
-        let menu = Menu::new(&screen)?;
+        let menu = Menu::new(container)?;
         menu.size(320, 240).center();
 
         // Initial sub-page
@@ -50,7 +50,7 @@ impl View for WidgetMenu4 {
         menu.set_page(&main_page);
 
         // Floating add button
-        let float_btn = Button::new(&screen)?;
+        let float_btn = Button::new(container)?;
         float_btn.size(50, 50);
         float_btn.add_flag(ObjFlag::FLOATING);
         float_btn.align(Align::BottomRight, -10, -10);
@@ -58,51 +58,53 @@ impl View for WidgetMenu4 {
         float_btn.radius(RADIUS_MAX, Selector::DEFAULT);
         float_btn.style_bg_image_src_symbol(&symbols::PLUS, Selector::DEFAULT);
 
-        Ok(Self {
-            menu,
-            float_btn,
-            btn_cnt: 1,
-        })
+                self.menu = Some(menu);
+        self.float_btn = Some(float_btn);
+        self.btn_cnt = 1;
+        Ok(())
     }
 
-    fn on_event(&mut self, event: &Event) {
-        if event.matches(&self.float_btn, EventCode::CLICKED) {
-            self.btn_cnt += 1;
+    fn on_event(&mut self, event: &Event) -> NavAction {
+        if let (Some(float_btn), Some(menu)) = (&self.float_btn, &self.menu) {
+            if event.matches(float_btn, EventCode::CLICKED) {
+                self.btn_cnt += 1;
 
-            // New sub-page
-            let sub_page = self.menu.page_create(None);
-            let cont = Menu::cont_create(&sub_page);
-            if let Ok(lbl) = Label::new(&cont) {
-                let mut buf = heapless::String::<64>::new();
-                let _ = core::fmt::Write::write_fmt(
-                    &mut buf,
-                    format_args!("Hello, I am hiding inside {}", self.btn_cnt),
-                );
-                lbl.text(&buf);
-                core::mem::forget(lbl);
-            }
-
-            // New main-page item
-            if let Some(main_page) = self.menu.get_cur_main_page() {
-                let cont = Menu::cont_create(&main_page);
+                // New sub-page
+                let sub_page = menu.page_create(None);
+                let cont = Menu::cont_create(&sub_page);
                 if let Ok(lbl) = Label::new(&cont) {
-                    let mut buf = heapless::String::<32>::new();
+                    let mut buf = heapless::String::<64>::new();
                     let _ = core::fmt::Write::write_fmt(
                         &mut buf,
-                        format_args!("Item {}", self.btn_cnt),
+                        format_args!("Hello, I am hiding inside {}", self.btn_cnt),
                     );
                     lbl.text(&buf);
-                    self.menu.set_load_page_event(&cont, &sub_page);
-                    cont.scroll_to_view(true);
                     core::mem::forget(lbl);
+                }
+
+                // New main-page item
+                if let Some(main_page) = menu.get_cur_main_page() {
+                    let cont = Menu::cont_create(&main_page);
+                    if let Ok(lbl) = Label::new(&cont) {
+                        let mut buf = heapless::String::<32>::new();
+                        let _ = core::fmt::Write::write_fmt(
+                            &mut buf,
+                            format_args!("Item {}", self.btn_cnt),
+                        );
+                        lbl.text(&buf);
+                        menu.set_load_page_event(&cont, &sub_page);
+                        cont.scroll_to_view(true);
+                        core::mem::forget(lbl);
+                    }
                 }
             }
         }
+        NavAction::None
     }
 
-    fn update(&mut self) -> Result<(), WidgetError> {
-        Ok(())
+    fn update(&mut self) -> Result<NavAction, WidgetError> {
+        Ok(NavAction::None)
     }
 }
 
-oxivgl_examples_common::example_main!(WidgetMenu4);
+oxivgl_examples_common::example_main!(WidgetMenu4::default());

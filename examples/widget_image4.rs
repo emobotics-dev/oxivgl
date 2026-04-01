@@ -12,22 +12,22 @@ extern crate alloc;
 
 use oxivgl::{
     style::{color_black, palette_main, Palette, Selector, Style, StyleBuilder},
-    view::View,
-    widgets::{Image, Screen, WidgetError},
+    view::{NavAction, View},
+    widgets::{Obj, Image, WidgetError},
 };
 
 oxivgl::image_declare!(img_skew_strip);
 
+#[derive(Default)]
 struct WidgetImage4 {
-    _style: Style,
-    img: Image<'static>,
+    _style: Option<Style>,
+    img: Option<Image<'static>>,
     offset_y: i32,
     direction: i32,
 }
 
 impl View for WidgetImage4 {
-    fn create() -> Result<Self, WidgetError> {
-        let screen = Screen::active().ok_or(WidgetError::LvglNullPointer)?;
+    fn create(&mut self, container: &Obj<'static>) -> Result<(), WidgetError> {
 
         let mut sb = StyleBuilder::new();
         sb.bg_color(palette_main(Palette::Yellow))
@@ -36,28 +36,29 @@ impl View for WidgetImage4 {
             .image_recolor(color_black());
         let style = sb.build();
 
-        let img = Image::new(&screen)?;
+        let img = Image::new(container)?;
         img.add_style(&style, Selector::DEFAULT);
         img.set_src(img_skew_strip());
         img.size(150, 100);
         img.center();
 
-        Ok(Self {
-            _style: style,
-            img,
-            offset_y: 0,
-            direction: 1,
-        })
+                self._style = Some(style);
+        self.img = Some(img);
+        self.offset_y = 0;
+        self.direction = 1;
+        Ok(())
     }
 
-    fn update(&mut self) -> Result<(), WidgetError> {
+    fn update(&mut self) -> Result<NavAction, WidgetError> {
         self.offset_y += self.direction;
         if self.offset_y >= 100 || self.offset_y <= 0 {
             self.direction = -self.direction;
         }
-        self.img.set_offset_y(self.offset_y);
-        Ok(())
+        if let Some(ref img) = self.img {
+            img.set_offset_y(self.offset_y);
+        }
+        Ok(NavAction::None)
     }
 }
 
-oxivgl_examples_common::example_main!(WidgetImage4);
+oxivgl_examples_common::example_main!(WidgetImage4::default());

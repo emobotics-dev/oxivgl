@@ -14,21 +14,21 @@ use oxivgl::{
     event::Event,
     style::Selector,
     symbols,
-    view::View,
-    widgets::{Align, Button, List, Part, Screen, WidgetError, RADIUS_MAX},
+    view::{NavAction, View},
+    widgets::{Obj, Align, Button, List, Part, WidgetError, RADIUS_MAX},
 };
 
+#[derive(Default)]
 struct Scroll3 {
-    list: List<'static>,
-    float_btn: Button<'static>,
+    list: Option<List<'static>>,
+    float_btn: Option<Button<'static>>,
     btn_cnt: u32,
 }
 
 impl View for Scroll3 {
-    fn create() -> Result<Self, WidgetError> {
-        let screen = Screen::active().ok_or(WidgetError::LvglNullPointer)?;
+    fn create(&mut self, container: &Obj<'static>) -> Result<(), WidgetError> {
 
-        let list = List::new(&screen)?;
+        let list = List::new(container)?;
         list.size(280, 220).center();
 
         // Add initial tracks
@@ -48,28 +48,33 @@ impl View for Scroll3 {
         float_btn.radius(RADIUS_MAX, Selector::DEFAULT);
         float_btn.style_bg_image_src_symbol(&symbols::PLUS, Selector::DEFAULT);
 
-        Ok(Self {
-            list,
-            float_btn,
-            btn_cnt: 2,
-        })
-    }
-
-    fn on_event(&mut self, event: &Event) {
-        if event.matches(&self.float_btn, EventCode::CLICKED) {
-            self.btn_cnt += 1;
-            let mut buf = heapless::String::<32>::new();
-            let _ = core::fmt::Write::write_fmt(&mut buf, format_args!("Track {}", self.btn_cnt));
-            let new_btn = self.list.add_button(Some(&symbols::AUDIO), &buf);
-
-            self.float_btn.move_foreground();
-            new_btn.scroll_to_view(true);
-        }
-    }
-
-    fn update(&mut self) -> Result<(), WidgetError> {
+                self.list = Some(list);
+        self.float_btn = Some(float_btn);
+        self.btn_cnt = 2;
         Ok(())
+    }
+
+    fn on_event(&mut self, event: &Event) -> NavAction {
+        if let Some(ref float_btn) = self.float_btn {
+            if event.matches(float_btn, EventCode::CLICKED) {
+                self.btn_cnt += 1;
+                let mut buf = heapless::String::<32>::new();
+                let _ = core::fmt::Write::write_fmt(&mut buf, format_args!("Track {}", self.btn_cnt));
+                if let Some(ref list) = self.list {
+                    let new_btn = list.add_button(Some(&symbols::AUDIO), &buf);
+                    new_btn.scroll_to_view(true);
+                }
+                if let Some(ref float_btn) = self.float_btn {
+                    float_btn.move_foreground();
+                }
+            }
+        }
+        NavAction::None
+    }
+
+    fn update(&mut self) -> Result<NavAction, WidgetError> {
+        Ok(NavAction::None)
     }
 }
 
-oxivgl_examples_common::example_main!(Scroll3);
+oxivgl_examples_common::example_main!(Scroll3::default());

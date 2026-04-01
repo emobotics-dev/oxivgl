@@ -11,9 +11,9 @@
 
 use oxivgl::{
     btnmatrix_map,
-    view::View,
+    view::{NavAction, View},
     widgets::{
-        Align, ButtonmatrixCtrl, ButtonmatrixMap, Keyboard, KeyboardMode, Screen, Textarea,
+        Obj, Align, ButtonmatrixCtrl, ButtonmatrixMap, Keyboard, KeyboardMode, Textarea,
         WidgetError,
     },
 };
@@ -45,32 +45,33 @@ static AZERTY_CTRL: &[ButtonmatrixCtrl] = &[
     ButtonmatrixCtrl::NONE, ButtonmatrixCtrl::NONE, ButtonmatrixCtrl::NONE,
 ];
 
+#[derive(Default)]
 struct WidgetKeyboard2 {
-    _screen: Screen,
-    _ta: Textarea<'static>,
-    _kb: Keyboard<'static>,
+    _ta: Option<Textarea<'static>>,
+    _kb: Option<Keyboard<'static>>,
 }
 
 impl View for WidgetKeyboard2 {
-    fn create() -> Result<Self, WidgetError> {
-        let screen = Screen::active().ok_or(WidgetError::LvglNullPointer)?;
+    fn create(&mut self, container: &Obj<'static>) -> Result<(), WidgetError> {
 
-        let ta = Textarea::new(&screen)?;
+        let ta = Textarea::new(container)?;
         ta.size(280, 80);
         ta.align(Align::TopMid, 0, 10);
         ta.set_placeholder_text("Type here...");
 
-        let kb = Keyboard::new(&screen)?;
+        let kb = Keyboard::new(container)?;
         kb.set_textarea(&ta);
         kb.set_map(KeyboardMode::User1, AZERTY_MAP, AZERTY_CTRL);
         kb.set_mode(KeyboardMode::User1);
 
-        Ok(Self { _screen: screen, _ta: ta, _kb: kb })
+                self._ta = Some(ta);
+        self._kb = Some(kb);
+        Ok(())
     }
 
-    fn update(&mut self) -> Result<(), WidgetError> {
-        Ok(())
+    fn update(&mut self) -> Result<NavAction, WidgetError> {
+        Ok(NavAction::None)
     }
 }
 
-oxivgl_examples_common::example_main!(WidgetKeyboard2);
+oxivgl_examples_common::example_main!(WidgetKeyboard2::default());

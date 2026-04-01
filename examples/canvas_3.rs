@@ -10,19 +10,19 @@ use oxivgl::{
     draw::{Area, DrawRectDsc},
     draw_buf::{ColorFormat, DrawBuf},
     style::color_make,
-    view::View,
-    widgets::{Align, Canvas, Screen, WidgetError},
+    view::{NavAction, View},
+    widgets::{Obj, Align, Canvas, WidgetError},
 };
 
+#[derive(Default)]
 struct Canvas3 {
-    _canvas: Canvas<'static>,
+    _canvas: Option<Canvas<'static>>,
 }
 
 impl View for Canvas3 {
-    fn create() -> Result<Self, WidgetError> {
-        let screen = Screen::active().ok_or(WidgetError::LvglNullPointer)?;
+    fn create(&mut self, container: &Obj<'static>) -> Result<(), WidgetError> {
         let canvas = Canvas::new(
-            &screen,
+            container,
             DrawBuf::create(70, 70, ColorFormat::ARGB8888).ok_or(WidgetError::LvglNullPointer)?,
         )?;
         canvas.fill_bg(color_make(0xcc, 0xcc, 0xcc), 255);
@@ -39,12 +39,13 @@ impl View for Canvas3 {
                 .radius(5);
             layer.draw_rect(&dsc, Area { x1: 10, y1: 10, x2: 60, y2: 60 });
         }
-        Ok(Self { _canvas: canvas })
+                self._canvas = Some(canvas);
+        Ok(())
     }
 
-    fn update(&mut self) -> Result<(), WidgetError> {
-        Ok(())
+    fn update(&mut self) -> Result<NavAction, WidgetError> {
+        Ok(NavAction::None)
     }
 }
 
-oxivgl_examples_common::example_main!(Canvas3);
+oxivgl_examples_common::example_main!(Canvas3::default());

@@ -8,34 +8,34 @@
 
 use oxivgl::{
     style::Selector,
-    view::View,
-    widgets::{Align, Button, Label, Screen, WidgetError},
+    view::{NavAction, View},
+    widgets::{Obj, Align, Button, Label, WidgetError},
 };
 
+#[derive(Default)]
 struct Style15 {
-    _label3: Label<'static>,
-    _btn3: Button<'static>,
-    _label2: Label<'static>,
-    _btn2: Button<'static>,
-    _label1: Label<'static>,
-    _btn1: Button<'static>,
+    _label3: Option<Label<'static>>,
+    _btn3: Option<Button<'static>>,
+    _label2: Option<Label<'static>>,
+    _btn2: Option<Button<'static>>,
+    _label1: Option<Label<'static>>,
+    _btn1: Option<Button<'static>>,
 }
 
 impl View for Style15 {
-    fn create() -> Result<Self, WidgetError> {
-        let screen = Screen::active().ok_or(WidgetError::LvglNullPointer)?;
+    fn create(&mut self, container: &Obj<'static>) -> Result<(), WidgetError> {
 
-        let btn1 = Button::new(&screen)?;
+        let btn1 = Button::new(container)?;
         btn1.size(100, 40).align(Align::Center, 0, -70);
         let label1 = Label::new(&btn1)?;
         label1.text("Normal").center();
 
-        let btn2 = Button::new(&screen)?;
+        let btn2 = Button::new(container)?;
         btn2.size(100, 40).opa(128).align(Align::Center, 0, 0);
         let label2 = Label::new(&btn2)?;
         label2.text("Opa:50%").center();
 
-        let btn3 = Button::new(&screen)?;
+        let btn3 = Button::new(container)?;
         btn3.size(100, 40).opa(128).align(Align::Center, 0, 70);
         btn3.style_transform_rotation(150, Selector::DEFAULT)
             .style_transform_scale(256 + 64, Selector::DEFAULT)
@@ -44,19 +44,18 @@ impl View for Style15 {
         let label3 = Label::new(&btn3)?;
         label3.text("Transf.").center();
 
-        Ok(Self {
-            _label3: label3,
-            _btn3: btn3,
-            _label2: label2,
-            _btn2: btn2,
-            _label1: label1,
-            _btn1: btn1,
-        })
+                self._label3 = Some(label3);
+        self._btn3 = Some(btn3);
+        self._label2 = Some(label2);
+        self._btn2 = Some(btn2);
+        self._label1 = Some(label1);
+        self._btn1 = Some(btn1);
+        Ok(())
     }
 
-    fn update(&mut self) -> Result<(), WidgetError> {
-        Ok(())
+    fn update(&mut self) -> Result<NavAction, WidgetError> {
+        Ok(NavAction::None)
     }
 }
 
-oxivgl_examples_common::example_main!(Style15);
+oxivgl_examples_common::example_main!(Style15::default());

@@ -46,7 +46,8 @@ pub use crate::widgets::{
     Keyboard, KeyboardMode, Label,
     LabelLongMode, Led, Line, List, Matrix, Menu, MenuHeaderMode, Msgbox, Obj, Part, RADIUS_MAX, Roller, RollerMode,
     SCALE_LABEL_ROTATE_KEEP_UPRIGHT, SCALE_LABEL_ROTATE_MATCH_TICKS, Scale, ScaleBuilder, ScaleLabels, ScaleMode,
-    ScaleSection, Screen, Slider, SliderMode, Span, SpanMode, SpanOverflow, Spangroup, Spinbox, Spinner, Switch,
+    ScaleSection, Screen, ScreenAnim, ScreenAnimType, Slider, SliderMode, Span, SpanMode, SpanOverflow, Spangroup,
+    Spinbox, Spinner, Switch,
     SwitchOrientation, Table, TableCellCtrl, Tabview, TextAlign, Textarea, Tileview, ValueLabel, WidgetError, Win,
 };
 pub use crate::{

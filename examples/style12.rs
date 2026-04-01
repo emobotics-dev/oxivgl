@@ -10,18 +10,18 @@ extern crate alloc;
 
 use oxivgl::{
     style::{palette_lighten, palette_main, Palette, Selector, Style, StyleBuilder},
-    view::View,
-    widgets::{Obj, Screen, WidgetError},
+    view::{NavAction, View},
+    widgets::{Obj, WidgetError},
 };
 
+#[derive(Default)]
 struct Style12 {
-    _obj: Obj<'static>,
-    _style: Style,
+    _obj: Option<Obj<'static>>,
+    _style: Option<Style>,
 }
 
 impl View for Style12 {
-    fn create() -> Result<Self, WidgetError> {
-        let screen = Screen::active().ok_or(WidgetError::LvglNullPointer)?;
+    fn create(&mut self, container: &Obj<'static>) -> Result<(), WidgetError> {
 
         let mut builder = StyleBuilder::new();
         builder
@@ -30,20 +30,19 @@ impl View for Style12 {
             .border_width(3);
         let style = builder.build();
 
-        let obj = Obj::new(&screen)?;
+        let obj = Obj::new(container)?;
         obj.add_style(&style, Selector::DEFAULT);
         obj.style_bg_color(palette_main(Palette::Orange), Selector::DEFAULT);
         obj.center();
 
-        Ok(Self {
-            _obj: obj,
-            _style: style,
-        })
+                self._obj = Some(obj);
+        self._style = Some(style);
+        Ok(())
     }
 
-    fn update(&mut self) -> Result<(), WidgetError> {
-        Ok(())
+    fn update(&mut self) -> Result<NavAction, WidgetError> {
+        Ok(NavAction::None)
     }
 }
 
-oxivgl_examples_common::example_main!(Style12);
+oxivgl_examples_common::example_main!(Style12::default());

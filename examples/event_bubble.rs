@@ -10,26 +10,27 @@
 //! button turns it red — the container's single event handler catches all
 //! bubbled CLICKED events.
 
+use oxivgl::view::NavAction;
 use oxivgl::{
     style::{palette_main, Palette, Selector},
     view::{register_event_on, View},
     enums::EventCode,
     event::Event,
     layout::FlexFlow,
-    widgets::{Button, Label, Obj, Screen, WidgetError},
+    widgets::{Button, Label, Obj, WidgetError},
 };
 
+#[derive(Default)]
 struct EventBubble {
-    cont: Obj<'static>,
-    _buttons: heapless::Vec<Button<'static>, 30>,
-    _labels: heapless::Vec<Label<'static>, 30>,
+    cont: Option<Obj<'static>>,
+    _buttons: Option<heapless::Vec<Button<'static>, 30>>,
+    _labels: Option<heapless::Vec<Label<'static>, 30>>,
 }
 
 impl View for EventBubble {
-    fn create() -> Result<Self, WidgetError> {
-        let screen = Screen::active().ok_or(WidgetError::LvglNullPointer)?;
+    fn create(&mut self, container: &Obj<'static>) -> Result<(), WidgetError> {
 
-        let cont = Obj::new(&screen)?;
+        let cont = Obj::new(container)?;
         cont.size(290, 200).center();
         cont.set_flex_flow(FlexFlow::RowWrap);
 
@@ -50,31 +51,35 @@ impl View for EventBubble {
             let _ = labels.push(label);
         }
 
-        Ok(Self {
-            cont,
-            _buttons: buttons,
-            _labels: labels,
-        })
+                self.cont = Some(cont);
+        self._buttons = Some(buttons);
+        self._labels = Some(labels);
+        Ok(())
     }
 
     fn register_events(&mut self) {
-        register_event_on(self, self.cont.handle());
+        if let Some(ref cont) = self.cont {
+            register_event_on(self, cont.handle());
+        }
     }
 
-    fn on_event(&mut self, event: &Event) {
+    fn on_event(&mut self, event: &Event) -> NavAction {
         if event.code() != EventCode::CLICKED {
-            return;
+            return NavAction::None;
         }
         let target = event.target_handle();
-        if target == self.cont.handle() {
-            return;
+        if let Some(ref cont) = self.cont {
+            if target == cont.handle() {
+                return NavAction::None;
+            }
         }
         event.target_style_bg_color(palette_main(Palette::Red), Selector::DEFAULT);
+        NavAction::None
     }
 
-    fn update(&mut self) -> Result<(), WidgetError> {
-        Ok(())
+    fn update(&mut self) -> Result<NavAction, WidgetError> {
+        Ok(NavAction::None)
     }
 }
 
-oxivgl_examples_common::example_main!(EventBubble);
+oxivgl_examples_common::example_main!(EventBubble::default());

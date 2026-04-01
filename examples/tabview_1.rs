@@ -10,18 +10,18 @@
 //! view on creation via `scroll_to_view_recursive`.
 
 use oxivgl::{
-    view::View,
-    widgets::{Label, LabelLongMode, Screen, Tabview, WidgetError},
+    view::{NavAction, View},
+    widgets::{Obj, Label, LabelLongMode, Tabview, WidgetError},
 };
 
+#[derive(Default)]
 struct Tabview1 {
-    _tv: Tabview<'static>,
+    _tv: Option<Tabview<'static>>,
 }
 
 impl View for Tabview1 {
-    fn create() -> Result<Self, WidgetError> {
-        let screen = Screen::active().ok_or(WidgetError::LvglNullPointer)?;
-        let tv = Tabview::new(&screen)?;
+    fn create(&mut self, container: &Obj<'static>) -> Result<(), WidgetError> {
+        let tv = Tabview::new(container)?;
 
         let tab1 = tv.add_tab("Tab 1");
         let tab2 = tv.add_tab("Tab 2");
@@ -41,12 +41,13 @@ impl View for Tabview1 {
         // Scroll the last label into view (as in the LVGL example).
         label3.scroll_to_view_recursive(true);
 
-        Ok(Self { _tv: tv })
+                self._tv = Some(tv);
+        Ok(())
     }
 
-    fn update(&mut self) -> Result<(), WidgetError> {
-        Ok(())
+    fn update(&mut self) -> Result<NavAction, WidgetError> {
+        Ok(NavAction::None)
     }
 }
 
-oxivgl_examples_common::example_main!(Tabview1);
+oxivgl_examples_common::example_main!(Tabview1::default());

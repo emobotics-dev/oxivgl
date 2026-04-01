@@ -10,19 +10,19 @@
 
 use oxivgl::{
     style::{palette_main, Palette, Selector, Style, StyleBuilder},
-    view::View,
-    widgets::{Bar, Part, Screen, WidgetError},
+    view::{NavAction, View},
+    widgets::{Obj, Bar, Part, WidgetError},
 };
 
+#[derive(Default)]
 struct WidgetBar2 {
-    _bar: Bar<'static>,
-    _style_bg: Style,
-    _style_indic: Style,
+    _bar: Option<Bar<'static>>,
+    _style_bg: Option<Style>,
+    _style_indic: Option<Style>,
 }
 
 impl View for WidgetBar2 {
-    fn create() -> Result<Self, WidgetError> {
-        let screen = Screen::active().ok_or(WidgetError::LvglNullPointer)?;
+    fn create(&mut self, container: &Obj<'static>) -> Result<(), WidgetError> {
 
         let mut style_bg = StyleBuilder::new();
         style_bg
@@ -40,7 +40,7 @@ impl View for WidgetBar2 {
             .radius(3);
         let style_indic = style_indic.build();
 
-        let bar = Bar::new(&screen)?;
+        let bar = Bar::new(container)?;
         bar.remove_style_all();
         bar.add_style(&style_bg, Selector::DEFAULT);
         bar.add_style(&style_indic, Part::Indicator);
@@ -48,16 +48,15 @@ impl View for WidgetBar2 {
         bar.set_range_raw(0, 100);
         bar.set_value_raw(100, true);
 
-        Ok(Self {
-            _bar: bar,
-            _style_bg: style_bg,
-            _style_indic: style_indic,
-        })
+                self._bar = Some(bar);
+        self._style_bg = Some(style_bg);
+        self._style_indic = Some(style_indic);
+        Ok(())
     }
 
-    fn update(&mut self) -> Result<(), WidgetError> {
-        Ok(())
+    fn update(&mut self) -> Result<NavAction, WidgetError> {
+        Ok(NavAction::None)
     }
 }
 
-oxivgl_examples_common::example_main!(WidgetBar2);
+oxivgl_examples_common::example_main!(WidgetBar2::default());

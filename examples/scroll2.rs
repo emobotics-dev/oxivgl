@@ -13,22 +13,22 @@ use oxivgl::{
     enums::{EventCode, ObjFlag, ObjState, ScrollSnap},
     event::Event,
     layout::FlexFlow,
-    view::View,
-    widgets::{Align, Button, Label, Obj, Screen, Switch, WidgetError},
+    view::{NavAction, View},
+    widgets::{Align, Button, Label, Obj, Switch, WidgetError},
 };
 
+#[derive(Default)]
 struct Scroll2 {
-    panel: Obj<'static>,
-    sw: Switch<'static>,
+    panel: Option<Obj<'static>>,
+    sw: Option<Switch<'static>>,
     _btns: heapless::Vec<Button<'static>, 10>,
     _labels: heapless::Vec<Label<'static>, 12>,
 }
 
 impl View for Scroll2 {
-    fn create() -> Result<Self, WidgetError> {
-        let screen = Screen::active().ok_or(WidgetError::LvglNullPointer)?;
+    fn create(&mut self, container: &Obj<'static>) -> Result<(), WidgetError> {
 
-        let panel = Obj::new(&screen)?;
+        let panel = Obj::new(container)?;
         panel
             .size(280, 120)
             .set_scroll_snap_x(ScrollSnap::Center)
@@ -61,37 +61,39 @@ impl View for Scroll2 {
         panel.update_snap(true);
 
         // Switch to toggle "one scroll" mode
-        let sw = Switch::new(&screen)?;
+        let sw = Switch::new(container)?;
         sw.align(Align::TopRight, -20, 10);
         sw.bubble_events();
 
-        let sw_label = Label::new(&screen)?;
+        let sw_label = Label::new(container)?;
         sw_label
             .text("One scroll")
             .align_to(&sw, Align::OutBottomMid, 0, 5);
         let _ = labels.push(sw_label);
 
-        Ok(Self {
-            panel,
-            sw,
-            _btns: btns,
-            _labels: labels,
-        })
+                self.panel = Some(panel);
+        self.sw = Some(sw);
+        self._btns = btns;
+        self._labels = labels;
+        Ok(())
     }
 
-    fn on_event(&mut self, event: &Event) {
-        if event.matches(&self.sw, EventCode::VALUE_CHANGED) {
-            if self.sw.has_state(ObjState::CHECKED) {
-                self.panel.add_flag(ObjFlag::SCROLL_ONE);
-            } else {
-                self.panel.remove_flag(ObjFlag::SCROLL_ONE);
+    fn on_event(&mut self, event: &Event) -> NavAction {
+        if let (Some(sw), Some(panel)) = (&self.sw, &self.panel) {
+            if event.matches(sw, EventCode::VALUE_CHANGED) {
+                if sw.has_state(ObjState::CHECKED) {
+                    panel.add_flag(ObjFlag::SCROLL_ONE);
+                } else {
+                    panel.remove_flag(ObjFlag::SCROLL_ONE);
+                }
             }
         }
+        NavAction::None
     }
 
-    fn update(&mut self) -> Result<(), WidgetError> {
-        Ok(())
+    fn update(&mut self) -> Result<NavAction, WidgetError> {
+        Ok(NavAction::None)
     }
 }
 
-oxivgl_examples_common::example_main!(Scroll2);
+oxivgl_examples_common::example_main!(Scroll2::default());

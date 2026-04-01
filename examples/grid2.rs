@@ -8,25 +8,25 @@
 
 use oxivgl::{
     style::LV_SIZE_CONTENT,
-    view::View,
+    view::{NavAction, View},
     layout::{GridAlign, GridCell, GRID_TEMPLATE_LAST},
-    widgets::{Label, Obj, Screen, WidgetError},
+    widgets::{Label, Obj, WidgetError},
 };
 
 static COL_DSC: [i32; 4] = [70, 70, 70, GRID_TEMPLATE_LAST];
 static ROW_DSC: [i32; 4] = [50, 50, 50, GRID_TEMPLATE_LAST];
 
+#[derive(Default)]
 struct Grid2 {
-    _cont: Obj<'static>,
+    _cont: Option<Obj<'static>>,
     _items: heapless::Vec<Obj<'static>, 5>,
     _labels: heapless::Vec<Label<'static>, 5>,
 }
 
 impl View for Grid2 {
-    fn create() -> Result<Self, WidgetError> {
-        let screen = Screen::active().ok_or(WidgetError::LvglNullPointer)?;
+    fn create(&mut self, container: &Obj<'static>) -> Result<(), WidgetError> {
 
-        let cont = Obj::new(&screen)?;
+        let cont = Obj::new(container)?;
         cont.set_grid_dsc_array(&COL_DSC, &ROW_DSC);
         cont.size(300, 220).center();
 
@@ -93,16 +93,15 @@ impl View for Grid2 {
         let _ = items.push(obj);
         let _ = labels.push(lbl);
 
-        Ok(Self {
-            _cont: cont,
-            _items: items,
-            _labels: labels,
-        })
+                self._cont = Some(cont);
+        self._items = items;
+        self._labels = labels;
+        Ok(())
     }
 
-    fn update(&mut self) -> Result<(), WidgetError> {
-        Ok(())
+    fn update(&mut self) -> Result<NavAction, WidgetError> {
+        Ok(NavAction::None)
     }
 }
 
-oxivgl_examples_common::example_main!(Grid2);
+oxivgl_examples_common::example_main!(Grid2::default());

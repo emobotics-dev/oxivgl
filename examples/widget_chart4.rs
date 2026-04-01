@@ -10,12 +10,13 @@
 //! green (high) based on its Y value. Uses `DRAW_TASK_ADDED` events with
 //! `with_fill_dsc` to recolor bars during rendering.
 
+use oxivgl::view::NavAction;
 use oxivgl::{
     enums::EventCode,
     event::Event,
     style::{color_make, color_mix, palette_main, Palette, Selector},
     view::{register_event_on, View},
-    widgets::{Chart, ChartAxis, ChartSeries, ChartType, Part, Screen, WidgetError},
+    widgets::{Obj, Chart, ChartAxis, ChartSeries, ChartType, Part, WidgetError},
 };
 
 const NUM_POINTS: usize = 24;
@@ -27,18 +28,17 @@ fn pseudo_rand(seed: &mut u32, min: i32, max: i32) -> i32 {
     min + ((*seed >> 16) % range) as i32
 }
 
+#[derive(Default)]
 struct WidgetChart4 {
-    _screen: Screen,
-    chart: Chart<'static>,
-    _ser: ChartSeries,
+    chart: Option<Chart<'static>>,
+    _ser: Option<ChartSeries>,
     values: [i32; NUM_POINTS],
 }
 
 impl View for WidgetChart4 {
-    fn create() -> Result<Self, WidgetError> {
-        let screen = Screen::active().ok_or(WidgetError::LvglNullPointer)?;
+    fn create(&mut self, container: &Obj<'static>) -> Result<(), WidgetError> {
 
-        let chart = Chart::new(&screen)?;
+        let chart = Chart::new(container)?;
         chart.set_type(ChartType::Bar);
         chart.set_point_count(NUM_POINTS as u32);
         chart.style_pad_column(2, Selector::DEFAULT);
@@ -57,21 +57,24 @@ impl View for WidgetChart4 {
             chart.set_next_value(&ser, values[i]);
         }
 
-        Ok(Self { _screen: screen, chart, _ser: ser, values })
+        self.chart = Some(chart);
+        self._ser = Some(ser);
+        self.values = values;
+        Ok(())
     }
 
     fn register_events(&mut self) {
-        register_event_on(self, self.chart.handle());
+        if let Some(ref chart) = self.chart { register_event_on(self, chart.handle()); }
     }
 
-    fn on_event(&mut self, event: &Event) {
+    fn on_event(&mut self, event: &Event) -> NavAction {
         if event.code() != EventCode::DRAW_TASK_ADDED {
-            return;
+            return NavAction::None;
         }
-        let Some(task) = event.draw_task() else { return };
+        let Some(task) = event.draw_task() else { return NavAction::None };
         let base = task.base();
         if base.part != Part::Items {
-            return;
+            return NavAction::None;
         }
         let idx = base.id2 as usize;
         if idx < NUM_POINTS {
@@ -83,11 +86,12 @@ impl View for WidgetChart4 {
                 dsc.set_color(color_mix(green, red, ratio));
             });
         }
+        NavAction::None
     }
 
-    fn update(&mut self) -> Result<(), WidgetError> {
-        Ok(())
+    fn update(&mut self) -> Result<NavAction, WidgetError> {
+        Ok(NavAction::None)
     }
 }
 
-oxivgl_examples_common::example_main!(WidgetChart4);
+oxivgl_examples_common::example_main!(WidgetChart4::default());

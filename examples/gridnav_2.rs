@@ -16,23 +16,22 @@ use oxivgl::{
     group::{Group, group_remove_obj},
     style::{Palette, lv_pct, palette_lighten},
     symbols,
-    view::View,
-    widgets::{Align, List, Screen, WidgetError},
+    view::{NavAction, View},
+    widgets::{Obj, Align, List, WidgetError},
 };
 
+#[derive(Default)]
 struct Gridnav2 {
-    _screen: Screen,
-    _group: Group,
-    _list1: List<'static>,
-    _list2: List<'static>,
+    _group: Option<Group>,
+    _list1: Option<List<'static>>,
+    _list2: Option<List<'static>>,
 }
 
 impl View for Gridnav2 {
-    fn create() -> Result<Self, WidgetError> {
-        let screen = Screen::active().ok_or(WidgetError::LvglNullPointer)?;
+    fn create(&mut self, container: &Obj<'static>) -> Result<(), WidgetError> {
 
         // ── List 1: File items, no rollover ───────────────────────────────
-        let list1 = List::new(&screen)?;
+        let list1 = List::new(container)?;
         list1
             .size(lv_pct(45), lv_pct(80))
             .align(Align::LeftMid, 5, 0)
@@ -49,7 +48,7 @@ impl View for Gridnav2 {
         }
 
         // ── List 2: Folder items, rollover ────────────────────────────────
-        let list2 = List::new(&screen)?;
+        let list2 = List::new(container)?;
         list2
             .size(lv_pct(45), lv_pct(80))
             .align(Align::RightMid, -5, 0)
@@ -72,64 +71,15 @@ impl View for Gridnav2 {
         group.add_obj(&list2);
         group.assign_to_keyboard_indevs();
 
-        Ok(Self {
-            _screen: screen,
-            _group: group,
-            _list1: list1,
-            _list2: list2,
-        })
-    }
-
-    fn update(&mut self) -> Result<(), WidgetError> {
+        self._group = Some(group);
+        self._list1 = Some(list1);
+        self._list2 = Some(list2);
         Ok(())
     }
-}
 
-// ── Platform entry points ──────────────────────────────────────────────────
-
-#[cfg(target_arch = "xtensa")]
-oxivgl_examples_common::fire27_main!(Gridnav2);
-
-#[cfg(not(target_arch = "xtensa"))]
-fn main() {
-    use oxivgl::driver::LvglDriver;
-    use oxivgl::view::{View, register_view_events};
-    use oxivgl_examples_common::host::{H, W, capture, pump};
-
-    oxivgl_examples_common::env_logger::init();
-    let screenshot_only = std::env::var("SCREENSHOT_ONLY").as_deref() == Ok("1");
-    let driver = if screenshot_only {
-        LvglDriver::init(W, H)
-    } else {
-        LvglDriver::sdl(W, H)
-            .title(c"oxivgl — gridnav 2")
-            .mouse(true)
-            .keyboard(true)
-            .build()
-    };
-    let mut _view = Gridnav2::create().expect("view create failed");
-    register_view_events(&mut _view);
-
-    let src = file!();
-    let name = std::path::Path::new(src)
-        .file_stem()
-        .and_then(|s| s.to_str())
-        .unwrap_or("screenshot");
-    let dir = format!("{}/examples/doc/screenshots", env!("CARGO_MANIFEST_DIR"));
-
-    _view.update().expect("update failed");
-    pump(&driver, 10);
-    capture(&driver, name, &dir);
-
-    if screenshot_only {
-        std::process::exit(0);
-    }
-
-    loop {
-        _view.update().unwrap_or_else(|e| eprintln!("update: {e:?}"));
-        for _ in 0..4 {
-            driver.timer_handler();
-            std::thread::sleep(std::time::Duration::from_millis(8));
-        }
+    fn update(&mut self) -> Result<NavAction, WidgetError> {
+        Ok(NavAction::None)
     }
 }
+
+oxivgl_examples_common::example_main!(Gridnav2::default());

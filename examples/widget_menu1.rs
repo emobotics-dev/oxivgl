@@ -10,20 +10,19 @@
 //! navigates to a sub-page.
 
 use oxivgl::{
-    view::View,
-    widgets::{Label, Menu, Screen, WidgetError},
+    view::{NavAction, View},
+    widgets::{Label, Menu, Obj, WidgetError},
 };
 
+#[derive(Default)]
 struct WidgetMenu1 {
-    _menu: Menu<'static>,
-    _labels: [Label<'static>; 4],
+    _menu: Option<Menu<'static>>,
+    _labels: Option<[Label<'static>; 4]>,
 }
 
 impl View for WidgetMenu1 {
-    fn create() -> Result<Self, WidgetError> {
-        let screen = Screen::active().ok_or(WidgetError::LvglNullPointer)?;
-
-        let menu = Menu::new(&screen)?;
+    fn create(&mut self, container: &Obj<'static>) -> Result<(), WidgetError> {
+        let menu = Menu::new(container)?;
         menu.size(320, 240).center();
 
         // Sub-page
@@ -50,20 +49,14 @@ impl View for WidgetMenu1 {
 
         menu.set_page(&main_page);
 
-        Ok(Self {
-            _menu: menu,
-            _labels: [
-                l0,
-                l1,
-                l2,
-                l3,
-            ],
-        })
+        self._menu = Some(menu);
+        self._labels = Some([l0, l1, l2, l3]);
+        Ok(())
     }
 
-    fn update(&mut self) -> Result<(), WidgetError> {
-        Ok(())
+    fn update(&mut self) -> Result<NavAction, WidgetError> {
+        Ok(NavAction::None)
     }
 }
 
-oxivgl_examples_common::example_main!(WidgetMenu1);
+oxivgl_examples_common::example_main!(WidgetMenu1::default());

@@ -10,6 +10,7 @@
 //! current value as text: white inside the indicator when wide, black outside
 //! when the indicator is short.
 
+use oxivgl::view::NavAction;
 use oxivgl::{
     anim::{anim_set_bar_value, Anim, AnimHandle, ANIM_REPEAT_INFINITE},
     draw::{Area, DrawLabelDscOwned},
@@ -17,19 +18,27 @@ use oxivgl::{
     event::Event,
     style::color_make,
     view::{register_event_on, View},
-    widgets::{Align, Bar, Screen, WidgetError},
+    widgets::{Obj, Align, Bar, WidgetError},
 };
 
 struct WidgetBar6 {
-    bar: Bar<'static>,
-    _anim: AnimHandle,
+    bar: Option<Bar<'static>>,
+    _anim: Option<AnimHandle>,
+}
+
+impl WidgetBar6 {
+    fn new() -> Self {
+        Self {
+            bar: None,
+            _anim: None,
+        }
+    }
 }
 
 impl View for WidgetBar6 {
-    fn create() -> Result<Self, WidgetError> {
-        let screen = Screen::active().ok_or(WidgetError::LvglNullPointer)?;
+    fn create(&mut self, container: &Obj<'static>) -> Result<(), WidgetError> {
 
-        let bar = Bar::new(&screen)?;
+        let bar = Bar::new(container)?;
         bar.set_range_raw(0, 100);
         bar.size(200, 20).center();
 
@@ -42,21 +51,26 @@ impl View for WidgetBar6 {
             .set_repeat_count(ANIM_REPEAT_INFINITE);
         let handle = a.start();
 
-        Ok(Self { bar, _anim: handle })
+                self.bar = Some(bar);
+        self._anim = Some(handle);
+        Ok(())
     }
 
     fn register_events(&mut self) {
-        register_event_on(self, self.bar.handle());
+        if let Some(ref bar) = self.bar {
+            register_event_on(self, bar.handle());
+        }
     }
 
-    fn on_event(&mut self, event: &Event) {
-        if !event.matches(&self.bar, EventCode::DRAW_MAIN_END) {
-            return;
+    fn on_event(&mut self, event: &Event) -> NavAction {
+        let Some(ref bar) = self.bar else { return NavAction::None };
+        if !event.matches(bar, EventCode::DRAW_MAIN_END) {
+            return NavAction::None;
         }
-        let Some(layer) = event.layer() else { return };
-        let value = self.bar.get_value_raw();
+        let Some(layer) = event.layer() else { return NavAction::None };
+        let value = bar.get_value_raw();
         if value == 0 {
-            return;
+            return NavAction::None;
         }
         let mut buf = heapless::String::<8>::new();
         let _ = core::fmt::Write::write_fmt(&mut buf, format_args!("{}", value));
@@ -65,7 +79,7 @@ impl View for WidgetBar6 {
         let mut txt_area = Area { x1: 0, y1: 0, x2: txt_w - 1, y2: txt_h - 1 };
         // Simplified: lv_bar_get_indicator_area() not yet wrapped, so approximate
         // the indicator rect from get_coords() + proportional width.
-        let mut indic_area = self.bar.get_coords();
+        let mut indic_area = bar.get_coords();
         indic_area.set_width(indic_area.width() * value / 100);
         if indic_area.width() > txt_w + 20 {
             txt_area.align_to_area(indic_area, Align::RightMid, -10, 0);
@@ -75,11 +89,12 @@ impl View for WidgetBar6 {
             dsc.set_color(color_make(0, 0, 0));
         }
         layer.draw_label(&dsc, txt_area, &buf);
+        NavAction::None
     }
 
-    fn update(&mut self) -> Result<(), WidgetError> {
-        Ok(())
+    fn update(&mut self) -> Result<NavAction, WidgetError> {
+        Ok(NavAction::None)
     }
 }
 
-oxivgl_examples_common::example_main!(WidgetBar6);
+oxivgl_examples_common::example_main!(WidgetBar6::new());

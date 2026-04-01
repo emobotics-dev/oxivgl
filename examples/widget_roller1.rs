@@ -11,19 +11,19 @@
 extern crate alloc;
 
 use oxivgl::{
-    view::View,
-    widgets::{Roller, RollerMode, Screen, WidgetError},
+    view::{NavAction, View},
+    widgets::{Obj, Roller, RollerMode, WidgetError},
 };
 
+#[derive(Default)]
 struct WidgetRoller1 {
-    _roller: Roller<'static>,
+    _roller: Option<Roller<'static>>,
 }
 
 impl View for WidgetRoller1 {
-    fn create() -> Result<Self, WidgetError> {
-        let screen = Screen::active().ok_or(WidgetError::LvglNullPointer)?;
+    fn create(&mut self, container: &Obj<'static>) -> Result<(), WidgetError> {
 
-        let roller = Roller::new(&screen)?;
+        let roller = Roller::new(container)?;
         roller.set_options(
             "January\n\
              February\n\
@@ -42,12 +42,13 @@ impl View for WidgetRoller1 {
         roller.set_visible_row_count(4);
         roller.center();
 
-        Ok(Self { _roller: roller })
+                self._roller = Some(roller);
+        Ok(())
     }
 
-    fn update(&mut self) -> Result<(), WidgetError> {
-        Ok(())
+    fn update(&mut self) -> Result<NavAction, WidgetError> {
+        Ok(NavAction::None)
     }
 }
 
-oxivgl_examples_common::example_main!(WidgetRoller1);
+oxivgl_examples_common::example_main!(WidgetRoller1::default());

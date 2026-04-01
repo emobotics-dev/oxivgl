@@ -9,12 +9,13 @@
 //! One-line textarea with a custom numeric button matrix keypad.
 //! Pressing a digit appends it; backspace deletes; newline sends READY.
 
+use oxivgl::view::NavAction;
 use oxivgl::{
     btnmatrix_map,
     enums::{EventCode, ObjFlag, ObjState},
     event::Event,
     view::{register_event_on, View},
-    widgets::{Align, Buttonmatrix, ButtonmatrixMap, Screen, Textarea, WidgetError,
+    widgets::{Obj, Align, Buttonmatrix, ButtonmatrixMap, Textarea, WidgetError,
     },
 };
 
@@ -30,53 +31,62 @@ static BTNM_MAP: &ButtonmatrixMap = btnmatrix_map!(
     c"\u{F55A}", c"0", c"\u{F8A2}"
 );
 
+#[derive(Default)]
 struct WidgetTextarea1 {
-    ta: Textarea<'static>,
-    btnm: Buttonmatrix<'static>,
+    ta: Option<Textarea<'static>>,
+    btnm: Option<Buttonmatrix<'static>>,
 }
 
 impl View for WidgetTextarea1 {
-    fn create() -> Result<Self, WidgetError> {
-        let screen = Screen::active().ok_or(WidgetError::LvglNullPointer)?;
+    fn create(&mut self, container: &Obj<'static>) -> Result<(), WidgetError> {
 
-        let ta = Textarea::new(&screen)?;
+        let ta = Textarea::new(container)?;
         ta.set_one_line(true);
         ta.align(Align::TopMid, 0, 10);
         ta.add_state(ObjState::FOCUSED);
         ta.bubble_events();
 
-        let btnm = Buttonmatrix::new(&screen)?;
+        let btnm = Buttonmatrix::new(container)?;
         btnm.set_map(BTNM_MAP);
         btnm.size(200, 150);
         btnm.align(Align::BottomMid, 0, -10);
         btnm.remove_flag(ObjFlag::CLICK_FOCUSABLE); // Keep textarea focused on button clicks
         btnm.bubble_events();
 
-        Ok(Self { ta, btnm })
+                self.ta = Some(ta);
+        self.btnm = Some(btnm);
+        Ok(())
     }
 
     fn register_events(&mut self) {
-        register_event_on(self, self.btnm.handle());
-    }
-
-    fn on_event(&mut self, event: &Event) {
-        if event.matches(&self.btnm, EventCode::VALUE_CHANGED) {
-            let btn_id = self.btnm.get_selected_button();
-            if let Some(txt) = self.btnm.get_button_text(btn_id) {
-                if txt == SYMBOL_BACKSPACE {
-                    self.ta.delete_char();
-                } else if txt == SYMBOL_NEW_LINE {
-                    self.ta.send_event(EventCode::READY);
-                } else {
-                    self.ta.add_text(txt);
-                }
-            }
+        if let Some(ref btnm) = self.btnm {
+            register_event_on(self, btnm.handle());
         }
     }
 
-    fn update(&mut self) -> Result<(), WidgetError> {
-        Ok(())
+    fn on_event(&mut self, event: &Event) -> NavAction {
+        if let Some(ref btnm) = self.btnm {
+            if event.matches(btnm, EventCode::VALUE_CHANGED) {
+                let btn_id = btnm.get_selected_button();
+                if let Some(txt) = btnm.get_button_text(btn_id) {
+                    if let Some(ref ta) = self.ta {
+                        if txt == SYMBOL_BACKSPACE {
+                            ta.delete_char();
+                        } else if txt == SYMBOL_NEW_LINE {
+                            ta.send_event(EventCode::READY);
+                        } else {
+                            ta.add_text(txt);
+                        }
+                    }
+                }
+            }
+        }
+        NavAction::None
+    }
+
+    fn update(&mut self) -> Result<NavAction, WidgetError> {
+        Ok(NavAction::None)
     }
 }
 
-oxivgl_examples_common::example_main!(WidgetTextarea1);
+oxivgl_examples_common::example_main!(WidgetTextarea1::default());

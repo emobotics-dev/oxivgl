@@ -11,19 +11,20 @@
 
 use oxivgl::{
     style::{GradDsc, GradExtend, Selector, Style, StyleBuilder, color_make, lv_pct},
-    view::View,
-    widgets::{Button, Obj, Screen, WidgetError},
+    view::{NavAction, View},
+    widgets::{Button, Obj, WidgetError},
 };
 
+#[derive(Default)]
 struct Grad2 {
-    _obj: Obj<'static>,
-    _bullet1: Button<'static>,
-    _bullet2: Button<'static>,
-    _style: Style, // last — drop after widgets that reference it
+    _obj: Option<Obj<'static>>,
+    _bullet1: Option<Button<'static>>,
+    _bullet2: Option<Button<'static>>,
+    _style: Option<Style>, // last — drop after widgets that reference it
 }
 
 impl View for Grad2 {
-    fn create() -> Result<Self, WidgetError> {
+    fn create(&mut self, container: &Obj<'static>) -> Result<(), WidgetError> {
         let colors = [color_make(0xff, 0, 0), color_make(0, 0xff, 0)];
         let opas = [255u8, 0];
 
@@ -39,9 +40,7 @@ impl View for Grad2 {
             .pad_all(0)
             .radius(12);
         let style = style.build();
-
-        let screen = Screen::active().ok_or(WidgetError::LvglNullPointer)?;
-        let obj = Obj::new(&screen)?;
+        let obj = Obj::new(container)?;
         obj.size(lv_pct(80), lv_pct(80)).center();
         obj.add_style(&style, Selector::DEFAULT);
 
@@ -55,17 +54,16 @@ impl View for Grad2 {
         bullet2.size(15, 15).pos(200, 150);
         bullet2.bg_color(0x00ffff).bg_opa(255);
 
-        Ok(Self {
-            _style: style,
-            _obj: obj,
-            _bullet1: bullet1,
-            _bullet2: bullet2,
-        })
+                self._style = Some(style);
+        self._obj = Some(obj);
+        self._bullet1 = Some(bullet1);
+        self._bullet2 = Some(bullet2);
+        Ok(())
     }
 
-    fn update(&mut self) -> Result<(), WidgetError> {
-        Ok(())
+    fn update(&mut self) -> Result<NavAction, WidgetError> {
+        Ok(NavAction::None)
     }
 }
 
-oxivgl_examples_common::example_main!(Grad2);
+oxivgl_examples_common::example_main!(Grad2::default());

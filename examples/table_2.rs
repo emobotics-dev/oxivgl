@@ -8,19 +8,21 @@
 //! - `DRAW_TASK_ADDED`: highlights checked rows with a blue tint.
 //! - `VALUE_CHANGED`: toggles the `CUSTOM_1` bit on the selected row.
 
+use oxivgl::view::NavAction;
 use oxivgl::{
     draw::DrawTask,
     enums::EventCode,
     event::Event,
     style::{Palette, palette_lighten},
     view::{View, register_event_on},
-    widgets::{Align, Part, Screen, Table, TableCellCtrl, WidgetError},
+    widgets::{Obj, Align, Part, Table, TableCellCtrl, WidgetError},
 };
 
 const ITEM_CNT: u32 = 200;
 
+#[derive(Default)]
 struct Table2 {
-    table: Table<'static>,
+    table: Option<Table<'static>>,
 }
 
 impl Table2 {
@@ -29,18 +31,19 @@ impl Table2 {
         if base.part != Part::Items {
             return;
         }
-        if self.table.has_cell_ctrl(base.id1, 0, TableCellCtrl::CUSTOM_1) {
-            if let Some(fill) = draw_task.fill_dsc() {
-                fill.set_color(palette_lighten(Palette::Blue, 3));
+        if let Some(ref table) = self.table {
+            if table.has_cell_ctrl(base.id1, 0, TableCellCtrl::CUSTOM_1) {
+                if let Some(fill) = draw_task.fill_dsc() {
+                    fill.set_color(palette_lighten(Palette::Blue, 3));
+                }
             }
         }
     }
 }
 
 impl View for Table2 {
-    fn create() -> Result<Self, WidgetError> {
-        let screen = Screen::active().ok_or(WidgetError::LvglNullPointer)?;
-        let table = Table::new(&screen)?;
+    fn create(&mut self, container: &Obj<'static>) -> Result<(), WidgetError> {
+        let table = Table::new(container)?;
 
         table.set_column_width(0, 200);
         table.set_row_count(ITEM_CNT);
@@ -61,31 +64,37 @@ impl View for Table2 {
         table.height(220);
         table.send_draw_task_events();
 
-        Ok(Self { table })
+                self.table = Some(table);
+        Ok(())
     }
 
     fn register_events(&mut self) {
-        register_event_on(self, self.table.handle());
+        if let Some(ref table) = self.table {
+            register_event_on(self, table.handle());
+        }
     }
 
-    fn on_event(&mut self, event: &Event) {
+    fn on_event(&mut self, event: &Event) -> NavAction {
         if event.code() == EventCode::DRAW_TASK_ADDED {
             if let Some(draw_task) = event.draw_task() {
                 self.handle_draw_task(&draw_task);
             }
         } else if event.code() == EventCode::VALUE_CHANGED {
-            if let Some((row, _col)) = self.table.get_selected_cell() {
-                if self.table.has_cell_ctrl(row, 0, TableCellCtrl::CUSTOM_1) {
-                    self.table.clear_cell_ctrl(row, 0, TableCellCtrl::CUSTOM_1);
-                } else {
-                    self.table.set_cell_ctrl(row, 0, TableCellCtrl::CUSTOM_1);
+            if let Some(ref table) = self.table {
+                if let Some((row, _col)) = table.get_selected_cell() {
+                    if table.has_cell_ctrl(row, 0, TableCellCtrl::CUSTOM_1) {
+                        table.clear_cell_ctrl(row, 0, TableCellCtrl::CUSTOM_1);
+                    } else {
+                        table.set_cell_ctrl(row, 0, TableCellCtrl::CUSTOM_1);
+                    }
                 }
             }
         }
+        NavAction::None
     }
 
-    fn update(&mut self) -> Result<(), WidgetError> {
-        Ok(())
+    fn update(&mut self) -> Result<NavAction, WidgetError> {
+        Ok(NavAction::None)
     }
 }
 
@@ -111,4 +120,4 @@ fn u32_to_str(mut n: u32, buf: &mut [u8]) -> usize {
     out
 }
 
-oxivgl_examples_common::example_main!(Table2);
+oxivgl_examples_common::example_main!(Table2::default());

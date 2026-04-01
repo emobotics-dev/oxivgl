@@ -12,6 +12,7 @@
 //! On every KEY event, slider values are synced to the matching roller and
 //! vice-versa, so both controls always reflect the same selection.
 
+use oxivgl::view::NavAction;
 use oxivgl::{
     enums::EventCode,
     event::Event,
@@ -20,16 +21,16 @@ use oxivgl::{
     layout::{FlexAlign, FlexFlow},
     style::lv_pct,
     view::{View, register_event_on},
-    widgets::{Align, Obj, Roller, RollerMode, Screen, Slider, WidgetError},
+    widgets::{Align, Obj, Roller, RollerMode, Slider, WidgetError},
 };
 
+#[derive(Default)]
 struct Gridnav5 {
-    _screen: Screen,
-    _group: Group,
+    _group: Option<Group>,
     sliders: heapless::Vec<Slider<'static>, 3>,
     rollers: heapless::Vec<Roller<'static>, 3>,
-    _cont_top: Obj<'static>,
-    _cont_bot: Obj<'static>,
+    _cont_top: Option<Obj<'static>>,
+    _cont_bot: Option<Obj<'static>>,
 }
 
 /// Roller options and matching slider ranges for each of the three columns.
@@ -41,11 +42,10 @@ const OPTS: [&str; 3] = [
 const COUNTS: [i32; 3] = [6, 10, 3];
 
 impl View for Gridnav5 {
-    fn create() -> Result<Self, WidgetError> {
-        let screen = Screen::active().ok_or(WidgetError::LvglNullPointer)?;
+    fn create(&mut self, container: &Obj<'static>) -> Result<(), WidgetError> {
 
         // ── Top container: sliders, vertical-move-only ────────────────────
-        let cont_top = Obj::new(&screen)?;
+        let cont_top = Obj::new(container)?;
         cont_top
             .set_flex_flow(FlexFlow::Column)
             .set_flex_align(FlexAlign::Center, FlexAlign::Center, FlexAlign::Center)
@@ -62,7 +62,7 @@ impl View for Gridnav5 {
         }
 
         // ── Bottom container: rollers, horizontal-move-only ───────────────
-        let cont_bot = Obj::new(&screen)?;
+        let cont_bot = Obj::new(container)?;
         cont_bot
             .set_flex_flow(FlexFlow::Row)
             .set_flex_align(FlexAlign::Center, FlexAlign::Center, FlexAlign::Center)
@@ -86,94 +86,44 @@ impl View for Gridnav5 {
         group.add_obj(&cont_bot);
         group.assign_to_keyboard_indevs();
 
-        Ok(Self {
-            _screen: screen,
-            _group: group,
-            sliders,
-            rollers,
-            _cont_top: cont_top,
-            _cont_bot: cont_bot,
-        })
+        self._group = Some(group);
+        self.sliders = sliders;
+        self.rollers = rollers;
+        self._cont_top = Some(cont_top);
+        self._cont_bot = Some(cont_bot);
+        Ok(())
     }
 
     fn register_events(&mut self) {
-        register_event_on(self, self._cont_top.handle());
-        register_event_on(self, self._cont_bot.handle());
+        if let Some(ref ct) = self._cont_top { register_event_on(self, ct.handle()); }
+        if let Some(ref cb) = self._cont_bot { register_event_on(self, cb.handle()); }
     }
 
-    fn on_event(&mut self, event: &Event) {
+    fn on_event(&mut self, event: &Event) -> NavAction {
         if event.code() != EventCode::KEY {
-            return;
+            return NavAction::None;
         }
-        // Sync all three slider↔roller pairs on any key event in either
-        // container. The active container determines which direction to sync.
         let target = event.target();
         let target_handle = target.handle();
-        if target_handle == self._cont_top.handle() {
-            // Slider had focus — push slider values to rollers.
+        let ct_handle = self._cont_top.as_ref().map(|c| c.handle());
+        let cb_handle = self._cont_bot.as_ref().map(|c| c.handle());
+        if Some(target_handle) == ct_handle {
             for i in 0..3 {
                 let val = self.sliders[i].get_value() as u32;
                 self.rollers[i].set_selected(val, true);
             }
-        } else if target_handle == self._cont_bot.handle() {
-            // Roller had focus — push roller selections to sliders.
+        } else if Some(target_handle) == cb_handle {
             for i in 0..3 {
                 let sel = self.rollers[i].get_selected() as i32;
                 self.sliders[i].set_value_animated(sel, true);
             }
         }
+        NavAction::None
     }
 
-    fn update(&mut self) -> Result<(), WidgetError> {
-        Ok(())
-    }
-}
-
-// ── Platform entry points ──────────────────────────────────────────────────
-
-#[cfg(target_arch = "xtensa")]
-oxivgl_examples_common::fire27_main!(Gridnav5);
-
-#[cfg(not(target_arch = "xtensa"))]
-fn main() {
-    use oxivgl::driver::LvglDriver;
-    use oxivgl::view::{View, register_view_events};
-    use oxivgl_examples_common::host::{H, W, capture, pump};
-
-    oxivgl_examples_common::env_logger::init();
-    let screenshot_only = std::env::var("SCREENSHOT_ONLY").as_deref() == Ok("1");
-    let driver = if screenshot_only {
-        LvglDriver::init(W, H)
-    } else {
-        LvglDriver::sdl(W, H)
-            .title(c"oxivgl — gridnav 5")
-            .mouse(true)
-            .keyboard(true)
-            .build()
-    };
-    let mut _view = Gridnav5::create().expect("view create failed");
-    register_view_events(&mut _view);
-
-    let src = file!();
-    let name = std::path::Path::new(src)
-        .file_stem()
-        .and_then(|s| s.to_str())
-        .unwrap_or("screenshot");
-    let dir = format!("{}/examples/doc/screenshots", env!("CARGO_MANIFEST_DIR"));
-
-    _view.update().expect("update failed");
-    pump(&driver, 10);
-    capture(&driver, name, &dir);
-
-    if screenshot_only {
-        std::process::exit(0);
-    }
-
-    loop {
-        _view.update().unwrap_or_else(|e| eprintln!("update: {e:?}"));
-        for _ in 0..4 {
-            driver.timer_handler();
-            std::thread::sleep(std::time::Duration::from_millis(8));
-        }
+    fn update(&mut self) -> Result<NavAction, WidgetError> {
+        Ok(NavAction::None)
     }
 }
+
+oxivgl_examples_common::example_main!(Gridnav5::default());

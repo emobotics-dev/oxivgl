@@ -11,18 +11,18 @@
 
 use oxivgl::{
     symbols,
-    view::View,
-    widgets::{Label, Screen, WidgetError, Win},
+    view::{NavAction, View},
+    widgets::{Obj, Label, WidgetError, Win},
 };
 
+#[derive(Default)]
 struct Win1 {
-    _win: Win<'static>,
+    _win: Option<Win<'static>>,
 }
 
 impl View for Win1 {
-    fn create() -> Result<Self, WidgetError> {
-        let screen = Screen::active().ok_or(WidgetError::LvglNullPointer)?;
-        let win = Win::new(&screen)?;
+    fn create(&mut self, container: &Obj<'static>) -> Result<(), WidgetError> {
+        let win = Win::new(container)?;
 
         let _btn1 = win.add_button(&symbols::LEFT, 40);
         let _title = win.add_title("A title");
@@ -47,12 +47,13 @@ impl View for Win1 {
              overflows. :)",
         );
 
-        Ok(Self { _win: win })
+                self._win = Some(win);
+        Ok(())
     }
 
-    fn update(&mut self) -> Result<(), WidgetError> {
-        Ok(())
+    fn update(&mut self) -> Result<NavAction, WidgetError> {
+        Ok(NavAction::None)
     }
 }
 
-oxivgl_examples_common::example_main!(Win1);
+oxivgl_examples_common::example_main!(Win1::default());

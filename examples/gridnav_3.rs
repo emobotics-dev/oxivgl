@@ -14,6 +14,7 @@
 //! Only the containers are in the group; buttons are removed so gridnav
 //! controls focus inside each container.
 
+use oxivgl::view::NavAction;
 use oxivgl::{
     enums::{EventCode, Key, ObjState},
     event::Event,
@@ -22,35 +23,34 @@ use oxivgl::{
     layout::FlexFlow,
     style::{LV_SIZE_CONTENT, Palette, lv_pct, palette_lighten},
     view::{View, register_event_on},
-    widgets::{AsLvHandle, Button, Label, Obj, Screen, WidgetError},
+    widgets::{Button, Label, Obj, WidgetError},
 };
 
+#[derive(Default)]
 struct Gridnav3 {
-    _screen: Screen,
-    _group: Group,
+    _group: Option<Group>,
     // containers kept alive
-    _cont_main: Obj<'static>,
-    _cont_sub1: Obj<'static>,
-    cont_sub2: Obj<'static>,
+    _cont_main: Option<Obj<'static>>,
+    _cont_sub1: Option<Obj<'static>>,
+    cont_sub2: Option<Obj<'static>>,
     // child widgets kept alive
-    _btn1: Button<'static>,
-    _btn1_lbl: Label<'static>,
-    _btn2: Button<'static>,
-    _btn2_lbl: Label<'static>,
-    _sub1_lbl: Label<'static>,
-    _sub2_hint_lbl: Label<'static>,
-    _btn3: Button<'static>,
-    _btn3_lbl: Label<'static>,
-    _btn4: Button<'static>,
-    _btn4_lbl: Label<'static>,
+    _btn1: Option<Button<'static>>,
+    _btn1_lbl: Option<Label<'static>>,
+    _btn2: Option<Button<'static>>,
+    _btn2_lbl: Option<Label<'static>>,
+    _sub1_lbl: Option<Label<'static>>,
+    _sub2_hint_lbl: Option<Label<'static>>,
+    _btn3: Option<Button<'static>>,
+    _btn3_lbl: Option<Label<'static>>,
+    _btn4: Option<Button<'static>>,
+    _btn4_lbl: Option<Label<'static>>,
 }
 
 impl View for Gridnav3 {
-    fn create() -> Result<Self, WidgetError> {
-        let screen = Screen::active().ok_or(WidgetError::LvglNullPointer)?;
+    fn create(&mut self, container: &Obj<'static>) -> Result<(), WidgetError> {
 
         // ── Main container ────────────────────────────────────────────────
-        let cont_main = Obj::new(&screen)?;
+        let cont_main = Obj::new(container)?;
         cont_main
             .set_flex_flow(FlexFlow::RowWrap)
             .style_bg_color(palette_lighten(Palette::Blue, 5), ObjState::FOCUSED)
@@ -119,99 +119,59 @@ impl View for Gridnav3 {
         let btn4_lbl = Label::new(&btn4)?;
         btn4_lbl.text("Button 4");
 
-        Ok(Self {
-            _screen: screen,
-            _group: group,
-            _cont_main: cont_main,
-            _cont_sub1: cont_sub1,
-            cont_sub2,
-            _btn1: btn1,
-            _btn1_lbl: btn1_lbl,
-            _btn2: btn2,
-            _btn2_lbl: btn2_lbl,
-            _sub1_lbl: sub1_lbl,
-            _sub2_hint_lbl: sub2_hint_lbl,
-            _btn3: btn3,
-            _btn3_lbl: btn3_lbl,
-            _btn4: btn4,
-            _btn4_lbl: btn4_lbl,
-        })
+        self._group = Some(group);
+        self._cont_main = Some(cont_main);
+        self._cont_sub1 = Some(cont_sub1);
+        self.cont_sub2 = Some(cont_sub2);
+        self._btn1 = Some(btn1);
+        self._btn1_lbl = Some(btn1_lbl);
+        self._btn2 = Some(btn2);
+        self._btn2_lbl = Some(btn2_lbl);
+        self._sub1_lbl = Some(sub1_lbl);
+        self._sub2_hint_lbl = Some(sub2_hint_lbl);
+        self._btn3 = Some(btn3);
+        self._btn3_lbl = Some(btn3_lbl);
+        self._btn4 = Some(btn4);
+        self._btn4_lbl = Some(btn4_lbl);
+        Ok(())
     }
 
     fn register_events(&mut self) {
         // Receive KEY events from cont_sub2 (no bubble needed — direct registration).
-        register_event_on(self, self.cont_sub2.lv_handle());
+        if let Some(ref cont_sub2) = self.cont_sub2 {
+            register_event_on(self, cont_sub2.handle());
+        }
     }
 
-    fn on_event(&mut self, event: &Event) {
+    fn on_event(&mut self, event: &Event) -> NavAction {
         if event.code() != EventCode::KEY {
-            return;
+            return NavAction::None;
         }
         // Only handle events from cont_sub2.
-        if event.target_handle() != self.cont_sub2.lv_handle() {
-            return;
-        }
-        match event.key() {
-            Some(Key::ENTER) => {
-                self._group.focus_obj(&self.cont_sub2);
+        if let Some(ref cont_sub2) = self.cont_sub2 {
+            if event.target_handle() != cont_sub2.handle() {
+                return NavAction::None;
             }
-            Some(Key::ESC) => {
-                self._group.focus_next();
+            match event.key() {
+                Some(Key::ENTER) => {
+                    if let Some(ref group) = self._group {
+                        group.focus_obj(cont_sub2);
+                    }
+                }
+                Some(Key::ESC) => {
+                    if let Some(ref group) = self._group {
+                        group.focus_next();
+                    }
+                }
+                _ => {}
             }
-            _ => {}
         }
+        NavAction::None
     }
 
-    fn update(&mut self) -> Result<(), WidgetError> {
-        Ok(())
+    fn update(&mut self) -> Result<NavAction, WidgetError> {
+        Ok(NavAction::None)
     }
 }
 
-// ── Platform entry points ──────────────────────────────────────────────────
-
-#[cfg(target_arch = "xtensa")]
-oxivgl_examples_common::fire27_main!(Gridnav3);
-
-#[cfg(not(target_arch = "xtensa"))]
-fn main() {
-    use oxivgl::driver::LvglDriver;
-    use oxivgl::view::{View, register_view_events};
-    use oxivgl_examples_common::host::{H, W, capture, pump};
-
-    oxivgl_examples_common::env_logger::init();
-    let screenshot_only = std::env::var("SCREENSHOT_ONLY").as_deref() == Ok("1");
-    let driver = if screenshot_only {
-        LvglDriver::init(W, H)
-    } else {
-        LvglDriver::sdl(W, H)
-            .title(c"oxivgl — gridnav 3")
-            .mouse(true)
-            .keyboard(true)
-            .build()
-    };
-    let mut _view = Gridnav3::create().expect("view create failed");
-    register_view_events(&mut _view);
-
-    let src = file!();
-    let name = std::path::Path::new(src)
-        .file_stem()
-        .and_then(|s| s.to_str())
-        .unwrap_or("screenshot");
-    let dir = format!("{}/examples/doc/screenshots", env!("CARGO_MANIFEST_DIR"));
-
-    _view.update().expect("update failed");
-    pump(&driver, 10);
-    capture(&driver, name, &dir);
-
-    if screenshot_only {
-        std::process::exit(0);
-    }
-
-    loop {
-        _view.update().unwrap_or_else(|e| eprintln!("update: {e:?}"));
-        for _ in 0..4 {
-            driver.timer_handler();
-            std::thread::sleep(std::time::Duration::from_millis(8));
-        }
-    }
-}
+oxivgl_examples_common::example_main!(Gridnav3::default());

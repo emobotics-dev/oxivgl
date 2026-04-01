@@ -9,34 +9,36 @@
 //! Cogwheel image rotating continuously via `update()`.
 
 use oxivgl::{
-    view::View,
-    widgets::{Image, Screen, WidgetError},
+    view::{NavAction, View},
+    widgets::{Obj, Image, WidgetError},
 };
 
 oxivgl::image_declare!(img_cogwheel_argb);
 
+#[derive(Default)]
 struct WidgetImage3 {
-    img: Image<'static>,
+    img: Option<Image<'static>>,
     angle: i32,
 }
 
 impl View for WidgetImage3 {
-    fn create() -> Result<Self, WidgetError> {
-        let screen = Screen::active().ok_or(WidgetError::LvglNullPointer)?;
+    fn create(&mut self, container: &Obj<'static>) -> Result<(), WidgetError> {
 
-        let img = Image::new(&screen)?;
+        let img = Image::new(container)?;
         img.set_src(img_cogwheel_argb());
         img.center();
         img.set_pivot(50, 50);
 
-        Ok(Self { img, angle: 0 })
+                self.img = Some(img);
+        self.angle = 0;
+        Ok(())
     }
 
-    fn update(&mut self) -> Result<(), WidgetError> {
+    fn update(&mut self) -> Result<NavAction, WidgetError> {
         self.angle = (self.angle + 30) % 3600;
-        self.img.set_rotation(self.angle);
-        Ok(())
+        if let Some(ref img) = self.img { img.set_rotation(self.angle); }
+        Ok(NavAction::None)
     }
 }
 
-oxivgl_examples_common::example_main!(WidgetImage3);
+oxivgl_examples_common::example_main!(WidgetImage3::default());

@@ -13,18 +13,18 @@
 use oxivgl::{
     enums::ScrollDir,
     style::lv_pct,
-    view::View,
-    widgets::{Button, Label, List, Screen, Tileview, WidgetError},
+    view::{NavAction, View},
+    widgets::{Obj, Button, Label, List, Tileview, WidgetError},
 };
 
+#[derive(Default)]
 struct Tileview1 {
-    _tv: Tileview<'static>,
+    _tv: Option<Tileview<'static>>,
 }
 
 impl View for Tileview1 {
-    fn create() -> Result<Self, WidgetError> {
-        let screen = Screen::active().ok_or(WidgetError::LvglNullPointer)?;
-        let tv = Tileview::new(&screen)?;
+    fn create(&mut self, container: &Obj<'static>) -> Result<(), WidgetError> {
+        let tv = Tileview::new(container)?;
 
         // Tile1: just a label
         let tile1 = tv.add_tile(0, 0, ScrollDir::BOTTOM);
@@ -48,12 +48,13 @@ impl View for Tileview1 {
             list.add_button(None, name);
         }
 
-        Ok(Self { _tv: tv })
+                self._tv = Some(tv);
+        Ok(())
     }
 
-    fn update(&mut self) -> Result<(), WidgetError> {
-        Ok(())
+    fn update(&mut self) -> Result<NavAction, WidgetError> {
+        Ok(NavAction::None)
     }
 }
 
-oxivgl_examples_common::example_main!(Tileview1);
+oxivgl_examples_common::example_main!(Tileview1::default());

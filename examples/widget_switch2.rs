@@ -10,39 +10,38 @@
 //! pre-checked.
 
 use oxivgl::{
-    view::View,
+    view::{NavAction, View},
     enums::ObjState,
     layout::{FlexAlign, FlexFlow},
-    widgets::{Screen, Switch, SwitchOrientation, WidgetError},
+    widgets::{Obj, Switch, SwitchOrientation, WidgetError},
 };
 
+#[derive(Default)]
 struct WidgetSwitch2 {
-    _sw1: Switch<'static>,
-    _sw2: Switch<'static>,
+    _sw1: Option<Switch<'static>>,
+    _sw2: Option<Switch<'static>>,
 }
 
 impl View for WidgetSwitch2 {
-    fn create() -> Result<Self, WidgetError> {
-        let screen = Screen::active().ok_or(WidgetError::LvglNullPointer)?;
-        screen.set_flex_flow(FlexFlow::Column);
-        screen.set_flex_align(FlexAlign::Center, FlexAlign::Center, FlexAlign::Center);
+    fn create(&mut self, container: &Obj<'static>) -> Result<(), WidgetError> {
+        container.set_flex_flow(FlexFlow::Column);
+        container.set_flex_align(FlexAlign::Center, FlexAlign::Center, FlexAlign::Center);
 
-        let sw1 = Switch::new(&screen)?;
+        let sw1 = Switch::new(container)?;
 
-        let sw2 = Switch::new(&screen)?;
+        let sw2 = Switch::new(container)?;
         sw2.set_orientation(SwitchOrientation::Vertical);
         sw2.size(50, 120);
         sw2.add_state(ObjState::CHECKED);
 
-        Ok(Self {
-            _sw1: sw1,
-            _sw2: sw2,
-        })
+                self._sw1 = Some(sw1);
+        self._sw2 = Some(sw2);
+        Ok(())
     }
 
-    fn update(&mut self) -> Result<(), WidgetError> {
-        Ok(())
+    fn update(&mut self) -> Result<NavAction, WidgetError> {
+        Ok(NavAction::None)
     }
 }
 
-oxivgl_examples_common::example_main!(WidgetSwitch2);
+oxivgl_examples_common::example_main!(WidgetSwitch2::default());

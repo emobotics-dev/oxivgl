@@ -9,28 +9,29 @@
 //! 100×100 spinner with a 10 s animation cycle and 200° arc.
 
 use oxivgl::{
-    view::View,
-    widgets::{Spinner, WidgetError, Screen},
+    view::{NavAction, View},
+    widgets::{Obj, Spinner, WidgetError},
 };
 
+#[derive(Default)]
 struct Spinner1 {
-    _spinner: Spinner<'static>,
+    _spinner: Option<Spinner<'static>>,
 }
 
 impl View for Spinner1 {
-    fn create() -> Result<Self, WidgetError> {
-        let screen = Screen::active().ok_or(WidgetError::LvglNullPointer)?;
+    fn create(&mut self, container: &Obj<'static>) -> Result<(), WidgetError> {
 
-        let spinner = Spinner::new(&screen)?;
+        let spinner = Spinner::new(container)?;
         spinner.size(100, 100).center();
         spinner.set_anim_params(10000, 200);
 
-        Ok(Self { _spinner: spinner })
+                self._spinner = Some(spinner);
+        Ok(())
     }
 
-    fn update(&mut self) -> Result<(), WidgetError> {
-        Ok(())
+    fn update(&mut self) -> Result<NavAction, WidgetError> {
+        Ok(NavAction::None)
     }
 }
 
-oxivgl_examples_common::example_main!(Spinner1);
+oxivgl_examples_common::example_main!(Spinner1::default());

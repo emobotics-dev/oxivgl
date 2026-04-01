@@ -7,20 +7,23 @@ use crate::widgets::AsLvHandle;
 
 /// Handle to a running LVGL animation (the LVGL-owned copy).
 ///
-/// Returned by [`Anim::start()`]. Valid only while the animation is
-/// running — LVGL frees the copy when the animation completes or the
-/// target widget is deleted.
+/// Returned by [`Anim::start()`]. The handle stores enough information
+/// to look up the animation via `lv_anim_get`, so operations like
+/// [`pause_for`](Self::pause_for) are safe — they silently no-op if the
+/// animation has already completed.
 ///
 /// ```ignore
 /// let mut a = Anim::new();
 /// a.set_var(&obj).set_values(0, 100).set_duration(500)
 ///     .set_exec_cb(Some(anim_set_x));
 /// let handle = a.start();
-/// // SAFETY: animation is still running (just started).
-/// unsafe { handle.pause_for(200) };
+/// handle.pause_for(200);
 /// ```
 pub struct AnimHandle {
-    ptr: *mut lv_anim_t,
+    /// Target variable pointer, used for `lv_anim_get` lookup.
+    var: *mut c_void,
+    /// Exec callback, used for `lv_anim_get` lookup.
+    exec_cb: lv_anim_exec_xcb_t,
 }
 
 impl core::fmt::Debug for AnimHandle {
@@ -33,14 +36,19 @@ impl AnimHandle {
     /// Pause the running animation for `ms` milliseconds.
     ///
     /// The animation resumes automatically after the pause expires.
+    /// If the animation has already completed (or the target widget was
+    /// deleted), this is a no-op.
     ///
-    /// # Safety
-    /// The caller must ensure the animation is still running. LVGL frees
-    /// the internal copy when the animation completes or the target widget
-    /// is deleted — calling this after that point is undefined behaviour.
     /// Must be called from the LVGL task (LVGL is not thread-safe).
-    pub unsafe fn pause_for(&self, ms: u32) {
-        unsafe { lv_anim_pause_for(self.ptr, ms) };
+    pub fn pause_for(&self, ms: u32) {
+        // Look up the animation by (var, exec_cb). Returns null if the
+        // animation has already completed or the widget was deleted.
+        let ptr = unsafe { lv_anim_get(self.var, self.exec_cb) };
+        if !ptr.is_null() {
+            // SAFETY: lv_anim_get returned a valid pointer to a running
+            // animation owned by LVGL's internal list.
+            unsafe { lv_anim_pause_for(ptr, ms) };
+        }
     }
 }
 
@@ -54,6 +62,9 @@ impl AnimHandle {
 pub struct Anim<'w> {
     pub(crate) inner: lv_anim_t,
     _widget: PhantomData<&'w ()>,
+    /// Tracks whether `user_data` holds a bezier pair Box allocation
+    /// that must be freed on repeated `set_bezier3_path` calls.
+    has_bezier_user_data: bool,
 }
 
 impl<'w> core::fmt::Debug for Anim<'w> {
@@ -71,7 +82,7 @@ impl<'w> Anim<'w> {
         // SAFETY: lv_anim_init writes default field values into the zeroed
         // struct. No other LVGL state is required.
         unsafe { lv_anim_init(&mut inner) };
-        Self { inner, _widget: PhantomData }
+        Self { inner, _widget: PhantomData, has_bezier_user_data: false }
     }
 
     /// Set the animated variable (the raw `lv_obj_t*` pointer).
@@ -149,38 +160,61 @@ impl<'w> Anim<'w> {
     /// The atomics must be `'static` because LVGL copies the animation
     /// descriptor and may read the pointers after this `Anim` is dropped.
     ///
-    /// **Leak:** Each call allocates 16 bytes via `Box::leak` (never reclaimed).
-    /// Acceptable on embedded where animations are long-lived.
+    /// **Leak:** Each call allocates 16 bytes via `Box::into_raw` (freed only
+    /// if `set_bezier3_path` is called again on the same `Anim`). Acceptable
+    /// on embedded where animations are typically long-lived.
     pub fn set_bezier3_path(
         &mut self,
         p1: &'static AtomicI32,
         p2: &'static AtomicI32,
     ) -> &mut Self {
+        // Free any previous bezier pair allocation from a prior call.
+        if self.has_bezier_user_data {
+            // SAFETY: has_bezier_user_data is only set when user_data
+            // points to a Box::into_raw allocation of [*const AtomicI32; 2].
+            unsafe {
+                drop(alloc::boxed::Box::from_raw(
+                    self.inner.user_data as *mut [*const AtomicI32; 2],
+                ));
+            }
+        }
         // Pack the two pointers into user_data. Since AtomicI32 refs are
         // 'static, the pointers remain valid for the animation lifetime.
         // We use a leaked Box to hold the pair because LVGL copies the
         // animation descriptor (including the user_data pointer) in
         // lv_anim_start(). Both the original and the LVGL-owned copy must
-        // point to the same stable allocation. Leak is intentional: the
-        // Box is small (2 pointers, 16 bytes on 64-bit) and lives for
-        // the process lifetime — acceptable on embedded.
+        // point to the same stable allocation.
         let pair = alloc::boxed::Box::into_raw(alloc::boxed::Box::new([
             p1 as *const AtomicI32,
             p2 as *const AtomicI32,
         ]));
         self.inner.user_data = pair as *mut c_void;
+        self.has_bezier_user_data = true;
         unsafe { lv_anim_set_path_cb(&mut self.inner, Some(bezier3_path_cb)) };
         self
     }
 
     /// Start the animation. LVGL copies the descriptor internally.
     ///
-    /// Returns a handle to the running (LVGL-owned) copy. The handle is
-    /// valid only while the animation is active.
+    /// Returns a handle that can look up the running animation by
+    /// `(var, exec_cb)`. The handle's operations are no-ops once the
+    /// animation completes.
+    ///
+    /// # Panics
+    ///
+    /// Panics if [`set_var`](Self::set_var) was not called — LVGL would
+    /// pass a null pointer to the exec callback, causing undefined behaviour.
     pub fn start(&self) -> AnimHandle {
+        assert!(
+            !self.inner.var.is_null(),
+            "Anim::start() called without set_var() — would pass null to exec callback"
+        );
         let ptr = unsafe { lv_anim_start(&self.inner) };
         assert!(!ptr.is_null(), "lv_anim_start returned NULL");
-        AnimHandle { ptr }
+        AnimHandle {
+            var: self.inner.var,
+            exec_cb: self.inner.exec_cb,
+        }
     }
 }
 

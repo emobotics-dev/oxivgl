@@ -15,8 +15,8 @@ use oxivgl::{
     draw::{Area, DrawRectDsc},
     draw_buf::{ColorFormat, DrawBuf},
     style::{GradDir, Selector, StyleBuilder, color_black, color_white},
-    view::View,
-    widgets::{Canvas, Part, Roller, RollerMode, Screen, WidgetError},
+    view::{NavAction, View},
+    widgets::{Obj, Canvas, Part, Roller, RollerMode, WidgetError},
 };
 
 const MASK_W: u32 = 130;
@@ -51,15 +51,15 @@ fn generate_mask(buf: &DrawBuf) {
     });
 }
 
+#[derive(Default)]
 struct WidgetRoller3 {
-    _mask: alloc::boxed::Box<DrawBuf>,
-    _roller: Roller<'static>,
+    _mask: Option<alloc::boxed::Box<DrawBuf>>,
+    _roller: Option<Roller<'static>>,
 }
 
 impl View for WidgetRoller3 {
-    fn create() -> Result<Self, WidgetError> {
-        let screen = Screen::active().ok_or(WidgetError::LvglNullPointer)?;
-        screen.bg_color(0x607D8B); // LV_PALETTE_BLUE_GREY
+    fn create(&mut self, container: &Obj<'static>) -> Result<(), WidgetError> {
+        container.bg_color(0x607D8B); // LV_PALETTE_BLUE_GREY
 
         let mut sb = StyleBuilder::new();
         sb.bg_color(color_black())
@@ -68,7 +68,7 @@ impl View for WidgetRoller3 {
             .radius(0);
         let style = sb.build();
 
-        let roller = Roller::new(&screen)?;
+        let roller = Roller::new(container)?;
         roller.add_style(&style, Selector::DEFAULT);
         roller.bg_opa_selector(50, Part::Selected);
         roller.set_options(
@@ -97,12 +97,14 @@ impl View for WidgetRoller3 {
         // SAFETY: mask is stored in Self._mask (Box) and outlives the roller.
         unsafe { roller.style_bitmap_mask_src(&mask, Selector::DEFAULT) };
 
-        Ok(Self { _mask: mask, _roller: roller })
+                self._mask = Some(mask);
+        self._roller = Some(roller);
+        Ok(())
     }
 
-    fn update(&mut self) -> Result<(), WidgetError> {
-        Ok(())
+    fn update(&mut self) -> Result<NavAction, WidgetError> {
+        Ok(NavAction::None)
     }
 }
 
-oxivgl_examples_common::example_main!(WidgetRoller3);
+oxivgl_examples_common::example_main!(WidgetRoller3::default());

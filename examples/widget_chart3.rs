@@ -11,20 +11,19 @@
 
 use oxivgl::{
     style::Selector,
-    view::View,
-    widgets::{Chart, ChartAxis, ChartType, Screen, WidgetError},
+    view::{NavAction, View},
+    widgets::{Obj, Chart, ChartAxis, ChartType, WidgetError},
 };
 
+#[derive(Default)]
 struct WidgetChart3 {
-    _screen: Screen,
-    _chart: Chart<'static>,
+    _chart: Option<Chart<'static>>,
 }
 
 impl View for WidgetChart3 {
-    fn create() -> Result<Self, WidgetError> {
-        let screen = Screen::active().ok_or(WidgetError::LvglNullPointer)?;
+    fn create(&mut self, container: &Obj<'static>) -> Result<(), WidgetError> {
 
-        let chart = Chart::new(&screen)?;
+        let chart = Chart::new(container)?;
         chart.size(280, 180);
         chart.center();
         chart.set_type(ChartType::Stacked);
@@ -50,15 +49,13 @@ impl View for WidgetChart3 {
             chart.set_next_value(&ser3, v);
         }
 
-        Ok(Self {
-            _screen: screen,
-            _chart: chart,
-        })
+        self._chart = Some(chart);
+        Ok(())
     }
 
-    fn update(&mut self) -> Result<(), WidgetError> {
-        Ok(())
+    fn update(&mut self) -> Result<NavAction, WidgetError> {
+        Ok(NavAction::None)
     }
 }
 
-oxivgl_examples_common::example_main!(WidgetChart3);
+oxivgl_examples_common::example_main!(WidgetChart3::default());

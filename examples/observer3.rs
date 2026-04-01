@@ -25,7 +25,7 @@ use oxivgl::{
     event::Event,
     fonts::MONTSERRAT_30,
     style::{LV_SIZE_CONTENT, lv_pct},
-    view::View,
+    view::{NavAction, View},
     widgets::{Align, AsLvHandle, Button, Child, Dropdown, Label, Obj, Roller, RollerMode, Screen, Subject, WidgetError},
 };
 
@@ -44,24 +44,24 @@ const MINUTE_OPTIONS: &str =
      \n31\n32\n33\n34\n35\n36\n37\n38\n39\n40\n41\n42\n43\n44\n45\
      \n46\n47\n48\n49\n50\n51\n52\n53\n54\n55\n56\n57\n58\n59";
 
+#[derive(Default)]
 struct Observer3 {
-    time_label: Label<'static>,
-    set_btn: Button<'static>,
+    time_label: Option<Label<'static>>,
+    set_btn: Option<Button<'static>>,
     panel: Option<Obj<'static>>,
     hour_roller: Option<Child<Roller<'static>>>,
     close_btn_handle: *mut c_void,
     last_format: i32,
     // Subjects last — drop after widgets so observers removed before deinit.
-    hour_subject: Subject,
-    minute_subject: Subject,
-    format_subject: Subject,
-    am_pm_subject: Subject,
-    _time_subject: Subject,
+    hour_subject: Option<Subject>,
+    minute_subject: Option<Subject>,
+    format_subject: Option<Subject>,
+    am_pm_subject: Option<Subject>,
+    _time_subject: Option<Subject>,
 }
 
 impl View for Observer3 {
-    fn create() -> Result<Self, WidgetError> {
-        let screen = Screen::active().ok_or(WidgetError::LvglNullPointer)?;
+    fn create(&mut self, container: &Obj<'static>) -> Result<(), WidgetError> {
 
         // Subjects.
         let hour_subject = Subject::new_int(7);
@@ -76,11 +76,11 @@ impl View for Observer3 {
         ]);
 
         // Time display label.
-        let time_label = Label::new(&screen)?;
+        let time_label = Label::new(container)?;
         time_label.text_font(MONTSERRAT_30).pos(24, 24);
 
         // Set button — opens the settings panel.
-        let set_btn = Button::new(&screen)?;
+        let set_btn = Button::new(container)?;
         set_btn.pos(180, 24);
         let set_lbl = Child::new(Label::new(&set_btn)?);
         set_lbl.text("Set").center();
@@ -90,34 +90,40 @@ impl View for Observer3 {
         minute_subject.set_int(30);
         am_pm_subject.set_int(1); // PM
 
-        Ok(Self {
-            time_label,
-            set_btn,
-            panel: None,
-            hour_roller: None,
-            close_btn_handle: null_mut(),
-            last_format: TIME_FORMAT_12,
-            hour_subject,
-            minute_subject,
-            format_subject,
-            am_pm_subject,
-            _time_subject: time_subject,
-        })
+        self.time_label = Some(time_label);
+        self.set_btn = Some(set_btn);
+        self.panel = None;
+        self.hour_roller = None;
+        self.close_btn_handle = null_mut();
+        self.last_format = TIME_FORMAT_12;
+        self.hour_subject = Some(hour_subject);
+        self.minute_subject = Some(minute_subject);
+        self.format_subject = Some(format_subject);
+        self.am_pm_subject = Some(am_pm_subject);
+        self._time_subject = Some(time_subject);
+        Ok(())
     }
 
-    fn on_event(&mut self, event: &Event) {
+    fn on_event(&mut self, event: &Event) -> NavAction {
         // Set button clicked — open settings panel.
-        if event.matches(&self.set_btn, EventCode::CLICKED) && self.panel.is_none() {
-            self.set_btn.add_state(ObjState::DISABLED);
+        let set_btn_match = if let Some(ref btn) = self.set_btn {
+            event.matches(btn, EventCode::CLICKED)
+        } else {
+            false
+        };
+        if set_btn_match && self.panel.is_none() {
+            if let Some(ref btn) = self.set_btn {
+                btn.add_state(ObjState::DISABLED);
+            }
 
             let screen = match Screen::active() {
                 Some(s) => s,
-                None => return,
+                None => return NavAction::None,
             };
 
             let cont = match Obj::new(&screen) {
                 Ok(o) => o,
-                Err(_) => return,
+                Err(_) => return NavAction::None,
             };
             cont.size(lv_pct(100), LV_SIZE_CONTENT)
                 .align(Align::BottomMid, 0, 0);
@@ -125,7 +131,7 @@ impl View for Observer3 {
             // Hour roller — options updated on format change.
             let hour_roller = match Roller::new(&cont) {
                 Ok(r) => Child::new(r),
-                Err(_) => return,
+                Err(_) => return NavAction::None,
             };
             hour_roller
                 .add_flag(ObjFlag::FLEX_IN_NEW_TRACK)
@@ -133,48 +139,48 @@ impl View for Observer3 {
             hour_roller
                 .set_options(HOUR12_OPTIONS, RollerMode::Normal)
                 .set_visible_row_count(3);
-            hour_roller.bind_value(&self.hour_subject);
+            if let Some(ref subj) = self.hour_subject { hour_roller.bind_value(subj); }
 
             // Minute roller.
             let min_roller = match Roller::new(&cont) {
                 Ok(r) => Child::new(r),
-                Err(_) => return,
+                Err(_) => return NavAction::None,
             };
             min_roller
                 .set_options(MINUTE_OPTIONS, RollerMode::Normal)
                 .set_visible_row_count(3)
                 .pos(64, 0);
-            min_roller.bind_value(&self.minute_subject);
+            if let Some(ref subj) = self.minute_subject { min_roller.bind_value(subj); }
 
             // Format dropdown (12/24).
             let format_dd = match Dropdown::new(&cont) {
                 Ok(d) => Child::new(d),
-                Err(_) => return,
+                Err(_) => return NavAction::None,
             };
             format_dd.set_options("12\n24").pos(128, 0).size(80, 40);
-            format_dd.bind_value(&self.format_subject);
+            if let Some(ref subj) = self.format_subject { format_dd.bind_value(subj); }
 
             // AM/PM dropdown — disabled in 24-hour mode.
             let ampm_dd = match Dropdown::new(&cont) {
                 Ok(d) => Child::new(d),
-                Err(_) => return,
+                Err(_) => return NavAction::None,
             };
             ampm_dd
                 .set_options("am\npm")
                 .pos(128, 48)
                 .size(80, 40);
-            ampm_dd.bind_value(&self.am_pm_subject);
-            ampm_dd.bind_state_if_eq(&self.format_subject, ObjState::DISABLED, TIME_FORMAT_24);
+            if let Some(ref subj) = self.am_pm_subject { ampm_dd.bind_value(subj); }
+            if let Some(ref subj) = self.format_subject { ampm_dd.bind_state_if_eq(subj, ObjState::DISABLED, TIME_FORMAT_24); }
 
             // Close button — bubbles CLICKED to screen for on_event matching.
             let close_btn = match Button::new(&cont) {
                 Ok(b) => Child::new(b),
-                Err(_) => return,
+                Err(_) => return NavAction::None,
             };
             close_btn.align(Align::TopRight, 0, 0).bubble_events();
             let close_lbl = match Label::new(&*close_btn) {
                 Ok(l) => Child::new(l),
-                Err(_) => return,
+                Err(_) => return NavAction::None,
             };
             close_lbl.text("X");
 
@@ -193,16 +199,17 @@ impl View for Observer3 {
             // but the pointer becomes dangling once LVGL cascade-deletes.
             self.hour_roller = None;
             self.panel = None;
-            self.set_btn.remove_state(ObjState::DISABLED);
+            if let Some(ref btn) = self.set_btn { btn.remove_state(ObjState::DISABLED); }
         }
+        NavAction::None
     }
 
-    fn update(&mut self) -> Result<(), WidgetError> {
+    fn update(&mut self) -> Result<NavAction, WidgetError> {
         // Format time label by polling subjects.
-        let hour = self.hour_subject.get_int();
-        let minute = self.minute_subject.get_int();
-        let format = self.format_subject.get_int();
-        let am_pm = self.am_pm_subject.get_int();
+        let hour = self.hour_subject.as_ref().map(|s| s.get_int()).unwrap_or(0);
+        let minute = self.minute_subject.as_ref().map(|s| s.get_int()).unwrap_or(0);
+        let format = self.format_subject.as_ref().map(|s| s.get_int()).unwrap_or(0);
+        let am_pm = self.am_pm_subject.as_ref().map(|s| s.get_int()).unwrap_or(0);
 
         let mut buf: HString<32> = HString::new();
         if format == TIME_FORMAT_24 {
@@ -211,7 +218,7 @@ impl View for Observer3 {
             let suffix = if am_pm == TIME_AM { "am" } else { "pm" };
             let _ = write!(buf, "{:02}:{:02} {}", hour + 1, minute, suffix);
         }
-        self.time_label.text(&buf);
+        if let Some(ref label) = self.time_label { label.text(&buf); }
 
         // Swap hour roller options when 12/24-hour format changes.
         if format != self.last_format {
@@ -232,8 +239,8 @@ impl View for Observer3 {
             }
         }
 
-        Ok(())
+        Ok(NavAction::None)
     }
 }
 
-oxivgl_examples_common::example_main!(Observer3);
+oxivgl_examples_common::example_main!(Observer3::default());

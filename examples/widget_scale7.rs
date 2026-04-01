@@ -10,13 +10,14 @@
 //! tick label with a rainbow palette and reformats the numeric text as a
 //! one-decimal float.
 
+use oxivgl::view::NavAction;
 use oxivgl::{
     draw::DrawTask,
     enums::EventCode,
     event::Event,
     style::{lv_pct, palette_main, Palette},
     view::{register_event_on, View},
-    widgets::{Part, Scale, ScaleMode, Screen, WidgetError},
+    widgets::{Obj, Part, Scale, ScaleMode, WidgetError},
 };
 
 const RAINBOW: [Palette; 7] = [
@@ -29,8 +30,9 @@ const RAINBOW: [Palette; 7] = [
     Palette::Purple,
 ];
 
+#[derive(Default)]
 struct WidgetScale7 {
-    scale: Scale<'static>,
+    scale: Option<Scale<'static>>,
 }
 
 impl WidgetScale7 {
@@ -40,9 +42,10 @@ impl WidgetScale7 {
             return;
         }
         let Some(label_dsc) = draw_task.label_dsc() else { return };
+        let Some(ref scale) = self.scale else { return };
 
         // Color each major tick label by index.
-        let major_every = self.scale.get_major_tick_every() as u32;
+        let major_every = scale.get_major_tick_every() as u32;
         if major_every > 0 {
             let color_idx = (base.id1 / major_every) as usize;
             if color_idx < RAINBOW.len() {
@@ -71,10 +74,9 @@ impl WidgetScale7 {
 }
 
 impl View for WidgetScale7 {
-    fn create() -> Result<Self, WidgetError> {
-        let screen = Screen::active().ok_or(WidgetError::LvglNullPointer)?;
+    fn create(&mut self, container: &Obj<'static>) -> Result<(), WidgetError> {
 
-        let scale = Scale::new(&screen)?;
+        let scale = Scale::new(container)?;
         scale.size(lv_pct(80), 100);
         scale.set_mode(ScaleMode::HorizontalBottom);
         scale.center();
@@ -89,24 +91,26 @@ impl View for WidgetScale7 {
 
         scale.send_draw_task_events();
 
-        Ok(Self { scale })
+                self.scale = Some(scale);
+        Ok(())
     }
 
     fn register_events(&mut self) {
-        register_event_on(self, self.scale.handle());
+        if let Some(ref scale) = self.scale { register_event_on(self, scale.handle()); }
     }
 
-    fn on_event(&mut self, event: &Event) {
+    fn on_event(&mut self, event: &Event) -> NavAction {
         if event.code() == EventCode::DRAW_TASK_ADDED {
             if let Some(draw_task) = event.draw_task() {
                 self.handle_draw_task(&draw_task);
             }
         }
+        NavAction::None
     }
 
-    fn update(&mut self) -> Result<(), WidgetError> {
-        Ok(())
+    fn update(&mut self) -> Result<NavAction, WidgetError> {
+        Ok(NavAction::None)
     }
 }
 
-oxivgl_examples_common::example_main!(WidgetScale7);
+oxivgl_examples_common::example_main!(WidgetScale7::default());

@@ -8,21 +8,21 @@
 
 use oxivgl::{
     layout::FlexFlow,
-    view::View,
-    widgets::{Label, Obj, Screen, WidgetError},
+    view::{NavAction, View},
+    widgets::{Label, Obj, WidgetError},
 };
 
+#[derive(Default)]
 struct Flex4 {
-    _cont: Obj<'static>,
+    _cont: Option<Obj<'static>>,
     _items: heapless::Vec<Obj<'static>, 6>,
     _labels: heapless::Vec<Label<'static>, 6>,
 }
 
 impl View for Flex4 {
-    fn create() -> Result<Self, WidgetError> {
-        let screen = Screen::active().ok_or(WidgetError::LvglNullPointer)?;
+    fn create(&mut self, container: &Obj<'static>) -> Result<(), WidgetError> {
 
-        let cont = Obj::new(&screen)?;
+        let cont = Obj::new(container)?;
         cont.size(300, 220).center();
         cont.set_flex_flow(FlexFlow::ColumnReverse);
 
@@ -42,16 +42,15 @@ impl View for Flex4 {
             let _ = labels.push(label);
         }
 
-        Ok(Self {
-            _cont: cont,
-            _items: items,
-            _labels: labels,
-        })
+                self._cont = Some(cont);
+        self._items = items;
+        self._labels = labels;
+        Ok(())
     }
 
-    fn update(&mut self) -> Result<(), WidgetError> {
-        Ok(())
+    fn update(&mut self) -> Result<NavAction, WidgetError> {
+        Ok(NavAction::None)
     }
 }
 
-oxivgl_examples_common::example_main!(Flex4);
+oxivgl_examples_common::example_main!(Flex4::default());

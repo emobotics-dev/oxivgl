@@ -47,15 +47,30 @@ pub use async_button;
 #[cfg(target_arch = "xtensa")]
 pub use oxivgl_sys;
 
-/// Generate a `main` function for the given [`oxivgl::view::View`] type,
+/// Generate a `main` function for the given [`oxivgl::view::View`] instance,
 /// selecting the correct backend at compile time.
 #[macro_export]
 macro_rules! example_main {
-    ($View:ty) => {
+    ($view_expr:expr) => {
         #[cfg(target_arch = "xtensa")]
-        $crate::fire27_main!($View);
+        $crate::fire27_main!($view_expr);
 
         #[cfg(not(target_arch = "xtensa"))]
-        $crate::host_main!($View);
+        $crate::host_main!($view_expr);
+    };
+}
+
+/// Generate a `main` function for a **multi-screen navigation** example.
+///
+/// Like [`example_main!`] but uses a [`Navigator`] to process
+/// [`NavAction`] values, enabling push/pop/replace/modal transitions.
+#[macro_export]
+macro_rules! example_main_nav {
+    ($view_expr:expr) => {
+        #[cfg(target_arch = "xtensa")]
+        $crate::fire27_main_nav!($view_expr);
+
+        #[cfg(not(target_arch = "xtensa"))]
+        $crate::host_main_nav!($view_expr);
     };
 }

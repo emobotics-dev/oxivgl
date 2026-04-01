@@ -7,29 +7,30 @@
 //! Getting Started 1 — Hello World
 
 use oxivgl::{
-    view::View,
-    widgets::{Align, Label, Screen, WidgetError},
+    view::{NavAction, View},
+    widgets::{Obj, Align, Label, WidgetError},
 };
 
+#[derive(Default)]
 struct GettingStarted1 {
-    _label: Label<'static>,
+    _label: Option<Label<'static>>,
 }
 
 impl View for GettingStarted1 {
-    fn create() -> Result<Self, WidgetError> {
-        let screen = Screen::active().ok_or(WidgetError::LvglNullPointer)?;
-        screen.bg_color(0x003a57).bg_opa(255);
-        screen.text_color(0xffffff);
+    fn create(&mut self, container: &Obj<'static>) -> Result<(), WidgetError> {
+        container.bg_color(0x003a57).bg_opa(255);
+        container.text_color(0xffffff);
 
-        let label = Label::new(&screen)?;
+        let label = Label::new(container)?;
         label.text("Hello world").align(Align::Center, 0, 0);
 
-        Ok(Self { _label: label })
+                self._label = Some(label);
+        Ok(())
     }
 
-    fn update(&mut self) -> Result<(), WidgetError> {
-        Ok(())
+    fn update(&mut self) -> Result<NavAction, WidgetError> {
+        Ok(NavAction::None)
     }
 }
 
-oxivgl_examples_common::example_main!(GettingStarted1);
+oxivgl_examples_common::example_main!(GettingStarted1::default());

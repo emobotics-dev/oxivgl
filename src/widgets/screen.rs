@@ -163,6 +163,9 @@ impl Screen {
     /// Same lifetime contract as [`add_style`](Self::add_style) — the style Rc
     /// clone is intentionally leaked on drop because the LVGL screen outlives
     /// this non-owning handle.
+    ///
+    /// The subject should outlive the screen. Both drop orders are safe
+    /// (see [`Subject`](super::subject::Subject) docs).
     pub fn bind_style(
         &self,
         style: &Style,
@@ -194,6 +197,112 @@ impl Screen {
         };
         self
     }
+
+    /// Create a new LVGL screen object (a root-level widget with no parent).
+    ///
+    /// Returns an owned [`Obj`](super::obj::Obj) that the caller manages.
+    /// Use this for navigator-managed screens where normal `Obj::drop`
+    /// cleanup is desired (no intentional style leaking).
+    pub fn create() -> super::obj::Obj<'static> {
+        // SAFETY: lv_obj_create(NULL) creates a root-level screen object.
+        // Safe after lv_init().
+        let handle = unsafe { lv_obj_create(core::ptr::null_mut()) };
+        assert!(!handle.is_null(), "lv_obj_create(NULL) returned NULL");
+        super::obj::Obj::from_raw(handle)
+    }
+
+    /// Get the system layer — a global overlay above the top layer.
+    ///
+    /// Returns a non-owning handle. The system layer is owned by LVGL and
+    /// must never be deleted.
+    ///
+    /// **Warning:** Styles added to the returned `Child` handle will **not**
+    /// be freed, because `Child` suppresses `Drop`. If you add styles to
+    /// the system layer, they leak for the process lifetime.
+    pub fn layer_sys() -> super::child::Child<super::obj::Obj<'static>> {
+        // SAFETY: lv_layer_sys() returns a valid global object after lv_init().
+        let handle = unsafe { lv_layer_sys() };
+        assert!(!handle.is_null(), "lv_layer_sys returned NULL");
+        super::child::Child::new(super::obj::Obj::from_raw(handle))
+    }
+
+    /// Load a screen with an animated transition.
+    ///
+    /// `scr` becomes the new active screen. The previous screen is
+    /// optionally deleted after the animation completes (`auto_del`).
+    pub fn load(
+        scr: &impl AsLvHandle,
+        anim: &ScreenAnim,
+        auto_del: bool,
+    ) {
+        // SAFETY: scr handle is non-null (enforced by AsLvHandle contract).
+        unsafe {
+            lv_screen_load_anim(
+                scr.lv_handle(),
+                anim.anim_type as lv_screen_load_anim_t,
+                anim.duration_ms,
+                anim.delay_ms,
+                auto_del,
+            );
+        }
+    }
+
+    /// Load a screen instantly with no animation.
+    pub fn load_instant(scr: &impl AsLvHandle) {
+        // SAFETY: scr handle is non-null (enforced by AsLvHandle contract).
+        unsafe { lv_screen_load(scr.lv_handle()) };
+    }
+}
+
+/// Screen transition animation type.
+///
+/// Mirrors `lv_screen_load_anim_t`. Used with [`Screen::load`].
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[repr(u32)]
+pub enum ScreenAnimType {
+    /// No animation — instant switch.
+    None = lv_screen_load_anim_t_LV_SCREEN_LOAD_ANIM_NONE,
+    /// New screen slides in from the left, covering the old one.
+    OverLeft = lv_screen_load_anim_t_LV_SCREEN_LOAD_ANIM_OVER_LEFT,
+    /// New screen slides in from the right, covering the old one.
+    OverRight = lv_screen_load_anim_t_LV_SCREEN_LOAD_ANIM_OVER_RIGHT,
+    /// New screen slides in from the top, covering the old one.
+    OverTop = lv_screen_load_anim_t_LV_SCREEN_LOAD_ANIM_OVER_TOP,
+    /// New screen slides in from the bottom, covering the old one.
+    OverBottom = lv_screen_load_anim_t_LV_SCREEN_LOAD_ANIM_OVER_BOTTOM,
+    /// Both screens move left together.
+    MoveLeft = lv_screen_load_anim_t_LV_SCREEN_LOAD_ANIM_MOVE_LEFT,
+    /// Both screens move right together.
+    MoveRight = lv_screen_load_anim_t_LV_SCREEN_LOAD_ANIM_MOVE_RIGHT,
+    /// Both screens move up together.
+    MoveTop = lv_screen_load_anim_t_LV_SCREEN_LOAD_ANIM_MOVE_TOP,
+    /// Both screens move down together.
+    MoveBottom = lv_screen_load_anim_t_LV_SCREEN_LOAD_ANIM_MOVE_BOTTOM,
+    /// New screen fades in over the old one.
+    FadeIn = lv_screen_load_anim_t_LV_SCREEN_LOAD_ANIM_FADE_IN,
+    /// Old screen fades out, revealing the new one.
+    FadeOut = lv_screen_load_anim_t_LV_SCREEN_LOAD_ANIM_FADE_OUT,
+    /// Old screen slides out to the left, revealing the new one.
+    OutLeft = lv_screen_load_anim_t_LV_SCREEN_LOAD_ANIM_OUT_LEFT,
+    /// Old screen slides out to the right, revealing the new one.
+    OutRight = lv_screen_load_anim_t_LV_SCREEN_LOAD_ANIM_OUT_RIGHT,
+    /// Old screen slides out upward, revealing the new one.
+    OutTop = lv_screen_load_anim_t_LV_SCREEN_LOAD_ANIM_OUT_TOP,
+    /// Old screen slides out downward, revealing the new one.
+    OutBottom = lv_screen_load_anim_t_LV_SCREEN_LOAD_ANIM_OUT_BOTTOM,
+}
+
+/// Screen transition animation parameters.
+///
+/// Used with [`Screen::load`] to control how screen transitions look.
+#[derive(Debug, Clone, Copy)]
+pub struct ScreenAnim {
+    /// Animation type (slide, fade, move, etc.).
+    pub anim_type: ScreenAnimType,
+    /// Duration in milliseconds.
+    pub duration_ms: u32,
+    /// Delay before animation starts, in milliseconds.
+    pub delay_ms: u32,
 }
 
 impl Drop for Screen {

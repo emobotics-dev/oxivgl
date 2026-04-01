@@ -7,40 +7,48 @@
 //! Observer 1 — Slider bound to a temperature label via a Subject
 
 use oxivgl::{
-    view::View,
-    widgets::{Align, Label, Screen, Slider, Subject, WidgetError},
+    view::{NavAction, View},
+    widgets::{Obj, Align, Label, Slider, Subject, WidgetError},
 };
 
 struct Observer1 {
-    _slider: Slider<'static>,
-    _label: Label<'static>,
-    _subject: Subject, // last — drop after widgets
+    _slider: Option<Slider<'static>>,
+    _label: Option<Label<'static>>,
+    _subject: Option<Subject>, // last — drop after widgets
+}
+
+impl Observer1 {
+    fn new() -> Self {
+        Self {
+            _slider: None,
+            _label: None,
+            _subject: None,
+        }
+    }
 }
 
 impl View for Observer1 {
-    fn create() -> Result<Self, WidgetError> {
-        let screen = Screen::active().ok_or(WidgetError::LvglNullPointer)?;
+    fn create(&mut self, container: &Obj<'static>) -> Result<(), WidgetError> {
 
         let subject = Subject::new_int(28);
 
-        let slider = Slider::new(&screen)?;
+        let slider = Slider::new(container)?;
         slider.set_range(0, 100).align(Align::Center, 0, 0);
         slider.bind_value(&subject);
 
-        let label = Label::new(&screen)?;
+        let label = Label::new(container)?;
         label.align(Align::Center, 0, 30);
         label.bind_text(&subject, c"%d \u{00b0}C");
 
-        Ok(Self {
-            _slider: slider,
-            _label: label,
-            _subject: subject,
-        })
+                self._slider = Some(slider);
+        self._label = Some(label);
+        self._subject = Some(subject);
+        Ok(())
     }
 
-    fn update(&mut self) -> Result<(), WidgetError> {
-        Ok(())
+    fn update(&mut self) -> Result<NavAction, WidgetError> {
+        Ok(NavAction::None)
     }
 }
 
-oxivgl_examples_common::example_main!(Observer1);
+oxivgl_examples_common::example_main!(Observer1::new());

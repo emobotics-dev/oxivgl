@@ -10,24 +10,24 @@
 //! percentage and follows the arc's edge.
 
 use oxivgl::{
-    view::View,
+    view::{NavAction, View},
     enums::EventCode,
     event::Event,
-    widgets::{Arc, Label, Screen, WidgetError},
+    widgets::{Obj, Arc, Label, WidgetError},
 };
 
+#[derive(Default)]
 struct WidgetArc1 {
-    arc: Arc<'static>,
-    label: Label<'static>,
+    arc: Option<Arc<'static>>,
+    label: Option<Label<'static>>,
 }
 
 impl View for WidgetArc1 {
-    fn create() -> Result<Self, WidgetError> {
-        let screen = Screen::active().ok_or(WidgetError::LvglNullPointer)?;
+    fn create(&mut self, container: &Obj<'static>) -> Result<(), WidgetError> {
 
-        let label = Label::new(&screen)?;
+        let label = Label::new(container)?;
 
-        let arc = Arc::new(&screen)?;
+        let arc = Arc::new(container)?;
         arc.size(150, 150);
         arc.set_rotation(135);
         arc.set_bg_angles(0, 270);
@@ -41,22 +41,29 @@ impl View for WidgetArc1 {
         label.text(&buf);
         arc.rotate_obj_to_angle(&label, 25);
 
-        Ok(Self { arc, label })
-    }
-
-    fn on_event(&mut self, event: &Event) {
-        if event.matches(&self.arc, EventCode::VALUE_CHANGED) {
-            let v = self.arc.get_value_raw();
-            let mut buf = heapless::String::<8>::new();
-            let _ = core::fmt::Write::write_fmt(&mut buf, format_args!("{}%", v));
-            self.label.text(&buf);
-            self.arc.rotate_obj_to_angle(&self.label, 25);
-        }
-    }
-
-    fn update(&mut self) -> Result<(), WidgetError> {
+                self.arc = Some(arc);
+        self.label = Some(label);
         Ok(())
+    }
+
+    fn on_event(&mut self, event: &Event) -> NavAction {
+        if let Some(ref arc) = self.arc {
+            if event.matches(arc, EventCode::VALUE_CHANGED) {
+                let v = arc.get_value_raw();
+                let mut buf = heapless::String::<8>::new();
+                let _ = core::fmt::Write::write_fmt(&mut buf, format_args!("{}%", v));
+                if let Some(ref label) = self.label {
+                    label.text(&buf);
+                    arc.rotate_obj_to_angle(label, 25);
+                }
+            }
+        }
+        NavAction::None
+    }
+
+    fn update(&mut self) -> Result<NavAction, WidgetError> {
+        Ok(NavAction::None)
     }
 }
 
-oxivgl_examples_common::example_main!(WidgetArc1);
+oxivgl_examples_common::example_main!(WidgetArc1::default());

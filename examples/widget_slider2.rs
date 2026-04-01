@@ -15,25 +15,25 @@ use oxivgl::{
         color_make, palette_darken, palette_main, props, Palette, Selector, Style, StyleBuilder,
         TransitionDsc,
     },
-    view::View,
+    view::{NavAction, View},
     enums::ObjState,
-    widgets::{Part, Screen, Slider, WidgetError, RADIUS_MAX},
+    widgets::{Obj, Part, Slider, WidgetError, RADIUS_MAX},
 };
 
+#[derive(Default)]
 struct WidgetSlider2 {
-    _slider: Slider<'static>,
-    _style_main: Style,
-    _style_indic: Style,
-    _style_knob: Style,
-    _style_pressed: Style,
+    _slider: Option<Slider<'static>>,
+    _style_main: Option<Style>,
+    _style_indic: Option<Style>,
+    _style_knob: Option<Style>,
+    _style_pressed: Option<Style>,
 }
 
 /// Transition property: background color.
 static TRANS_PROPS: [props::lv_style_prop_t; 2] = [props::BG_COLOR, props::LAST];
 
 impl View for WidgetSlider2 {
-    fn create() -> Result<Self, WidgetError> {
-        let screen = Screen::active().ok_or(WidgetError::LvglNullPointer)?;
+    fn create(&mut self, container: &Obj<'static>) -> Result<(), WidgetError> {
 
         // Main track
         let mut style_main = StyleBuilder::new();
@@ -80,7 +80,7 @@ impl View for WidgetSlider2 {
         style_pressed.bg_color(palette_darken(Palette::Cyan, 2));
         let style_pressed = style_pressed.build();
 
-        let slider = Slider::new(&screen)?;
+        let slider = Slider::new(container)?;
         slider.remove_style_all();
         slider.add_style(&style_main, Selector::DEFAULT);
         slider.add_style(&style_indic, Part::Indicator);
@@ -89,18 +89,17 @@ impl View for WidgetSlider2 {
         slider.add_style(&style_pressed, Part::Knob | ObjState::PRESSED);
         slider.center();
 
-        Ok(Self {
-            _slider: slider,
-            _style_main: style_main,
-            _style_indic: style_indic,
-            _style_knob: style_knob,
-            _style_pressed: style_pressed,
-        })
+                self._slider = Some(slider);
+        self._style_main = Some(style_main);
+        self._style_indic = Some(style_indic);
+        self._style_knob = Some(style_knob);
+        self._style_pressed = Some(style_pressed);
+        Ok(())
     }
 
-    fn update(&mut self) -> Result<(), WidgetError> {
-        Ok(())
+    fn update(&mut self) -> Result<NavAction, WidgetError> {
+        Ok(NavAction::None)
     }
 }
 
-oxivgl_examples_common::example_main!(WidgetSlider2);
+oxivgl_examples_common::example_main!(WidgetSlider2::default());

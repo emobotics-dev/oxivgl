@@ -11,8 +11,8 @@
 use oxivgl::{
     scale_labels,
     style::{palette_darken, palette_lighten, Palette, Selector, Style, StyleBuilder},
-    view::View,
-    widgets::{Part, Scale, ScaleLabels, ScaleMode, Screen, WidgetError},
+    view::{NavAction, View},
+    widgets::{Obj, Part, Scale, ScaleLabels, ScaleMode, WidgetError},
 };
 
 /// Custom labels for ticks 1–10 (null-terminated).
@@ -20,15 +20,22 @@ static CUSTOM_LABELS: &ScaleLabels =
     scale_labels!(c"1", c"2", c"3", c"4", c"5", c"6", c"7", c"8", c"9", c"10");
 
 struct WidgetScale4 {
-    _scale: Scale<'static>,
+    _scale: Option<Scale<'static>>,
     _styles: [Style; 9],
 }
 
-impl View for WidgetScale4 {
-    fn create() -> Result<Self, WidgetError> {
-        let screen = Screen::active().ok_or(WidgetError::LvglNullPointer)?;
+impl WidgetScale4 {
+    fn new() -> Self {
+        Self {
+            _scale: None,
+            _styles: core::array::from_fn(|_| StyleBuilder::new().build()),
+        }
+    }
+}
 
-        let scale = Scale::new(&screen)?;
+impl View for WidgetScale4 {
+    fn create(&mut self, container: &Obj<'static>) -> Result<(), WidgetError> {
+        let scale = Scale::new(container)?;
         scale.size(200, 200).center();
         scale
             .set_mode(ScaleMode::RoundOuter)
@@ -105,25 +112,24 @@ impl View for WidgetScale4 {
             .set_items_style(&green_ticks)
             .set_main_style(&green_main);
 
-        Ok(Self {
-            _scale: scale,
-            _styles: [
-                indicator_style,
-                items_style,
-                main_style,
-                red_label,
-                red_ticks,
-                red_main,
-                green_label,
-                green_ticks,
-                green_main,
-            ],
-        })
+        self._scale = Some(scale);
+        self._styles = [
+            indicator_style,
+            items_style,
+            main_style,
+            red_label,
+            red_ticks,
+            red_main,
+            green_label,
+            green_ticks,
+            green_main,
+        ];
+        Ok(())
     }
 
-    fn update(&mut self) -> Result<(), WidgetError> {
-        Ok(())
+    fn update(&mut self) -> Result<NavAction, WidgetError> {
+        Ok(NavAction::None)
     }
 }
 
-oxivgl_examples_common::example_main!(WidgetScale4);
+oxivgl_examples_common::example_main!(WidgetScale4::new());

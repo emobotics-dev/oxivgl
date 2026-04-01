@@ -9,51 +9,50 @@
 //! Four checkboxes in a column: unchecked, checked, disabled, checked+disabled.
 
 use oxivgl::{
-    view::View,
+    view::{NavAction, View},
     enums::ObjState,
     layout::{FlexAlign, FlexFlow},
-    widgets::{Checkbox, Screen, WidgetError},
+    widgets::{Obj, Checkbox, WidgetError},
 };
 
+#[derive(Default)]
 struct WidgetCheckbox1 {
-    _cb1: Checkbox<'static>,
-    _cb2: Checkbox<'static>,
-    _cb3: Checkbox<'static>,
-    _cb4: Checkbox<'static>,
+    _cb1: Option<Checkbox<'static>>,
+    _cb2: Option<Checkbox<'static>>,
+    _cb3: Option<Checkbox<'static>>,
+    _cb4: Option<Checkbox<'static>>,
 }
 
 impl View for WidgetCheckbox1 {
-    fn create() -> Result<Self, WidgetError> {
-        let screen = Screen::active().ok_or(WidgetError::LvglNullPointer)?;
-        screen.set_flex_flow(FlexFlow::Column);
-        screen.set_flex_align(FlexAlign::Center, FlexAlign::Start, FlexAlign::Center);
+    fn create(&mut self, container: &Obj<'static>) -> Result<(), WidgetError> {
+        container.set_flex_flow(FlexFlow::Column);
+        container.set_flex_align(FlexAlign::Center, FlexAlign::Start, FlexAlign::Center);
 
-        let cb1 = Checkbox::new(&screen)?;
+        let cb1 = Checkbox::new(container)?;
         cb1.text("Apple");
 
-        let cb2 = Checkbox::new(&screen)?;
+        let cb2 = Checkbox::new(container)?;
         cb2.text("Banana");
         cb2.add_state(ObjState::CHECKED);
 
-        let cb3 = Checkbox::new(&screen)?;
+        let cb3 = Checkbox::new(container)?;
         cb3.text("Lemon");
         cb3.add_state(ObjState::DISABLED);
 
-        let cb4 = Checkbox::new(&screen)?;
+        let cb4 = Checkbox::new(container)?;
         cb4.text("Melon");
         cb4.add_state(ObjState::CHECKED | ObjState::DISABLED);
 
-        Ok(Self {
-            _cb1: cb1,
-            _cb2: cb2,
-            _cb3: cb3,
-            _cb4: cb4,
-        })
+                self._cb1 = Some(cb1);
+        self._cb2 = Some(cb2);
+        self._cb3 = Some(cb3);
+        self._cb4 = Some(cb4);
+        Ok(())
     }
 
-    fn update(&mut self) -> Result<(), WidgetError> {
-        Ok(())
+    fn update(&mut self) -> Result<NavAction, WidgetError> {
+        Ok(NavAction::None)
     }
 }
 
-oxivgl_examples_common::example_main!(WidgetCheckbox1);
+oxivgl_examples_common::example_main!(WidgetCheckbox1::default());
