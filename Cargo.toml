@@ -10,6 +10,7 @@ homepage = "https://github.com/emobotics-dev/oxivgl"
 documentation = "https://docs.rs/oxivgl"
 readme = "README.md"
 keywords = ["lvgl", "embedded-gui", "esp32", "no-std", "ui"]
+authors = ["emobotics-dev"]
 categories = ["embedded", "no-std", "gui"]
 exclude = [
     ".devcontainer/",
