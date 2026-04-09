@@ -18,31 +18,32 @@ oxivgl was created to close this gap. It is a safety layer on top of LVGL that e
 
 ```rust
 use oxivgl::{
-    view::View,
-    widgets::{Align, Label, Screen, WidgetError},
+    view::{NavAction, View},
+    widgets::{Align, Label, Obj, WidgetError},
 };
 
+#[derive(Default)]
 struct MyView {
-    _label: Label<'static>,
+    _label: Option<Label<'static>>,
 }
 
 impl View for MyView {
-    fn create() -> Result<Self, WidgetError> {
-        let screen = Screen::active().ok_or(WidgetError::LvglNullPointer)?;
-        screen.bg_color(0x003a57).bg_opa(255);
+    fn create(&mut self, container: &Obj<'static>) -> Result<(), WidgetError> {
+        container.bg_color(0x003a57).bg_opa(255);
 
-        let label = Label::new(&screen)?;
+        let label = Label::new(container)?;
         label.text("Hello world").align(Align::Center, 0, 0);
 
-        Ok(Self { _label: label })
+        self._label = Some(label);
+        Ok(())
     }
 
-    fn update(&mut self) -> Result<(), WidgetError> {
-        Ok(())
+    fn update(&mut self) -> Result<NavAction, WidgetError> {
+        Ok(NavAction::None)
     }
 }
 
-oxivgl_examples_common::example_main!(MyView);
+oxivgl_examples_common::example_main!(MyView::default());
 ```
 
 Add as a git dependency:
@@ -51,6 +52,10 @@ Add as a git dependency:
 [dependencies]
 oxivgl = { git = "https://github.com/emobotics-dev/oxivgl" }
 ```
+
+## Toolchain
+
+**Requires Rust nightly.** The primary target is ESP32 (Xtensa), which depends on a nightly-based toolchain (`cargo +esp`), `esp-hal` unstable features, and `embassy-executor` nightly. Since every ESP32 user already needs nightly, the host build (used for testing, docs, and development only) uses nightly too — this avoids split toolchain complexity and lets the library use edition 2024 features like `#[unsafe(no_mangle)]` and `#[collapse_debuginfo]`.
 
 ## Status
 
@@ -67,7 +72,7 @@ oxivgl is under active development. Even if it has reached some degree of maturi
 
 | Type | Module | Role |
 |------|--------|------|
-| `View` | `view` | Trait: `create()` builds UI, `update()` refreshes per tick, `on_event()` handles input |
+| `View` | `view` | Trait: `create()` builds UI into a container, `update()` refreshes per tick (returns `NavAction`), `on_event()` handles input |
 | `LvglDriver` | `driver` | Zero-sized init token — proves `lv_init()` was called |
 | `SdlBuilder` | `driver` | Builder for SDL-backed driver: `.sdl(w,h).title().mouse().build()` |
 | `Event` | `event` | Safe wrapper around LVGL events, passed to `View::on_event()` |
