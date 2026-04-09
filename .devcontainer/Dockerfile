@@ -38,7 +38,7 @@ RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs \
 
 # ── ESP/Xtensa toolchain (via espup) ────────────────────────────────
 RUN cargo install espup \
-    && cargo install --git https://github.com/esp-rs/espflash espflash \
+    && cargo install espflash@4.3.0 --locked \
     && espup install \
     && rm -rf "${CARGO_HOME}/registry" "${CARGO_HOME}/git"
 
