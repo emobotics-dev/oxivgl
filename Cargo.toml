@@ -64,7 +64,7 @@ oxivgl_sys = { package = "oxivgl-sys", version = "0.1.1", path = "oxivgl-sys", d
 [target.'cfg(target_arch = "xtensa")'.dev-dependencies]
 embassy-executor       = { version = "0.9.1", features = ["nightly"] }
 esp-bootloader-esp-idf = { version = "0.4.0", features = ["esp32"] }
-esp-hal                = { version = "1.0.0", features = ["esp32", "unstable"] }
+esp-hal                = { version = "=1.0.0", features = ["esp32", "unstable"] }
 esp-rtos               = { version = "0.2.0", features = ["esp32", "embassy"] }
 
 [profile.dev]
