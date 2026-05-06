@@ -77,6 +77,20 @@ impl bindgen::callbacks::ParseCallbacks for IgnoreMacros {
 }
 
 fn main() {
+    // docs.rs has no network access, so we cannot download LVGL or run
+    // bindgen. Use a pre-generated host (x86_64-linux) bindings file and
+    // skip both the C compilation and bindgen pipelines entirely.
+    if env::var("DOCS_RS").is_ok() {
+        let manifest_dir = PathBuf::from(env::var("CARGO_MANIFEST_DIR").unwrap());
+        let out_path = PathBuf::from(env::var("OUT_DIR").unwrap());
+        std::fs::copy(
+            manifest_dir.join("bindings_docsrs.rs"),
+            out_path.join("bindings.rs"),
+        )
+        .expect("failed to install bundled bindings_docsrs.rs");
+        return;
+    }
+
     let project_dir = canonicalize(PathBuf::from(env::var("CARGO_MANIFEST_DIR").unwrap()));
     let shims_dir = project_dir.join("shims");
     let out_path = PathBuf::from(env::var("OUT_DIR").unwrap());

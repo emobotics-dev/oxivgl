@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.2] — 2026-05-06
+
+### Fixed
+
+- docs.rs build: the v0.1.1 fix was incomplete — docs.rs has no network
+  access at build time, so `oxivgl-sys` could not download the LVGL
+  source. Now under `DOCS_RS=1`, `oxivgl-sys` uses a pre-generated
+  `bindings_docsrs.rs` (committed in the crate) and skips the LVGL
+  download + cc compilation entirely.
+
 ## [0.1.1] — 2026-05-06
 
 ### Fixed
