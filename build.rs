@@ -1,6 +1,12 @@
 // SPDX-License-Identifier: GPL-3.0-only
 
 fn main() {
+    // docs.rs has no lv_conf.h and oxivgl-sys skips C compilation under DOCS_RS,
+    // so skip image asset generation here too — only Rust docs need to render.
+    if std::env::var("DOCS_RS").is_ok() {
+        return;
+    }
+
     let target = std::env::var("TARGET").unwrap_or_default();
     if target.starts_with("xtensa-") {
         println!("cargo:rustc-link-arg=-Tlinkall.x");

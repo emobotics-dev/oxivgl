@@ -5,6 +5,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.1] — 2026-05-06
+
+### Fixed
+
+- docs.rs documentation build: `oxivgl-sys` now falls back to a bundled
+  `default-conf/lv_conf.h` under `DOCS_RS=1` (the workspace
+  `.cargo/config.toml` is unavailable on docs.rs), and `oxivgl/build.rs`
+  skips image asset compilation in the same environment.
+
 ## [0.1.0] — 2026-04-09
 
 Initial public release.

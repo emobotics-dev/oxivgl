@@ -77,17 +77,6 @@ impl bindgen::callbacks::ParseCallbacks for IgnoreMacros {
 }
 
 fn main() {
-    // docs.rs cannot compile LVGL — emit empty bindings and return
-    if env::var("DOCS_RS").is_ok() {
-        let out_path = PathBuf::from(env::var("OUT_DIR").unwrap());
-        std::fs::write(
-            out_path.join("bindings.rs"),
-            "// empty bindings for docs.rs\n",
-        )
-        .unwrap();
-        return;
-    }
-
     let project_dir = canonicalize(PathBuf::from(env::var("CARGO_MANIFEST_DIR").unwrap()));
     let shims_dir = project_dir.join("shims");
     let out_path = PathBuf::from(env::var("OUT_DIR").unwrap());
@@ -134,14 +123,17 @@ fn main() {
     let drivers = project_dir.join("lv_drivers");
 
     let lv_config_dir = {
-        let conf_path = env::var(CONFIG_NAME)
-            .map(PathBuf::from)
-            .unwrap_or_else(|_| {
-                panic!(
-                    "The environment variable {} is required to be defined",
-                    CONFIG_NAME
-                );
-            });
+        let conf_path = env::var(CONFIG_NAME).map(PathBuf::from).unwrap_or_else(|_| {
+            // On docs.rs the workspace .cargo/config.toml is unavailable, so
+            // fall back to the bundled default config to allow doc rendering.
+            if env::var("DOCS_RS").is_ok() {
+                return project_dir.join("default-conf");
+            }
+            panic!(
+                "The environment variable {} is required to be defined",
+                CONFIG_NAME
+            );
+        });
 
         if !conf_path.exists() {
             panic!(
