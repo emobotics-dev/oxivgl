@@ -40,6 +40,25 @@ macro_rules! fire27_main_nav {
     };
 }
 
+/// Spawn a task, panicking with call-site context if the task pool is exhausted.
+///
+/// Replaces embassy-executor's `Spawner::must_spawn`, which was removed in
+/// 0.10.0 when `spawn` became infallible and the `Result` moved to the task
+/// function itself. For one-shot init code with `pool_size = 1` (the default),
+/// the failure is a logic bug, so panicking is the right behavior.
+///
+/// Works with both `Spawner` and `SendSpawner` (duck-typed on `.spawn()`).
+#[macro_export]
+#[doc(hidden)]
+macro_rules! must_spawn {
+    ($spawner:expr, $task:expr) => {
+        $spawner.spawn(
+            $task.unwrap_or_else(|e| panic!(
+                concat!("spawn ", stringify!($task), ": {:?}"), e))
+        )
+    };
+}
+
 /// Internal: shared Fire27 hardware setup body. Do not call directly.
 ///
 /// `$mode` is either `single` (uses `run_app`) or `nav` (uses `run_app_nav`).
@@ -251,7 +270,7 @@ macro_rules! fire27_body {
 
             let tg0 = TimerGroup::new(p.TIMG0);
             let sw_int = SoftwareInterruptControl::new(p.SW_INTERRUPT);
-            esp_rtos::start(tg0.timer0);
+            esp_rtos::start(tg0.timer0, sw_int.software_interrupt0);
             info!("Embassy initialized");
 
             // Configure hardware buttons (active-low, external pull-ups on GPIO34-39).
@@ -261,12 +280,12 @@ macro_rules! fire27_body {
             let btn_c = Input::new(p.GPIO37, InputConfig::default()); // C — NEXT
 
             // Spawn one task per button before the LVGL loop starts.
-            _low_prio_spawner
-                .must_spawn(button_task(btn_a, $crate::oxivgl::enums::Key::PREV.0));
-            _low_prio_spawner
-                .must_spawn(button_task(btn_b, $crate::oxivgl::enums::Key::ENTER.0));
-            _low_prio_spawner
-                .must_spawn(button_task(btn_c, $crate::oxivgl::enums::Key::NEXT.0));
+            $crate::must_spawn!(_low_prio_spawner,
+                button_task(btn_a, $crate::oxivgl::enums::Key::PREV.0));
+            $crate::must_spawn!(_low_prio_spawner,
+                button_task(btn_b, $crate::oxivgl::enums::Key::ENTER.0));
+            $crate::must_spawn!(_low_prio_spawner,
+                button_task(btn_c, $crate::oxivgl::enums::Key::NEXT.0));
 
             let spi_config = SpiConfig::default()
                 .with_frequency(Rate::from_khz(40_000))
@@ -308,7 +327,7 @@ macro_rules! fire27_body {
             let int_exec =
                 make_static!(InterruptExecutor::new(sw_int.software_interrupt1));
             let hi_spawner = int_exec.start(Priority::min());
-            hi_spawner.must_spawn(flush_task(driver));
+            $crate::must_spawn!(hi_spawner, flush_task(driver));
 
             static mut LVGL_BUFS: LvglBuffers<LVGL_BUF_BYTES> = LvglBuffers::new();
             // SAFETY: LVGL_BUFS is only accessed here, before the single-threaded

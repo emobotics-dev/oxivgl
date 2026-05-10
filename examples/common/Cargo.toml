@@ -17,16 +17,16 @@ heapless = { version = "0.8" }
 [target.'cfg(target_arch = "xtensa")'.dependencies]
 oxivgl = { path = "../..", features = ["esp-hal", "esp32", "log-04"] }
 oxivgl_sys = { package = "oxivgl-sys", path = "../../oxivgl-sys", default-features = false }
-esp-alloc            = { version = "0.9.0", features = ["internal-heap-stats"] }
+esp-alloc            = { version = "0.10.0", features = ["esp32", "internal-heap-stats"] }
 esp-backtrace        = { version = "0.18.1", features = ["esp32", "panic-handler", "custom-halt", "colors", "println"] }
-esp-bootloader-esp-idf = { version = "0.4.0", features = ["esp32"] }
-esp-hal              = { version = "=1.0.0", features = ["esp32", "unstable"] }
+esp-bootloader-esp-idf = { version = "0.5.0", features = ["esp32"] }
+esp-hal              = { version = "=1.1.0", features = ["esp32", "unstable"] }
 esp-println          = { version = "0.16.1", features = ["esp32", "log-04", "colors", "uart"], default-features = false }
-esp-rtos             = { version = "0.2.0", features = ["esp32", "embassy"] }
-esp-sync             = { version = "0.1.1", features = ["esp32"] }
-embassy-embedded-hal = { version = "0.5.0", features = ["time"] }
-embassy-executor     = { version = "0.9.1", features = ["nightly"] }
-embassy-sync         = "0.7.2"
+esp-rtos             = { version = "0.3.0", features = ["esp32", "embassy"] }
+esp-sync             = { version = "0.2.1", features = ["esp32"] }
+embassy-embedded-hal = { version = "0.6.0", features = ["time"] }
+embassy-executor     = { version = "0.10.0", features = ["nightly"] }
+embassy-sync         = "0.8"
 embassy-time         = "0.5.0"
 lcd-async            = "0.1.1"
 log                  = "0.4"
