@@ -436,7 +436,7 @@ impl Navigator {
         // its tree is what the view just populated.
         unsafe { remove_clickable_recursive(container_handle) };
 
-        // Intentionally do NOT call boxed.register_events(): the default
+        // Intentionally do NOT call boxed.register_events_on(): the default
         // impl registers on lv_screen_active() (the background view's
         // screen) and would dangle across page switches — exactly the
         // bug this toast surface exists to avoid.

@@ -253,8 +253,8 @@ macro_rules! fire27_body {
                 self.inner.on_event(event)
             }
 
-            fn register_events_on(&mut self, _container: &Obj<'static>) {
-                self.inner.register_events();
+            fn register_events_on(&mut self, container: &Obj<'static>) {
+                self.inner.register_events_on(container);
             }
         }
 
