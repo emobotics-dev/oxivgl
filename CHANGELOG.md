@@ -5,6 +5,40 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.0] — 2026-05-31
+
+### Added
+
+- **Global passive toast overlay.** `Navigator::show_toast` / `dismiss_toast` /
+  `tick_toast`; `NavAction::{ShowToast, DismissToast}`. Lives on `lv_layer_sys()`,
+  persists across push/replace/pop, input-transparent by contract,
+  navigator-owned auto-dismiss.
+- **Post toasts from any task.** Free functions `post_toast<V: View + Send>` and
+  `post_dismiss_toast` enqueue into a library-owned channel drained by
+  `run_app_nav` — no draining view required.
+- **OSD-style modal support.** Click-absorbing backdrop on `lv_layer_top()`
+  (was specified, now implemented). `View::input_group() -> Option<GroupRef>`:
+  when `Some`, the navigator swaps focus into the modal's group on open and
+  restores the previous default group + per-indev bindings on dismiss.
+- `Group::as_ref`, `GroupRef::set_default`, `GroupRef::assign_to_keyboard_indevs`.
+
+### Changed
+
+- **Breaking:** `View::register_events(&mut self)` renamed to
+  `register_events_on(&mut self, container: &Obj<'static>)`. The default attaches
+  the trampoline to `container` (the navigator-supplied target) rather than
+  `lv_screen_active()`.
+
+  *Migration:* rename the override and add the `_container` parameter; bodies
+  typically don't need to change. Overrides that just called the old default can
+  be deleted — the new default is correct for screens and modals alike.
+
+### Fixed
+
+- Modal `register_events` no longer attaches handlers to the *background view's*
+  screen (where they dangled after the next push/pop). The new
+  `register_events_on(container)` default routes correctly for every overlay.
+
 ## [0.1.2] — 2026-05-06
 
 ### Fixed
