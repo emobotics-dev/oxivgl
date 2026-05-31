@@ -471,6 +471,10 @@ pub async fn run_app_nav<const BYTES: usize>(
             }
         }
 
+        // Drain toast requests posted from background tasks via
+        // navigator::post_toast / post_dismiss_toast.
+        nav.drain_toast_requests();
+
         // Auto-dismiss expired toasts; self-heal if the slot was orphaned.
         nav.tick_toast();
     }

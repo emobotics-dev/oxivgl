@@ -15,6 +15,7 @@ extern crate alloc;
 use alloc::boxed::Box;
 use alloc::vec::Vec;
 
+use embassy_sync::{blocking_mutex::raw::CriticalSectionRawMutex, channel::Channel};
 use embassy_time::Duration;
 use oxivgl_sys::*;
 
@@ -589,11 +590,99 @@ impl Navigator {
             false
         }
     }
+
+    /// Drain any toast requests posted from background tasks via
+    /// [`post_toast`] / [`post_dismiss_toast`].
+    ///
+    /// Called once per render-loop iteration by `run_app_nav`. Each
+    /// queued request becomes a `show_toast` or `dismiss_toast` call.
+    pub fn drain_toast_requests(&mut self) {
+        while let Ok(req) = TOAST_CHANNEL.try_receive() {
+            match req {
+                ToastRequest::Show(view, duration) => {
+                    // Box<dyn AnyView + Send> coerces to Box<dyn AnyView>
+                    // via unsizing — Send is dropped from the trait object.
+                    self.show_toast_boxed(view, duration);
+                }
+                ToastRequest::Dismiss => {
+                    let _ = self.dismiss_toast();
+                }
+            }
+        }
+    }
 }
 
 impl Default for Navigator {
     fn default() -> Self {
         Self::new()
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Cross-task toast posting (TOAST_CHANNEL + post_toast / post_dismiss_toast)
+// ---------------------------------------------------------------------------
+
+/// Capacity of the global toast request queue. Toasts are infrequent;
+/// 4 outstanding requests tolerate brief contention without backpressure.
+const TOAST_QUEUE_CAPACITY: usize = 4;
+
+/// A request enqueued by [`post_toast`] / [`post_dismiss_toast`] and
+/// drained by [`Navigator::drain_toast_requests`].
+enum ToastRequest {
+    Show(Box<dyn AnyView + Send>, Option<Duration>),
+    Dismiss,
+}
+
+/// Global queue of toast requests. Posted to from any async task,
+/// drained by the render loop via [`Navigator::drain_toast_requests`].
+static TOAST_CHANNEL: Channel<CriticalSectionRawMutex, ToastRequest, TOAST_QUEUE_CAPACITY> =
+    Channel::new();
+
+/// Queue a global passive toast from **any** async task — including
+/// background workers that hold no `Navigator` handle.
+///
+/// The request is processed on the next render-loop iteration
+/// (`run_app_nav` calls [`Navigator::drain_toast_requests`] every
+/// tick). It then flows through the same path as
+/// [`Navigator::show_toast`], so all the passivity / persistence /
+/// auto-dismiss guarantees apply identically — the only difference is
+/// who initiated it.
+///
+/// Use this for **truly global status messages** (e.g. "No SD card",
+/// "BLE disconnected") raised before any particular view is on screen
+/// or from a task that has no reason to know about the active view.
+///
+/// # `View: Send` constraint
+///
+/// The view crosses a `Channel` boundary, so its concrete type must be
+/// `Send`. In practice toast views are simple config structs (text,
+/// color, icon source) — they don't store live `Obj` wrappers, which
+/// are `!Send`. Build the actual widgets inside `View::create` from
+/// `&Obj<'static>` parameters; do **not** keep them in struct fields.
+///
+/// # Backpressure
+///
+/// The queue holds 4 outstanding requests (`TOAST_QUEUE_CAPACITY`).
+/// If full, this call logs a warning and drops the request rather than
+/// blocking — toasts are notifications, not data; a dropped duplicate
+/// is preferable to async deadlock.
+pub fn post_toast<V: View + Send>(view: V, duration: Option<Duration>) {
+    let req = ToastRequest::Show(Box::new(view), duration);
+    if TOAST_CHANNEL.try_send(req).is_err() {
+        warn!("post_toast: queue full ({}), request dropped", TOAST_QUEUE_CAPACITY);
+    }
+}
+
+/// Queue a request to dismiss the active toast from any async task.
+///
+/// Same delivery semantics as [`post_toast`]. No-op on the render-loop
+/// side if no toast is active when the request is processed.
+pub fn post_dismiss_toast() {
+    if TOAST_CHANNEL.try_send(ToastRequest::Dismiss).is_err() {
+        warn!(
+            "post_dismiss_toast: queue full ({}), request dropped",
+            TOAST_QUEUE_CAPACITY,
+        );
     }
 }
 

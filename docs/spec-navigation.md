@@ -414,6 +414,39 @@ a third-party clear of the system layer), `tick_toast` detects the
 stale handle via `lv_obj_is_valid` and drops the orphaned view so the
 slot becomes reusable.
 
+**Raising from any task.** Background async tasks that hold no
+`Navigator` handle (BLE listener, sensor poller, app shell at boot
+before any view is on screen) can still raise toasts via two free
+functions:
+
+```rust
+pub fn post_toast<V: View + Send>(view: V, duration: Option<Duration>);
+pub fn post_dismiss_toast();
+```
+
+Both enqueue into a library-owned static `Channel`
+(capacity `TOAST_QUEUE_CAPACITY = 4`, `CriticalSectionRawMutex`).
+`run_app_nav` calls `nav.drain_toast_requests()` once per render-loop
+iteration before `tick_toast`. The drained request flows through the
+same `show_toast_boxed` / `dismiss_toast` paths as `NavAction::ShowToast`
+— so all the passivity / persistence / auto-dismiss guarantees apply
+identically; only the initiator differs.
+
+The `Send` bound on the View type rules out keeping live `Obj` wrappers
+in toast struct fields (raw pointers are `!Send`). In practice this is
+not a constraint — toast views are typically simple config structs
+(text, color, icon source) that build their widgets inside
+`View::create` from the supplied `&Obj<'static>` container; the widgets
+then live as children of the toast container, owned by LVGL.
+
+If the queue is full when `post_toast` runs, the new request is dropped
+with a logged warning rather than blocking — toasts are notifications,
+not data; a dropped duplicate is preferable to async deadlock.
+
+This closes the "no draining view" gap: a "No SD card" warning raised
+at boot from an SD-card task no longer needs the currently-active view
+to opt into draining a status channel.
+
 **Distinction from `Modal`.**
 
 | Property               | `Modal`                              | Toast                          |
