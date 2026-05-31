@@ -120,7 +120,7 @@ impl View for List2 {
         Ok(())
     }
 
-    fn register_events(&mut self) {
+    fn register_events_on(&mut self, _container: &Obj<'static>) {
         if let Some(ref list1) = self.list1 {
             register_event_on(self, list1.handle());
         }

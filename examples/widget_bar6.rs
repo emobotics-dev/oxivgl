@@ -56,7 +56,7 @@ impl View for WidgetBar6 {
         Ok(())
     }
 
-    fn register_events(&mut self) {
+    fn register_events_on(&mut self, _container: &Obj<'static>) {
         if let Some(ref bar) = self.bar {
             register_event_on(self, bar.handle());
         }

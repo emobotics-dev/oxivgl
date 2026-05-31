@@ -69,7 +69,7 @@ impl View for WidgetTextarea2 {
         Ok(())
     }
 
-    fn register_events(&mut self) {
+    fn register_events_on(&mut self, _container: &Obj<'static>) {
         if let Some(ref pwd_ta) = self.pwd_ta {
             register_event_on(self, pwd_ta.handle());
         }

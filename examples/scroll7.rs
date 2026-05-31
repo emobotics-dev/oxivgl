@@ -155,7 +155,7 @@ impl View for Scroll7 {
         Ok(())
     }
 
-    fn register_events(&mut self) {
+    fn register_events_on(&mut self, _container: &Obj<'static>) {
         if let Some(ref cont) = self.cont { register_event_on(self, cont.handle()); }
         if let Some(ref cb) = self.checkbox { register_event_on(self, cb.handle()); }
     }

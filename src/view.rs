@@ -18,7 +18,7 @@ use crate::{
     driver::LvglDriver,
     enums::EventCode,
     event::Event,
-    widgets::{Obj, ScreenAnim, WidgetError},
+    widgets::{AsLvHandle, Obj, ScreenAnim, WidgetError},
 };
 
 /// LVGL timer tick interval (ms). `LV_DEF_REFR_PERIOD / 4` yields ~4 ticks
@@ -43,8 +43,8 @@ const LVGL_TICK_MS: u64 = LV_DEF_REFR_PERIOD as u64 / 4;
 /// set so the event reaches the screen-level handler.
 ///
 /// For nested widget trees (e.g. buttons inside a container), override
-/// [`register_events`](View::register_events) to add event handlers on
-/// intermediate objects via [`register_event_on`].
+/// [`register_events_on`](View::register_events_on) to add event handlers
+/// on intermediate objects via [`register_event_on`].
 pub trait View: Sized + 'static {
     /// Build all LVGL widgets for this view into `container`.
     ///
@@ -68,12 +68,20 @@ pub trait View: Sized + 'static {
         NavAction::None
     }
 
-    /// Register event handlers. Called once after [`create`](View::create).
-    /// Default registers on the active screen only. Override to register on
-    /// additional objects (e.g. containers that catch bubbled events).
-    fn register_events(&mut self) {
-        // SAFETY: lv_screen_active() is valid after lv_init().
-        register_event_on(self, unsafe { lv_screen_active() });
+    /// Register event handlers. Called once after [`create`](View::create),
+    /// with the same `container` that was passed to `create`.
+    ///
+    /// Default registers the view's event trampoline on `container`, so
+    /// bubbled events from any descendant reach [`on_event`](View::on_event).
+    /// Override to register on additional objects (e.g. intermediate
+    /// containers that catch bubbled events for sub-trees).
+    ///
+    /// Receiving the container as an argument — rather than reading
+    /// `lv_screen_active()` — is what makes the default impl correct for
+    /// modals: when the navigator builds a modal, `container` is
+    /// `lv_layer_top()`, not the background view's screen.
+    fn register_events_on(&mut self, container: &Obj<'static>) {
+        register_event_on(self, container.lv_handle());
     }
 
     /// Called before this view's widget tree is destroyed (navigating away).
@@ -83,6 +91,20 @@ pub trait View: Sized + 'static {
     /// Called after this view becomes visible again (navigated back to).
     /// Default is a no-op.
     fn did_show(&mut self) {}
+
+    /// Focus group containing this view's focusable widgets.
+    ///
+    /// When non-`None`, the navigator activates this group on
+    /// modal open (sets it as default + binds it to all keyboard /
+    /// encoder input devices) and restores the previously active focus
+    /// state on dismiss. The view owns the [`Group`](crate::group::Group)
+    /// internally; this method just borrows a non-owning handle.
+    ///
+    /// Default `None` — only OSD-style modals that need key input
+    /// usually return `Some`.
+    fn input_group(&self) -> Option<crate::group::GroupRef> {
+        None
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -165,12 +187,14 @@ pub trait AnyView: 'static {
     fn update(&mut self) -> Result<NavAction, WidgetError>;
     /// Handle a bubbled LVGL event. See [`View::on_event`].
     fn on_event(&mut self, event: &Event) -> NavAction;
-    /// Register event handlers. See [`View::register_events`].
-    fn register_events(&mut self);
+    /// Register event handlers. See [`View::register_events_on`].
+    fn register_events_on(&mut self, container: &Obj<'static>);
     /// Called before widget teardown. See [`View::will_hide`].
     fn will_hide(&mut self);
     /// Called after view becomes visible again. See [`View::did_show`].
     fn did_show(&mut self);
+    /// Focus group for this view (modals only). See [`View::input_group`].
+    fn input_group(&self) -> Option<crate::group::GroupRef>;
 }
 
 impl<T: View> AnyView for T {
@@ -186,8 +210,8 @@ impl<T: View> AnyView for T {
         View::on_event(self, event)
     }
 
-    fn register_events(&mut self) {
-        View::register_events(self)
+    fn register_events_on(&mut self, container: &Obj<'static>) {
+        View::register_events_on(self, container)
     }
 
     fn will_hide(&mut self) {
@@ -196,6 +220,10 @@ impl<T: View> AnyView for T {
 
     fn did_show(&mut self) {
         View::did_show(self)
+    }
+
+    fn input_group(&self) -> Option<crate::group::GroupRef> {
+        View::input_group(self)
     }
 }
 
@@ -251,19 +279,18 @@ pub(crate) fn take_pending_event_action() -> Option<NavAction> {
     unsafe { (*PENDING_EVENT_ACTION.0.get()).take() }
 }
 
-/// Register event handlers for the view. Calls [`View::register_events`],
-/// which by default registers on the active screen. Override the trait method
-/// to register on additional objects.
+/// Register event handlers for the view by delegating to
+/// [`View::register_events_on`] with `container` as the target.
 ///
 /// The `view` reference must remain at a stable address for the lifetime of
 /// the LVGL display (guaranteed by `run_app` and `host_main!`).
-pub fn register_view_events<V: View>(view: &mut V) {
-    view.register_events();
+pub fn register_view_events<V: View>(view: &mut V, container: &Obj<'static>) {
+    view.register_events_on(container);
 }
 
 
 /// Register the view's event trampoline on a specific LVGL object.
-/// Use this from [`View::register_events`] to catch events on containers
+/// Use this from [`View::register_events_on`] to catch events on containers
 /// or other intermediate objects that don't bubble to the screen.
 ///
 /// # Address stability (not enforced by the type system)
@@ -357,7 +384,7 @@ pub async fn run_app<V: View, const BYTES: usize>(
         }
     }
 
-    register_view_events(&mut view);
+    register_view_events(&mut view, &container);
 
     loop {
         debug!("Rendering UI loop iteration");

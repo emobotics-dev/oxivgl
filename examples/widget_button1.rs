@@ -53,7 +53,7 @@ impl View for WidgetButton1 {
         Ok(())
     }
 
-    fn register_events(&mut self) {
+    fn register_events_on(&mut self, _container: &Obj<'static>) {
         if let Some(ref btn1) = self.btn1 { register_event_on(self, btn1.handle()); }
         if let Some(ref btn2) = self.btn2 { register_event_on(self, btn2.handle()); }
     }

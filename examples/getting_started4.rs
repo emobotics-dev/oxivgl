@@ -39,7 +39,7 @@ impl View for GettingStarted4 {
         Ok(())
     }
 
-    fn register_events(&mut self) {
+    fn register_events_on(&mut self, _container: &Obj<'static>) {
         if let Some(ref slider) = self.slider { register_event_on(self, slider.handle()); }
     }
 

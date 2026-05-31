@@ -81,7 +81,7 @@ impl View for Table1 {
         Ok(())
     }
 
-    fn register_events(&mut self) {
+    fn register_events_on(&mut self, _container: &Obj<'static>) {
         if let Some(ref table) = self.table {
             register_event_on(self, table.handle());
         }

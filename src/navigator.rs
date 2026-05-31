@@ -49,8 +49,17 @@ struct ViewEntry {
 pub struct Navigator {
     /// Full-screen navigation stack. Index 0 is the root view.
     stack: Vec<ViewEntry>,
-    /// Currently active modal, if any. Rendered on `lv_layer_top()`.
+    /// Currently active modal, if any. Rendered as a child of the
+    /// modal backdrop on `lv_layer_top()`.
     modal: Option<Box<dyn AnyView>>,
+    /// Full-size click-absorbing backdrop the modal is built inside.
+    /// Dropping this `Obj` deletes the backdrop and (cascade) the modal
+    /// widget tree in one shot.
+    modal_backdrop: Option<Obj<'static>>,
+    /// Focus state captured when the active modal was opened — restored
+    /// on dismiss. `None` when no modal is active or when the modal did
+    /// not provide an [`input_group`](crate::view::View::input_group).
+    saved_focus: Option<SavedFocus>,
     /// Currently active global toast, if any. Rendered as a child of
     /// `lv_layer_sys()` so it persists across page switches and stays
     /// above any modal. See [`Navigator::show_toast`].
@@ -70,6 +79,8 @@ impl Navigator {
         Self {
             stack: Vec::new(),
             modal: None,
+            modal_backdrop: None,
+            saved_focus: None,
             toast: None,
             toast_container: None,
             toast_deadline_ms: None,
@@ -93,9 +104,9 @@ impl Navigator {
             .create(&container)
             .expect("root view create failed");
 
-        // register_events() default calls register_event_on(self, lv_screen_active()).
-        // lv_screen_active() is the default screen — correct at this point.
-        boxed.register_events();
+        // Default impl of register_events_on attaches the trampoline on
+        // `container` — the default screen at this point.
+        boxed.register_events_on(&container);
         boxed.did_show();
 
         self.stack.push(ViewEntry {
@@ -151,9 +162,9 @@ impl Navigator {
             .create(&new_screen)
             .expect("pushed view create failed");
 
-        // register_events() calls register_event_on(self, lv_screen_active()).
-        // Since we loaded new_screen above, lv_screen_active() == new_screen.
-        boxed.register_events();
+        // Default impl of register_events_on attaches on the new screen
+        // we just created and loaded.
+        boxed.register_events_on(&new_screen);
 
         // Clean the old screen's children (widget tree) to free memory,
         // but keep the screen object alive for potential pop animation.
@@ -226,7 +237,7 @@ impl Navigator {
             .create(&container)
             .map_err(NavigationError::CreateFailed)?;
 
-        top.view.register_events();
+        top.view.register_events_on(&container);
         top.view.did_show();
         Ok(())
     }
@@ -261,7 +272,7 @@ impl Navigator {
         boxed
             .create(&new_screen)
             .expect("replaced view create failed");
-        boxed.register_events();
+        boxed.register_events_on(&new_screen);
         boxed.did_show();
 
         self.stack.push(ViewEntry {
@@ -288,39 +299,84 @@ impl Navigator {
             let _ = self.dismiss_modal();
         }
 
-        let layer_top = Screen::layer_top();
+        // Create a full-size click-absorbing backdrop on lv_layer_top,
+        // then build the modal's widgets as children of the backdrop.
+        // This gives every modal automatic input absorption (touches on
+        // the backdrop never reach the view beneath) and a single root
+        // to delete on dismiss (deleting the backdrop cascades).
+        // SAFETY: lv_layer_top is a valid LVGL global after lv_init.
+        let layer_top_h = unsafe { lv_layer_top() };
+        assert!(!layer_top_h.is_null(), "lv_layer_top returned NULL");
+        // SAFETY: layer_top_h is non-null.
+        let backdrop_h = unsafe { lv_obj_create(layer_top_h) };
+        assert!(!backdrop_h.is_null(), "modal backdrop creation failed");
+        let backdrop = Obj::from_raw(backdrop_h);
+
+        // Full-size, click-absorbing, no scroll. Transparent fill so the
+        // background view stays visible unless the modal itself draws a
+        // dim layer.
+        // SAFETY: backdrop_h is the freshly-created object above.
+        unsafe {
+            let pct100 = lv_pct(100);
+            lv_obj_set_size(backdrop_h, pct100, pct100);
+            lv_obj_set_style_bg_opa(backdrop_h, 0, 0);
+            lv_obj_set_style_border_width(backdrop_h, 0, 0);
+            lv_obj_set_style_pad_all(backdrop_h, 0, 0);
+            lv_obj_add_flag(
+                backdrop_h,
+                crate::enums::ObjFlag::CLICKABLE.0,
+            );
+            lv_obj_remove_flag(
+                backdrop_h,
+                crate::enums::ObjFlag::SCROLLABLE.0,
+            );
+        }
+
         boxed
-            .create(&layer_top)
+            .create(&backdrop)
             .expect("modal view create failed");
-        // For modals, register_events default would register on
-        // lv_screen_active() which is the background view's screen.
-        // Modal views should override register_events to register on
-        // the layer_top container instead, or use EVENT_BUBBLE.
-        // We call register_events() and trust the view's override.
-        boxed.register_events();
+        // register_events_on defaults to attaching the trampoline on the
+        // backdrop, so bubbled events from any modal widget reach the
+        // view's on_event. Modal views that catch events on intermediate
+        // widgets can still override register_events_on.
+        boxed.register_events_on(&backdrop);
         boxed.did_show();
+
+        // If the modal exposes a focus group, snapshot the current focus
+        // state and route input to the modal's group. Restored on dismiss.
+        if let Some(modal_group) = boxed.input_group() {
+            self.saved_focus = Some(SavedFocus::capture());
+            modal_group.set_default();
+            modal_group.assign_to_keyboard_indevs();
+        }
+
         self.modal = Some(boxed);
+        self.modal_backdrop = Some(backdrop);
     }
 
     /// Dismiss the current modal overlay.
     ///
-    /// Cleans `lv_layer_top()` children. Returns `Err` if no modal is active.
+    /// Deletes the backdrop (which cascades to the modal's widget tree)
+    /// and restores any focus state captured on open. Returns `Err` if
+    /// no modal is active.
     pub fn dismiss_modal(&mut self) -> Result<(), NavigationError> {
-        if let Some(mut modal) = self.modal.take() {
-            modal.will_hide();
-            // SAFETY: lv_layer_top() returns the global overlay object (valid
-            // after lv_init). lv_obj_clean deletes all children. Any Obj
-            // wrappers in the modal view now hold stale pointers — their Drop
-            // uses lv_obj_is_valid() as a guard (spec-memory-lifetime §8.1).
-            // We clean before dropping the modal so LVGL removes its widgets
-            // from the display immediately.
-            let layer = unsafe { lv_layer_top() };
-            unsafe { lv_obj_clean(layer) };
-            // modal is dropped here — Obj::drop guards prevent double-free.
-            Ok(())
-        } else {
-            Err(NavigationError::NoActiveModal)
+        let mut modal = match self.modal.take() {
+            Some(m) => m,
+            None => return Err(NavigationError::NoActiveModal),
+        };
+        modal.will_hide();
+        // Drop the backdrop Obj — lv_obj_delete cascades to all descendants
+        // (the modal's widget tree). Any Obj wrappers held inside the
+        // modal view now hold stale pointers; their Drop uses
+        // lv_obj_is_valid as a guard (spec-memory-lifetime §8.1).
+        drop(self.modal_backdrop.take());
+        drop(modal);
+
+        // Restore the pre-modal focus state, if we captured it.
+        if let Some(saved) = self.saved_focus.take() {
+            saved.restore();
         }
+        Ok(())
     }
 
     /// Whether a modal is currently showing.
@@ -538,6 +594,64 @@ impl Navigator {
 impl Default for Navigator {
     fn default() -> Self {
         Self::new()
+    }
+}
+
+/// Snapshot of the input-focus state captured when a modal with an
+/// [`input_group`](crate::view::View::input_group) opens. Restored on
+/// dismiss so the background view regains its key/encoder input routing.
+///
+/// Stores raw pointers; we do not own any of these — the groups and
+/// indevs are managed by app or LVGL.
+struct SavedFocus {
+    /// Previous default group (may be NULL).
+    prev_default: *mut lv_group_t,
+    /// Per-indev (KEYPAD/ENCODER) group bindings to restore on dismiss.
+    /// Heap-allocated rather than fixed-size since LVGL allows any
+    /// number of indevs in principle; in practice this is 1–2 entries.
+    prev_indev_groups: Vec<(*mut lv_indev_t, *mut lv_group_t)>,
+}
+
+impl SavedFocus {
+    /// Capture the current default group and per-indev group bindings.
+    fn capture() -> Self {
+        // SAFETY: lv_group_get_default reads a global; safe after lv_init.
+        let prev_default = unsafe { lv_group_get_default() };
+
+        let mut prev_indev_groups = Vec::new();
+        // SAFETY: lv_indev_get_next(NULL) returns the first indev or
+        // NULL. lv_indev_get_type and lv_indev_get_group are safe on
+        // any non-null lv_indev_t.
+        unsafe {
+            let mut indev = lv_indev_get_next(core::ptr::null_mut());
+            while !indev.is_null() {
+                let kind = lv_indev_get_type(indev);
+                if kind == lv_indev_type_t_LV_INDEV_TYPE_KEYPAD
+                    || kind == lv_indev_type_t_LV_INDEV_TYPE_ENCODER
+                {
+                    prev_indev_groups.push((indev, lv_indev_get_group(indev)));
+                }
+                indev = lv_indev_get_next(indev);
+            }
+        }
+
+        Self { prev_default, prev_indev_groups }
+    }
+
+    /// Restore the captured state.
+    fn restore(self) {
+        // SAFETY: pointers were valid when captured. If the previous
+        // default group or any indev has been deleted since (rare,
+        // would imply app-side teardown during a modal), LVGL handles a
+        // NULL/dangling group pointer by routing to no group; we do not
+        // attempt to verify aliveness because LVGL does not expose a
+        // per-group is_valid check.
+        unsafe {
+            lv_group_set_default(self.prev_default);
+            for (indev, group) in self.prev_indev_groups {
+                lv_indev_set_group(indev, group);
+            }
+        }
     }
 }
 

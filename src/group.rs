@@ -89,6 +89,15 @@ impl Group {
         self
     }
 
+    /// Borrow this group as a non-owning [`GroupRef`].
+    ///
+    /// Useful when handing the group to a navigator-style consumer that
+    /// only needs to swap focus into and out of it without taking
+    /// ownership.
+    pub fn as_ref(&self) -> GroupRef {
+        GroupRef { ptr: self.ptr, _not_send: PhantomData }
+    }
+
     /// Assign this group to all keyboard and encoder input devices.
     ///
     /// Iterates all registered indevs with `lv_indev_get_next` and calls
@@ -137,6 +146,38 @@ pub struct GroupRef {
 }
 
 impl GroupRef {
+    /// Set this group as the default group.
+    ///
+    /// Mirrors [`Group::set_default`] but operates on a non-owning handle —
+    /// useful for restoring a previously-captured default after a modal /
+    /// OSD overlay has hijacked it.
+    pub fn set_default(&self) -> &Self {
+        // SAFETY: self.ptr is non-null (checked by group_get_default /
+        // Group::as_ref). lv_group_set_default stores the pointer in a
+        // global.
+        unsafe { lv_group_set_default(self.ptr) };
+        self
+    }
+
+    /// Assign this group to all keyboard and encoder input devices.
+    /// Same semantics as [`Group::assign_to_keyboard_indevs`].
+    pub fn assign_to_keyboard_indevs(&self) -> &Self {
+        // SAFETY: same as Group::assign_to_keyboard_indevs.
+        unsafe {
+            let mut indev = lv_indev_get_next(core::ptr::null_mut());
+            while !indev.is_null() {
+                let kind = lv_indev_get_type(indev);
+                if kind == lv_indev_type_t_LV_INDEV_TYPE_KEYPAD
+                    || kind == lv_indev_type_t_LV_INDEV_TYPE_ENCODER
+                {
+                    lv_indev_set_group(indev, self.ptr);
+                }
+                indev = lv_indev_get_next(indev);
+            }
+        }
+        self
+    }
+
     /// Add a widget to this group.
     pub fn add_obj(&self, obj: &impl AsLvHandle) -> &Self {
         // SAFETY: self.ptr is non-null (checked in group_get_default()).

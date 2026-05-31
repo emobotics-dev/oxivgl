@@ -158,7 +158,7 @@ impl View for Scroll8 {
         Ok(())
     }
 
-    fn register_events(&mut self) {
+    fn register_events_on(&mut self, _container: &Obj<'static>) {
         if let Some(ref cont_row) = self.cont_row {
             register_event_on(self, cont_row.handle());
         }

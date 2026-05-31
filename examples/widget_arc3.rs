@@ -153,7 +153,7 @@ impl View for WidgetArc3 {
         Ok(())
     }
 
-    fn register_events(&mut self) {
+    fn register_events_on(&mut self, _container: &Obj<'static>) {
         if let Some(ref arcs) = self.arcs {
             let handles: [_; NUM_SLICES] = core::array::from_fn(|i| arcs[i].handle());
             for h in handles {

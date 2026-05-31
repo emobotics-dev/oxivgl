@@ -131,6 +131,26 @@ pub trait View: 'static {
     ///
     /// Default is a no-op.
     fn did_show(&mut self) {}
+
+    /// Register event handlers. Called once after `create`, with the
+    /// same `container` that was passed to `create`. Default attaches
+    /// the view's event trampoline to `container`, so bubbled events
+    /// from any descendant reach `on_event`.
+    ///
+    /// Receiving `container` as an argument — rather than reading
+    /// `lv_screen_active()` — makes the default correct for modals as
+    /// well as full-screen views: the navigator passes the modal
+    /// backdrop, the toast container, or the screen, whichever applies.
+    fn register_events_on(&mut self, container: &Obj<'static>) {
+        register_event_on(self, container.lv_handle());
+    }
+
+    /// Focus group containing this view's focusable widgets (modals
+    /// only). When non-`None`, the navigator activates this group on
+    /// modal open (sets it as default + binds it to all KEYPAD /
+    /// ENCODER input devices) and restores the previous focus state on
+    /// dismiss. Default `None`. See §4.2 for the full lifecycle.
+    fn input_group(&self) -> Option<GroupRef> { None }
 }
 ```
 
@@ -196,8 +216,13 @@ overlays.
 pub struct Navigator {
     // Full-screen navigation stack. Index 0 is the root view.
     stack: Vec<ViewEntry>,
-    // Currently active modal, if any. Rendered on lv_layer_top().
+    // Currently active modal, if any. Rendered inside `modal_backdrop`
+    // which itself is a child of lv_layer_top().
     modal: Option<Box<dyn AnyView>>,
+    modal_backdrop: Option<Obj<'static>>,
+    // Focus state captured on modal open (if input_group was Some);
+    // restored on dismiss. See §4.2.
+    saved_focus: Option<SavedFocus>,
     // Currently active global toast, if any. Rendered as a child of
     // lv_layer_sys(). See §4.3.
     toast: Option<Box<dyn AnyView>>,
@@ -279,11 +304,46 @@ creates a full-size `Obj` on `lv_layer_top()` with
 `ObjFlag::CLICKABLE` set. This absorbs all touch/click events,
 preventing them from reaching the view below. The modal's widgets are
 then created as children of this backdrop object. Dismissing the modal
-deletes the backdrop and all its children.
+drops the backdrop `Obj`, which cascades the deletion to every modal
+widget — a single root, no `lv_obj_clean(layer_top)` needed.
 
 Optional: the backdrop can be styled with a semi-transparent dark fill
-(`opa(128)`, `bg_color(Color::black())`) for a standard dim effect.
-This is a `ScreenAnim` option, not automatic.
+(`opa(128)`, `bg_color(Color::black())`) on the modal's own widgets
+for a standard dim effect. The backdrop itself is transparent.
+
+**Event registration.** `View::register_events_on` defaults to attaching
+the trampoline on the container the navigator passed — which for a
+modal is the backdrop, **not** `lv_screen_active()`. This is what
+makes default modal event handling correct: every bubbled event from a
+modal widget reaches the modal's `on_event`, and no handlers are
+attached to the background view's screen (where they would dangle on a
+push/pop transition).
+
+Modals that catch events on intermediate widgets (containers that don't
+auto-bubble) can still override `register_events_on` and call
+`register_event_on(self, intermediate.handle())` for those.
+
+**Focus management (OSD-style modals).** A modal that needs keyboard or
+encoder input — e.g. an on-screen menu the user navigates with hardware
+buttons — owns its own [`Group`](../src/group.rs) and exposes it via
+`View::input_group`. The navigator does the rest:
+
+1. **On `modal()` open**, if `view.input_group()` returns `Some(group)`:
+   - capture the current default group + the per-indev (KEYPAD /
+     ENCODER) group bindings into a private `SavedFocus`;
+   - call `group.set_default()`;
+   - call `group.assign_to_keyboard_indevs()`.
+
+2. **On `dismiss_modal()`**, the captured `SavedFocus` is restored:
+   - previous default group reinstated via `lv_group_set_default`;
+   - each previously-bound indev re-bound to its previous group via
+     `lv_indev_set_group`.
+
+The app never has to touch `lv_indev_*` / `lv_group_set_default`
+directly, and key events route to the OSD while it is open and back to
+the background view as soon as it is dismissed. A modal that does *not*
+need key input simply returns `None` from `input_group` (the default)
+and the navigator leaves focus state untouched.
 
 ### 4.3 Global Status Overlay (Toast)
 

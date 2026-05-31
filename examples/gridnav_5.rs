@@ -94,7 +94,7 @@ impl View for Gridnav5 {
         Ok(())
     }
 
-    fn register_events(&mut self) {
+    fn register_events_on(&mut self, _container: &Obj<'static>) {
         if let Some(ref ct) = self._cont_top { register_event_on(self, ct.handle()); }
         if let Some(ref cb) = self._cont_bot { register_event_on(self, cb.handle()); }
     }
