@@ -188,3 +188,77 @@ fn input_transparency_strips_clickable() {
 
     nav.dismiss_toast().expect("dismiss");
 }
+
+// ── post_toast / post_dismiss_toast (cross-task queue) ──────────────────────
+
+#[test]
+fn post_toast_then_drain_shows_toast() {
+    let mut nav = fresh_navigator();
+    assert!(!nav.has_toast());
+
+    // Post from "elsewhere" — same task here, but the channel path is
+    // identical to a real cross-task post.
+    oxivgl::navigator::post_toast(LabelToast, None);
+    assert!(!nav.has_toast(), "post must not bypass the drain step");
+
+    nav.drain_toast_requests();
+    assert!(nav.has_toast(), "drain_toast_requests should pick up the queued show");
+    assert_eq!(sys_layer_child_count(), 1);
+
+    nav.dismiss_toast().expect("dismiss");
+}
+
+#[test]
+fn post_dismiss_toast_then_drain_dismisses() {
+    let mut nav = fresh_navigator();
+    nav.show_toast(LabelToast, None);
+    assert!(nav.has_toast());
+
+    oxivgl::navigator::post_dismiss_toast();
+    nav.drain_toast_requests();
+    assert!(!nav.has_toast());
+    assert_eq!(sys_layer_child_count(), 0);
+}
+
+#[test]
+fn multiple_posts_in_one_drain_collapse_to_latest() {
+    let mut nav = fresh_navigator();
+    // Three queued shows + one dismiss: the navigator processes them
+    // in order; show→show replaces, then show, then dismiss. End state:
+    // no toast.
+    oxivgl::navigator::post_toast(LabelToast, None);
+    oxivgl::navigator::post_toast(LabelToast, None);
+    oxivgl::navigator::post_toast(LabelToast, None);
+    oxivgl::navigator::post_dismiss_toast();
+
+    nav.drain_toast_requests();
+    assert!(!nav.has_toast());
+    assert_eq!(sys_layer_child_count(), 0);
+}
+
+#[test]
+fn drain_with_empty_queue_is_a_noop() {
+    let mut nav = fresh_navigator();
+    nav.drain_toast_requests();
+    nav.drain_toast_requests();
+    assert!(!nav.has_toast());
+}
+
+#[test]
+fn post_toast_queue_full_drops_silently() {
+    // Drain anything left over from prior tests in the queue.
+    let mut nav = fresh_navigator();
+    nav.drain_toast_requests();
+
+    // Fill the queue (capacity 4 today). Posting more must not panic
+    // or block — excess requests are dropped with a logged warning.
+    for _ in 0..16 {
+        oxivgl::navigator::post_toast(LabelToast, None);
+    }
+    nav.drain_toast_requests();
+    // We can't assert exactly how many were dropped (it depends on the
+    // queue capacity constant), but draining must leave us in a sane
+    // state and the next dismiss must succeed.
+    assert!(nav.has_toast());
+    nav.dismiss_toast().expect("dismiss after queue-overflow recovery");
+}
