@@ -34,6 +34,13 @@ use crate::widgets::{AsLvHandle, Obj, Screen, ScreenAnim};
 /// on the container inside [`View::create`].
 pub const TOAST_MARGIN_PX: i32 = 2;
 
+/// Default shadow blur radius (px) for the toast container. Together
+/// with [`TOAST_SHADOW_OPA`], gives the toast a soft elevated halo.
+pub const TOAST_SHADOW_WIDTH_PX: i32 = 12;
+
+/// Default shadow opacity (0..=255) for the toast container.
+pub const TOAST_SHADOW_OPA: u8 = 80;
+
 /// Entry on the navigation stack, pairing a type-erased view with its
 /// owning screen object (if any).
 struct ViewEntry {
@@ -455,6 +462,9 @@ impl Navigator {
                 0,
                 -TOAST_MARGIN_PX,
             );
+            // Soft symmetric halo — reinforces the "elevated card" look.
+            lv_obj_set_style_shadow_width(container_handle, TOAST_SHADOW_WIDTH_PX, 0);
+            lv_obj_set_style_shadow_opa(container_handle, TOAST_SHADOW_OPA, 0);
         }
 
         if let Err(e) = boxed.create(&container) {

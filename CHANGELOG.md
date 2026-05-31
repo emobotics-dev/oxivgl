@@ -9,11 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- **Default toast geometry.** `show_toast` now positions the container
-  as a bottom-anchored floating card — full sys-layer width, symmetric
-  `TOAST_MARGIN_PX` (2 px) inset on left / right / bottom, height
-  hugging content. Views may still override on the container in
-  `create`. New public `navigator::TOAST_MARGIN_PX`.
+- **Default toast geometry and shadow.** `show_toast` now positions
+  the container as a bottom-anchored floating card — full sys-layer
+  width, symmetric `TOAST_MARGIN_PX` (2 px) inset on left / right /
+  bottom, height hugging content, plus a soft symmetric shadow
+  (`TOAST_SHADOW_WIDTH_PX = 12`, `TOAST_SHADOW_OPA = 80`) to reinforce
+  the elevated look. Views may still override on the container in
+  `create`. New public constants in `navigator`.
 
 ## [0.2.0] — 2026-05-31
 
