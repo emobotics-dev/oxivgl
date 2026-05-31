@@ -5,3 +5,4 @@ docs/archived/
 docs/plans/
 oxivgl-sys/target/
 .devcontainer/.clco-built
+.cargo/credentials.toml

@@ -192,12 +192,17 @@ overlays.
 ///
 /// The navigator owns all view instances. Views lower in the stack
 /// have their widget trees destroyed but their struct state preserved.
-/// Only the topmost view (and any active modal) have live widgets.
+/// Only the topmost view (and any active modal/toast) have live widgets.
 pub struct Navigator {
     // Full-screen navigation stack. Index 0 is the root view.
     stack: Vec<ViewEntry>,
     // Currently active modal, if any. Rendered on lv_layer_top().
     modal: Option<Box<dyn AnyView>>,
+    // Currently active global toast, if any. Rendered as a child of
+    // lv_layer_sys(). See §4.3.
+    toast: Option<Box<dyn AnyView>>,
+    toast_container: Option<Obj<'static>>,
+    toast_deadline: Option<Instant>,
 }
 ```
 
@@ -280,7 +285,88 @@ Optional: the backdrop can be styled with a semi-transparent dark fill
 (`opa(128)`, `bg_color(Color::black())`) for a standard dim effect.
 This is a `ScreenAnim` option, not automatic.
 
-### 4.3 Screen Animations
+### 4.3 Global Status Overlay (Toast)
+
+The toast is a **passive, page-independent** status surface, distinct
+from `modal`. It is used for messages that must appear regardless of
+which view is active (e.g. "No SD card" raised at boot before any
+particular page has focus) and that must not steal input from the view
+beneath.
+
+```rust
+impl Navigator {
+    /// Show a global passive toast on the system layer.
+    ///
+    /// Persists across push/replace/pop. Registers no input handlers.
+    /// Every widget the view creates has `CLICKABLE` cleared, so
+    /// touches pass through to the view beneath.
+    ///
+    /// `duration` is an optional auto-dismiss timeout, owned by the
+    /// navigator. `None` means the caller must dismiss explicitly.
+    /// Calling `show_toast` while one is active replaces it.
+    pub fn show_toast(&mut self, view: impl View, duration: Option<Duration>);
+
+    /// Dismiss the active toast.
+    pub fn dismiss_toast(&mut self) -> Result<(), NavigationError>;
+
+    /// Whether a toast is currently showing.
+    pub fn has_toast(&self) -> bool;
+
+    /// Called once per render-loop iteration by `run_app_nav`.
+    /// Auto-dismisses on deadline; self-heals if the toast container
+    /// was destroyed externally.
+    pub fn tick_toast(&mut self);
+}
+```
+
+**Layer choice.** Toasts live on `lv_layer_sys()` (above `lv_layer_top()`),
+not the top layer. This keeps the toast lifecycle separate from
+modals: dismissing a modal does `lv_obj_clean(lv_layer_top())`, which
+would otherwise also delete the toast's widgets. Each `show_toast`
+creates its own dedicated container as a child of the system layer; on
+dismissal only that container is deleted, leaving the system layer
+itself (an LVGL-owned object) intact.
+
+**Passivity contract.** The navigator enforces input-transparency:
+- `register_events()` is **never** called on the toast view —
+  preventing the dangling-handler hazard that `Modal` has (where
+  default `register_events` would register on `lv_screen_active()`,
+  the *background* view's screen).
+- After `create()`, `CLICKABLE` and `CLICK_FOCUSABLE` are cleared on
+  the toast container and every descendant. Touches pass through.
+
+A toast view's `update()` and `on_event()` are *not* polled by
+`run_app_nav` — toasts are display-only.
+
+**Persistence.** The toast container is parented to the system layer,
+not to any screen, so it is unaffected by `push` / `replace` / `pop`.
+The same toast instance is visible across page switches with no
+recreation.
+
+**Auto-dismiss.** When `duration` is `Some`, the navigator records
+`Instant::now() + duration` and dismisses when `tick_toast` next runs
+after the deadline. The render loop calls `tick_toast` every
+iteration; the dismiss latency is therefore the loop period
+(~4×`LVGL_TICK_MS` ≈ 33 ms).
+
+**Self-heal.** If something else destroys the toast container (e.g.
+a third-party clear of the system layer), `tick_toast` detects the
+stale handle via `lv_obj_is_valid` and drops the orphaned view so the
+slot becomes reusable.
+
+**Distinction from `Modal`.**
+
+| Property               | `Modal`                              | Toast                          |
+|------------------------|--------------------------------------|--------------------------------|
+| Layer                  | `lv_layer_top()`                     | `lv_layer_sys()` child         |
+| Input                  | Absorbs (backdrop)                   | Transparent                    |
+| Persists across nav    | Yes (until `dismiss_modal`)          | Yes                            |
+| Lifetime tied to view  | No (lives until dismissed)           | No                             |
+| Auto-dismiss           | App-managed                          | Navigator-managed (optional)   |
+| Receives events        | Yes                                  | No (handlers never registered) |
+| Intended for           | Page-specific dialogs / future OSD   | Global status notifications    |
+
+### 4.4 Screen Animations
 
 ```rust
 /// Screen transition animation, wrapping `lv_screen_load_anim`.
@@ -309,7 +395,7 @@ pub enum ScreenAnimType {
 }
 ```
 
-### 4.4 `NavAction` — Navigation Requests
+### 4.5 `NavAction` — Navigation Requests
 
 Views cannot call Navigator methods directly (the navigator owns
 the view — `&mut Navigator` and `&mut self` cannot coexist). Instead,
@@ -327,10 +413,14 @@ pub enum NavAction {
     Pop(Option<ScreenAnim>),
     /// Replace the current view.
     Replace(Box<dyn AnyView>, Option<ScreenAnim>),
-    /// Show a modal overlay.
+    /// Show a modal overlay (page-specific, takes input).
     Modal(Box<dyn AnyView>),
     /// Dismiss the current modal.
     DismissModal,
+    /// Show a global passive toast on the system layer (see §4.3).
+    ShowToast(Box<dyn AnyView>, Option<Duration>),
+    /// Dismiss the active global toast.
+    DismissToast,
 }
 ```
 

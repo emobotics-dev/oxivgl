@@ -12,6 +12,7 @@ mod draw;
 mod event;
 mod group;
 mod misc;
+mod navigator_toast;
 mod obj;
 mod observer;
 mod style;
