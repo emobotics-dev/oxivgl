@@ -15,7 +15,10 @@ extern crate alloc;
 use alloc::boxed::Box;
 use alloc::vec::Vec;
 
+use embassy_time::Duration;
 use oxivgl_sys::*;
+
+use crate::driver::get_tick_ms;
 
 use crate::view::{
     AnyView, NavAction, NavigationError, View,
@@ -48,6 +51,17 @@ pub struct Navigator {
     stack: Vec<ViewEntry>,
     /// Currently active modal, if any. Rendered on `lv_layer_top()`.
     modal: Option<Box<dyn AnyView>>,
+    /// Currently active global toast, if any. Rendered as a child of
+    /// `lv_layer_sys()` so it persists across page switches and stays
+    /// above any modal. See [`Navigator::show_toast`].
+    toast: Option<Box<dyn AnyView>>,
+    /// The container the active toast was created into. Owned here
+    /// (rather than by the toast view) so dismissal deletes exactly the
+    /// toast's widgets and nothing else on the system layer.
+    toast_container: Option<Obj<'static>>,
+    /// Auto-dismiss deadline for the active toast, in `get_tick_ms` units
+    /// (wrap-aware u32 milliseconds). Compared via `wrapping_sub`.
+    toast_deadline_ms: Option<u32>,
 }
 
 impl Navigator {
@@ -56,6 +70,9 @@ impl Navigator {
         Self {
             stack: Vec::new(),
             modal: None,
+            toast: None,
+            toast_container: None,
+            toast_deadline_ms: None,
         }
     }
 
@@ -311,6 +328,158 @@ impl Navigator {
         self.modal.is_some()
     }
 
+    /// Show a global passive status overlay on the system layer.
+    ///
+    /// Unlike [`modal`](Self::modal), the toast:
+    /// - lives on `lv_layer_sys()` so it persists across `push` /
+    ///   `replace` / `pop` and is unaffected by modal dismissal;
+    /// - is **passive** — `register_events` is never called, and every
+    ///   widget the view creates has the `CLICKABLE` flag cleared so
+    ///   touches pass through to the view beneath;
+    /// - has its auto-dismiss timer owned by the navigator. If
+    ///   `duration` is `Some`, the toast is dismissed automatically the
+    ///   next time [`tick_toast`](Self::tick_toast) runs after the
+    ///   deadline. `None` means the caller must dismiss explicitly.
+    ///
+    /// Calling `show_toast` while one is already active replaces it.
+    pub fn show_toast(&mut self, view: impl View, duration: Option<Duration>) {
+        self.show_toast_boxed(Box::new(view), duration);
+    }
+
+    fn show_toast_boxed(
+        &mut self,
+        mut boxed: Box<dyn AnyView>,
+        duration: Option<Duration>,
+    ) {
+        // Replace any active toast first.
+        if self.toast.is_some() {
+            let _ = self.dismiss_toast();
+        }
+
+        // Create a dedicated container as a child of lv_layer_sys() so
+        // dismissal deletes only the toast's widgets — the system layer
+        // itself stays alive (it is LVGL-owned).
+        let sys_layer = unsafe { lv_layer_sys() };
+        assert!(!sys_layer.is_null(), "lv_layer_sys returned NULL");
+        // SAFETY: sys_layer is a valid LVGL container.
+        let container_handle = unsafe { lv_obj_create(sys_layer) };
+        assert!(!container_handle.is_null(), "toast container creation failed");
+        let container = Obj::from_raw(container_handle);
+
+        if let Err(e) = boxed.create(&container) {
+            warn!("nav show_toast: create failed: {:?}", e);
+            // Drop the container so we leave the sys layer clean.
+            drop(container);
+            return;
+        }
+
+        // Strip CLICKABLE from the container and all its descendants so
+        // touches pass through to whatever is beneath the toast. This
+        // enforces the passivity contract regardless of what the view did.
+        // SAFETY: container_handle is the freshly-created object above;
+        // its tree is what the view just populated.
+        unsafe { remove_clickable_recursive(container_handle) };
+
+        // Intentionally do NOT call boxed.register_events(): the default
+        // impl registers on lv_screen_active() (the background view's
+        // screen) and would dangle across page switches — exactly the
+        // bug this toast surface exists to avoid.
+
+        boxed.did_show();
+
+        self.toast = Some(boxed);
+        self.toast_container = Some(container);
+        self.toast_deadline_ms = duration.map(|d| {
+            // Saturate the embassy Duration into u32 ms (≈49.7 days max),
+            // then wrap-add to the current tick. The compare in tick_toast
+            // uses `wrapping_sub` so wrap-around is correct as long as the
+            // duration is < ~25 days.
+            let ms = d.as_millis().min(u32::MAX as u64) as u32;
+            get_tick_ms().wrapping_add(ms)
+        });
+    }
+
+    /// Dismiss the active toast overlay.
+    ///
+    /// Returns `Err(NoActiveToast)` if none is showing.
+    pub fn dismiss_toast(&mut self) -> Result<(), NavigationError> {
+        let mut toast = match self.toast.take() {
+            Some(t) => t,
+            None => return Err(NavigationError::NoActiveToast),
+        };
+        self.toast_deadline_ms = None;
+        toast.will_hide();
+
+        // Delete the toast's container (and thus its widget subtree).
+        // The toast view's internal Obj wrappers now hold stale pointers;
+        // Obj::Drop uses lv_obj_is_valid as a guard (spec §8.1).
+        if let Some(container) = self.toast_container.take() {
+            let handle = container.lv_handle();
+            // Suppress container's own Drop — we delete it explicitly.
+            core::mem::forget(container);
+            // SAFETY: handle was returned by lv_obj_create above; checked
+            // valid here in case lv_obj_clean on the sys layer destroyed
+            // it externally between show and dismiss.
+            unsafe {
+                if lv_obj_is_valid(handle) {
+                    lv_obj_delete(handle);
+                }
+            }
+        }
+        drop(toast);
+        Ok(())
+    }
+
+    /// Whether a toast is currently showing.
+    pub fn has_toast(&self) -> bool {
+        self.toast.is_some()
+    }
+
+    /// Get a mutable reference to the active toast view, if any.
+    pub fn active_toast_mut(&mut self) -> Option<&mut dyn AnyView> {
+        self.toast.as_mut().map(|t| &mut **t as &mut dyn AnyView)
+    }
+
+    /// Maintenance tick for the toast slot — call once per render-loop
+    /// iteration.
+    ///
+    /// - Dismisses the toast if its auto-dismiss deadline has passed.
+    /// - Self-heals the slot if the toast container was destroyed
+    ///   externally (e.g. some other code cleared the system layer):
+    ///   drops the orphaned view so the slot is reusable.
+    pub fn tick_toast(&mut self) {
+        if self.toast.is_none() {
+            return;
+        }
+
+        // External-destruction guard: if the container handle is no
+        // longer valid, drop the view + clear the slot.
+        if let Some(container) = self.toast_container.as_ref() {
+            let handle = container.lv_handle();
+            // SAFETY: lv_obj_is_valid handles any pointer (returns false
+            // for freed objects).
+            if !unsafe { lv_obj_is_valid(handle) } {
+                if let Some(mut t) = self.toast.take() {
+                    t.will_hide();
+                }
+                // Suppress the container's Drop — its target is already gone.
+                if let Some(orphan) = self.toast_container.take() {
+                    core::mem::forget(orphan);
+                }
+                self.toast_deadline_ms = None;
+                return;
+            }
+        }
+
+        // Wrap-aware compare: `now - deadline >= 0` (as i32) means we've
+        // reached the deadline, robust to u32 wrap.
+        if let Some(deadline) = self.toast_deadline_ms
+            && get_tick_ms().wrapping_sub(deadline) as i32 >= 0
+        {
+            let _ = self.dismiss_toast();
+        }
+    }
+
     /// Number of views on the stack.
     pub fn depth(&self) -> usize {
         self.stack.len()
@@ -345,6 +514,12 @@ impl Navigator {
                     warn!("nav dismiss_modal failed: {}", e);
                 }
             }
+            NavAction::ShowToast(view, duration) => self.show_toast_boxed(view, duration),
+            NavAction::DismissToast => {
+                if let Err(e) = self.dismiss_toast() {
+                    warn!("nav dismiss_toast failed: {}", e);
+                }
+            }
         }
     }
 
@@ -356,6 +531,35 @@ impl Navigator {
             true
         } else {
             false
+        }
+    }
+}
+
+impl Default for Navigator {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+/// Strip `CLICKABLE` and `CLICK_FOCUSABLE` from `obj` and every descendant.
+///
+/// Used to make a toast subtree input-transparent regardless of what the
+/// toast view did when it built its widgets.
+///
+/// # Safety
+/// `obj` must be a valid `lv_obj_t*` whose subtree is fully constructed
+/// (no concurrent mutation from another task).
+unsafe fn remove_clickable_recursive(obj: *mut lv_obj_t) {
+    if obj.is_null() {
+        return;
+    }
+    let flags = crate::enums::ObjFlag::CLICKABLE.0 | crate::enums::ObjFlag::CLICK_FOCUSABLE.0;
+    unsafe {
+        lv_obj_remove_flag(obj, flags);
+        let n = lv_obj_get_child_count(obj);
+        for i in 0..n {
+            let child = lv_obj_get_child(obj, i as i32);
+            remove_clickable_recursive(child);
         }
     }
 }

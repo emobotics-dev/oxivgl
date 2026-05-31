@@ -244,6 +244,53 @@ fn leak_aa_lvgl_baseline() {
     });
 }
 
+// ── Navigator toast (show/dismiss cycle) ─────────────────────────────────────
+
+#[test]
+fn leak_navigator_toast_show_dismiss() {
+    // A trivial root view for the navigator stack.
+    #[derive(Default)]
+    struct EmptyRoot;
+    impl oxivgl::view::View for EmptyRoot {
+        fn create(
+            &mut self,
+            _container: &oxivgl::widgets::Obj<'static>,
+        ) -> Result<(), oxivgl::widgets::WidgetError> {
+            Ok(())
+        }
+    }
+
+    // A passive toast view (one label).
+    #[derive(Default)]
+    struct LabelToast;
+    impl oxivgl::view::View for LabelToast {
+        fn create(
+            &mut self,
+            container: &oxivgl::widgets::Obj<'static>,
+        ) -> Result<(), oxivgl::widgets::WidgetError> {
+            let lbl = oxivgl::widgets::Label::new(container)?;
+            lbl.text("status");
+            Ok(())
+        }
+    }
+
+    run_isolated("Navigator toast show/dismiss", || {
+        let mut nav = oxivgl::navigator::Navigator::new();
+        nav.push_root(EmptyRoot);
+        pump_child();
+        start_tracking();
+        let before = total_alloc_bytes();
+        for _ in 0..MEASURE {
+            nav.show_toast(LabelToast, None);
+            nav.dismiss_toast().expect("dismiss_toast");
+            pump_child();
+        }
+        let after = total_alloc_bytes();
+        stop_tracking();
+        (after - before) / MEASURE
+    });
+}
+
 // ── Statics referenced by test closures ─────────────────────────────────────
 
 static TRANS_PROPS: [props::lv_style_prop_t; 3] = [props::BG_COLOR, props::BG_OPA, props::LAST];

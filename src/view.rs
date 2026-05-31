@@ -107,6 +107,15 @@ pub enum NavAction {
     Modal(Box<dyn AnyView>),
     /// Dismiss the current modal overlay.
     DismissModal,
+    /// Show a global passive status overlay (toast) on the system layer.
+    ///
+    /// Unlike [`Modal`](Self::Modal), the toast persists across page
+    /// switches and registers no input handlers. If the `Duration` is
+    /// `Some`, the navigator auto-dismisses on expiry. See
+    /// [`Navigator::show_toast`](crate::navigator::Navigator::show_toast).
+    ShowToast(Box<dyn AnyView>, Option<Duration>),
+    /// Dismiss the active global toast overlay.
+    DismissToast,
 }
 
 impl NavAction {
@@ -123,6 +132,15 @@ impl NavAction {
     /// Convenience: show a modal overlay.
     pub fn modal(view: impl View) -> Self {
         Self::Modal(Box::new(view))
+    }
+
+    /// Convenience: show a passive global toast.
+    ///
+    /// `duration` is an optional auto-dismiss timeout owned by the navigator.
+    /// `None` means the toast stays until [`NavAction::DismissToast`] (or
+    /// [`Navigator::dismiss_toast`](crate::navigator::Navigator::dismiss_toast)).
+    pub fn show_toast(view: impl View, duration: Option<Duration>) -> Self {
+        Self::ShowToast(Box::new(view), duration)
     }
 
     /// Returns `true` if this is [`NavAction::None`].
@@ -192,6 +210,8 @@ pub enum NavigationError {
     StackEmpty,
     /// No modal is currently active.
     NoActiveModal,
+    /// No toast overlay is currently active.
+    NoActiveToast,
     /// View creation failed during a navigation transition.
     CreateFailed(WidgetError),
 }
@@ -201,6 +221,7 @@ impl core::fmt::Display for NavigationError {
         match self {
             Self::StackEmpty => write!(f, "cannot pop the root view"),
             Self::NoActiveModal => write!(f, "no active modal to dismiss"),
+            Self::NoActiveToast => write!(f, "no active toast to dismiss"),
             Self::CreateFailed(e) => write!(f, "view creation failed: {:?}", e),
         }
     }
@@ -422,5 +443,8 @@ pub async fn run_app_nav<const BYTES: usize>(
                 nav.process_action(modal_action);
             }
         }
+
+        // Auto-dismiss expired toasts; self-heal if the slot was orphaned.
+        nav.tick_toast();
     }
 }
