@@ -106,7 +106,7 @@ impl View for Observer2 {
         Ok(())
     }
 
-    fn register_events(&mut self) {
+    fn register_events_on(&mut self, _container: &Obj<'static>) {
         if let Some(ref ta) = self.ta { register_event_on(self, ta.handle()); }
         if let Some(ref btn_logout) = self.btn_logout { register_event_on(self, btn_logout.handle()); }
     }

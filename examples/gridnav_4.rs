@@ -78,7 +78,7 @@ impl View for Gridnav4 {
         Ok(())
     }
 
-    fn register_events(&mut self) {
+    fn register_events_on(&mut self, _container: &Obj<'static>) {
         if let Some(ref list) = self.list {
             register_event_on(self, list.handle());
         }

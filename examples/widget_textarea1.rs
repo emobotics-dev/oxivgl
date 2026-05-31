@@ -58,7 +58,7 @@ impl View for WidgetTextarea1 {
         Ok(())
     }
 
-    fn register_events(&mut self) {
+    fn register_events_on(&mut self, _container: &Obj<'static>) {
         if let Some(ref btnm) = self.btnm {
             register_event_on(self, btnm.handle());
         }

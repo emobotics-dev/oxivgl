@@ -73,7 +73,7 @@ impl View for WidgetCheckbox2 {
         Ok(())
     }
 
-    fn register_events(&mut self) {
+    fn register_events_on(&mut self, _container: &Obj<'static>) {
         if let Some(ref g) = self.group1 {
             register_event_on(self, g.handle());
         }

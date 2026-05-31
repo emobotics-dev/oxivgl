@@ -104,7 +104,7 @@ impl View for Translation2 {
         Ok(())
     }
 
-    fn register_events(&mut self) {
+    fn register_events_on(&mut self, _container: &Obj<'static>) {
         if let Some(ref dd) = self.dd {
             register_event_on(self, dd.handle());
         }

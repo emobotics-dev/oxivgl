@@ -136,7 +136,7 @@ impl View for Gridnav3 {
         Ok(())
     }
 
-    fn register_events(&mut self) {
+    fn register_events_on(&mut self, _container: &Obj<'static>) {
         // Receive KEY events from cont_sub2 (no bubble needed — direct registration).
         if let Some(ref cont_sub2) = self.cont_sub2 {
             register_event_on(self, cont_sub2.handle());

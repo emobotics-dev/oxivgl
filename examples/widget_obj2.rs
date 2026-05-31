@@ -38,7 +38,7 @@ impl View for WidgetObj2 {
         Ok(())
     }
 
-    fn register_events(&mut self) {
+    fn register_events_on(&mut self, _container: &Obj<'static>) {
         if let Some(ref obj) = self.obj {
             register_event_on(self, obj.handle());
         }

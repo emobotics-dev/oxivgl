@@ -43,7 +43,7 @@ impl View for EventButton {
         Ok(())
     }
 
-    fn register_events(&mut self) {
+    fn register_events_on(&mut self, _container: &Obj<'static>) {
         if let Some(ref btn) = self.btn { register_event_on(self, btn.handle()); }
     }
 

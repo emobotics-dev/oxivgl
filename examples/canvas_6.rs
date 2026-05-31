@@ -41,7 +41,7 @@ impl View for Canvas6 {
         Ok(())
     }
 
-    fn register_events(&mut self) {}
+    fn register_events_on(&mut self, _container: &Obj<'static>) {}
     fn on_event(&mut self, _: &oxivgl::event::Event) -> NavAction { NavAction::None }
 
     fn update(&mut self) -> Result<NavAction, WidgetError> {

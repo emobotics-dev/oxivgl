@@ -165,7 +165,7 @@ macro_rules! host_main {
             let container = $crate::oxivgl::widgets::Obj::from_raw_non_owning(screen_handle);
             _view.create(&container).expect("view create failed");
 
-            $crate::oxivgl::view::register_view_events(&mut _view);
+            $crate::oxivgl::view::register_view_events(&mut _view, &container);
 
             // Derive screenshot name from source file path.
             let src = file!();
