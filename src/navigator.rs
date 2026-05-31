@@ -27,6 +27,13 @@ use crate::view::{
 };
 use crate::widgets::{AsLvHandle, Obj, Screen, ScreenAnim};
 
+/// Symmetric inset (in pixels) applied to the default toast container
+/// on left, right, and bottom — gives the toast a "floating card" look
+/// by leaving a uniform sliver of the underlying view visible on all
+/// three free sides. Override by re-setting size / alignment / margin
+/// on the container inside [`View::create`].
+pub const TOAST_MARGIN_PX: i32 = 2;
+
 /// Entry on the navigation stack, pairing a type-erased view with its
 /// owning screen object (if any).
 struct ViewEntry {
@@ -398,6 +405,16 @@ impl Navigator {
     ///   next time [`tick_toast`](Self::tick_toast) runs after the
     ///   deadline. `None` means the caller must dismiss explicitly.
     ///
+    /// # Default geometry
+    ///
+    /// Before [`View::create`] runs, the container is sized and
+    /// positioned for a bottom-anchored "floating card": full sys-layer
+    /// width with a symmetric [`TOAST_MARGIN_PX`]-pixel inset on left
+    /// and right, height hugging its content, anchored at
+    /// `Align::BottomMid` lifted by the same margin. The view can
+    /// override any of this by re-setting size, alignment, or styles
+    /// on the container inside `create`.
+    ///
     /// Calling `show_toast` while one is already active replaces it.
     pub fn show_toast(&mut self, view: impl View, duration: Option<Duration>) {
         self.show_toast_boxed(Box::new(view), duration);
@@ -422,6 +439,23 @@ impl Navigator {
         let container_handle = unsafe { lv_obj_create(sys_layer) };
         assert!(!container_handle.is_null(), "toast container creation failed");
         let container = Obj::from_raw(container_handle);
+
+        // Default geometry: bottom-anchored floating card with a
+        // symmetric margin on left / right / bottom. Applied BEFORE
+        // create() so a custom view can override on the same container.
+        // SAFETY: container_handle is the freshly-created object above.
+        unsafe {
+            lv_obj_set_width(container_handle, lv_pct(100));
+            lv_obj_set_style_margin_left(container_handle, TOAST_MARGIN_PX, 0);
+            lv_obj_set_style_margin_right(container_handle, TOAST_MARGIN_PX, 0);
+            lv_obj_set_height(container_handle, crate::style::LV_SIZE_CONTENT);
+            lv_obj_align(
+                container_handle,
+                lv_align_t_LV_ALIGN_BOTTOM_MID as lv_align_t,
+                0,
+                -TOAST_MARGIN_PX,
+            );
+        }
 
         if let Err(e) = boxed.create(&container) {
             warn!("nav show_toast: create failed: {:?}", e);

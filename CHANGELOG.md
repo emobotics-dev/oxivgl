@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.1] — 2026-05-31
+
+### Added
+
+- **Default toast geometry.** `show_toast` now positions the container
+  as a bottom-anchored floating card — full sys-layer width, symmetric
+  `TOAST_MARGIN_PX` (2 px) inset on left / right / bottom, height
+  hugging content. Views may still override on the container in
+  `create`. New public `navigator::TOAST_MARGIN_PX`.
+
 ## [0.2.0] — 2026-05-31
 
 ### Added
