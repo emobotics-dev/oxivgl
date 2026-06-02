@@ -335,7 +335,26 @@ static LEAK_TRANS_VALUES: [S; 2] = [S::from_cstr(c"Hello"), S::from_cstr(c"Hallo
 
 // ── Pure Rust leak tests ────────────────────────────────────────────────────
 
+/// `'static` keypad states for the KeypadIndev leak tests (LVGL stores a
+/// pointer to each for the device's lifetime).
+static KP_LEAK: oxivgl::indev::KeypadState = oxivgl::indev::KeypadState::new();
+static KP_LEAK_EVT: oxivgl::indev::KeypadState = oxivgl::indev::KeypadState::new();
+
 leak_rust_test! {
+    leak_keypad_indev, "KeypadIndev create/drop", || {
+        let kp = oxivgl::indev::KeypadIndev::new(&KP_LEAK).unwrap();
+        drop(kp);
+    };
+
+    leak_keypad_event, "KeypadIndev EVENT create/drop", || {
+        // create() (EVENT mode) + Drop is the allocation surface owned here;
+        // send()/read() allocate nothing (fixed ring + atomics), and the
+        // read-drain path is covered by the integration tests (real screen).
+        let kp = oxivgl::indev::KeypadIndev::new_event(&KP_LEAK_EVT).unwrap();
+        KP_LEAK_EVT.send(oxivgl::enums::Key::NEXT); // exercises the ring; no alloc
+        drop(kp);
+    };
+
     leak_style_build_drop, "Style build/drop", || {
         let mut sb = StyleBuilder::new();
         sb.bg_color_hex(0xFF0000).bg_opa(255).radius(5).border_width(2).border_color_hex(0x00FF00);

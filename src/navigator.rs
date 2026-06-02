@@ -123,6 +123,7 @@ impl Navigator {
         // `container` — the default screen at this point.
         boxed.register_events_on(&container);
         boxed.did_show();
+        activate_view_group(boxed.input_group());
 
         self.stack.push(ViewEntry {
             view: boxed,
@@ -193,6 +194,7 @@ impl Navigator {
         }
 
         boxed.did_show();
+        activate_view_group(boxed.input_group());
 
         self.stack.push(ViewEntry {
             view: boxed,
@@ -254,6 +256,7 @@ impl Navigator {
 
         top.view.register_events_on(&container);
         top.view.did_show();
+        activate_view_group(top.view.input_group());
         Ok(())
     }
 
@@ -289,6 +292,7 @@ impl Navigator {
             .expect("replaced view create failed");
         boxed.register_events_on(&new_screen);
         boxed.did_show();
+        activate_view_group(boxed.input_group());
 
         self.stack.push(ViewEntry {
             view: boxed,
@@ -659,6 +663,22 @@ impl Navigator {
 impl Default for Navigator {
     fn default() -> Self {
         Self::new()
+    }
+}
+
+/// Route keypad/encoder input to the active full-screen view's focus group,
+/// if it provides one via [`View::input_group`](crate::view::View::input_group).
+///
+/// Called after every full-screen activation (`push_root` / `push` / `pop` /
+/// `replace`). Unlike the modal path, there is no save/restore: a full-screen
+/// transition *replaces* the active view, so each activation simply rebinds the
+/// default group and the keyboard/encoder devices to the new top view's group.
+/// A view returning `None` leaves the previous routing untouched (its widgets
+/// are gone, so the stale group has no focusable members).
+fn activate_view_group(group: Option<crate::group::GroupRef>) {
+    if let Some(g) = group {
+        g.set_default();
+        g.assign_to_keyboard_indevs();
     }
 }
 

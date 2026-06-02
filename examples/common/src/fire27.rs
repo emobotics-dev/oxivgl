@@ -164,27 +164,21 @@ macro_rules! fire27_body {
         /// and stores the corresponding LVGL key code in KEY_PENDING.
         #[embassy_executor::task(pool_size = 3)]
         async fn button_task(
-            pin: Input<'static>,
+            mut pin: Input<'static>,
             key_code: u32,
         ) -> ! {
-            use $crate::async_button::{Button, ButtonConfig, Mode as BtnMode};
-            let config = ButtonConfig {
-                mode: BtnMode::PullUp,
-                ..ButtonConfig::default()
-            };
-            let mut btn = Button::new(pin, config);
+            use $crate::embassy_time::{Duration, Timer};
+            // Buttons are active-low (external pull-ups on GPIO34-39). Respond on
+            // the PRESS edge for minimal latency — interrupt-driven, no polling —
+            // rather than waiting for a debounced release. A queued key is
+            // consumed once by keypad_read_cb, so one press = one focus step.
+            const DEBOUNCE: Duration = Duration::from_millis(15);
             loop {
-                use $crate::async_button::ButtonEvent;
-                match btn.update().await {
-                    ButtonEvent::ShortPress { .. } => {
-                        // Only write if no key is pending (last press wins on overlap).
-                        KEY_PENDING.store(
-                            key_code,
-                            core::sync::atomic::Ordering::Relaxed,
-                        );
-                    }
-                    ButtonEvent::LongPress => {}
-                }
+                pin.wait_for_falling_edge().await;
+                KEY_PENDING.store(key_code, core::sync::atomic::Ordering::Relaxed);
+                Timer::after(DEBOUNCE).await; // settle press bounce
+                pin.wait_for_rising_edge().await; // wait for release
+                Timer::after(DEBOUNCE).await; // settle release bounce
             }
         }
 
@@ -255,6 +249,22 @@ macro_rules! fire27_body {
 
             fn register_events_on(&mut self, container: &Obj<'static>) {
                 self.inner.register_events_on(container);
+            }
+
+            // Delegate the remaining lifecycle/focus hooks to the inner view —
+            // otherwise they fall back to View's defaults (None / no-op) and the
+            // inner view's overrides never run. input_group() is what lets the
+            // navigator route the hardware keypad to the view's focus group.
+            fn input_group(&self) -> Option<$crate::oxivgl::group::GroupRef> {
+                self.inner.input_group()
+            }
+
+            fn will_hide(&mut self) {
+                self.inner.will_hide();
+            }
+
+            fn did_show(&mut self) {
+                self.inner.did_show();
             }
         }
 

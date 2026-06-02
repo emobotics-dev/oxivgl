@@ -212,6 +212,30 @@ fn modal_without_input_group_does_not_touch_focus() {
     assert_eq!(after, before, "still unchanged after dismiss");
 }
 
+#[test]
+fn full_screen_view_with_input_group_becomes_default_group() {
+    // Regression guard: full-screen `input_group` routing (push/pop/replace),
+    // not just modals. The navigator must bind a pushed view's group as the
+    // default + to the keyboard indevs via `activate_view_group`.
+    let mut nav = fresh_navigator();
+
+    // A baseline app group, distinct from the pushed view's group.
+    let app_group = Group::new().expect("app group create");
+    app_group.set_default();
+    let app_group_ptr = group_get_default().expect("default").add_obj_ptr_for_test();
+
+    // Push a full-screen root view that exposes an input_group.
+    nav.push_root(GroupModal::new());
+
+    let after = group_get_default()
+        .expect("default set after push_root")
+        .add_obj_ptr_for_test();
+    assert_ne!(
+        after, app_group_ptr,
+        "navigator must route a full-screen view's input_group to the default group",
+    );
+}
+
 // ── GroupRef test extension trait ───────────────────────────────────────────
 // GroupRef doesn't expose its raw pointer; for tests we need an identity to
 // compare. Add a sentinel widget and use its address as a stand-in.
