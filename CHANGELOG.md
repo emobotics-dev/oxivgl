@@ -5,6 +5,33 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.0] — 2026-06-02
+
+### Added
+
+- **Keypad input device.** `KeypadState` + `KeypadIndev` — a safe LVGL `KEYPAD`
+  indev fed by the application, for focus-navigated menus driven by hardware
+  buttons or on-screen / touch keys. Two producer models:
+  - *Held* — `KeypadState::press(key)` / `release()`; LVGL derives
+    long-press/repeat (raw momentary buttons).
+  - *One-shot* — `KeypadState::send(key)`; each event is exactly one focus step
+    with no LVGL-side repeat, for input drivers that already decode
+    debounce/long-press/repeat. Backed by a lock-free single-producer ring.
+- **Event-driven, poll-free input.** `KeypadIndev::new_event` (LVGL
+  `LV_INDEV_MODE_EVENT`, no read timer) + `read()` to drain on demand;
+  `KeypadState::has_pending`. The device is read only when the application
+  signals an event — nothing is polled.
+- **Navigator focus routing for full-screen views.** Each active view's
+  `View::input_group()` is now bound on `push` / `pop` / `replace` (previously
+  modal-only), so a whole page — not just a modal — can be keypad-navigated.
+- **Run-loop keypad entry points.** `view::run_app_nav_keypad` (TIMER mode) and
+  `view::run_app_nav_keypad_events` (EVENT mode + async `wake` closure that races
+  the inter-tick sleep for near-instant, poll-free input).
+- `EventCode::RELEASED` (LVGL touch-up edge).
+- Prelude re-exports `KeypadState` and `KeypadIndev`.
+- **Example** `menu_keypad` — a focus-navigated menu driven by on-screen keys
+  (host SDL); the same code is driven by the front-panel buttons on ESP32.
+
 ## [0.2.1] — 2026-05-31
 
 ### Added

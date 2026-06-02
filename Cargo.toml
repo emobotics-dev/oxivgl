@@ -2,7 +2,7 @@
 [package]
 name = "oxivgl"
 edition = "2024"
-version = "0.2.1"
+version = "0.3.0"
 license = "MIT OR Apache-2.0"
 description = "Safe no_std Rust bindings for LVGL — embedded GUI on ESP32 and host SDL2"
 repository = "https://github.com/emobotics-dev/oxivgl"
