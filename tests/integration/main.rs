@@ -11,6 +11,7 @@ mod anim;
 mod draw;
 mod event;
 mod group;
+mod keypad;
 mod misc;
 mod navigator_modal;
 mod navigator_toast;

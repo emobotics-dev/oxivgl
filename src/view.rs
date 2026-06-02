@@ -422,6 +422,82 @@ pub async fn run_app_nav<const BYTES: usize>(
     bufs: &'static mut LvglBuffers<BYTES>,
     initial: impl View,
 ) -> ! {
+    run_app_nav_inner(w, h, bufs, initial, None, false, no_wake).await
+}
+
+/// Like [`run_app_nav`], but also registers a **TIMER-mode** keypad input
+/// device driven by `keypad`.
+///
+/// The navigator routes each active view's
+/// [`input_group`](View::input_group) to the keypad, so focusable widgets can
+/// be navigated with discrete keys — from a GPIO button task or, on a
+/// touchscreen, from on-screen buttons that call
+/// [`KeypadState::press`](crate::indev::KeypadState::press) /
+/// [`release`](crate::indev::KeypadState::release). LVGL polls the device on its
+/// own read timer.
+///
+/// For an interrupt-driven, poll-free input path (a driver that already decodes
+/// long-press/repeat and uses [`KeypadState::send`](crate::indev::KeypadState::send)),
+/// use [`run_app_nav_keypad_events`] instead.
+///
+/// `keypad` must be `'static` (typically a `static KeypadState`). Never returns.
+pub async fn run_app_nav_keypad<const BYTES: usize>(
+    w: i32,
+    h: i32,
+    bufs: &'static mut LvglBuffers<BYTES>,
+    initial: impl View,
+    keypad: &'static crate::indev::KeypadState,
+) -> ! {
+    run_app_nav_inner(w, h, bufs, initial, Some(keypad), false, no_wake).await
+}
+
+/// Like [`run_app_nav_keypad`], but **event-driven and poll-free**.
+///
+/// Creates the keypad in EVENT mode (no LVGL read timer) and races the
+/// inter-tick sleep against `wake`. When `wake` resolves — e.g. your
+/// interrupt-driven input task signalled after `KEYPAD.send(key)` — the loop
+/// reads the device immediately, so a decoded key reaches the screen with no
+/// periodic polling of either the button or the indev.
+///
+/// `wake` is called fresh each tick to produce a future to race; supply your
+/// input signal, e.g. `|| async { WAKE.wait().await }`. Never returns.
+pub async fn run_app_nav_keypad_events<const BYTES: usize, Fut>(
+    w: i32,
+    h: i32,
+    bufs: &'static mut LvglBuffers<BYTES>,
+    initial: impl View,
+    keypad: &'static crate::indev::KeypadState,
+    wake: impl Fn() -> Fut,
+) -> !
+where
+    Fut: core::future::Future<Output = ()>,
+{
+    run_app_nav_inner(w, h, bufs, initial, Some(keypad), true, wake).await
+}
+
+/// No-wake closure for the timer-only loops: a future that never resolves, so
+/// the inter-tick race always falls through to the normal tick.
+fn no_wake() -> core::future::Pending<()> {
+    core::future::pending()
+}
+
+/// Shared implementation of the navigation render loop.
+///
+/// `event_mode` selects EVENT mode for the keypad (read only on `wake`) vs
+/// TIMER mode (LVGL polls). `wake` is raced against each inter-tick sleep; when
+/// it resolves the loop reads the keypad and runs `update()` immediately.
+async fn run_app_nav_inner<const BYTES: usize, Fut>(
+    w: i32,
+    h: i32,
+    bufs: &'static mut LvglBuffers<BYTES>,
+    initial: impl View,
+    keypad: Option<&'static crate::indev::KeypadState>,
+    event_mode: bool,
+    wake: impl Fn() -> Fut,
+) -> !
+where
+    Fut: core::future::Future<Output = ()>,
+{
     info!("UI task started (navigator)");
     let driver = LvglDriver::init(w, h);
     // SAFETY: lv_init() has been called inside LvglDriver::init() above.
@@ -429,6 +505,24 @@ pub async fn run_app_nav<const BYTES: usize>(
 
     DISPLAY_READY.wait().await;
     info!("Display ready");
+
+    // Register the keypad device (if any) BEFORE push_root, so the root view's
+    // input_group binds to it. Held for the loop's lifetime; since the loop
+    // never returns, its Drop never runs.
+    let keypad_dev = keypad.and_then(|state| {
+        let res = if event_mode {
+            crate::indev::KeypadIndev::new_event(state)
+        } else {
+            crate::indev::KeypadIndev::new(state)
+        };
+        match res {
+            Ok(kp) => Some(kp),
+            Err(e) => {
+                warn!("keypad indev create failed: {:?}", e);
+                None
+            }
+        }
+    });
 
     let mut nav = crate::navigator::Navigator::new();
     nav.push_root(initial);
@@ -453,10 +547,25 @@ pub async fn run_app_nav<const BYTES: usize>(
                 NavAction::None
             });
 
-        // Drive lv_timer_handler 4× per update cycle.
+        // Drive lv_timer_handler 4× per update cycle, racing each inter-tick
+        // sleep against `wake`. If `wake` resolves first (input arrived), read
+        // the keypad now and break out early to run update() sooner.
         for _ in 0..4 {
             driver.timer_handler();
-            Timer::after(Duration::from_millis(LVGL_TICK_MS)).await;
+            match embassy_time::with_timeout(
+                Duration::from_millis(LVGL_TICK_MS),
+                wake(),
+            )
+            .await
+            {
+                Ok(()) => {
+                    if let Some(kp) = &keypad_dev {
+                        kp.read();
+                    }
+                    break;
+                }
+                Err(_timeout) => {} // normal tick
+            }
         }
 
         // Event actions (from on_event trampoline) take priority.

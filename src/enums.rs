@@ -30,6 +30,8 @@ impl EventCode {
     pub const PRESSED: Self = Self(oxivgl_sys::lv_event_code_t_LV_EVENT_PRESSED);
     /// Widget is being pressed (sent continuously while pressing).
     pub const PRESSING: Self = Self(oxivgl_sys::lv_event_code_t_LV_EVENT_PRESSING);
+    /// Finger/pointer released (sent on release whether or not it was a click).
+    pub const RELEASED: Self = Self(oxivgl_sys::lv_event_code_t_LV_EVENT_RELEASED);
     /// Short click (press + release, not sent if scrolled).
     pub const SHORT_CLICKED: Self = Self(oxivgl_sys::lv_event_code_t_LV_EVENT_SHORT_CLICKED);
     /// First short click within small distance and short time.

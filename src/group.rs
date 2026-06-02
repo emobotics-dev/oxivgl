@@ -89,6 +89,12 @@ impl Group {
         self
     }
 
+    /// Raw `lv_group_t` pointer for crate-internal binding (e.g.
+    /// [`KeypadIndev::set_group`](crate::indev::KeypadIndev::set_group)).
+    pub(crate) fn raw_ptr(&self) -> *mut lv_group_t {
+        self.ptr
+    }
+
     /// Borrow this group as a non-owning [`GroupRef`].
     ///
     /// Useful when handing the group to a navigator-style consumer that
