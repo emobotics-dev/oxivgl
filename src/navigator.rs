@@ -777,10 +777,11 @@ impl Navigator {
     pub fn drain_toast_requests(&mut self) {
         while let Ok(req) = TOAST_CHANNEL.try_receive() {
             match req {
-                ToastRequest::Show(view, duration) => {
-                    // Box<dyn AnyView + Send> coerces to Box<dyn AnyView>
-                    // via unsizing — Send is dropped from the trait object.
-                    self.show_toast_boxed(view, duration);
+                ToastRequest::Show(make, duration) => {
+                    // Construct the view here, on the render task — so it need
+                    // not be `Send`. Only the builder closure crossed the
+                    // channel; `create()` then runs on the LVGL task as usual.
+                    self.show_toast_boxed(make(), duration);
                 }
                 ToastRequest::Dismiss => {
                     let _ = self.dismiss_toast();
@@ -820,10 +821,17 @@ fn activate_view_group(group: Option<crate::group::GroupRef>) {
 /// 4 outstanding requests tolerate brief contention without backpressure.
 const TOAST_QUEUE_CAPACITY: usize = 4;
 
-/// A request enqueued by [`post_toast`] / [`post_dismiss_toast`] and
-/// drained by [`Navigator::drain_toast_requests`].
+/// A boxed `Send` closure that constructs a toast view on the render task.
+///
+/// Only this closure crosses the [`TOAST_CHANNEL`]; the `View` it produces
+/// is built render-side, so the view itself need not be `Send` (widget
+/// wrappers hold raw `lv_obj_t` pointers and are `!Send`).
+type ToastBuilder = Box<dyn FnOnce() -> Box<dyn AnyView> + Send>;
+
+/// A request enqueued by [`post_toast`] / [`post_toast_with`] /
+/// [`post_dismiss_toast`] and drained by [`Navigator::drain_toast_requests`].
 enum ToastRequest {
-    Show(Box<dyn AnyView + Send>, Option<Duration>),
+    Show(ToastBuilder, Option<Duration>),
     Dismiss,
 }
 
@@ -832,27 +840,33 @@ enum ToastRequest {
 static TOAST_CHANNEL: Channel<CriticalSectionRawMutex, ToastRequest, TOAST_QUEUE_CAPACITY> =
     Channel::new();
 
-/// Queue a global passive toast from **any** async task — including
-/// background workers that hold no `Navigator` handle.
+/// Queue a global passive toast from **any** async task by handing the
+/// render loop a **builder closure** — including background workers that
+/// hold no `Navigator` handle.
 ///
-/// The request is processed on the next render-loop iteration
-/// (`run_app_nav` calls [`Navigator::drain_toast_requests`] every
-/// tick). It then flows through the same path as
+/// The closure is invoked on the next render-loop iteration (`run_app_nav`
+/// calls [`Navigator::drain_toast_requests`] every tick), which constructs
+/// the view and feeds it through the same path as
 /// [`Navigator::show_toast`], so all the passivity / persistence /
-/// auto-dismiss guarantees apply identically — the only difference is
-/// who initiated it.
+/// auto-dismiss guarantees apply identically — the only difference is who
+/// initiated it.
 ///
 /// Use this for **truly global status messages** (e.g. "No SD card",
 /// "BLE disconnected") raised before any particular view is on screen
 /// or from a task that has no reason to know about the active view.
 ///
-/// # `View: Send` constraint
+/// # Why a closure, not a `View`
 ///
-/// The view crosses a `Channel` boundary, so its concrete type must be
-/// `Send`. In practice toast views are simple config structs (text,
-/// color, icon source) — they don't store live `Obj` wrappers, which
-/// are `!Send`. Build the actual widgets inside `View::create` from
-/// `&Obj<'static>` parameters; do **not** keep them in struct fields.
+/// Only the closure crosses the `Channel`, so only `make` must be `Send` —
+/// and it genuinely is, since it captures just the toast's config
+/// (`String`, colors, icon source). The `View` it returns is built
+/// render-side, where `create()` already runs, so it **need not be
+/// `Send`**. This is what lets a toast store its widget wrappers (whose
+/// `Drop` frees the style `Rc`s, the leak-free pattern) even though those
+/// wrappers hold raw `lv_obj_t` pointers and are `!Send`.
+///
+/// For a toast whose view *is* `Send` (a trivial config struct that builds
+/// and forgets its widgets), [`post_toast`] is shorter sugar over this.
 ///
 /// # Backpressure
 ///
@@ -860,11 +874,27 @@ static TOAST_CHANNEL: Channel<CriticalSectionRawMutex, ToastRequest, TOAST_QUEUE
 /// If full, this call logs a warning and drops the request rather than
 /// blocking — toasts are notifications, not data; a dropped duplicate
 /// is preferable to async deadlock.
-pub fn post_toast<V: View + Send>(view: V, duration: Option<Duration>) {
-    let req = ToastRequest::Show(Box::new(view), duration);
+pub fn post_toast_with<V: View>(
+    make: impl FnOnce() -> V + Send + 'static,
+    duration: Option<Duration>,
+) {
+    let req = ToastRequest::Show(Box::new(move || Box::new(make()) as Box<dyn AnyView>), duration);
     if TOAST_CHANNEL.try_send(req).is_err() {
         warn!("post_toast: queue full ({}), request dropped", TOAST_QUEUE_CAPACITY);
     }
+}
+
+/// Queue a global passive toast from **any** async task by value.
+///
+/// Thin convenience over [`post_toast_with`] for toasts whose view is
+/// `Send` — i.e. a config struct that does not retain its widget wrappers.
+/// A view that *stores* its widgets (the leak-free pattern) is `!Send`;
+/// post it with [`post_toast_with`] instead, handing over a builder closure.
+///
+/// Same delivery, sequencing, and backpressure semantics as
+/// [`post_toast_with`].
+pub fn post_toast<V: View + Send>(view: V, duration: Option<Duration>) {
+    post_toast_with(move || view, duration);
 }
 
 /// Queue a request to dismiss the active toast from any async task.
