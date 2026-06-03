@@ -17,7 +17,7 @@ use alloc::collections::VecDeque;
 use alloc::vec::Vec;
 
 use embassy_sync::{blocking_mutex::raw::CriticalSectionRawMutex, channel::Channel};
-use embassy_time::Duration;
+use core::time::Duration;
 use oxivgl_sys::*;
 
 use crate::driver::get_tick_ms;
@@ -588,11 +588,11 @@ impl Navigator {
         self.toast = Some(boxed);
         self.toast_container = Some(container);
         self.toast_deadline_ms = duration.map(|d| {
-            // Saturate the embassy Duration into u32 ms (≈49.7 days max),
-            // then wrap-add to the current tick. The compare in tick_toast
-            // uses `wrapping_sub` so wrap-around is correct as long as the
+            // Saturate the Duration into u32 ms (≈49.7 days max), then
+            // wrap-add to the current tick. The compare in tick_toast uses
+            // `wrapping_sub` so wrap-around is correct as long as the
             // duration is < ~25 days.
-            let ms = d.as_millis().min(u32::MAX as u64) as u32;
+            let ms = d.as_millis().min(u32::MAX as u128) as u32;
             get_tick_ms().wrapping_add(ms)
         });
         true

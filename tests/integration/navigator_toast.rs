@@ -5,7 +5,7 @@ use crate::common::{ensure_init, pump};
 
 use std::sync::atomic::{AtomicUsize, Ordering};
 
-use embassy_time::Duration;
+use std::time::Duration;
 use oxivgl::enums::ObjFlag;
 use oxivgl::navigator::Navigator;
 use oxivgl::view::{NavigationError, View};

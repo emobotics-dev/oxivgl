@@ -9,7 +9,8 @@ use alloc::boxed::Box;
 use core::cell::UnsafeCell;
 use core::ffi::c_void;
 
-use embassy_time::{Duration, Timer};
+use core::time::Duration;
+use embassy_time::Timer;
 
 use oxivgl_sys::*;
 
@@ -380,7 +381,7 @@ pub async fn run_app<V: View, const BYTES: usize>(
     if let Err(e) = view.create(&container) {
         warn!("Could not create LVGL widgets: {:?}, disabling UI", e);
         loop {
-            Timer::after(Duration::from_secs(60)).await;
+            Timer::after(embassy_time::Duration::from_secs(60)).await;
         }
     }
 
@@ -397,7 +398,7 @@ pub async fn run_app<V: View, const BYTES: usize>(
         for _ in 0..4 {
             debug!("LVGL tick/timer handler");
             driver.timer_handler();
-            Timer::after(Duration::from_millis(LVGL_TICK_MS)).await;
+            Timer::after(embassy_time::Duration::from_millis(LVGL_TICK_MS)).await;
         }
 
         // Drain any pending event action (stashed by on_event trampoline).
@@ -553,7 +554,7 @@ where
         for _ in 0..4 {
             driver.timer_handler();
             match embassy_time::with_timeout(
-                Duration::from_millis(LVGL_TICK_MS),
+                embassy_time::Duration::from_millis(LVGL_TICK_MS),
                 wake(),
             )
             .await

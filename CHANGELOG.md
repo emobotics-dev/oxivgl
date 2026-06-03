@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.2] — 2026-06-03
+
+### Changed
+
+- **Toast timeout type is now `core::time::Duration`** instead of
+  `embassy_time::Duration`. The value was always collapsed to a `u32`
+  millisecond count internally, so the `embassy_time` type was pure ceremony
+  that forced every consumer of a *timed* toast to add an `embassy-time`
+  dependency. Affected public API: `Navigator::show_toast`,
+  `navigator::post_toast`, and `NavAction::ShowToast` / `NavAction::show_toast`.
+  Callers now write `Some(Duration::from_secs(3))` with the dependency-free,
+  no_std `core` type. `embassy-time` remains an internal dependency (render-loop
+  timers, tick source) but no longer appears in the public toast signature.
+
 ## [0.3.1] — 2026-06-03
 
 ### Fixed
