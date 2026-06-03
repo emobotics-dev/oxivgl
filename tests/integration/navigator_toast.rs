@@ -70,6 +70,24 @@ impl View for CountingToast {
     }
 }
 
+/// A toast view that *stores* its widget wrapper — the leak-free pattern,
+/// where the held `Label`'s `Drop` releases its styles on teardown. Holding
+/// an `Obj`-based wrapper (a raw `lv_obj_t` pointer) makes the view `!Send`,
+/// so it cannot be posted by value: only a builder closure can carry it to a
+/// background task. Used by `post_toast_with_shows_a_non_send_view`.
+#[derive(Default)]
+struct StoringToast {
+    label: Option<Label<'static>>,
+}
+impl View for StoringToast {
+    fn create(&mut self, container: &Obj<'static>) -> Result<(), WidgetError> {
+        let lbl = Label::new(container)?;
+        lbl.text("status");
+        self.label = Some(lbl);
+        Ok(())
+    }
+}
+
 /// A long duration that will not elapse during a test, so a timed toast
 /// stays put until it is explicitly dismissed.
 fn long() -> Option<Duration> {
@@ -277,6 +295,26 @@ fn post_toast_then_drain_shows_toast() {
 
     nav.drain_toast_requests();
     assert!(nav.has_toast(), "drain_toast_requests should pick up the queued show");
+    assert_eq!(sys_layer_child_count(), 1);
+
+    nav.dismiss_toast().expect("dismiss");
+}
+
+#[test]
+fn post_toast_with_shows_a_non_send_view() {
+    let mut nav = fresh_navigator();
+    assert!(!nav.has_toast());
+
+    // `StoringToast` retains a `Label<'static>` (raw pointer) and is `!Send`,
+    // so `post_toast` would reject it. A builder closure carries only its
+    // (Send) capture across the channel; the view is constructed render-side
+    // on drain. This test won't compile if the channel ever requires the
+    // view itself to be Send again.
+    oxivgl::navigator::post_toast_with(StoringToast::default, None);
+    assert!(!nav.has_toast(), "post must not bypass the drain step");
+
+    nav.drain_toast_requests();
+    assert!(nav.has_toast(), "drain should build the !Send view and show it");
     assert_eq!(sys_layer_child_count(), 1);
 
     nav.dismiss_toast().expect("dismiss");

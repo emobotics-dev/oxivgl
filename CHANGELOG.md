@@ -5,6 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.3] — 2026-06-03
+
+### Added
+
+- **`navigator::post_toast_with`** — post a cross-task toast by handing the
+  render loop a `Send` *builder closure* instead of a `View` value. The view is
+  constructed render-side, so it need not be `Send` — which lets a toast store
+  its widget wrappers (the leak-free pattern, where `Drop` frees the style
+  `Rc`s) even though those wrappers are `!Send`. `post_toast` is now thin sugar
+  over it for trivial `Send` views. Unblocks posting real styled toasts from
+  background tasks and from `.on(event)` closures that cannot return a
+  `NavAction`.
+
 ## [0.3.2] — 2026-06-03
 
 ### Changed
