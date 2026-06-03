@@ -13,6 +13,7 @@
 extern crate alloc;
 
 use alloc::boxed::Box;
+use alloc::collections::VecDeque;
 use alloc::vec::Vec;
 
 use embassy_sync::{blocking_mutex::raw::CriticalSectionRawMutex, channel::Channel};
@@ -45,8 +46,10 @@ pub const TOAST_SHADOW_OPA: u8 = 80;
 /// owning screen object (if any).
 struct ViewEntry {
     view: Box<dyn AnyView>,
-    /// The LVGL screen created for this view. `None` for the root view
-    /// which uses LVGL's default screen.
+    /// The LVGL screen created for this view. Every view — including the
+    /// root (see [`Navigator::push_root`]) — now owns its own loaded
+    /// screen, so current code paths always store `Some`. The type stays
+    /// `Option` only for the defensive fallback in [`Navigator::pop`].
     screen: Option<Obj<'static>>,
 }
 
@@ -85,8 +88,30 @@ pub struct Navigator {
     toast_container: Option<Obj<'static>>,
     /// Auto-dismiss deadline for the active toast, in `get_tick_ms` units
     /// (wrap-aware u32 milliseconds). Compared via `wrapping_sub`.
+    /// `None` while a toast is showing means it is persistent (no
+    /// auto-dismiss); `None` with no active toast means the slot is empty.
     toast_deadline_ms: Option<u32>,
+    /// Toasts waiting to be shown after the active one is dismissed.
+    /// Populated when a timed toast is requested while another is already
+    /// on screen; drained one-at-a-time by [`Navigator::promote_next_toast`]
+    /// so rapidly-posted toasts are displayed sequentially instead of
+    /// collapsing to only the last one. Bounded by [`TOAST_PENDING_CAPACITY`].
+    toast_queue: VecDeque<PendingToast>,
 }
+
+/// A toast deferred behind the currently-displayed one. Its widgets are
+/// not created until it is promoted into the active slot, so `did_show` /
+/// `will_hide` are never called while it waits here.
+struct PendingToast {
+    view: Box<dyn AnyView>,
+    duration: Option<Duration>,
+}
+
+/// Maximum number of timed toasts that may wait behind the active one.
+/// Toasts are notifications, not data; once the queue is full further
+/// requests are dropped (with a warning) rather than displacing the ones
+/// already waiting.
+const TOAST_PENDING_CAPACITY: usize = 4;
 
 impl Navigator {
     /// Create a new empty navigator.
@@ -99,35 +124,44 @@ impl Navigator {
             toast: None,
             toast_container: None,
             toast_deadline_ms: None,
+            toast_queue: VecDeque::new(),
         }
     }
 
     /// Push the initial root view. Called once during setup.
     ///
-    /// The root view uses the default LVGL screen. Its widgets are
-    /// created immediately.
+    /// The root view is built on its own freshly-created LVGL screen, which
+    /// is made active via `lv_screen_load`. Loading a screen — rather than
+    /// reusing the default active screen LVGL creates at `lv_init` — is what
+    /// activates `lv_layer_sys()` compositing: in PARTIAL render mode
+    /// (ESP32) the system layer is only composited onto redraws once a
+    /// screen has been loaded at least once. Building the root on the
+    /// never-loaded default screen left a toast shown before the first
+    /// navigation (e.g. the No-SD boot warning) invisible until the user
+    /// happened to switch pages. Its widgets are created immediately.
     pub fn push_root(&mut self, view: impl View) {
         let mut boxed: Box<dyn AnyView> = Box::new(view);
 
-        // Use the default active screen as the container. Child suppresses
-        // Drop so the LVGL screen is never deleted by Rust.
-        let screen_handle = unsafe { lv_screen_active() };
-        assert!(!screen_handle.is_null(), "no active screen");
-        let container = Obj::from_raw_non_owning(screen_handle);
+        // Create and load a real screen for the root (NOT the default active
+        // screen). The load activates lv_layer_sys compositing from boot —
+        // see the doc comment; without it, toasts shown before the first
+        // page switch never appear.
+        let new_screen = Screen::create();
+        Screen::load_instant(&new_screen);
 
         boxed
-            .create(&container)
+            .create(&new_screen)
             .expect("root view create failed");
 
-        // Default impl of register_events_on attaches the trampoline on
-        // `container` — the default screen at this point.
-        boxed.register_events_on(&container);
+        // Default impl of register_events_on attaches the trampoline on the
+        // root screen we just created and loaded.
+        boxed.register_events_on(&new_screen);
         boxed.did_show();
         activate_view_group(boxed.input_group());
 
         self.stack.push(ViewEntry {
             view: boxed,
-            screen: None,
+            screen: Some(new_screen),
         });
     }
 
@@ -230,16 +264,20 @@ impl Navigator {
             }
             top_screen.lv_handle()
         } else {
-            // Root view: load the default LVGL screen. We must get its
-            // handle BEFORE dropping popped (which deletes popped.screen).
+            // Defensive fallback — NOT expected to run. Every `ViewEntry`
+            // (root included, since `push_root` now creates and loads its
+            // own screen) stores `Some(screen)`, so `top.screen` is always
+            // `Some` here. Kept only to avoid leaving LVGL with no active
+            // screen if that invariant is ever broken; loads the LVGL
+            // default screen as a last resort.
+            debug_assert!(false, "pop: top ViewEntry has no screen — invariant broken");
             // SAFETY: lv_display_get_default/lv_display_get_screen returns
-            // the LVGL default screen (index 0), which is always valid.
+            // the LVGL default screen (index 0), which is always valid. We
+            // get the handle BEFORE dropping popped (which deletes its screen).
             let default_screen = unsafe {
                 let disp = lv_display_get_default();
                 lv_display_get_screen_active(disp)
             };
-            // The default screen may be behind the popped screen. Load it
-            // before dropping so it becomes active.
             Screen::load_instant(&Obj::from_raw_non_owning(default_screen));
             default_screen
         };
@@ -426,20 +464,68 @@ impl Navigator {
     /// override any of this by re-setting size, alignment, or styles
     /// on the container inside `create`.
     ///
-    /// Calling `show_toast` while one is already active replaces it.
+    /// # Sequencing
+    ///
+    /// Toasts are displayed one at a time and **never overwritten before
+    /// they have been seen**:
+    ///
+    /// - A **timed** toast requested while another is on screen is
+    ///   *queued* (FIFO, a few deep) and shown after
+    ///   the current one is dismissed — so a burst of `show_toast` /
+    ///   [`post_toast`] calls plays back in order instead of collapsing to
+    ///   only the last one. Each timed toast therefore stays for its full
+    ///   requested `duration` before the next appears; because
+    ///   [`tick_toast`](Self::tick_toast) (which auto-dismisses) runs after
+    ///   the render in each loop iteration, even a very short duration
+    ///   still gets at least one render cycle on screen.
+    /// - A **persistent** toast (`duration == None`) is a sticky status:
+    ///   it supersedes whatever is showing, clears the pending queue, and
+    ///   is displayed immediately. It stays until dismissed explicitly.
     pub fn show_toast(&mut self, view: impl View, duration: Option<Duration>) {
         self.show_toast_boxed(Box::new(view), duration);
     }
 
-    fn show_toast_boxed(
-        &mut self,
-        mut boxed: Box<dyn AnyView>,
-        duration: Option<Duration>,
-    ) {
-        // Replace any active toast first.
-        if self.toast.is_some() {
-            let _ = self.dismiss_toast();
+    fn show_toast_boxed(&mut self, boxed: Box<dyn AnyView>, duration: Option<Duration>) {
+        match duration {
+            // Persistent (sticky) status: supersede everything and show now.
+            None => {
+                self.toast_queue.clear();
+                if self.toast.is_some() {
+                    let _ = self.teardown_active_toast();
+                }
+                self.display_toast_now(boxed, None);
+            }
+            // Timed toast: show now if the slot is free, otherwise queue it
+            // behind the active toast for sequential playback.
+            Some(_) => {
+                if self.toast.is_some() {
+                    self.enqueue_toast(boxed, duration);
+                } else {
+                    self.display_toast_now(boxed, duration);
+                }
+            }
         }
+    }
+
+    /// Queue a toast to be shown after the active one is dismissed. Drops
+    /// (with a warning) if the pending queue is already full — toasts are
+    /// notifications, not data.
+    fn enqueue_toast(&mut self, boxed: Box<dyn AnyView>, duration: Option<Duration>) {
+        if self.toast_queue.len() >= TOAST_PENDING_CAPACITY {
+            warn!(
+                "nav show_toast: pending queue full ({}), toast dropped",
+                TOAST_PENDING_CAPACITY,
+            );
+            return;
+        }
+        self.toast_queue.push_back(PendingToast { view: boxed, duration });
+    }
+
+    /// Build and display `boxed` in the (assumed empty) active toast slot.
+    /// Returns `true` on success; logs and returns `false` if the view's
+    /// `create` fails (leaving the slot empty and the sys layer clean).
+    fn display_toast_now(&mut self, mut boxed: Box<dyn AnyView>, duration: Option<Duration>) -> bool {
+        debug_assert!(self.toast.is_none(), "display_toast_now: slot not empty");
 
         // Create a dedicated container as a child of lv_layer_sys() so
         // dismissal deletes only the toast's widgets — the system layer
@@ -475,7 +561,7 @@ impl Navigator {
             warn!("nav show_toast: create failed: {:?}", e);
             // Drop the container so we leave the sys layer clean.
             drop(container);
-            return;
+            return false;
         }
 
         // Strip CLICKABLE from the container and all its descendants so
@@ -484,6 +570,13 @@ impl Navigator {
         // SAFETY: container_handle is the freshly-created object above;
         // its tree is what the view just populated.
         unsafe { remove_clickable_recursive(container_handle) };
+
+        // Force a redraw of the toast's area. In PARTIAL render mode
+        // (ESP32) only invalidated regions are recomposited and flushed;
+        // a toast added to the system layer without an accompanying nav
+        // event would otherwise produce no dirty region and never reach
+        // the panel. Harmless in FULL/DIRECT mode (host).
+        container.invalidate();
 
         // Intentionally do NOT call boxed.register_events_on(): the default
         // impl registers on lv_screen_active() (the background view's
@@ -502,12 +595,28 @@ impl Navigator {
             let ms = d.as_millis().min(u32::MAX as u64) as u32;
             get_tick_ms().wrapping_add(ms)
         });
+        true
     }
 
-    /// Dismiss the active toast overlay.
-    ///
-    /// Returns `Err(NoActiveToast)` if none is showing.
-    pub fn dismiss_toast(&mut self) -> Result<(), NavigationError> {
+    /// Promote the next queued toast into the active slot, if the slot is
+    /// free and the queue is non-empty. Displays at most one toast per
+    /// call, so each gets its own render cycles. Skips past any whose
+    /// `create` fails so a single bad toast doesn't stall the queue.
+    fn promote_next_toast(&mut self) {
+        if self.toast.is_some() {
+            return;
+        }
+        while let Some(next) = self.toast_queue.pop_front() {
+            if self.display_toast_now(next.view, next.duration) {
+                break;
+            }
+        }
+    }
+
+    /// Tear down the currently-displayed toast (delete its widgets, clear
+    /// the slot). Does **not** touch the pending queue. Returns
+    /// `Err(NoActiveToast)` if none is showing.
+    fn teardown_active_toast(&mut self) -> Result<(), NavigationError> {
         let mut toast = match self.toast.take() {
             Some(t) => t,
             None => return Err(NavigationError::NoActiveToast),
@@ -535,6 +644,19 @@ impl Navigator {
         Ok(())
     }
 
+    /// Dismiss the active toast overlay and advance to the next queued
+    /// toast, if any.
+    ///
+    /// Returns `Err(NoActiveToast)` if none is showing. Note that on
+    /// success a *different* toast may immediately take the slot if one
+    /// was queued behind the dismissed one (see [`show_toast`](Self::show_toast)
+    /// sequencing).
+    pub fn dismiss_toast(&mut self) -> Result<(), NavigationError> {
+        self.teardown_active_toast()?;
+        self.promote_next_toast();
+        Ok(())
+    }
+
     /// Whether a toast is currently showing.
     pub fn has_toast(&self) -> bool {
         self.toast.is_some()
@@ -548,10 +670,12 @@ impl Navigator {
     /// Maintenance tick for the toast slot — call once per render-loop
     /// iteration.
     ///
-    /// - Dismisses the toast if its auto-dismiss deadline has passed.
+    /// - Dismisses the toast if its auto-dismiss deadline has passed, then
+    ///   promotes the next queued toast (if any) into the slot.
     /// - Self-heals the slot if the toast container was destroyed
     ///   externally (e.g. some other code cleared the system layer):
-    ///   drops the orphaned view so the slot is reusable.
+    ///   drops the orphaned view and promotes the next queued toast so the
+    ///   slot doesn't get stuck.
     pub fn tick_toast(&mut self) {
         if self.toast.is_none() {
             return;
@@ -572,12 +696,14 @@ impl Navigator {
                     core::mem::forget(orphan);
                 }
                 self.toast_deadline_ms = None;
+                self.promote_next_toast();
                 return;
             }
         }
 
         // Wrap-aware compare: `now - deadline >= 0` (as i32) means we've
-        // reached the deadline, robust to u32 wrap.
+        // reached the deadline, robust to u32 wrap. `dismiss_toast` also
+        // promotes the next queued toast.
         if let Some(deadline) = self.toast_deadline_ms
             && get_tick_ms().wrapping_sub(deadline) as i32 >= 0
         {
@@ -644,6 +770,10 @@ impl Navigator {
     ///
     /// Called once per render-loop iteration by `run_app_nav`. Each
     /// queued request becomes a `show_toast` or `dismiss_toast` call.
+    /// Draining several `Show` requests in one iteration is safe: at most
+    /// one is displayed and the rest are queued for sequential playback
+    /// (see [`show_toast`](Self::show_toast) sequencing), so they no longer
+    /// collapse to only the last one.
     pub fn drain_toast_requests(&mut self) {
         while let Ok(req) = TOAST_CHANNEL.try_receive() {
             match req {
