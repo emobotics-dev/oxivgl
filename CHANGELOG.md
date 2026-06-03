@@ -5,6 +5,31 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.1] — 2026-06-03
+
+### Fixed
+
+- **Invisible toasts in PARTIAL render mode (ESP32).** A toast raised before the
+  first navigation (e.g. a "No SD card" boot warning) stayed invisible until the
+  user happened to switch pages. `Navigator::push_root` now builds the root view
+  on its own loaded screen — which arms `lv_layer_sys()` compositing from boot —
+  and `show_toast` invalidates the toast container so it is flushed even without
+  an accompanying navigation event. Verified on hardware. (No effect on host /
+  SDL, which uses FULL/DIRECT rendering and never exhibited the bug.)
+- **Rapid toasts collapsing to only the last one.** Toasts requested in quick
+  succession were created and destroyed within a single render iteration and
+  never drawn. Timed toasts now queue and play back sequentially (bounded FIFO),
+  each shown for its full duration; persistent (`None`) toasts supersede the
+  active toast and clear the queue. `dismiss_toast` advances to the next queued
+  toast. Public API is unchanged — only behavior.
+- **`Navigator::pop` back to the root** now loads the root's own screen via the
+  normal path; the default-screen fallback became an unreachable defensive guard.
+
+### Added
+
+- **Example** `toast_hil_demo` — minimal navigator app that raises a persistent
+  toast before any navigation, used to verify the fix on real ESP32 hardware.
+
 ## [0.3.0] — 2026-06-02
 
 ### Added

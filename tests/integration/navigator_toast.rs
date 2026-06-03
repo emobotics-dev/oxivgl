@@ -3,6 +3,8 @@
 
 use crate::common::{ensure_init, pump};
 
+use std::sync::atomic::{AtomicUsize, Ordering};
+
 use embassy_time::Duration;
 use oxivgl::enums::ObjFlag;
 use oxivgl::navigator::Navigator;
@@ -40,6 +42,38 @@ impl View for ButtonToast {
         let _btn = Button::new(container)?;
         Ok(())
     }
+}
+
+/// Counts how many times any `CountingToast` has had its widgets built.
+/// Lets the sequencing tests prove a *queued* toast is not created until
+/// it is promoted (and is dropped uncreated if the queue is cleared).
+/// Safe to use as a global because integration tests run single-threaded.
+static TOAST_CREATE_COUNT: AtomicUsize = AtomicUsize::new(0);
+
+fn reset_toast_create_count() {
+    TOAST_CREATE_COUNT.store(0, Ordering::SeqCst);
+}
+fn toast_create_count() -> usize {
+    TOAST_CREATE_COUNT.load(Ordering::SeqCst)
+}
+
+/// A passive toast that bumps [`TOAST_CREATE_COUNT`] each time its widgets
+/// are actually built.
+#[derive(Default)]
+struct CountingToast;
+impl View for CountingToast {
+    fn create(&mut self, container: &Obj<'static>) -> Result<(), WidgetError> {
+        TOAST_CREATE_COUNT.fetch_add(1, Ordering::SeqCst);
+        let lbl = Label::new(container)?;
+        lbl.text("status");
+        Ok(())
+    }
+}
+
+/// A long duration that will not elapse during a test, so a timed toast
+/// stays put until it is explicitly dismissed.
+fn long() -> Option<Duration> {
+    Some(Duration::from_secs(3600))
 }
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
@@ -83,6 +117,46 @@ fn assert_subtree_not_clickable(obj: *mut oxivgl_sys::lv_obj_t) {
 }
 
 // ── Tests ────────────────────────────────────────────────────────────────────
+
+#[test]
+fn push_root_loads_its_own_screen() {
+    // Regression for the invisible-toast fix: push_root must create and
+    // LOAD its own screen (which arms lv_layer_sys compositing) rather than
+    // reusing the default active screen. If someone reverts to reusing
+    // lv_screen_active(), the active screen would be unchanged and this fails.
+    ensure_init();
+    // SAFETY: LVGL initialised; create + load a known "default" screen.
+    let before = unsafe {
+        let s = oxivgl_sys::lv_obj_create(core::ptr::null_mut());
+        oxivgl_sys::lv_screen_load(s);
+        s
+    };
+
+    let mut nav = Navigator::new();
+    nav.push_root(EmptyRoot);
+
+    // SAFETY: returns the currently-active screen (always valid post-init).
+    let after = unsafe { oxivgl_sys::lv_screen_active() };
+    assert!(!after.is_null());
+    assert_ne!(
+        after, before,
+        "push_root must load its own screen, not reuse the active one",
+    );
+}
+
+#[test]
+fn pop_to_root_does_not_panic() {
+    // Regression: with the root owning a real screen, popping back to it
+    // must load that screen via the normal path — not fall through to the
+    // (now unreachable) default-screen fallback, which is a debug_assert.
+    let mut nav = fresh_navigator(); // root pushed
+    nav.push(EmptyRoot, None); // depth 2
+    assert_eq!(nav.depth(), 2);
+
+    nav.pop(None).expect("pop back to root");
+    pump();
+    assert_eq!(nav.depth(), 1, "should be back at the root view");
+}
 
 #[test]
 fn show_then_dismiss_clears_sys_layer() {
@@ -221,17 +295,116 @@ fn post_dismiss_toast_then_drain_dismisses() {
 }
 
 #[test]
-fn multiple_posts_in_one_drain_collapse_to_latest() {
+fn multiple_persistent_posts_in_one_drain_collapse_to_latest() {
     let mut nav = fresh_navigator();
-    // Three queued shows + one dismiss: the navigator processes them
-    // in order; show→show replaces, then show, then dismiss. End state:
-    // no toast.
+    // Persistent (None) toasts are sticky-status: each supersedes the
+    // previous immediately. Three persistent shows + one dismiss: each
+    // show replaces the last, then dismiss clears it. End state: no toast.
+    // (Timed toasts instead play back in order — see the sequencing tests.)
     oxivgl::navigator::post_toast(LabelToast, None);
     oxivgl::navigator::post_toast(LabelToast, None);
     oxivgl::navigator::post_toast(LabelToast, None);
     oxivgl::navigator::post_dismiss_toast();
 
     nav.drain_toast_requests();
+    assert!(!nav.has_toast());
+    assert_eq!(sys_layer_child_count(), 0);
+}
+
+// ── Sequencing of timed toasts (anti-collapse) ──────────────────────────────
+
+#[test]
+fn timed_toasts_queue_and_play_sequentially() {
+    let mut nav = fresh_navigator();
+    reset_toast_create_count();
+
+    // First timed toast displays immediately.
+    nav.show_toast(CountingToast, long());
+    pump();
+    assert!(nav.has_toast());
+    assert_eq!(sys_layer_child_count(), 1);
+    assert_eq!(toast_create_count(), 1, "first toast should be built");
+
+    // A second timed toast requested while the first is up must QUEUE,
+    // not replace — its widgets are not built yet and the sys layer still
+    // holds exactly one container.
+    nav.show_toast(CountingToast, long());
+    pump();
+    assert!(nav.has_toast());
+    assert_eq!(sys_layer_child_count(), 1, "queued toast must not be shown yet");
+    assert_eq!(toast_create_count(), 1, "queued toast must not be built yet");
+
+    // Dismissing the first promotes the queued one into the slot.
+    nav.dismiss_toast().expect("dismiss first");
+    pump();
+    assert!(nav.has_toast(), "queued toast should be promoted");
+    assert_eq!(sys_layer_child_count(), 1);
+    assert_eq!(toast_create_count(), 2, "second toast built on promotion");
+
+    // Dismissing the second empties the slot — nothing left to promote.
+    nav.dismiss_toast().expect("dismiss second");
+    pump();
+    assert!(!nav.has_toast());
+    assert_eq!(sys_layer_child_count(), 0);
+}
+
+#[test]
+fn multiple_timed_posts_play_back_in_order() {
+    let mut nav = fresh_navigator();
+    nav.drain_toast_requests(); // clear any residue
+    reset_toast_create_count();
+
+    // Three timed toasts posted then drained in a single iteration must
+    // NOT collapse to the last one: one shows, two queue.
+    oxivgl::navigator::post_toast(CountingToast, long());
+    oxivgl::navigator::post_toast(CountingToast, long());
+    oxivgl::navigator::post_toast(CountingToast, long());
+    nav.drain_toast_requests();
+    pump();
+    assert!(nav.has_toast());
+    assert_eq!(sys_layer_child_count(), 1);
+    assert_eq!(toast_create_count(), 1, "only the first should be built after drain");
+
+    // Each dismiss reveals the next queued toast in order.
+    nav.dismiss_toast().expect("dismiss 1");
+    assert_eq!(toast_create_count(), 2);
+    assert_eq!(sys_layer_child_count(), 1);
+
+    nav.dismiss_toast().expect("dismiss 2");
+    assert_eq!(toast_create_count(), 3);
+    assert_eq!(sys_layer_child_count(), 1);
+
+    nav.dismiss_toast().expect("dismiss 3");
+    assert!(!nav.has_toast());
+    assert_eq!(sys_layer_child_count(), 0);
+}
+
+#[test]
+fn persistent_toast_supersedes_pending_queue() {
+    let mut nav = fresh_navigator();
+    reset_toast_create_count();
+
+    // A timed toast shown, plus a second timed toast queued behind it.
+    nav.show_toast(CountingToast, long());
+    nav.show_toast(CountingToast, long()); // queued, not built
+    assert_eq!(toast_create_count(), 1);
+    assert_eq!(sys_layer_child_count(), 1);
+
+    // A persistent toast supersedes the active one AND clears the queue,
+    // so the queued toast is dropped without ever being built.
+    nav.show_toast(CountingToast, None);
+    pump();
+    assert!(nav.has_toast());
+    assert_eq!(sys_layer_child_count(), 1);
+    assert_eq!(
+        toast_create_count(),
+        2,
+        "active replaced + persistent built; queued one dropped uncreated",
+    );
+
+    // Dismissing the persistent toast leaves nothing — the queue was cleared.
+    nav.dismiss_toast().expect("dismiss persistent");
+    pump();
     assert!(!nav.has_toast());
     assert_eq!(sys_layer_child_count(), 0);
 }
