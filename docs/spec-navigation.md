@@ -223,7 +223,9 @@ pub struct Navigator {
     // Focus state captured on modal open (if input_group was Some);
     // restored on dismiss. See §4.2.
     saved_focus: Option<SavedFocus>,
-    // Currently active global toast, if any. Rendered as a child of
+    // Currently active global toast, if any. Rendered on the current
+    // topmost surface (active screen, or modal backdrop while a modal is
+    // open) and re-parented across nav/modal changes — not on
     // lv_layer_sys(). See §4.3.
     toast: Option<Box<dyn AnyView>>,
     toast_container: Option<Obj<'static>>,
@@ -355,7 +357,7 @@ beneath.
 
 ```rust
 impl Navigator {
-    /// Show a global passive toast on the system layer.
+    /// Show a global passive toast on the active screen.
     ///
     /// Persists across push/replace/pop. Registers no input handlers.
     /// Every widget the view creates has `CLICKABLE` cleared, so
@@ -379,13 +381,18 @@ impl Navigator {
 }
 ```
 
-**Layer choice.** Toasts live on `lv_layer_sys()` (above `lv_layer_top()`),
-not the top layer. This keeps the toast lifecycle separate from
-modals: dismissing a modal does `lv_obj_clean(lv_layer_top())`, which
-would otherwise also delete the toast's widgets. Each `show_toast`
-creates its own dedicated container as a child of the system layer; on
-dismissal only that container is deleted, leaving the system layer
-itself (an LVGL-owned object) intact.
+**Surface choice.** Toasts render on the **active screen** (or the modal
+backdrop while a modal is open), as an ordinary child of the normal widget
+tree — **not** on `lv_layer_sys()`. In `LV_DISPLAY_RENDER_MODE_PARTIAL`
+(ESP32) the system layer is not composited reliably onto passive redraws, so
+a toast on an otherwise-static screen could silently fail to appear (worst on
+the first cold boot); ordinary screen content, by contrast, composites every
+frame. Rendering the toast through the normal screen path makes it as reliable
+as any other widget. Each `show_toast` creates its own dedicated container on
+the current topmost surface; on dismissal only that container is deleted.
+`reattach_toast` (see **Persistence**) re-parents the container whenever the
+topmost surface changes, so the toast lifecycle stays separate from modal and
+page teardown — dismissing a modal or switching pages never deletes the toast.
 
 **Passivity contract.** The navigator enforces input-transparency:
 - `register_events()` is **never** called on the toast view —
@@ -398,10 +405,13 @@ itself (an LVGL-owned object) intact.
 A toast view's `update()` and `on_event()` are *not* polled by
 `run_app_nav` — toasts are display-only.
 
-**Persistence.** The toast container is parented to the system layer,
-not to any screen, so it is unaffected by `push` / `replace` / `pop`.
-The same toast instance is visible across page switches with no
-recreation.
+**Persistence.** `reattach_toast` re-parents the toast container onto the
+current topmost surface after every change to it — `push` / `replace` / `pop`
+(→ the new active screen) and modal open / dismiss (→ the backdrop, so the
+toast stays above the modal; back to the screen on dismiss). The re-parent
+runs before the previous surface's widget tree is destroyed, and re-appends the
+toast as the last (top) child, so the same toast instance survives page
+switches and modal teardown with no recreation, always on top.
 
 **Auto-dismiss.** When `duration` is `Some`, the navigator records
 `Instant::now() + duration` and dismisses when `tick_toast` next runs
@@ -410,7 +420,7 @@ iteration; the dismiss latency is therefore the loop period
 (~4×`LVGL_TICK_MS` ≈ 33 ms).
 
 **Self-heal.** If something else destroys the toast container (e.g.
-a third-party clear of the system layer), `tick_toast` detects the
+a third-party clear of its surface), `tick_toast` detects the
 stale handle via `lv_obj_is_valid` and drops the orphaned view so the
 slot becomes reusable.
 
@@ -451,9 +461,9 @@ to opt into draining a status channel.
 
 | Property               | `Modal`                              | Toast                          |
 |------------------------|--------------------------------------|--------------------------------|
-| Layer                  | `lv_layer_top()`                     | `lv_layer_sys()` child         |
+| Surface                | backdrop on `lv_layer_top()`         | active screen / modal backdrop (re-parented) |
 | Input                  | Absorbs (backdrop)                   | Transparent                    |
-| Persists across nav    | Yes (until `dismiss_modal`)          | Yes                            |
+| Persists across nav    | Yes (until `dismiss_modal`)          | Yes (re-parented each transition) |
 | Lifetime tied to view  | No (lives until dismissed)           | No                             |
 | Auto-dismiss           | App-managed                          | Navigator-managed (optional)   |
 | Receives events        | Yes                                  | No (handlers never registered) |
@@ -510,7 +520,7 @@ pub enum NavAction {
     Modal(Box<dyn AnyView>),
     /// Dismiss the current modal.
     DismissModal,
-    /// Show a global passive toast on the system layer (see §4.3).
+    /// Show a global passive toast on the active screen (see §4.3).
     ShowToast(Box<dyn AnyView>, Option<Duration>),
     /// Dismiss the active global toast.
     DismissToast,

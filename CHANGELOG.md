@@ -5,6 +5,30 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.4] — 2026-06-04
+
+### Fixed
+
+- **Toasts intermittently invisible in PARTIAL render mode (ESP32).** A passive
+  toast on an otherwise-static screen could silently fail to appear — worst on
+  the first cold boot — because `lv_layer_sys()` is not composited reliably onto
+  passive redraws in PARTIAL mode. Toasts now render on the **active screen**
+  (or the modal backdrop while a modal is open), an ordinary child of the normal
+  widget tree that composites as reliably as any other widget. `Navigator`
+  re-parents the toast onto the current topmost surface across
+  `push`/`replace`/`pop` and modal open/dismiss, so the public contract is
+  unchanged: it persists across page switches, stays above any modal, and stays
+  passive. Supersedes the earlier `lv_layer_sys()` approach and its
+  repaint-window mitigation (which only reached ~91% on hardware). Public API is
+  unchanged — only the rendering surface and reliability.
+
+### Changed
+
+- A toast now follows the active screen, so an *animated* screen transition
+  slides the toast with the incoming page (instant loads — the default — are
+  unaffected). Previously the toast sat on the system layer and stayed fixed
+  during transitions.
+
 ## [0.3.3] — 2026-06-03
 
 ### Added

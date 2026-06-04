@@ -482,7 +482,7 @@ impl Navigator {
     ///   persists across page switches and stays above any modal. It does
     ///   **not** live on `lv_layer_sys()` — that layer is not composited
     ///   reliably in PARTIAL render mode (see
-    ///   `docs/bug-partial-mode-toast-not-composited.md`);
+    ///   `docs/spec-navigation.md §4.3`);
     /// - is **passive** — `register_events` is never called, and every
     ///   widget the view creates has the `CLICKABLE` flag cleared so
     ///   touches pass through to the view beneath;
@@ -565,7 +565,7 @@ impl Navigator {
     /// Toasts ride a real screen/backdrop object rather than `lv_layer_sys()`
     /// because the system layer is not composited reliably in PARTIAL render
     /// mode — see the comment in [`display_toast_now`](Self::display_toast_now)
-    /// and `docs/bug-partial-mode-toast-not-composited.md`.
+    /// and `docs/spec-navigation.md §4.3`.
     fn current_toast_surface(&self) -> *mut lv_obj_t {
         if let Some(backdrop) = self.modal_backdrop.as_ref() {
             backdrop.lv_handle()
@@ -617,7 +617,7 @@ impl Navigator {
         // toast into the normal screen tree therefore makes it as reliable as
         // any other widget. Dismissal deletes only this container's subtree;
         // `reattach_toast` keeps it on the topmost surface across navigation
-        // and modal changes. See `docs/bug-partial-mode-toast-not-composited.md`.
+        // and modal changes. See `docs/spec-navigation.md §4.3`.
         let surface = self.current_toast_surface();
         assert!(!surface.is_null(), "toast surface is NULL");
         // SAFETY: surface is a valid LVGL screen/backdrop object.
