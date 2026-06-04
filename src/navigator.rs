@@ -78,13 +78,17 @@ pub struct Navigator {
     /// on dismiss. `None` when no modal is active or when the modal did
     /// not provide an [`input_group`](crate::view::View::input_group).
     saved_focus: Option<SavedFocus>,
-    /// Currently active global toast, if any. Rendered as a child of
-    /// `lv_layer_sys()` so it persists across page switches and stays
-    /// above any modal. See [`Navigator::show_toast`].
+    /// Currently active global toast, if any. Rendered on the current
+    /// topmost real surface (active screen, or the modal backdrop while a
+    /// modal is open) rather than `lv_layer_sys()`, because the system layer
+    /// is not composited reliably in PARTIAL render mode. It is re-parented
+    /// across navigation and modal changes by `reattach_toast`
+    /// so it persists across page switches and stays above any modal. See
+    /// [`Navigator::show_toast`].
     toast: Option<Box<dyn AnyView>>,
     /// The container the active toast was created into. Owned here
     /// (rather than by the toast view) so dismissal deletes exactly the
-    /// toast's widgets and nothing else on the system layer.
+    /// toast's widgets and nothing else on the surface it currently rides.
     toast_container: Option<Obj<'static>>,
     /// Auto-dismiss deadline for the active toast, in `get_tick_ms` units
     /// (wrap-aware u32 milliseconds). Compared via `wrapping_sub`.
@@ -131,21 +135,16 @@ impl Navigator {
     /// Push the initial root view. Called once during setup.
     ///
     /// The root view is built on its own freshly-created LVGL screen, which
-    /// is made active via `lv_screen_load`. Loading a screen — rather than
-    /// reusing the default active screen LVGL creates at `lv_init` — is what
-    /// activates `lv_layer_sys()` compositing: in PARTIAL render mode
-    /// (ESP32) the system layer is only composited onto redraws once a
-    /// screen has been loaded at least once. Building the root on the
-    /// never-loaded default screen left a toast shown before the first
-    /// navigation (e.g. the No-SD boot warning) invisible until the user
-    /// happened to switch pages. Its widgets are created immediately.
+    /// is made active via `lv_screen_load`, rather than reusing the default
+    /// active screen LVGL creates at `lv_init`. This gives the root the same
+    /// owned-screen treatment as every pushed view, so `pop`-to-root and the
+    /// toast surface re-parenting (`reattach_toast`)
+    /// work uniformly. Its widgets are created immediately.
     pub fn push_root(&mut self, view: impl View) {
         let mut boxed: Box<dyn AnyView> = Box::new(view);
 
         // Create and load a real screen for the root (NOT the default active
-        // screen). The load activates lv_layer_sys compositing from boot —
-        // see the doc comment; without it, toasts shown before the first
-        // page switch never appear.
+        // screen) so the root owns a screen like every other view.
         let new_screen = Screen::create();
         Screen::load_instant(&new_screen);
 
@@ -216,6 +215,11 @@ impl Navigator {
         // we just created and loaded.
         boxed.register_events_on(&new_screen);
 
+        // Move the active toast (if any) onto the new screen before cleaning
+        // the old one — otherwise lv_obj_clean below would delete it. The new
+        // view is already built, so the toast lands on top of it.
+        self.reattach_toast();
+
         // Clean the old screen's children (widget tree) to free memory,
         // but keep the screen object alive for potential pop animation.
         // SAFETY: old_screen_h was captured above while still valid. The old
@@ -249,38 +253,43 @@ impl Navigator {
         let mut popped = self.stack.pop().unwrap();
         popped.view.will_hide();
 
-        // Rebuild the now-top view's widgets.
-        let top = self.stack.last_mut().unwrap();
-
         // Load the restored screen BEFORE dropping the popped screen.
         // This ensures lv_screen_active() returns the correct screen
         // during create/register_events, and avoids the undefined state
-        // of having no active screen.
-        let container_handle = if let Some(ref top_screen) = top.screen {
-            if let Some(ref a) = anim {
-                Screen::load(top_screen, a, false);
+        // of having no active screen. Scope the `top` borrow so we can call
+        // `&self` helpers (reattach_toast) once it is released.
+        let container_handle = {
+            let top = self.stack.last_mut().unwrap();
+            if let Some(ref top_screen) = top.screen {
+                if let Some(ref a) = anim {
+                    Screen::load(top_screen, a, false);
+                } else {
+                    Screen::load_instant(top_screen);
+                }
+                top_screen.lv_handle()
             } else {
-                Screen::load_instant(top_screen);
+                // Defensive fallback — NOT expected to run. Every `ViewEntry`
+                // (root included, since `push_root` now creates and loads its
+                // own screen) stores `Some(screen)`, so `top.screen` is always
+                // `Some` here. Kept only to avoid leaving LVGL with no active
+                // screen if that invariant is ever broken; loads the LVGL
+                // default screen as a last resort.
+                debug_assert!(false, "pop: top ViewEntry has no screen — invariant broken");
+                // SAFETY: lv_display_get_default/lv_display_get_screen returns
+                // the LVGL default screen (index 0), which is always valid. We
+                // get the handle BEFORE dropping popped (which deletes its screen).
+                let default_screen = unsafe {
+                    let disp = lv_display_get_default();
+                    lv_display_get_screen_active(disp)
+                };
+                Screen::load_instant(&Obj::from_raw_non_owning(default_screen));
+                default_screen
             }
-            top_screen.lv_handle()
-        } else {
-            // Defensive fallback — NOT expected to run. Every `ViewEntry`
-            // (root included, since `push_root` now creates and loads its
-            // own screen) stores `Some(screen)`, so `top.screen` is always
-            // `Some` here. Kept only to avoid leaving LVGL with no active
-            // screen if that invariant is ever broken; loads the LVGL
-            // default screen as a last resort.
-            debug_assert!(false, "pop: top ViewEntry has no screen — invariant broken");
-            // SAFETY: lv_display_get_default/lv_display_get_screen returns
-            // the LVGL default screen (index 0), which is always valid. We
-            // get the handle BEFORE dropping popped (which deletes its screen).
-            let default_screen = unsafe {
-                let disp = lv_display_get_default();
-                lv_display_get_screen_active(disp)
-            };
-            Screen::load_instant(&Obj::from_raw_non_owning(default_screen));
-            default_screen
         };
+
+        // Move the active toast onto the restored (now active) screen before
+        // dropping the popped screen, so it is not deleted with it.
+        self.reattach_toast();
 
         // Now safe to drop the popped view and its screen.
         drop(popped);
@@ -288,13 +297,19 @@ impl Navigator {
         // Non-owning handle — the screen is owned by the ViewEntry, not
         // this temporary. Child suppresses Drop so no screen deletion.
         let container = Obj::from_raw_non_owning(container_handle);
-        top.view
-            .create(&container)
-            .map_err(NavigationError::CreateFailed)?;
+        {
+            let top = self.stack.last_mut().unwrap();
+            top.view
+                .create(&container)
+                .map_err(NavigationError::CreateFailed)?;
 
-        top.view.register_events_on(&container);
-        top.view.did_show();
-        activate_view_group(top.view.input_group());
+            top.view.register_events_on(&container);
+            top.view.did_show();
+            activate_view_group(top.view.input_group());
+        }
+
+        // Raise the toast above the just-rebuilt view.
+        self.reattach_toast();
         Ok(())
     }
 
@@ -322,6 +337,10 @@ impl Navigator {
             Screen::load_instant(&new_screen);
         }
 
+        // Move the active toast onto the new (now active) screen before
+        // dropping the old one, so it survives the screen deletion.
+        self.reattach_toast();
+
         // Now safe to drop the old view and its screen.
         self.stack.pop();
 
@@ -331,6 +350,9 @@ impl Navigator {
         boxed.register_events_on(&new_screen);
         boxed.did_show();
         activate_view_group(boxed.input_group());
+
+        // Raise the toast above the just-built replacement view.
+        self.reattach_toast();
 
         self.stack.push(ViewEntry {
             view: boxed,
@@ -409,6 +431,10 @@ impl Navigator {
 
         self.modal = Some(boxed);
         self.modal_backdrop = Some(backdrop);
+
+        // Raise the active toast (if any) onto the modal backdrop so it stays
+        // above the modal — preserving the "toast is always on top" contract.
+        self.reattach_toast();
     }
 
     /// Dismiss the current modal overlay.
@@ -422,11 +448,17 @@ impl Navigator {
             None => return Err(NavigationError::NoActiveModal),
         };
         modal.will_hide();
+        // Move the active toast off the backdrop onto the active screen
+        // before the backdrop is deleted. Take the backdrop out first so
+        // `current_toast_surface` resolves to the screen (modal_backdrop is
+        // now None), then drop it.
+        let backdrop = self.modal_backdrop.take();
+        self.reattach_toast();
         // Drop the backdrop Obj — lv_obj_delete cascades to all descendants
         // (the modal's widget tree). Any Obj wrappers held inside the
         // modal view now hold stale pointers; their Drop uses
         // lv_obj_is_valid as a guard (spec-memory-lifetime §8.1).
-        drop(self.modal_backdrop.take());
+        drop(backdrop);
         drop(modal);
 
         // Restore the pre-modal focus state, if we captured it.
@@ -441,11 +473,16 @@ impl Navigator {
         self.modal.is_some()
     }
 
-    /// Show a global passive status overlay on the system layer.
+    /// Show a global passive status overlay on top of the current view.
     ///
     /// Unlike [`modal`](Self::modal), the toast:
-    /// - lives on `lv_layer_sys()` so it persists across `push` /
-    ///   `replace` / `pop` and is unaffected by modal dismissal;
+    /// - rides the current topmost real surface (active screen, or the modal
+    ///   backdrop while a modal is open) and is automatically re-parented
+    ///   across `push` / `replace` / `pop` and modal open/dismiss, so it
+    ///   persists across page switches and stays above any modal. It does
+    ///   **not** live on `lv_layer_sys()` — that layer is not composited
+    ///   reliably in PARTIAL render mode (see
+    ///   `docs/spec-navigation.md §4.3`);
     /// - is **passive** — `register_events` is never called, and every
     ///   widget the view creates has the `CLICKABLE` flag cleared so
     ///   touches pass through to the view beneath;
@@ -521,19 +558,70 @@ impl Navigator {
         self.toast_queue.push_back(PendingToast { view: boxed, duration });
     }
 
+    /// The LVGL object the active toast should be parented to so it renders
+    /// on the current topmost surface: the modal backdrop while a modal is
+    /// open (so the toast stays above the modal), otherwise the active screen.
+    ///
+    /// Toasts ride a real screen/backdrop object rather than `lv_layer_sys()`
+    /// because the system layer is not composited reliably in PARTIAL render
+    /// mode — see the comment in [`display_toast_now`](Self::display_toast_now)
+    /// and `docs/spec-navigation.md §4.3`.
+    fn current_toast_surface(&self) -> *mut lv_obj_t {
+        if let Some(backdrop) = self.modal_backdrop.as_ref() {
+            backdrop.lv_handle()
+        } else {
+            // SAFETY: lv_screen_active returns the active screen, always valid
+            // after init (the navigator always has a loaded screen).
+            unsafe { lv_screen_active() }
+        }
+    }
+
+    /// Re-parent the active toast (if any) onto the current topmost surface
+    /// and raise it to the front. `lv_obj_set_parent` re-appends the toast as
+    /// the last child of the surface, so it lands on top of whatever was just
+    /// built there.
+    ///
+    /// Called after every change of the topmost surface — full-screen
+    /// navigation (`push`/`pop`/`replace`) and modal open/dismiss — so the
+    /// toast persists across page switches and is never destroyed together
+    /// with the surface it was on. Must run **before** the previous surface's
+    /// widget tree is cleaned/deleted, and **after** the new surface's view is
+    /// created (so the toast stays on top).
+    fn reattach_toast(&self) {
+        if let Some(container) = self.toast_container.as_ref() {
+            let handle = container.lv_handle();
+            let surface = self.current_toast_surface();
+            // SAFETY: handle is the live toast container (checked valid);
+            // surface is a valid screen/backdrop object.
+            unsafe {
+                if lv_obj_is_valid(handle) && !surface.is_null() {
+                    lv_obj_set_parent(handle, surface);
+                }
+            }
+        }
+    }
+
     /// Build and display `boxed` in the (assumed empty) active toast slot.
     /// Returns `true` on success; logs and returns `false` if the view's
-    /// `create` fails (leaving the slot empty and the sys layer clean).
+    /// `create` fails (leaving the slot empty and the surface clean).
     fn display_toast_now(&mut self, mut boxed: Box<dyn AnyView>, duration: Option<Duration>) -> bool {
         debug_assert!(self.toast.is_none(), "display_toast_now: slot not empty");
 
-        // Create a dedicated container as a child of lv_layer_sys() so
-        // dismissal deletes only the toast's widgets — the system layer
-        // itself stays alive (it is LVGL-owned).
-        let sys_layer = unsafe { lv_layer_sys() };
-        assert!(!sys_layer.is_null(), "lv_layer_sys returned NULL");
-        // SAFETY: sys_layer is a valid LVGL container.
-        let container_handle = unsafe { lv_obj_create(sys_layer) };
+        // Create a dedicated container on the current topmost *real* surface
+        // (active screen, or the modal backdrop while a modal is open) — NOT
+        // on `lv_layer_sys()`. In PARTIAL render mode (ESP32) the system layer
+        // is not composited reliably onto passive redraws, so a toast shown on
+        // a static screen could silently fail to appear (worst on the first
+        // cold boot). Ordinary screen content, by contrast, is always
+        // composited — the background view renders every frame. Parenting the
+        // toast into the normal screen tree therefore makes it as reliable as
+        // any other widget. Dismissal deletes only this container's subtree;
+        // `reattach_toast` keeps it on the topmost surface across navigation
+        // and modal changes. See `docs/spec-navigation.md §4.3`.
+        let surface = self.current_toast_surface();
+        assert!(!surface.is_null(), "toast surface is NULL");
+        // SAFETY: surface is a valid LVGL screen/backdrop object.
+        let container_handle = unsafe { lv_obj_create(surface) };
         assert!(!container_handle.is_null(), "toast container creation failed");
         let container = Obj::from_raw(container_handle);
 
@@ -559,7 +647,7 @@ impl Navigator {
 
         if let Err(e) = boxed.create(&container) {
             warn!("nav show_toast: create failed: {:?}", e);
-            // Drop the container so we leave the sys layer clean.
+            // Drop the container so we leave the surface clean.
             drop(container);
             return false;
         }
@@ -571,17 +659,22 @@ impl Navigator {
         // its tree is what the view just populated.
         unsafe { remove_clickable_recursive(container_handle) };
 
-        // Force a redraw of the toast's area. In PARTIAL render mode
-        // (ESP32) only invalidated regions are recomposited and flushed;
-        // a toast added to the system layer without an accompanying nav
-        // event would otherwise produce no dirty region and never reach
-        // the panel. Harmless in FULL/DIRECT mode (host).
+        // Settle layout synchronously, then invalidate the toast's final area.
+        // The container is `LV_SIZE_CONTENT`-high and bottom-aligned, so its
+        // real coordinates are only known after a layout pass; forcing it here
+        // makes the single post-create invalidation target the correct stripe
+        // deterministically (no reliance on the redraw racing layout settling).
+        // In PARTIAL render mode (ESP32) only invalidated regions are
+        // recomposited; this guarantees the toast's region is dirty. Harmless
+        // in FULL/DIRECT mode (host).
+        // SAFETY: container_handle is the live toast container.
+        unsafe { lv_obj_update_layout(container_handle) };
         container.invalidate();
 
         // Intentionally do NOT call boxed.register_events_on(): the default
         // impl registers on lv_screen_active() (the background view's
-        // screen) and would dangle across page switches — exactly the
-        // bug this toast surface exists to avoid.
+        // screen) and would dangle across page switches. The toast manages
+        // its own surface re-parenting via `reattach_toast`.
 
         boxed.did_show();
 
@@ -660,6 +753,16 @@ impl Navigator {
     /// Whether a toast is currently showing.
     pub fn has_toast(&self) -> bool {
         self.toast.is_some()
+    }
+
+    /// Test-only introspection: the raw LVGL handle of the active toast's
+    /// container, if any. Exposed so the integration test crate can verify
+    /// which surface the toast is parented to (the visibility fix moved it
+    /// off `lv_layer_sys()` onto the active screen / modal backdrop). Not
+    /// part of the stable API.
+    #[doc(hidden)]
+    pub fn toast_container_handle(&self) -> Option<*mut lv_obj_t> {
+        self.toast_container.as_ref().map(|c| c.lv_handle())
     }
 
     /// Get a mutable reference to the active toast view, if any.

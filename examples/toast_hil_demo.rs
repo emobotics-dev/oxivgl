@@ -4,15 +4,16 @@
     feature(impl_trait_in_assoc_type, type_alias_impl_trait)
 )]
 // SPDX-License-Identifier: MIT OR Apache-2.0
-//! Toast HIL demo — validates the invisible-toast fix on real hardware.
+//! Toast HIL demo — validates the toast visibility fix on real hardware.
 //!
-//! In PARTIAL render mode (ESP32) a toast raised before the first
-//! navigation used to be invisible until the user happened to switch
-//! pages. This demo shows a **persistent** toast on the very first
-//! `update()` — before any push/replace/pop — so the only way it appears
-//! is if `push_root` armed `lv_layer_sys()` compositing (loaded screen)
-//! AND the toast container is invalidated. If the green screen shows a
-//! "NO SD CARD" card at boot, both fixes work on the target.
+//! In PARTIAL render mode (ESP32) a toast raised on a static screen with no
+//! navigation could be invisible — worst on the first cold boot — because
+//! `lv_layer_sys()` is not composited reliably. The fix renders the toast on
+//! the **active screen** instead (re-parented across navigation/modals),
+//! which the panel composites as reliably as any other widget. This demo
+//! shows a **persistent** toast on the very first `update()` — before any
+//! push/replace/pop — so if the green screen shows a "NO SD CARD" card at
+//! boot, the toast surface is composited on the target.
 //!
 //! Note: widgets created in `create()` MUST be stored in the view struct,
 //! otherwise the local `Obj` drops at end of scope and `lv_obj_delete`s

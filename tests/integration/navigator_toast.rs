@@ -96,6 +96,31 @@ fn long() -> Option<Duration> {
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
+/// Count children of the surface the active toast rides. Toasts render on
+/// the active screen now (not `lv_layer_sys()`), and the root/pushed views in
+/// these tests (`EmptyRoot`) create no widgets of their own, so the active
+/// screen's child count equals the number of live toast containers on it.
+/// None of the tests here open a modal, so the surface is always the screen.
+fn toast_surface_child_count() -> u32 {
+    // SAFETY: lv_screen_active() returns the active screen, valid after init.
+    unsafe { oxivgl_sys::lv_obj_get_child_count(oxivgl_sys::lv_screen_active()) }
+}
+
+/// True iff the navigator's toast container is alive and parented to the
+/// current active screen — the core invariant of the sys-layer→screen fix.
+fn toast_on_active_screen(nav: &Navigator) -> bool {
+    match nav.toast_container_handle() {
+        // SAFETY: handle came from the live navigator; lv_obj_is_valid guards
+        // any pointer, and lv_obj_get_parent/lv_screen_active are always safe.
+        Some(h) => unsafe {
+            oxivgl_sys::lv_obj_is_valid(h)
+                && oxivgl_sys::lv_obj_get_parent(h) == oxivgl_sys::lv_screen_active()
+        },
+        None => false,
+    }
+}
+
+/// Children on `lv_layer_sys()` — must stay 0 now that toasts no longer use it.
 fn sys_layer_child_count() -> u32 {
     // SAFETY: lv_layer_sys() returns a valid LVGL global after init.
     unsafe { oxivgl_sys::lv_obj_get_child_count(oxivgl_sys::lv_layer_sys()) }
@@ -138,10 +163,11 @@ fn assert_subtree_not_clickable(obj: *mut oxivgl_sys::lv_obj_t) {
 
 #[test]
 fn push_root_loads_its_own_screen() {
-    // Regression for the invisible-toast fix: push_root must create and
-    // LOAD its own screen (which arms lv_layer_sys compositing) rather than
-    // reusing the default active screen. If someone reverts to reusing
-    // lv_screen_active(), the active screen would be unchanged and this fails.
+    // Regression: push_root must create and LOAD its own screen rather than
+    // reusing the default active screen, so the root owns a screen like every
+    // pushed view (uniform pop / toast re-parenting). If someone reverts to
+    // reusing lv_screen_active(), the active screen would be unchanged and
+    // this fails.
     ensure_init();
     // SAFETY: LVGL initialised; create + load a known "default" screen.
     let before = unsafe {
@@ -177,20 +203,23 @@ fn pop_to_root_does_not_panic() {
 }
 
 #[test]
-fn show_then_dismiss_clears_sys_layer() {
+fn show_then_dismiss_clears_surface() {
     let mut nav = fresh_navigator();
     assert!(!nav.has_toast());
-    assert_eq!(sys_layer_child_count(), 0);
+    assert_eq!(toast_surface_child_count(), 0);
 
     nav.show_toast(LabelToast, None);
     pump();
     assert!(nav.has_toast());
-    assert_eq!(sys_layer_child_count(), 1);
+    assert_eq!(toast_surface_child_count(), 1);
+    // The fix: the toast rides the active screen, NOT lv_layer_sys().
+    assert!(toast_on_active_screen(&nav), "toast must be a child of the active screen");
+    assert_eq!(sys_layer_child_count(), 0, "toast must NOT be on the system layer");
 
     nav.dismiss_toast().expect("dismiss_toast");
     pump();
     assert!(!nav.has_toast());
-    assert_eq!(sys_layer_child_count(), 0);
+    assert_eq!(toast_surface_child_count(), 0);
 }
 
 #[test]
@@ -218,7 +247,7 @@ fn auto_dismiss_after_duration() {
     nav.tick_toast();
     assert!(!nav.has_toast(), "toast not auto-dismissed");
     pump();
-    assert_eq!(sys_layer_child_count(), 0);
+    assert_eq!(toast_surface_child_count(), 0);
 }
 
 #[test]
@@ -229,37 +258,45 @@ fn persists_across_push_replace_pop() {
     let mut nav = fresh_navigator();
     nav.push(EmptyRoot, None);
     nav.show_toast(LabelToast, None);
-    let baseline = sys_layer_child_count();
+    let baseline = toast_surface_child_count();
     assert_eq!(baseline, 1);
+    assert!(toast_on_active_screen(&nav));
 
     nav.push(EmptyRoot, None);
     assert!(nav.has_toast(), "toast slot cleared by push");
-    assert_eq!(sys_layer_child_count(), baseline, "toast widgets removed by push");
+    assert_eq!(toast_surface_child_count(), baseline, "toast widgets removed by push");
+    // The toast must have been re-parented onto the NEW active screen, and
+    // never linger on the system layer.
+    assert!(toast_on_active_screen(&nav), "toast not re-parented onto pushed screen");
+    assert_eq!(sys_layer_child_count(), 0);
 
     nav.replace(EmptyRoot, None);
     assert!(nav.has_toast(), "toast slot cleared by replace");
-    assert_eq!(sys_layer_child_count(), baseline, "toast widgets removed by replace");
+    assert_eq!(toast_surface_child_count(), baseline, "toast widgets removed by replace");
+    assert!(toast_on_active_screen(&nav), "toast not re-parented onto replacement screen");
 
     nav.pop(None).expect("pop");
     assert!(nav.has_toast(), "toast slot cleared by pop");
-    assert_eq!(sys_layer_child_count(), baseline, "toast widgets removed by pop");
+    assert_eq!(toast_surface_child_count(), baseline, "toast widgets removed by pop");
+    assert!(toast_on_active_screen(&nav), "toast not re-parented onto restored screen");
+    assert_eq!(sys_layer_child_count(), 0);
 
     nav.dismiss_toast().expect("dismiss_toast");
-    assert_eq!(sys_layer_child_count(), 0);
+    assert_eq!(toast_surface_child_count(), 0);
 }
 
 #[test]
 fn show_toast_replaces_existing() {
     let mut nav = fresh_navigator();
     nav.show_toast(LabelToast, None);
-    assert_eq!(sys_layer_child_count(), 1);
+    assert_eq!(toast_surface_child_count(), 1);
 
     nav.show_toast(LabelToast, None);
     // Old toast container deleted, new one created — net count still 1.
-    assert_eq!(sys_layer_child_count(), 1);
+    assert_eq!(toast_surface_child_count(), 1);
 
     nav.dismiss_toast().expect("dismiss");
-    assert_eq!(sys_layer_child_count(), 0);
+    assert_eq!(toast_surface_child_count(), 0);
 }
 
 #[test]
@@ -268,14 +305,9 @@ fn input_transparency_strips_clickable() {
     nav.show_toast(ButtonToast, None);
     pump();
 
-    // SAFETY: lv_layer_sys() is a valid LVGL global.
-    let sys = unsafe { oxivgl_sys::lv_layer_sys() };
-    assert_eq!(
-        unsafe { oxivgl_sys::lv_obj_get_child_count(sys) },
-        1,
-        "expected exactly one toast container",
-    );
-    let container = unsafe { oxivgl_sys::lv_obj_get_child(sys, 0) };
+    // The toast container is the navigator's, parented to the active screen.
+    assert!(toast_on_active_screen(&nav), "toast must ride the active screen");
+    let container = nav.toast_container_handle().expect("toast container");
     assert_subtree_not_clickable(container);
 
     nav.dismiss_toast().expect("dismiss");
@@ -295,7 +327,7 @@ fn post_toast_then_drain_shows_toast() {
 
     nav.drain_toast_requests();
     assert!(nav.has_toast(), "drain_toast_requests should pick up the queued show");
-    assert_eq!(sys_layer_child_count(), 1);
+    assert_eq!(toast_surface_child_count(), 1);
 
     nav.dismiss_toast().expect("dismiss");
 }
@@ -315,7 +347,7 @@ fn post_toast_with_shows_a_non_send_view() {
 
     nav.drain_toast_requests();
     assert!(nav.has_toast(), "drain should build the !Send view and show it");
-    assert_eq!(sys_layer_child_count(), 1);
+    assert_eq!(toast_surface_child_count(), 1);
 
     nav.dismiss_toast().expect("dismiss");
 }
@@ -329,7 +361,7 @@ fn post_dismiss_toast_then_drain_dismisses() {
     oxivgl::navigator::post_dismiss_toast();
     nav.drain_toast_requests();
     assert!(!nav.has_toast());
-    assert_eq!(sys_layer_child_count(), 0);
+    assert_eq!(toast_surface_child_count(), 0);
 }
 
 #[test]
@@ -346,7 +378,7 @@ fn multiple_persistent_posts_in_one_drain_collapse_to_latest() {
 
     nav.drain_toast_requests();
     assert!(!nav.has_toast());
-    assert_eq!(sys_layer_child_count(), 0);
+    assert_eq!(toast_surface_child_count(), 0);
 }
 
 // ── Sequencing of timed toasts (anti-collapse) ──────────────────────────────
@@ -360,7 +392,7 @@ fn timed_toasts_queue_and_play_sequentially() {
     nav.show_toast(CountingToast, long());
     pump();
     assert!(nav.has_toast());
-    assert_eq!(sys_layer_child_count(), 1);
+    assert_eq!(toast_surface_child_count(), 1);
     assert_eq!(toast_create_count(), 1, "first toast should be built");
 
     // A second timed toast requested while the first is up must QUEUE,
@@ -369,21 +401,21 @@ fn timed_toasts_queue_and_play_sequentially() {
     nav.show_toast(CountingToast, long());
     pump();
     assert!(nav.has_toast());
-    assert_eq!(sys_layer_child_count(), 1, "queued toast must not be shown yet");
+    assert_eq!(toast_surface_child_count(), 1, "queued toast must not be shown yet");
     assert_eq!(toast_create_count(), 1, "queued toast must not be built yet");
 
     // Dismissing the first promotes the queued one into the slot.
     nav.dismiss_toast().expect("dismiss first");
     pump();
     assert!(nav.has_toast(), "queued toast should be promoted");
-    assert_eq!(sys_layer_child_count(), 1);
+    assert_eq!(toast_surface_child_count(), 1);
     assert_eq!(toast_create_count(), 2, "second toast built on promotion");
 
     // Dismissing the second empties the slot — nothing left to promote.
     nav.dismiss_toast().expect("dismiss second");
     pump();
     assert!(!nav.has_toast());
-    assert_eq!(sys_layer_child_count(), 0);
+    assert_eq!(toast_surface_child_count(), 0);
 }
 
 #[test]
@@ -400,21 +432,21 @@ fn multiple_timed_posts_play_back_in_order() {
     nav.drain_toast_requests();
     pump();
     assert!(nav.has_toast());
-    assert_eq!(sys_layer_child_count(), 1);
+    assert_eq!(toast_surface_child_count(), 1);
     assert_eq!(toast_create_count(), 1, "only the first should be built after drain");
 
     // Each dismiss reveals the next queued toast in order.
     nav.dismiss_toast().expect("dismiss 1");
     assert_eq!(toast_create_count(), 2);
-    assert_eq!(sys_layer_child_count(), 1);
+    assert_eq!(toast_surface_child_count(), 1);
 
     nav.dismiss_toast().expect("dismiss 2");
     assert_eq!(toast_create_count(), 3);
-    assert_eq!(sys_layer_child_count(), 1);
+    assert_eq!(toast_surface_child_count(), 1);
 
     nav.dismiss_toast().expect("dismiss 3");
     assert!(!nav.has_toast());
-    assert_eq!(sys_layer_child_count(), 0);
+    assert_eq!(toast_surface_child_count(), 0);
 }
 
 #[test]
@@ -426,14 +458,14 @@ fn persistent_toast_supersedes_pending_queue() {
     nav.show_toast(CountingToast, long());
     nav.show_toast(CountingToast, long()); // queued, not built
     assert_eq!(toast_create_count(), 1);
-    assert_eq!(sys_layer_child_count(), 1);
+    assert_eq!(toast_surface_child_count(), 1);
 
     // A persistent toast supersedes the active one AND clears the queue,
     // so the queued toast is dropped without ever being built.
     nav.show_toast(CountingToast, None);
     pump();
     assert!(nav.has_toast());
-    assert_eq!(sys_layer_child_count(), 1);
+    assert_eq!(toast_surface_child_count(), 1);
     assert_eq!(
         toast_create_count(),
         2,
@@ -444,7 +476,7 @@ fn persistent_toast_supersedes_pending_queue() {
     nav.dismiss_toast().expect("dismiss persistent");
     pump();
     assert!(!nav.has_toast());
-    assert_eq!(sys_layer_child_count(), 0);
+    assert_eq!(toast_surface_child_count(), 0);
 }
 
 #[test]
@@ -472,4 +504,70 @@ fn post_toast_queue_full_drops_silently() {
     // state and the next dismiss must succeed.
     assert!(nav.has_toast());
     nav.dismiss_toast().expect("dismiss after queue-overflow recovery");
+}
+
+// ── Surface re-parenting (sys-layer → screen/backdrop visibility fix) ────────
+
+#[test]
+fn toast_rides_modal_backdrop_then_returns_to_screen() {
+    // The toast lives on the active screen, but must stay ABOVE a modal.
+    // Opening a modal lifts the toast onto the modal backdrop (on layer_top);
+    // dismissing it returns the toast to the active screen. Throughout, the
+    // toast never touches lv_layer_sys().
+    let mut nav = fresh_navigator();
+    nav.show_toast(LabelToast, None);
+    assert!(toast_on_active_screen(&nav));
+
+    nav.modal(EmptyRoot);
+    let container = nav.toast_container_handle().expect("toast container");
+    // SAFETY: container is the live toast handle; parent / layer_top queries
+    // are always safe on a valid object.
+    unsafe {
+        let parent = oxivgl_sys::lv_obj_get_parent(container);
+        assert_ne!(
+            parent,
+            oxivgl_sys::lv_screen_active(),
+            "toast should move off the screen onto the backdrop",
+        );
+        assert_eq!(
+            oxivgl_sys::lv_obj_get_parent(parent),
+            oxivgl_sys::lv_layer_top(),
+            "toast must ride the modal backdrop (a layer_top child)",
+        );
+    }
+    assert_eq!(sys_layer_child_count(), 0, "toast must never use the system layer");
+
+    nav.dismiss_modal().expect("dismiss modal");
+    assert!(
+        toast_on_active_screen(&nav),
+        "toast must return to the active screen after the modal closes",
+    );
+    assert_eq!(sys_layer_child_count(), 0);
+
+    nav.dismiss_toast().expect("dismiss toast");
+}
+
+#[test]
+fn toast_shown_during_modal_lands_on_backdrop() {
+    // A toast raised WHILE a modal is open must be created directly on the
+    // backdrop (above the modal), not on the screen beneath it.
+    let mut nav = fresh_navigator();
+    nav.modal(EmptyRoot);
+    nav.show_toast(LabelToast, None);
+
+    let container = nav.toast_container_handle().expect("toast container");
+    // SAFETY: valid handle; parent / layer_top queries are safe.
+    unsafe {
+        let parent = oxivgl_sys::lv_obj_get_parent(container);
+        assert_eq!(
+            oxivgl_sys::lv_obj_get_parent(parent),
+            oxivgl_sys::lv_layer_top(),
+            "toast shown during a modal must be created on the backdrop",
+        );
+    }
+    assert_eq!(sys_layer_child_count(), 0);
+
+    nav.dismiss_modal().expect("dismiss modal");
+    assert!(toast_on_active_screen(&nav));
+    nav.dismiss_toast().expect("dismiss toast");
 }
