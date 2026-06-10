@@ -697,13 +697,44 @@ impl StyleBuilder {
 /// cloning bumps the refcount. When the last clone drops, `lv_style_reset`
 /// frees the LVGL property map, then sub-descriptors are freed.
 ///
-/// `Style` has no public constructor — obtain one via [`StyleBuilder`].
+/// A frozen, shareable style. Build one with [`Style::new`] (or
+/// [`StyleBuilder::build`]) and apply it to many widgets with
+/// [`add_style`](crate::widgets::Obj::add_style).
+///
+/// Cloning is a cheap `Rc` bump, and `add_style` retains its own clone — so you
+/// can build a `Style`, apply it across a screenful of widgets, and **drop your
+/// handle**; the styled widgets keep it alive. You only need to keep a `Style`
+/// in scope if you intend to `add_style` it *after* the initial build (e.g. in
+/// `update`). This is the spec's "build-then-share" discipline
+/// (`docs/spec-memory-lifetime.md` §4) and the memory-efficient way to style at
+/// scale: one shared property buffer instead of a per-object local style.
 #[derive(Clone, Debug)]
 pub struct Style {
     pub(crate) inner: Rc<StyleInner>,
 }
 
 impl Style {
+    /// Build a shared style in one call.
+    ///
+    /// Collapses `StyleBuilder::new()` + setters + `.build()` into a single
+    /// expression — the idiomatic way to define a style-guide entry once and
+    /// reuse it:
+    ///
+    /// ```ignore
+    /// let card = Style::new(|s| {
+    ///     s.bg_color_hex(0x1e1e2e).bg_opa(255).radius(8).pad_all(12);
+    /// });
+    /// for w in &widgets {
+    ///     w.add_style(&card, Selector::DEFAULT);
+    /// }
+    /// // `card` may be dropped here; the widgets retain it.
+    /// ```
+    pub fn new(f: impl FnOnce(&mut StyleBuilder)) -> Self {
+        let mut builder = StyleBuilder::new();
+        f(&mut builder);
+        builder.build()
+    }
+
     /// Return the raw `lv_style_t` pointer for passing to LVGL.
     ///
     /// Valid as long as at least one `Style` clone exists. The pointer is

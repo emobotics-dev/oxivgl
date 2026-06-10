@@ -71,10 +71,16 @@ on these targets.
    (occasional, not per-frame). This is the single largest reclaimable chunk on
    a multi-screen UI.
 
-2. **Share styles; avoid inline setters at scale.** A shared `static`/`Rc`
-   `Style` applied with `add_style` to many widgets amortizes to one descriptor;
-   per-widget inline `style_*(…)` setters write a local style entry per property
-   group per object. Sharing reduces both heap and style-refresh compute.
+2. **Share styles; avoid inline setters at scale.** A shared `Style` (build it
+   once with [`Style::new`](../src/style/style.rs) and apply with `add_style`)
+   amortizes to a single property buffer for all widgets that use it; per-widget
+   inline `style_*(…)` setters instead allocate a per-object local style (a
+   `styles[]` entry **plus** its own property buffer). For N identical widgets
+   with P properties that is N buffers + N allocations versus 1 buffer — and
+   sharing reduces style-refresh compute too, so it is a pure win wherever a
+   treatment repeats. You do **not** need to keep the `Style` in scope: every
+   `add_style` retains its own `Rc` clone, so build it, apply it across a
+   screenful, and drop your handle. See `examples/shared_styles1.rs`.
 
 3. **Flatten the tree.** Layout, style refresh, and draw all recurse over
    depth — deep nesting costs heap *per container* and stack *per level*. A

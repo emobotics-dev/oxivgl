@@ -231,6 +231,14 @@ rotation transform; a Slider controls scale transform on both cards.
 
 ![style21](screenshots/style21.png)
 
+### Shared Styles 1 — One style guide applied to many widgets
+
+The memory-efficient styling pattern: each visual treatment is built **once** as
+a shared `Style` (via `Style::new`) and applied to every widget with `add_style`
+— zero inline style setters. See [memory-tuning.md](../../docs/memory-tuning.md).
+
+![shared_styles1](screenshots/shared_styles1.png)
+
 ### Skipped
 
 - **Style 19** — Modal overlay (meta-example, benchmarking)
@@ -1362,7 +1370,7 @@ Status of all [LVGL 9.5 examples](https://docs.lvgl.io/9.5/examples.html) in oxi
 | Category | LVGL | Done | Skip | Notes |
 |---|---|---|---|---|
 | Getting Started | 4 | 4 (+4 extra gradient examples) | 0 | |
-| Styles | 21 | 20 | 1 | style19 (meta/benchmarking) |
+| Styles | 21 | 20 | 1 | style19 (meta/benchmarking); +shared_styles1 extra |
 | Animations | 5 | 5 | 0 | |
 | Events | 5 | 5 (+1 extra trickle) | 0 | |
 | Flex | 6 | 6 | 0 | |
