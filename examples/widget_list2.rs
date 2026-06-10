@@ -15,7 +15,7 @@ use oxivgl::{
     enums::{EventCode, ObjFlag, ObjState},
     event::Event,
     layout::FlexFlow,
-    style::lv_pct,
+    style::{lv_pct, Selector, Style},
     symbols,
     view::{register_event_on, View},
     widgets::{Align, AsLvHandle, Button, Child, List, Obj, WidgetError},
@@ -41,7 +41,10 @@ impl View for WidgetList2 {
         // Left list: items
         let list1 = List::new(container)?;
         list1.size(lv_pct(60), lv_pct(100));
-        list1.style_pad_row(5, oxivgl::style::Selector::DEFAULT);
+        let list1_style = Style::new(|s| {
+            s.pad_row(5);
+        });
+        list1.add_style(&list1_style, Selector::DEFAULT);
 
         let mut item_btns = heapless::Vec::<Button<'static>, 15>::new();
         for i in 0..15 {

@@ -15,6 +15,7 @@ use alloc::vec::Vec;
 
 use oxivgl::{
     enums::ObjFlag,
+    style::{Selector, Style},
     view::{NavAction, View},
     widgets::{Align, Label, Obj, Switch, WidgetError},
 };
@@ -34,16 +35,31 @@ struct Scroll9 {
     _switches: Option<Vec<Switch<'static>>>,
     _labels: Option<Vec<Label<'static>>>,
     _children: Option<Vec<Obj<'static>>>,
+    _styles: Option<Vec<Style>>,
 }
 
 impl View for Scroll9 {
     fn create(&mut self, container: &Obj<'static>) -> Result<(), WidgetError> {
 
+        // Shared styles: one panel background, plus one per child color
+        // (each combining bg_color + bg_opa) reused across the 20 children.
+        let panel_style = Style::new(|s| {
+            s.bg_color_hex(0xeeeeee);
+        });
+        let child_styles: Vec<Style> = COLORS
+            .iter()
+            .map(|&c| {
+                Style::new(move |s| {
+                    s.bg_color_hex(c).bg_opa(255);
+                })
+            })
+            .collect();
+
         // Scrollable panel
         let panel = Obj::new(container)?;
         panel.size(200, 120);
         panel.align(Align::TopMid, 0, 5);
-        panel.bg_color(0xeeeeee);
+        panel.add_style(&panel_style, Selector::DEFAULT);
 
         // 20 colored children in a grid that exceeds panel bounds
         let mut children = Vec::with_capacity(20);
@@ -55,11 +71,13 @@ impl View for Scroll9 {
             let x = 10 + col * (CHILD_W + GAP);
             let y = 10 + row * (CHILD_H + GAP);
             child.pos(x, y);
-            child.bg_color(COLORS[i % COLORS.len()]);
-            child.bg_opa(255);
+            child.add_style(&child_styles[i % COLORS.len()], Selector::DEFAULT);
             child.remove_flag(ObjFlag::SCROLLABLE);
             children.push(child);
         }
+
+        let mut styles = child_styles;
+        styles.push(panel_style);
 
         // Switch labels
         let flag_names = ["Scrollable", "Chain", "Elastic", "Momentum"];
@@ -84,6 +102,7 @@ impl View for Scroll9 {
         self._switches = Some(switches);
         self._labels = Some(labels);
         self._children = Some(children);
+        self._styles = Some(styles);
         Ok(())
     }
 

@@ -12,7 +12,7 @@
 use oxivgl::{
     enums::{EventCode, ObjFlag},
     event::Event,
-    style::Selector,
+    style::{Selector, Style},
     symbols,
     view::{NavAction, View},
     widgets::{Obj, Align, Button, List, Part, WidgetError, RADIUS_MAX},
@@ -23,6 +23,7 @@ struct Scroll3 {
     list: Option<List<'static>>,
     float_btn: Option<Button<'static>>,
     btn_cnt: u32,
+    _float_btn_style: Option<Style>,
 }
 
 impl View for Scroll3 {
@@ -45,12 +46,16 @@ impl View for Scroll3 {
         let pad = list.get_style_pad_right(Part::Main);
         float_btn.align(Align::BottomRight, 0, -pad);
         float_btn.bubble_events();
-        float_btn.radius(RADIUS_MAX, Selector::DEFAULT);
+        let float_btn_style = Style::new(|s| {
+            s.radius(RADIUS_MAX as i16);
+        });
+        float_btn.add_style(&float_btn_style, Selector::DEFAULT);
         float_btn.style_bg_image_src_symbol(&symbols::PLUS, Selector::DEFAULT);
 
                 self.list = Some(list);
         self.float_btn = Some(float_btn);
         self.btn_cnt = 2;
+        self._float_btn_style = Some(float_btn_style);
         Ok(())
     }
 

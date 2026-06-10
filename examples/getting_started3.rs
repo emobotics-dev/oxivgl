@@ -25,6 +25,7 @@ struct GettingStarted3 {
     _style_red: Option<Style>,
     _style_pressed: Option<Style>,
     _style_btn: Option<Style>,
+    _style_pill: Option<Style>,
 }
 
 impl View for GettingStarted3 {
@@ -54,6 +55,10 @@ impl View for GettingStarted3 {
             .bg_grad_color(palette_lighten(Palette::Red, 3));
         let style_red = style_red.build();
 
+        let mut style_pill = StyleBuilder::new();
+        style_pill.radius(RADIUS_MAX as i16);
+        let style_pill = style_pill.build();
+
         let btn1 = Button::new(container)?;
         btn1.remove_style_all().pos(10, 10).size(120, 50);
         btn1.add_style(&style_btn, Selector::DEFAULT);
@@ -67,7 +72,7 @@ impl View for GettingStarted3 {
         btn2.add_style(&style_btn, Selector::DEFAULT);
         btn2.add_style(&style_red, Selector::DEFAULT);
         btn2.add_style(&style_pressed, ObjState::PRESSED);
-        btn2.radius(RADIUS_MAX, Selector::DEFAULT);
+        btn2.add_style(&style_pill, Selector::DEFAULT);
 
         let lbl2 = Label::new(&btn2)?;
         lbl2.text("Button 2").center();
@@ -79,6 +84,7 @@ impl View for GettingStarted3 {
         self._style_red = Some(style_red);
         self._style_pressed = Some(style_pressed);
         self._style_btn = Some(style_btn);
+        self._style_pill = Some(style_pill);
         Ok(())
     }
 

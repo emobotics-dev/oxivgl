@@ -189,7 +189,10 @@ impl<'p> Calendar<'p> {
             // triggers a render pass. The btnmatrix must already have
             // the CJK font when rendering occurs.
             let bm = self.get_btnmatrix();
+            // Internal widget setup: apply the CJK font directly to the btnmatrix.
+            #[allow(deprecated)]
             bm.font(cjk_font);
+            #[allow(deprecated)]
             bm.style_text_font(cjk_font, crate::widgets::obj::Part::Items);
         }
         unsafe { lv_calendar_set_chinese_mode(self.obj.handle(), en) };

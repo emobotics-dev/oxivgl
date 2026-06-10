@@ -12,7 +12,7 @@
 use oxivgl::{
     fonts,
     view::{NavAction, View},
-    style::Selector,
+    style::{Selector, Style},
     widgets::{Obj, Align, BaseDir, Label, WidgetError},
 };
 
@@ -32,7 +32,10 @@ impl View for WidgetLabel3 {
             "In modern terminology, a microcontroller is similar to a \
              system on a chip (SoC).",
         );
-        ltr_label.font(fonts::MONTSERRAT_16);
+        let ltr_style = Style::new(|s| {
+            s.text_font(fonts::MONTSERRAT_16);
+        });
+        ltr_label.add_style(&ltr_style, Selector::DEFAULT);
         ltr_label.width(310);
         ltr_label.align(Align::TopLeft, 5, 5);
 
@@ -46,8 +49,11 @@ impl View for WidgetLabel3 {
              (\u{05D1}\u{05D0}\u{05E0}\u{05D2}\u{05DC}\u{05D9}\u{05EA}: \
              CPU - Central Processing Unit).",
         );
-        rtl_label.style_base_dir(BaseDir::Rtl, Selector::DEFAULT);
-        rtl_label.font(fonts::DEJAVU_16_PERSIAN_HEBREW);
+        let rtl_style = Style::new(|s| {
+            s.text_font(fonts::DEJAVU_16_PERSIAN_HEBREW)
+                .base_dir(BaseDir::Rtl);
+        });
+        rtl_label.add_style(&rtl_style, Selector::DEFAULT);
         rtl_label.width(310);
         rtl_label.align(Align::LeftMid, 5, 0);
 
@@ -60,7 +66,10 @@ impl View for WidgetLabel3 {
              \u{80FD}\u{548C}\u{5B9E}\u{65F6}\u{8BA1}\u{7B97}\u{6027}\u{80FD}\u{7684}\u{8BA1}\
              \u{7B97}\u{673A}\u{7CFB}\u{7EDF}\u{3002}",
         );
-        cjk_label.font(fonts::SOURCE_HAN_SANS_SC_16_CJK);
+        let cjk_style = Style::new(|s| {
+            s.text_font(fonts::SOURCE_HAN_SANS_SC_16_CJK);
+        });
+        cjk_label.add_style(&cjk_style, Selector::DEFAULT);
         cjk_label.width(310);
         cjk_label.align(Align::BottomLeft, 5, -5);
 

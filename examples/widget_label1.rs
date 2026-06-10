@@ -9,6 +9,7 @@
 //! Two labels: one with word-wrap (centered), one with circular scrolling.
 
 use oxivgl::{
+    style::{Selector, Style},
     view::{NavAction, View},
     widgets::{Obj, Align, Label, LabelLongMode, TextAlign, WidgetError},
 };
@@ -29,7 +30,10 @@ impl View for WidgetLabel1 {
              and wrap long text automatically.",
         );
         label1.width(150);
-        label1.text_align(TextAlign::Center);
+        let label1_style = Style::new(|s| {
+            s.text_align(TextAlign::Center);
+        });
+        label1.add_style(&label1_style, Selector::DEFAULT);
         label1.align(Align::Center, 0, -40);
 
         let label2 = Label::new(container)?;

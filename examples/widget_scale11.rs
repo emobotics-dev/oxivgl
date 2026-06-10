@@ -37,6 +37,12 @@ static HOUR_LABELS: &ScaleLabels = scale_labels!(
 struct WidgetScale11 {
     _bg: Option<Obj<'static>>,
     scale: Option<Scale<'static>>,
+    _bg_style: Option<Style>,
+    _scale_default_style: Option<Style>,
+    _scale_indicator_style: Option<Style>,
+    _today_style: Option<Style>,
+    _caption_style: Option<Style>,
+    _time_style: Option<Style>,
     _tick_style: Option<Style>,
     _night_style: Option<Style>,
     _day_style: Option<Style>,
@@ -70,17 +76,23 @@ impl View for WidgetScale11 {
         // Dark circular background
         let bg = Obj::new(container)?;
         bg.size(210, 210).center();
-        bg.radius(i32::MAX, Selector::DEFAULT);
-        bg.style_bg_color(palette_darken(Palette::Grey, 4), Selector::DEFAULT);
-        bg.bg_opa(255);
+        let bg_style = Style::new(|s| {
+            s.bg_color(palette_darken(Palette::Grey, 4))
+                .bg_opa(255)
+                .pad_all(0)
+                .radius_circle();
+        });
+        bg.add_style(&bg_style, Selector::DEFAULT);
         bg.remove_scrollable();
-        bg.pad(0);
 
         // Scale
         let scale = Scale::new(&bg)?;
         scale.center();
         scale.size(150, 150);
-        scale.style_arc_width(5, Selector::DEFAULT);
+        let scale_default_style = Style::new(|s| {
+            s.arc_width(5);
+        });
+        scale.add_style(&scale_default_style, Selector::DEFAULT);
 
         scale.set_mode(ScaleMode::RoundOuter);
         scale.set_range(0, 24);
@@ -89,8 +101,10 @@ impl View for WidgetScale11 {
         scale.set_angle_range(360);
         scale.set_rotation(105);
         scale.set_label_show(true);
-        scale.style_text_font(fonts::MONTSERRAT_12, Part::Indicator);
-        scale.style_radial_offset(-6, Part::Indicator);
+        let scale_indicator_style = Style::new(|s| {
+            s.text_font(fonts::MONTSERRAT_12).radial_offset(-6);
+        });
+        scale.add_style(&scale_indicator_style, Part::Indicator);
 
         // Rotate labels to match tick angles, keep upright
         scale.style_transform_rotation(
@@ -128,41 +142,56 @@ impl View for WidgetScale11 {
         // Enable draw task events for label recoloring
         scale.send_draw_task_events();
 
+        // Shared label styles (built once, applied to multiple labels).
+        let today_style = Style::new(|s| {
+            s.text_font(fonts::MONTSERRAT_16).text_color(color_white());
+        });
+        // SUNRISE/SUNSET captions: 14pt grey.
+        let caption_style = Style::new(|s| {
+            s.text_font(fonts::MONTSERRAT_14)
+                .text_color(palette_main(Palette::Grey));
+        });
+        // Time values: 20pt white.
+        let time_style = Style::new(|s| {
+            s.text_font(fonts::MONTSERRAT_20).text_color(color_white());
+        });
+
         // "TODAY" label
         let today = Label::new(&bg)?;
         today.text("TODAY");
-        today.style_text_font(fonts::MONTSERRAT_16, Selector::DEFAULT);
-        today.style_text_color(color_white(), Selector::DEFAULT);
+        today.add_style(&today_style, Selector::DEFAULT);
         today.align(Align::TopMid, 0, 60);
 
         // Sunrise
         let sunrise_lbl = Label::new(&bg)?;
         sunrise_lbl.text("SUNRISE");
-        sunrise_lbl.style_text_font(fonts::MONTSERRAT_14, Selector::DEFAULT);
-        sunrise_lbl.style_text_color(palette_main(Palette::Grey), Selector::DEFAULT);
+        sunrise_lbl.add_style(&caption_style, Selector::DEFAULT);
         sunrise_lbl.align(Align::LeftMid, 37, -10);
 
         let sunrise_time = Label::new(&bg)?;
         sunrise_time.text("6:43");
-        sunrise_time.style_text_font(fonts::MONTSERRAT_20, Selector::DEFAULT);
-        sunrise_time.style_text_color(color_white(), Selector::DEFAULT);
+        sunrise_time.add_style(&time_style, Selector::DEFAULT);
         sunrise_time.align_to(&sunrise_lbl, Align::OutBottomMid, 0, 2);
 
         // Sunset
         let sunset_lbl = Label::new(&bg)?;
         sunset_lbl.text("SUNSET");
-        sunset_lbl.style_text_font(fonts::MONTSERRAT_14, Selector::DEFAULT);
-        sunset_lbl.style_text_color(palette_main(Palette::Grey), Selector::DEFAULT);
+        sunset_lbl.add_style(&caption_style, Selector::DEFAULT);
         sunset_lbl.align(Align::RightMid, -37, -10);
 
         let sunset_time = Label::new(&bg)?;
         sunset_time.text("17:37");
-        sunset_time.style_text_font(fonts::MONTSERRAT_20, Selector::DEFAULT);
-        sunset_time.style_text_color(color_white(), Selector::DEFAULT);
+        sunset_time.add_style(&time_style, Selector::DEFAULT);
         sunset_time.align_to(&sunset_lbl, Align::OutBottomMid, 0, 2);
 
                 self._bg = Some(bg);
         self.scale = Some(scale);
+        self._bg_style = Some(bg_style);
+        self._scale_default_style = Some(scale_default_style);
+        self._scale_indicator_style = Some(scale_indicator_style);
+        self._today_style = Some(today_style);
+        self._caption_style = Some(caption_style);
+        self._time_style = Some(time_style);
         self._tick_style = Some(tick_style);
         self._night_style = Some(night_style);
         self._day_style = Some(day_style);

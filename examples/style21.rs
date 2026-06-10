@@ -13,7 +13,7 @@ use oxivgl::{
     enums::EventCode,
     event::Event,
     layout::FlexFlow,
-    style::{color_make, Selector},
+    style::{color_make, Selector, Style},
     view::{NavAction, View},
     widgets::{Align, Arc, Label, Obj, Slider, WidgetError},
 };
@@ -32,21 +32,41 @@ struct Style21 {
 
 impl View for Style21 {
     fn create(&mut self, container: &Obj<'static>) -> Result<(), WidgetError> {
-        container.bg_color(0xeeeeee).bg_opa(255);
+        // Shared screen background style.
+        let bg_style = Style::new(|s| {
+            s.bg_color_hex(0xeeeeee).bg_opa(255);
+        });
+        container.add_style(&bg_style, Selector::DEFAULT);
+
+        // Shared card style — identical for both cards (one property buffer).
+        let card_style = Style::new(|s| {
+            s.bg_color_hex(0xffffff)
+                .bg_opa(255)
+                .radius(12)
+                .border_width(0)
+                .shadow_width(20)
+                .shadow_color(color_make(0x88, 0x88, 0x88))
+                .shadow_offset_x(2)
+                .shadow_offset_y(4)
+                .shadow_spread(0)
+                .shadow_opa(200);
+        });
+
+        // Shared transparent-row style — the two control rows.
+        let row_style = Style::new(|s| {
+            s.bg_opa(0).border_width(0);
+        });
+
+        // Controls container style — transparent like the rows, plus padding.
+        let controls_style = Style::new(|s| {
+            s.bg_opa(0).border_width(0).pad_all(4).pad_row(8);
+        });
 
         // --- Card 1 ---
         let card1 = Obj::new(container)?;
         card1.size(120, 80);
         card1.align(Align::TopLeft, 20, 20);
-        card1.bg_color(0xffffff).bg_opa(255);
-        card1.radius(12, Selector::DEFAULT);
-        card1.border_width(0);
-        card1.style_shadow_width(20, Selector::DEFAULT);
-        card1.style_shadow_color(color_make(0x88, 0x88, 0x88), Selector::DEFAULT);
-        card1.style_shadow_offset_x(2, Selector::DEFAULT);
-        card1.style_shadow_offset_y(4, Selector::DEFAULT);
-        card1.style_shadow_spread(0, Selector::DEFAULT);
-        card1.style_shadow_opa(200, Selector::DEFAULT);
+        card1.add_style(&card_style, Selector::DEFAULT);
         card1.style_transform_pivot_x(60, Selector::DEFAULT);
         card1.style_transform_pivot_y(40, Selector::DEFAULT);
 
@@ -57,15 +77,7 @@ impl View for Style21 {
         let card2 = Obj::new(container)?;
         card2.size(120, 80);
         card2.align(Align::TopRight, -20, 20);
-        card2.bg_color(0xffffff).bg_opa(255);
-        card2.radius(12, Selector::DEFAULT);
-        card2.border_width(0);
-        card2.style_shadow_width(20, Selector::DEFAULT);
-        card2.style_shadow_color(color_make(0x88, 0x88, 0x88), Selector::DEFAULT);
-        card2.style_shadow_offset_x(2, Selector::DEFAULT);
-        card2.style_shadow_offset_y(4, Selector::DEFAULT);
-        card2.style_shadow_spread(0, Selector::DEFAULT);
-        card2.style_shadow_opa(200, Selector::DEFAULT);
+        card2.add_style(&card_style, Selector::DEFAULT);
         card2.style_transform_pivot_x(60, Selector::DEFAULT);
         card2.style_transform_pivot_y(40, Selector::DEFAULT);
 
@@ -76,16 +88,13 @@ impl View for Style21 {
         let controls = Obj::new(container)?;
         controls.size(280, 100);
         controls.align(Align::BottomMid, 0, -10);
-        controls.bg_opa(0);
-        controls.border_width(0);
+        controls.add_style(&controls_style, Selector::DEFAULT);
         controls.set_flex_flow(FlexFlow::Column);
-        controls.pad(4);
-        controls.style_pad_row(8, Selector::DEFAULT);
 
         // Arc — controls rotation
         let arc_row = Obj::new(&controls)?;
         arc_row.size(260, 40);
-        arc_row.bg_opa(0).border_width(0);
+        arc_row.add_style(&row_style, Selector::DEFAULT);
         arc_row.set_flex_flow(FlexFlow::Row);
 
         let arc_lbl = Label::new(&arc_row)?;
@@ -102,7 +111,7 @@ impl View for Style21 {
         // Slider — controls scale
         let slider_row = Obj::new(&controls)?;
         slider_row.size(260, 40);
-        slider_row.bg_opa(0).border_width(0);
+        slider_row.add_style(&row_style, Selector::DEFAULT);
         slider_row.set_flex_flow(FlexFlow::Row);
 
         let slider_lbl = Label::new(&slider_row)?;

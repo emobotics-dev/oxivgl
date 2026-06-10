@@ -13,6 +13,7 @@ use super::obj::Obj;
 // selector variants take lv_color_t for full control.
 impl<'p> Obj<'p> {
     /// Set background color from RGB hex (selector 0).
+    #[deprecated(note = "inline style setters allocate a per-object local style; build a shared Style (Style::new) and apply with add_style for memory efficiency at scale - see docs/memory-tuning.md")]
     pub fn bg_color(&self, color: u32) -> &Self {
         assert_ne!(self.handle(), null_mut(), "Obj handle cannot be null");
         // SAFETY: handle non-null (asserted above).
@@ -21,6 +22,7 @@ impl<'p> Obj<'p> {
     }
 
     /// Set background opacity (selector 0).
+    #[deprecated(note = "inline style setters allocate a per-object local style; build a shared Style (Style::new) and apply with add_style for memory efficiency at scale - see docs/memory-tuning.md")]
     pub fn bg_opa(&self, opa: u8) -> &Self {
         assert_ne!(self.handle(), null_mut(), "Obj handle cannot be null");
         // SAFETY: handle non-null (asserted above).
@@ -29,6 +31,7 @@ impl<'p> Obj<'p> {
     }
 
     /// Set background opacity for the given selector.
+    #[deprecated(note = "inline style setters allocate a per-object local style; build a shared Style (Style::new) and apply with add_style for memory efficiency at scale - see docs/memory-tuning.md")]
     pub fn bg_opa_selector(&self, opa: u8, selector: impl Into<crate::style::Selector>) -> &Self {
         let selector = selector.into().raw();
         assert_ne!(self.handle(), null_mut(), "Obj handle cannot be null");
@@ -38,6 +41,7 @@ impl<'p> Obj<'p> {
     }
 
     /// Set border width (selector 0).
+    #[deprecated(note = "inline style setters allocate a per-object local style; build a shared Style (Style::new) and apply with add_style for memory efficiency at scale - see docs/memory-tuning.md")]
     pub fn border_width(&self, w: i32) -> &Self {
         assert_ne!(self.handle(), null_mut(), "Obj handle cannot be null");
         // SAFETY: handle non-null (asserted above).
@@ -46,6 +50,7 @@ impl<'p> Obj<'p> {
     }
 
     /// Set padding on all sides (selector 0).
+    #[deprecated(note = "inline style setters allocate a per-object local style; build a shared Style (Style::new) and apply with add_style for memory efficiency at scale - see docs/memory-tuning.md")]
     pub fn pad(&self, p: i32) -> &Self {
         assert_ne!(self.handle(), null_mut(), "Obj handle cannot be null");
         // SAFETY: handle non-null (asserted above).
@@ -54,6 +59,7 @@ impl<'p> Obj<'p> {
     }
 
     /// Set top padding (selector 0).
+    #[deprecated(note = "inline style setters allocate a per-object local style; build a shared Style (Style::new) and apply with add_style for memory efficiency at scale - see docs/memory-tuning.md")]
     pub fn pad_top(&self, p: i32) -> &Self {
         assert_ne!(self.handle(), null_mut(), "Obj handle cannot be null");
         // SAFETY: handle non-null (asserted above).
@@ -62,6 +68,7 @@ impl<'p> Obj<'p> {
     }
 
     /// Set bottom padding (selector 0).
+    #[deprecated(note = "inline style setters allocate a per-object local style; build a shared Style (Style::new) and apply with add_style for memory efficiency at scale - see docs/memory-tuning.md")]
     pub fn pad_bottom(&self, p: i32) -> &Self {
         assert_ne!(self.handle(), null_mut(), "Obj handle cannot be null");
         // SAFETY: handle non-null (asserted above).
@@ -70,6 +77,7 @@ impl<'p> Obj<'p> {
     }
 
     /// Set left padding (selector 0).
+    #[deprecated(note = "inline style setters allocate a per-object local style; build a shared Style (Style::new) and apply with add_style for memory efficiency at scale - see docs/memory-tuning.md")]
     pub fn pad_left(&self, p: i32) -> &Self {
         assert_ne!(self.handle(), null_mut(), "Obj handle cannot be null");
         // SAFETY: handle non-null (asserted above).
@@ -78,6 +86,7 @@ impl<'p> Obj<'p> {
     }
 
     /// Set right padding (selector 0).
+    #[deprecated(note = "inline style setters allocate a per-object local style; build a shared Style (Style::new) and apply with add_style for memory efficiency at scale - see docs/memory-tuning.md")]
     pub fn pad_right(&self, p: i32) -> &Self {
         assert_ne!(self.handle(), null_mut(), "Obj handle cannot be null");
         // SAFETY: handle non-null (asserted above).
@@ -86,6 +95,7 @@ impl<'p> Obj<'p> {
     }
 
     /// Set horizontal padding (left + right) for the given selector.
+    #[deprecated(note = "inline style setters allocate a per-object local style; build a shared Style (Style::new) and apply with add_style for memory efficiency at scale - see docs/memory-tuning.md")]
     pub fn style_pad_hor(&self, p: i32, selector: impl Into<crate::style::Selector>) -> &Self {
         let selector = selector.into().raw();
         assert_ne!(self.handle(), null_mut(), "Obj handle cannot be null");
@@ -158,6 +168,7 @@ impl<'p> Obj<'p> {
     }
 
     /// Set `clip_corner` — clip overflowing content at rounded corners.
+    #[deprecated(note = "inline style setters allocate a per-object local style; build a shared Style (Style::new) and apply with add_style for memory efficiency at scale - see docs/memory-tuning.md")]
     pub fn style_clip_corner(&self, clip: bool, selector: impl Into<crate::style::Selector>) -> &Self {
         let selector = selector.into().raw();
         assert_ne!(self.handle(), null_mut(), "Obj handle cannot be null");
@@ -176,6 +187,7 @@ impl<'p> Obj<'p> {
     }
 
     /// Set text color from RGB hex (selector 0).
+    #[deprecated(note = "inline style setters allocate a per-object local style; build a shared Style (Style::new) and apply with add_style for memory efficiency at scale - see docs/memory-tuning.md")]
     pub fn text_color(&self, color: u32) -> &Self {
         assert_ne!(self.handle(), null_mut(), "Obj handle cannot be null");
         // SAFETY: handle non-null (asserted above).
@@ -184,6 +196,7 @@ impl<'p> Obj<'p> {
     }
 
     /// Set text font (selector 0).
+    #[deprecated(note = "inline style setters allocate a per-object local style; build a shared Style (Style::new) and apply with add_style for memory efficiency at scale - see docs/memory-tuning.md")]
     pub fn text_font(&self, font: crate::fonts::Font) -> &Self {
         assert_ne!(self.handle(), null_mut(), "Obj handle cannot be null");
         assert_ne!(font.as_ptr(), null_mut(), "Font pointer cannot be null");
@@ -193,11 +206,14 @@ impl<'p> Obj<'p> {
     }
 
     /// Alias for [`text_font`](Self::text_font).
+    #[deprecated(note = "inline style setters allocate a per-object local style; build a shared Style (Style::new) and apply with add_style for memory efficiency at scale - see docs/memory-tuning.md")]
+    #[allow(deprecated)] // alias forwards to the (also deprecated) text_font
     pub fn font(&self, font: crate::fonts::Font) -> &Self {
         self.text_font(font)
     }
 
     /// Set text alignment (selector 0).
+    #[deprecated(note = "inline style setters allocate a per-object local style; build a shared Style (Style::new) and apply with add_style for memory efficiency at scale - see docs/memory-tuning.md")]
     pub fn text_align(&self, align: super::obj::TextAlign) -> &Self {
         assert_ne!(self.handle(), null_mut(), "Obj handle cannot be null");
         // SAFETY: handle non-null (asserted above).
@@ -206,6 +222,7 @@ impl<'p> Obj<'p> {
     }
 
     /// Set overall opacity (selector 0).
+    #[deprecated(note = "inline style setters allocate a per-object local style; build a shared Style (Style::new) and apply with add_style for memory efficiency at scale - see docs/memory-tuning.md")]
     pub fn opa(&self, opa: u8) -> &Self {
         assert_ne!(self.handle(), null_mut(), "Obj handle cannot be null");
         // SAFETY: handle non-null (asserted above).
@@ -214,6 +231,7 @@ impl<'p> Obj<'p> {
     }
 
     /// Set opacity for the given style selector.
+    #[deprecated(note = "inline style setters allocate a per-object local style; build a shared Style (Style::new) and apply with add_style for memory efficiency at scale - see docs/memory-tuning.md")]
     pub fn style_opa(&self, opa: u8, selector: impl Into<crate::style::Selector>) -> &Self {
         let selector = selector.into().raw();
         assert_ne!(self.handle(), null_mut(), "Obj handle cannot be null");
@@ -223,6 +241,7 @@ impl<'p> Obj<'p> {
     }
 
     /// Set padding on all sides for the given style selector.
+    #[deprecated(note = "inline style setters allocate a per-object local style; build a shared Style (Style::new) and apply with add_style for memory efficiency at scale - see docs/memory-tuning.md")]
     pub fn style_pad_all(&self, p: i32, selector: impl Into<crate::style::Selector>) -> &Self {
         let selector = selector.into().raw();
         assert_ne!(self.handle(), null_mut(), "Obj handle cannot be null");
@@ -233,6 +252,7 @@ impl<'p> Obj<'p> {
 
     /// Set the corner radius for the given style selector.
     /// Use [`RADIUS_MAX`](super::RADIUS_MAX) for a pill/capsule shape.
+    #[deprecated(note = "inline style setters allocate a per-object local style; build a shared Style (Style::new) and apply with add_style for memory efficiency at scale - see docs/memory-tuning.md")]
     pub fn radius(&self, r: i32, selector: impl Into<crate::style::Selector>) -> &Self {
         let selector = selector.into().raw();
         assert_ne!(self.handle(), null_mut(), "Obj handle cannot be null");
@@ -242,6 +262,7 @@ impl<'p> Obj<'p> {
     }
 
     /// Set local `bg_color` style for the given selector (part | state).
+    #[deprecated(note = "inline style setters allocate a per-object local style; build a shared Style (Style::new) and apply with add_style for memory efficiency at scale - see docs/memory-tuning.md")]
     pub fn style_bg_color(&self, color: lv_color_t, selector: impl Into<crate::style::Selector>) -> &Self {
         let selector = selector.into().raw();
         assert_ne!(self.handle(), null_mut(), "Obj handle cannot be null");
@@ -251,6 +272,7 @@ impl<'p> Obj<'p> {
     }
 
     /// Set local `bg_grad_color` for the given selector.
+    #[deprecated(note = "inline style setters allocate a per-object local style; build a shared Style (Style::new) and apply with add_style for memory efficiency at scale - see docs/memory-tuning.md")]
     pub fn style_bg_grad_color(&self, color: lv_color_t, selector: impl Into<crate::style::Selector>) -> &Self {
         let selector = selector.into().raw();
         assert_ne!(self.handle(), null_mut(), "Obj handle cannot be null");
@@ -260,6 +282,7 @@ impl<'p> Obj<'p> {
     }
 
     /// Set local `bg_grad_dir` for the given selector.
+    #[deprecated(note = "inline style setters allocate a per-object local style; build a shared Style (Style::new) and apply with add_style for memory efficiency at scale - see docs/memory-tuning.md")]
     pub fn style_bg_grad_dir(&self, dir: crate::style::GradDir, selector: impl Into<crate::style::Selector>) -> &Self {
         let selector = selector.into().raw();
         assert_ne!(self.handle(), null_mut(), "Obj handle cannot be null");
@@ -308,6 +331,7 @@ impl<'p> Obj<'p> {
     }
 
     /// Set base text direction for the given selector.
+    #[deprecated(note = "inline style setters allocate a per-object local style; build a shared Style (Style::new) and apply with add_style for memory efficiency at scale - see docs/memory-tuning.md")]
     pub fn style_base_dir(&self, dir: super::obj::BaseDir, selector: impl Into<crate::style::Selector>) -> &Self {
         let selector = selector.into().raw();
         assert_ne!(self.handle(), null_mut(), "Obj handle cannot be null");
@@ -317,6 +341,7 @@ impl<'p> Obj<'p> {
     }
 
     /// Set `lv_obj_set_style_line_width` for the given LVGL style part.
+    #[deprecated(note = "inline style setters allocate a per-object local style; build a shared Style (Style::new) and apply with add_style for memory efficiency at scale - see docs/memory-tuning.md")]
     pub fn line_width(&self, part: super::obj::Part, width: i32) -> &Self {
         assert_ne!(self.handle(), null_mut(), "Obj handle cannot be null");
         // SAFETY: handle non-null (asserted above).
@@ -325,6 +350,7 @@ impl<'p> Obj<'p> {
     }
 
     /// Set image recolor tint.
+    #[deprecated(note = "inline style setters allocate a per-object local style; build a shared Style (Style::new) and apply with add_style for memory efficiency at scale - see docs/memory-tuning.md")]
     pub fn style_image_recolor(&self, color: lv_color_t, selector: impl Into<crate::style::Selector>) -> &Self {
         let selector = selector.into().raw();
         assert_ne!(self.handle(), null_mut(), "Obj handle cannot be null");
@@ -334,6 +360,7 @@ impl<'p> Obj<'p> {
     }
 
     /// Set radial offset for parts on round scales (in pixels).
+    #[deprecated(note = "inline style setters allocate a per-object local style; build a shared Style (Style::new) and apply with add_style for memory efficiency at scale - see docs/memory-tuning.md")]
     pub fn style_radial_offset(&self, offset: i32, selector: impl Into<crate::style::Selector>) -> &Self {
         let selector = selector.into().raw();
         assert_ne!(self.handle(), null_mut(), "Obj handle cannot be null");
@@ -343,6 +370,7 @@ impl<'p> Obj<'p> {
     }
 
     /// Set line opacity for a part (0–255).
+    #[deprecated(note = "inline style setters allocate a per-object local style; build a shared Style (Style::new) and apply with add_style for memory efficiency at scale - see docs/memory-tuning.md")]
     pub fn style_line_opa(&self, opa: u8, selector: impl Into<crate::style::Selector>) -> &Self {
         let selector = selector.into().raw();
         assert_ne!(self.handle(), null_mut(), "Obj handle cannot be null");
@@ -352,6 +380,7 @@ impl<'p> Obj<'p> {
     }
 
     /// Set text color for the given style selector.
+    #[deprecated(note = "inline style setters allocate a per-object local style; build a shared Style (Style::new) and apply with add_style for memory efficiency at scale - see docs/memory-tuning.md")]
     pub fn style_text_color(&self, color: lv_color_t, selector: impl Into<crate::style::Selector>) -> &Self {
         let selector = selector.into().raw();
         assert_ne!(self.handle(), null_mut(), "Obj handle cannot be null");
@@ -361,6 +390,7 @@ impl<'p> Obj<'p> {
     }
 
     /// Set text font for the given style selector.
+    #[deprecated(note = "inline style setters allocate a per-object local style; build a shared Style (Style::new) and apply with add_style for memory efficiency at scale - see docs/memory-tuning.md")]
     pub fn style_text_font(&self, font: crate::fonts::Font, selector: impl Into<crate::style::Selector>) -> &Self {
         let selector = selector.into().raw();
         assert_ne!(self.handle(), null_mut(), "Obj handle cannot be null");
@@ -371,6 +401,7 @@ impl<'p> Obj<'p> {
     }
 
     /// Set arc width for the given style selector.
+    #[deprecated(note = "inline style setters allocate a per-object local style; build a shared Style (Style::new) and apply with add_style for memory efficiency at scale - see docs/memory-tuning.md")]
     pub fn style_arc_width(&self, width: i32, selector: impl Into<crate::style::Selector>) -> &Self {
         let selector = selector.into().raw();
         assert_ne!(self.handle(), null_mut(), "Obj handle cannot be null");
@@ -380,6 +411,7 @@ impl<'p> Obj<'p> {
     }
 
     /// Set arc color for the given style selector.
+    #[deprecated(note = "inline style setters allocate a per-object local style; build a shared Style (Style::new) and apply with add_style for memory efficiency at scale - see docs/memory-tuning.md")]
     pub fn style_arc_color(&self, color: lv_color_t, selector: impl Into<crate::style::Selector>) -> &Self {
         let selector = selector.into().raw();
         assert_ne!(self.handle(), null_mut(), "Obj handle cannot be null");
@@ -389,6 +421,7 @@ impl<'p> Obj<'p> {
     }
 
     /// Set arc rounded end-caps for the given style selector.
+    #[deprecated(note = "inline style setters allocate a per-object local style; build a shared Style (Style::new) and apply with add_style for memory efficiency at scale - see docs/memory-tuning.md")]
     pub fn style_arc_rounded(&self, rounded: bool, selector: impl Into<crate::style::Selector>) -> &Self {
         let selector = selector.into().raw();
         assert_ne!(self.handle(), null_mut(), "Obj handle cannot be null");
@@ -398,6 +431,7 @@ impl<'p> Obj<'p> {
     }
 
     /// Set line color for the given style selector.
+    #[deprecated(note = "inline style setters allocate a per-object local style; build a shared Style (Style::new) and apply with add_style for memory efficiency at scale - see docs/memory-tuning.md")]
     pub fn style_line_color(&self, color: lv_color_t, selector: impl Into<crate::style::Selector>) -> &Self {
         let selector = selector.into().raw();
         assert_ne!(self.handle(), null_mut(), "Obj handle cannot be null");
@@ -409,6 +443,7 @@ impl<'p> Obj<'p> {
     /// Set the `length` property for the given style selector.
     ///
     /// Used for tick length on scale parts (Items=minor, Indicator=major).
+    #[deprecated(note = "inline style setters allocate a per-object local style; build a shared Style (Style::new) and apply with add_style for memory efficiency at scale - see docs/memory-tuning.md")]
     pub fn style_length(&self, length: i32, selector: impl Into<crate::style::Selector>) -> &Self {
         let selector = selector.into().raw();
         assert_ne!(self.handle(), null_mut(), "Obj handle cannot be null");
@@ -418,6 +453,7 @@ impl<'p> Obj<'p> {
     }
 
     /// Set line width for the given style selector.
+    #[deprecated(note = "inline style setters allocate a per-object local style; build a shared Style (Style::new) and apply with add_style for memory efficiency at scale - see docs/memory-tuning.md")]
     pub fn style_line_width(&self, width: i32, selector: impl Into<crate::style::Selector>) -> &Self {
         let selector = selector.into().raw();
         assert_ne!(self.handle(), null_mut(), "Obj handle cannot be null");
@@ -430,6 +466,7 @@ impl<'p> Obj<'p> {
     ///
     /// Different from [`Obj::size`] — this sets the style property, useful
     /// for sub-parts like tick marks.
+    #[deprecated(note = "inline style setters allocate a per-object local style; build a shared Style (Style::new) and apply with add_style for memory efficiency at scale - see docs/memory-tuning.md")]
     pub fn style_width(&self, width: i32, selector: impl Into<crate::style::Selector>) -> &Self {
         let selector = selector.into().raw();
         assert_ne!(self.handle(), null_mut(), "Obj handle cannot be null");
@@ -439,6 +476,7 @@ impl<'p> Obj<'p> {
     }
 
     /// Set image recolor opacity (0–255).
+    #[deprecated(note = "inline style setters allocate a per-object local style; build a shared Style (Style::new) and apply with add_style for memory efficiency at scale - see docs/memory-tuning.md")]
     pub fn style_image_recolor_opa(&self, opa: u8, selector: impl Into<crate::style::Selector>) -> &Self {
         let selector = selector.into().raw();
         assert_ne!(self.handle(), null_mut(), "Obj handle cannot be null");
@@ -448,6 +486,7 @@ impl<'p> Obj<'p> {
     }
 
     /// Set column gap for the given selector.
+    #[deprecated(note = "inline style setters allocate a per-object local style; build a shared Style (Style::new) and apply with add_style for memory efficiency at scale - see docs/memory-tuning.md")]
     pub fn style_pad_column(&self, gap: i32, selector: impl Into<crate::style::Selector>) -> &Self {
         let selector = selector.into().raw();
         assert_ne!(self.handle(), null_mut(), "Obj handle cannot be null");
@@ -457,6 +496,7 @@ impl<'p> Obj<'p> {
     }
 
     /// Set row gap for the given selector.
+    #[deprecated(note = "inline style setters allocate a per-object local style; build a shared Style (Style::new) and apply with add_style for memory efficiency at scale - see docs/memory-tuning.md")]
     pub fn style_pad_row(&self, gap: i32, selector: impl Into<crate::style::Selector>) -> &Self {
         let selector = selector.into().raw();
         assert_ne!(self.handle(), null_mut(), "Obj handle cannot be null");
@@ -466,6 +506,7 @@ impl<'p> Obj<'p> {
     }
 
     /// Set indicator/point width and height for the given selector.
+    #[deprecated(note = "inline style setters allocate a per-object local style; build a shared Style (Style::new) and apply with add_style for memory efficiency at scale - see docs/memory-tuning.md")]
     pub fn style_size(&self, w: i32, h: i32, selector: impl Into<crate::style::Selector>) -> &Self {
         let selector = selector.into().raw();
         assert_ne!(self.handle(), null_mut(), "Obj handle cannot be null");
@@ -546,6 +587,7 @@ impl<'p> Obj<'p> {
     }
 
     /// Set shadow width for the given selector.
+    #[deprecated(note = "inline style setters allocate a per-object local style; build a shared Style (Style::new) and apply with add_style for memory efficiency at scale - see docs/memory-tuning.md")]
     pub fn style_shadow_width(&self, w: i32, selector: impl Into<crate::style::Selector>) -> &Self {
         let selector = selector.into().raw();
         assert_ne!(self.handle(), null_mut(), "Obj handle cannot be null");
@@ -555,6 +597,7 @@ impl<'p> Obj<'p> {
     }
 
     /// Set shadow color for the given selector.
+    #[deprecated(note = "inline style setters allocate a per-object local style; build a shared Style (Style::new) and apply with add_style for memory efficiency at scale - see docs/memory-tuning.md")]
     pub fn style_shadow_color(&self, color: lv_color_t, selector: impl Into<crate::style::Selector>) -> &Self {
         let selector = selector.into().raw();
         assert_ne!(self.handle(), null_mut(), "Obj handle cannot be null");
@@ -564,6 +607,7 @@ impl<'p> Obj<'p> {
     }
 
     /// Set shadow X offset for the given selector.
+    #[deprecated(note = "inline style setters allocate a per-object local style; build a shared Style (Style::new) and apply with add_style for memory efficiency at scale - see docs/memory-tuning.md")]
     pub fn style_shadow_offset_x(&self, x: i32, selector: impl Into<crate::style::Selector>) -> &Self {
         let selector = selector.into().raw();
         assert_ne!(self.handle(), null_mut(), "Obj handle cannot be null");
@@ -573,6 +617,7 @@ impl<'p> Obj<'p> {
     }
 
     /// Set shadow Y offset for the given selector.
+    #[deprecated(note = "inline style setters allocate a per-object local style; build a shared Style (Style::new) and apply with add_style for memory efficiency at scale - see docs/memory-tuning.md")]
     pub fn style_shadow_offset_y(&self, y: i32, selector: impl Into<crate::style::Selector>) -> &Self {
         let selector = selector.into().raw();
         assert_ne!(self.handle(), null_mut(), "Obj handle cannot be null");
@@ -582,6 +627,7 @@ impl<'p> Obj<'p> {
     }
 
     /// Set shadow spread for the given selector.
+    #[deprecated(note = "inline style setters allocate a per-object local style; build a shared Style (Style::new) and apply with add_style for memory efficiency at scale - see docs/memory-tuning.md")]
     pub fn style_shadow_spread(&self, s: i32, selector: impl Into<crate::style::Selector>) -> &Self {
         let selector = selector.into().raw();
         assert_ne!(self.handle(), null_mut(), "Obj handle cannot be null");
@@ -591,6 +637,7 @@ impl<'p> Obj<'p> {
     }
 
     /// Set shadow opacity (0–255) for the given selector.
+    #[deprecated(note = "inline style setters allocate a per-object local style; build a shared Style (Style::new) and apply with add_style for memory efficiency at scale - see docs/memory-tuning.md")]
     pub fn style_shadow_opa(&self, opa: u8, selector: impl Into<crate::style::Selector>) -> &Self {
         let selector = selector.into().raw();
         assert_ne!(self.handle(), null_mut(), "Obj handle cannot be null");
@@ -618,6 +665,7 @@ impl<'p> Obj<'p> {
     }
 
     /// Set text letter spacing for the given selector.
+    #[deprecated(note = "inline style setters allocate a per-object local style; build a shared Style (Style::new) and apply with add_style for memory efficiency at scale - see docs/memory-tuning.md")]
     pub fn style_text_letter_space(&self, space: i32, selector: impl Into<crate::style::Selector>) -> &Self {
         let selector = selector.into().raw();
         assert_ne!(self.handle(), null_mut(), "Obj handle cannot be null");
@@ -630,6 +678,7 @@ impl<'p> Obj<'p> {
     ///
     /// Requires GPU-accelerated backend for visible effect; may be a no-op on
     /// SDL host.
+    #[deprecated(note = "inline style setters allocate a per-object local style; build a shared Style (Style::new) and apply with add_style for memory efficiency at scale - see docs/memory-tuning.md")]
     pub fn style_blur_radius(&self, r: i32, selector: impl Into<crate::style::Selector>) -> &Self {
         let selector = selector.into().raw();
         assert_ne!(self.handle(), null_mut(), "Obj handle cannot be null");
@@ -642,6 +691,7 @@ impl<'p> Obj<'p> {
     ///
     /// When enabled, the area behind the object is blurred (requires
     /// [`style_blur_radius`](Self::style_blur_radius) > 0).
+    #[deprecated(note = "inline style setters allocate a per-object local style; build a shared Style (Style::new) and apply with add_style for memory efficiency at scale - see docs/memory-tuning.md")]
     pub fn style_blur_backdrop(&self, en: bool, selector: impl Into<crate::style::Selector>) -> &Self {
         let selector = selector.into().raw();
         assert_ne!(self.handle(), null_mut(), "Obj handle cannot be null");

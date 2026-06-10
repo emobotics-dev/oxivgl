@@ -213,6 +213,88 @@ impl StyleBuilder {
         self
     }
 
+    /// Set corner radius to a full circle/pill (`LV_RADIUS_CIRCLE`).
+    pub fn radius_circle(&mut self) -> &mut Self {
+        // 0x7FFF == LV_RADIUS_CIRCLE; LVGL clamps to half the object size.
+        unsafe { lv_style_set_radius(&mut self.inner.lv, 0x7FFF as lv_coord_t) };
+        self
+    }
+
+    /// Set horizontal padding (left and right).
+    pub fn pad_hor(&mut self, p: i32) -> &mut Self {
+        unsafe { lv_style_set_pad_hor(&mut self.inner.lv, p) };
+        self
+    }
+
+    /// Set the gap between columns (flex/grid).
+    pub fn pad_column(&mut self, gap: i32) -> &mut Self {
+        unsafe { lv_style_set_pad_column(&mut self.inner.lv, gap) };
+        self
+    }
+
+    /// Set the gap between rows (flex/grid).
+    pub fn pad_row(&mut self, gap: i32) -> &mut Self {
+        unsafe { lv_style_set_pad_row(&mut self.inner.lv, gap) };
+        self
+    }
+
+    /// Set width and height together.
+    pub fn size(&mut self, w: i32, h: i32) -> &mut Self {
+        unsafe {
+            lv_style_set_width(&mut self.inner.lv, w);
+            lv_style_set_height(&mut self.inner.lv, h);
+        }
+        self
+    }
+
+    /// Clip child content to the (rounded) corners.
+    pub fn clip_corner(&mut self, clip: bool) -> &mut Self {
+        unsafe { lv_style_set_clip_corner(&mut self.inner.lv, clip) };
+        self
+    }
+
+    /// Set horizontal text alignment.
+    pub fn text_align(&mut self, align: crate::widgets::TextAlign) -> &mut Self {
+        unsafe { lv_style_set_text_align(&mut self.inner.lv, align as lv_text_align_t) };
+        self
+    }
+
+    /// Set the base text direction (LTR/RTL/auto).
+    pub fn base_dir(&mut self, dir: crate::widgets::BaseDir) -> &mut Self {
+        unsafe { lv_style_set_base_dir(&mut self.inner.lv, dir as lv_base_dir_t) };
+        self
+    }
+
+    /// Set the radial offset (scale/arc tick placement).
+    pub fn radial_offset(&mut self, offset: i32) -> &mut Self {
+        unsafe { lv_style_set_radial_offset(&mut self.inner.lv, offset) };
+        self
+    }
+
+    /// Set line opacity (0 = transparent, 255 = opaque).
+    pub fn line_opa(&mut self, opa: u8) -> &mut Self {
+        unsafe { lv_style_set_line_opa(&mut self.inner.lv, opa as lv_opa_t) };
+        self
+    }
+
+    /// Round the ends of arcs drawn with this style.
+    pub fn arc_rounded(&mut self, rounded: bool) -> &mut Self {
+        unsafe { lv_style_set_arc_rounded(&mut self.inner.lv, rounded) };
+        self
+    }
+
+    /// Set backdrop blur radius.
+    pub fn blur_radius(&mut self, r: i32) -> &mut Self {
+        unsafe { lv_style_set_blur_radius(&mut self.inner.lv, r) };
+        self
+    }
+
+    /// Enable backdrop blur (blur what is behind the object).
+    pub fn blur_backdrop(&mut self, en: bool) -> &mut Self {
+        unsafe { lv_style_set_blur_backdrop(&mut self.inner.lv, en) };
+        self
+    }
+
     /// Set overall object opacity (0-255).
     pub fn opa(&mut self, opa: u8) -> &mut Self {
         unsafe { lv_style_set_opa(&mut self.inner.lv, opa as lv_opa_t) };
@@ -392,6 +474,12 @@ impl StyleBuilder {
     /// Set top padding.
     pub fn pad_top(&mut self, p: i32) -> &mut Self {
         unsafe { lv_style_set_pad_top(&mut self.inner.lv, p) };
+        self
+    }
+
+    /// Set bottom padding.
+    pub fn pad_bottom(&mut self, p: i32) -> &mut Self {
+        unsafe { lv_style_set_pad_bottom(&mut self.inner.lv, p) };
         self
     }
 

@@ -18,6 +18,7 @@ use oxivgl::{
 struct Style12 {
     _obj: Option<Obj<'static>>,
     _style: Option<Style>,
+    _style_bg: Option<Style>,
 }
 
 impl View for Style12 {
@@ -30,13 +31,19 @@ impl View for Style12 {
             .border_width(3);
         let style = builder.build();
 
+        // Applied after `style` so its bg_color wins (LVGL last-wins order).
+        let style_bg = Style::new(|s| {
+            s.bg_color(palette_main(Palette::Orange));
+        });
+
         let obj = Obj::new(container)?;
         obj.add_style(&style, Selector::DEFAULT);
-        obj.style_bg_color(palette_main(Palette::Orange), Selector::DEFAULT);
+        obj.add_style(&style_bg, Selector::DEFAULT);
         obj.center();
 
                 self._obj = Some(obj);
         self._style = Some(style);
+        self._style_bg = Some(style_bg);
         Ok(())
     }
 

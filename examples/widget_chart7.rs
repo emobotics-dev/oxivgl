@@ -10,7 +10,7 @@
 //! 100 ms. Simplified from LVGL original (no custom draw coloring).
 
 use oxivgl::{
-    style::Selector,
+    style::{Selector, Style},
     timer::Timer,
     view::{NavAction, View},
     widgets::{Obj, Chart, ChartAxis, ChartSeries, ChartType, Part, WidgetError},
@@ -29,6 +29,8 @@ struct WidgetChart7 {
     ser: Option<ChartSeries>,
     timer: Option<Timer>,
     seed: u32,
+    _style_items: Option<Style>,
+    _style_indicator: Option<Style>,
 }
 
 impl View for WidgetChart7 {
@@ -42,8 +44,14 @@ impl View for WidgetChart7 {
         chart.set_axis_range(ChartAxis::PrimaryX, 0, 200);
         chart.set_axis_range(ChartAxis::PrimaryY, 0, 1000);
         // Hide connecting lines — show points only
-        chart.style_line_width(0, Selector::from(Part::Items));
-        chart.style_size(4, 4, Selector::from(Part::Indicator));
+        let style_items = Style::new(|s| {
+            s.line_width(0);
+        });
+        chart.add_style(&style_items, Selector::from(Part::Items));
+        let style_indicator = Style::new(|s| {
+            s.size(4, 4);
+        });
+        chart.add_style(&style_indicator, Selector::from(Part::Indicator));
 
         let color = oxivgl::style::palette_main(oxivgl::style::Palette::Red);
         let ser = chart.add_series(color, ChartAxis::PrimaryY);
@@ -61,6 +69,8 @@ impl View for WidgetChart7 {
         self.ser = Some(ser);
         self.timer = Some(timer);
         self.seed = seed;
+        self._style_items = Some(style_items);
+        self._style_indicator = Some(style_indicator);
         Ok(())
     }
 

@@ -10,7 +10,7 @@
 //! each. Simplified from the LVGL C example (no tooltip click events).
 
 use oxivgl::{
-    style::Selector,
+    style::{Selector, Style},
     view::{NavAction, View},
     widgets::{Obj, Chart, ChartAxis, ChartType, WidgetError},
 };
@@ -18,6 +18,7 @@ use oxivgl::{
 #[derive(Default)]
 struct WidgetChart3 {
     _chart: Option<Chart<'static>>,
+    _style: Option<Style>,
 }
 
 impl View for WidgetChart3 {
@@ -29,7 +30,10 @@ impl View for WidgetChart3 {
         chart.set_type(ChartType::Stacked);
         chart.set_point_count(10);
         chart.set_axis_range(ChartAxis::PrimaryY, 0, 100);
-        chart.style_pad_column(4, Selector::DEFAULT);
+        let style = Style::new(|s| {
+            s.pad_column(4);
+        });
+        chart.add_style(&style, Selector::DEFAULT);
 
         let color_red = oxivgl::style::palette_main(oxivgl::style::Palette::Red);
         let ser1 = chart.add_series(color_red, ChartAxis::PrimaryY);
@@ -50,6 +54,7 @@ impl View for WidgetChart3 {
         }
 
         self._chart = Some(chart);
+        self._style = Some(style);
         Ok(())
     }
 

@@ -19,7 +19,7 @@ use oxivgl::{
     draw::{Area, DrawLabelDscOwned},
     draw_buf::{ColorFormat, DrawBuf},
     fonts,
-    style::{GradDir, Selector, color_black, color_make, color_white},
+    style::{GradDir, Selector, Style, color_black, color_make, color_white},
     view::{NavAction, View},
     widgets::{Canvas, Obj, TextAlign, WidgetError},
 };
@@ -83,10 +83,13 @@ impl View for WidgetLabel4 {
         let grad = Obj::new(container)?;
         grad.size(MASK_WIDTH as i32, MASK_HEIGHT as i32);
         grad.center();
-        grad.border_width(0);
-        grad.style_bg_color(color_make(0xff, 0, 0), Selector::DEFAULT)
-            .style_bg_grad_color(color_make(0, 0, 0xff), Selector::DEFAULT)
-            .style_bg_grad_dir(GradDir::Hor, Selector::DEFAULT);
+        let grad_style = Style::new(|s| {
+            s.border_width(0)
+                .bg_color(color_make(0xff, 0, 0))
+                .bg_grad_color(color_make(0, 0, 0xff))
+                .bg_grad_dir(GradDir::Hor);
+        });
+        grad.add_style(&grad_style, Selector::DEFAULT);
         // SAFETY: mask is stored in Self._mask (Box) and outlives the grad widget.
         unsafe { grad.style_bitmap_mask_src(&mask, Selector::DEFAULT) };
 

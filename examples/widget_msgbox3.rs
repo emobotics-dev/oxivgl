@@ -15,7 +15,7 @@
 //! is always visible.
 
 use oxivgl::{
-    style::Selector,
+    style::{Selector, Style},
     view::{NavAction, View},
     widgets::{Align, Label, Msgbox, Obj, Screen, WidgetError},
 };
@@ -45,8 +45,10 @@ impl View for WidgetMsgbox3 {
 
         // Style layer_top for blur + dimming (applied to the msgbox backdrop)
         let layer = Screen::layer_top();
-        layer.style_blur_radius(20, Selector::DEFAULT);
-        layer.style_blur_backdrop(true, Selector::DEFAULT);
+        let blur_style = Style::new(|s| {
+            s.blur_radius(20).blur_backdrop(true);
+        });
+        layer.add_style(&blur_style, Selector::DEFAULT);
         // Prevent layer_top from being deleted on drop — LVGL owns it
         core::mem::forget(layer);
 

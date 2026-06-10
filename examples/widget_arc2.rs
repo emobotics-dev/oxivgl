@@ -11,6 +11,7 @@
 
 use oxivgl::{
     anim::{anim_set_arc_value, Anim, ANIM_REPEAT_INFINITE},
+    style::Style,
     view::{NavAction, View},
     enums::{ObjFlag, Opa},
     widgets::{Obj, Arc, Part, WidgetError},
@@ -29,9 +30,10 @@ impl View for WidgetArc2 {
         arc.set_bg_angles(0, 360);
         arc.set_range_raw(0, 100);
         // Hide knob
-        arc.radius(0, Part::Knob);
-        arc.style_opa(Opa::TRANSP.0, Part::Knob);
-        arc.style_pad_all(0, Part::Knob);
+        let knob_style = Style::new(|s| {
+            s.radius(0).opa(Opa::TRANSP.0).pad_all(0);
+        });
+        arc.add_style(&knob_style, Part::Knob);
         // Not interactive
         arc.remove_flag(ObjFlag::CLICKABLE);
         arc.center();

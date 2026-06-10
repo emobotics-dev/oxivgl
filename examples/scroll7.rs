@@ -15,7 +15,7 @@ use oxivgl::{
     enums::{EventCode, ObjState},
     event::Event,
     layout::FlexFlow,
-    style::lv_pct,
+    style::{lv_pct, Style},
     view::{register_event_on, View},
     widgets::{Align, Checkbox, Label, Obj, Part, WidgetError},
 };
@@ -135,7 +135,12 @@ impl View for Scroll7 {
         cont.size(160, 220);
         cont.align(Align::RightMid, -10, 0);
         cont.set_flex_flow(FlexFlow::Column);
-        cont.style_opa(0, Part::Scrollbar);
+        // Hide the scrollbar initially via a shared style; the checkbox handler
+        // overrides the opacity at runtime with a local style (last-wins).
+        let scrollbar_hidden = Style::new(|s| {
+            s.opa(0);
+        });
+        cont.add_style(&scrollbar_hidden, Part::Scrollbar);
 
         // Load initial item
         let item = Obj::new(&cont)?;
@@ -174,6 +179,8 @@ impl View for Scroll7 {
                 let checked = checkbox.has_state(ObjState::CHECKED);
                 let opa = if checked { 255u8 } else { 0u8 };
                 if let Some(ref cont) = self.cont {
+                    #[allow(deprecated)]
+                    // runtime-varying style; must stay inline
                     cont.style_opa(opa, Part::Scrollbar);
                 }
             }

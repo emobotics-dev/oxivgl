@@ -23,7 +23,7 @@ use oxivgl::{
     enums::{EventCode, ObjFlag, ObjState, ScrollDir},
     event::Event,
     layout::{FlexAlign, FlexFlow},
-    style::{Selector, lv_pct},
+    style::{Selector, Style, lv_pct},
     view::{NavAction, View},
     widgets::{Align, AsLvHandle, Button, Child, Dropdown, Label, Obj, Roller, RollerMode, Slider, Subject, WidgetError},
 };
@@ -69,31 +69,49 @@ impl View for Observer4 {
             Subject::new_int(2),
         ];
 
+        // Shared styles.
+        let pad0_style = Style::new(|s| {
+            s.pad_all(0);
+        });
+        // pad_all(8) is shared by the content area and footer.
+        let pad8_style = Style::new(|s| {
+            s.pad_all(8);
+        });
+        let btn_radius_style = Style::new(|s| {
+            s.radius(0);
+        });
+        let indicator_style = Style::new(|s| {
+            s.bg_opa(102); // 40% of 255 ≈ 102
+        });
+
         // Main container — full screen, flex column.
         let main_cont = Obj::new(container)?;
         main_cont
             .remove_style_all()
             .size(lv_pct(100), lv_pct(100))
-            .pad(0)
             .set_flex_flow(FlexFlow::Column);
+        main_cont.add_style(&pad0_style, Selector::DEFAULT);
 
         // Content area — flex-grow 1, scrollable vertically.
         let cont = Obj::new(&main_cont)?;
         cont.remove_style_all()
             .set_flex_grow(1)
-            .pad(8)
             .width(lv_pct(100))
             .set_scroll_dir(ScrollDir::VER);
+        cont.add_style(&pad8_style, Selector::DEFAULT);
 
         // Footer — 60px tall, row layout with buttons.
         let footer = Obj::new(&main_cont)?;
         footer
             .remove_style_all()
             .size(lv_pct(100), 60)
-            .style_pad_column(8, Selector::DEFAULT)
-            .pad(8)
             .set_flex_flow(FlexFlow::Row)
             .set_flex_align(FlexAlign::Center, FlexAlign::Center, FlexAlign::Center);
+        let footer_pad_column_style = Style::new(|s| {
+            s.pad_column(8);
+        });
+        footer.add_style(&footer_pad_column_style, Selector::DEFAULT);
+        footer.add_style(&pad8_style, Selector::DEFAULT);
 
         // Three tab buttons.
         let btn_labels = ["First", "Second", "Third"];
@@ -103,8 +121,8 @@ impl View for Observer4 {
             let btn = Child::new(Button::new(&footer)?);
             btn.set_flex_grow(1)
                 .height(lv_pct(100))
-                .radius(0, Selector::DEFAULT)
                 .bubble_events();
+            btn.add_style(&btn_radius_style, Selector::DEFAULT);
             btn.bind_state_if_eq(&tab_subject, ObjState::CHECKED, i as i32);
 
             let lbl = Child::new(Label::new(&*btn)?);
@@ -117,10 +135,10 @@ impl View for Observer4 {
         let indicator = Obj::new(&footer)?;
         indicator
             .remove_style(None, Selector::DEFAULT)
-            .bg_opa(102) // 40% of 255 ≈ 102
             .height(10)
             .align(Align::BottomLeft, 0, 0)
             .add_flag(ObjFlag::IGNORE_LAYOUT);
+        indicator.add_style(&indicator_style, Selector::DEFAULT);
 
         // Force layout so we can read button positions for the initial indicator.
         indicator.update_layout();

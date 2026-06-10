@@ -7,6 +7,7 @@
 //! Getting Started 1 — Hello World
 
 use oxivgl::{
+    style::{Selector, Style},
     view::{NavAction, View},
     widgets::{Obj, Align, Label, WidgetError},
 };
@@ -18,8 +19,10 @@ struct GettingStarted1 {
 
 impl View for GettingStarted1 {
     fn create(&mut self, container: &Obj<'static>) -> Result<(), WidgetError> {
-        container.bg_color(0x003a57).bg_opa(255);
-        container.text_color(0xffffff);
+        let container_style = Style::new(|s| {
+            s.bg_color_hex(0x003a57).bg_opa(255).text_color_hex(0xffffff);
+        });
+        container.add_style(&container_style, Selector::DEFAULT);
 
         let label = Label::new(container)?;
         label.text("Hello world").align(Align::Center, 0, 0);

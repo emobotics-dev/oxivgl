@@ -12,7 +12,7 @@
 use oxivgl::{
     enums::{EventCode, ObjFlag},
     event::Event,
-    style::Selector,
+    style::{Selector, Style},
     symbols,
     view::{NavAction, View},
     widgets::{Obj, Align, Button, Label, Menu, WidgetError, RADIUS_MAX},
@@ -55,7 +55,10 @@ impl View for WidgetMenu4 {
         float_btn.add_flag(ObjFlag::FLOATING);
         float_btn.align(Align::BottomRight, -10, -10);
         float_btn.bubble_events();
-        float_btn.radius(RADIUS_MAX, Selector::DEFAULT);
+        let float_btn_style = Style::new(|s| {
+            s.radius(RADIUS_MAX as i16);
+        });
+        float_btn.add_style(&float_btn_style, Selector::DEFAULT);
         float_btn.style_bg_image_src_symbol(&symbols::PLUS, Selector::DEFAULT);
 
                 self.menu = Some(menu);

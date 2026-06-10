@@ -7,7 +7,7 @@
 //! Grid 6 — Demonstrate RTL direction on grid
 
 use oxivgl::{
-    style::Selector,
+    style::{Selector, Style},
     view::{NavAction, View},
     layout::{GridAlign, GridCell, GRID_TEMPLATE_LAST},
     widgets::{BaseDir, Label, Obj, WidgetError},
@@ -28,7 +28,10 @@ impl View for Grid6 {
 
         let cont = Obj::new(container)?;
         cont.size(300, 220).center();
-        cont.style_base_dir(BaseDir::Rtl, Selector::DEFAULT);
+        let cont_style = Style::new(|s| {
+            s.base_dir(BaseDir::Rtl);
+        });
+        cont.add_style(&cont_style, Selector::DEFAULT);
         cont.set_grid_dsc_array(&COL_DSC, &ROW_DSC);
 
         let mut items = heapless::Vec::<Obj<'static>, 9>::new();

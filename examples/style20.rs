@@ -10,7 +10,7 @@
 //! overlay is shown on top. For the screenshot the overlay is visible.
 
 use oxivgl::{
-    style::Selector,
+    style::{Selector, Style},
     view::{NavAction, View},
     widgets::{Align, Button, Label, Obj, WidgetError},
 };
@@ -27,8 +27,10 @@ struct Style20 {
 
 impl View for Style20 {
     fn create(&mut self, container: &Obj<'static>) -> Result<(), WidgetError> {
-        container.bg_color(0xffffff);
-        container.bg_opa(255);
+        let container_style = Style::new(|s| {
+            s.bg_color_hex(0xffffff).bg_opa(255);
+        });
+        container.add_style(&container_style, Selector::DEFAULT);
 
         // Two buttons
         let btn1 = Button::new(container)?;
@@ -49,15 +51,18 @@ impl View for Style20 {
         let overlay = Obj::new(container)?;
         overlay.size(320, 240);
         overlay.align(Align::Center, 0, 0);
-        overlay.bg_color(0x000000);
-        overlay.bg_opa(180);
-        overlay.border_width(0);
-        overlay.radius(0, Selector::DEFAULT);
+        let overlay_style = Style::new(|s| {
+            s.bg_color_hex(0x000000).bg_opa(180).border_width(0).radius(0);
+        });
+        overlay.add_style(&overlay_style, Selector::DEFAULT);
 
         let overlay_label = Label::new(&overlay)?;
         overlay_label.text("Modal overlay\nclick to dismiss");
         overlay_label.center();
-        overlay_label.text_color(0xffffff);
+        let overlay_label_style = Style::new(|s| {
+            s.text_color_hex(0xffffff);
+        });
+        overlay_label.add_style(&overlay_label_style, Selector::DEFAULT);
 
                 self._btn1 = Some(btn1);
         self._btn2 = Some(btn2);

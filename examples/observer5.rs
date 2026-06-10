@@ -17,7 +17,7 @@ use core::ptr::null_mut;
 use oxivgl::{
     enums::{EventCode, ObjFlag},
     event::Event,
-    style::{Selector, color_make},
+    style::{Selector, Style, color_make},
     timer::Timer,
     view::{NavAction, View},
     widgets::{
@@ -102,11 +102,14 @@ impl View for Observer5 {
 
             // Style: rounded corners + drop shadow.
             let shadow_color = color_make(0x88, 0x88, 0x88);
-            win.radius(8, Selector::DEFAULT)
-                .style_shadow_width(24, Selector::DEFAULT)
-                .style_shadow_offset_x(2, Selector::DEFAULT)
-                .style_shadow_offset_y(3, Selector::DEFAULT)
-                .style_shadow_color(shadow_color, Selector::DEFAULT);
+            let win_style = Style::new(|s| {
+                s.radius(8)
+                    .shadow_width(24)
+                    .shadow_offset_x(2)
+                    .shadow_offset_y(3)
+                    .shadow_color(shadow_color);
+            });
+            win.add_style(&win_style, Selector::DEFAULT);
 
             // Title and close button in the header.
             win.add_title("Firmware update");

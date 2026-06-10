@@ -30,10 +30,13 @@ impl View for WidgetScale8 {
         scale.set_mode(ScaleMode::RoundInner);
 
         // Red-tinted background, fully round
-        scale
+        let mut bg_sb = StyleBuilder::new();
+        bg_sb
             .bg_opa(255)
-            .style_bg_color(palette_lighten(Palette::Red, 5), Selector::DEFAULT)
-            .radius(RADIUS_MAX, Selector::DEFAULT);
+            .bg_color(palette_lighten(Palette::Red, 5))
+            .radius(RADIUS_MAX as i16);
+        let bg_style = bg_sb.build();
+        scale.add_style(&bg_style, Selector::DEFAULT);
 
         scale.align(Align::LeftMid, lv_pct(2), 0);
 
@@ -44,12 +47,17 @@ impl View for WidgetScale8 {
         );
         scale.style_translate_x(10, Part::Indicator);
         scale.set_tick_length(Part::Indicator, 15);
-        scale.style_radial_offset(10, Part::Indicator);
+        let mut indicator_sb = StyleBuilder::new();
+        indicator_sb.radial_offset(10);
+        let indicator_style = indicator_sb.build();
+        scale.add_style(&indicator_style, Part::Indicator);
 
         // Minor ticks
         scale.set_tick_length(Part::Items, 10);
-        scale.style_radial_offset(5, Part::Items);
-        scale.style_line_opa(128, Part::Items);
+        let mut items_sb = StyleBuilder::new();
+        items_sb.radial_offset(5).line_opa(128);
+        let items_style = items_sb.build();
+        scale.add_style(&items_style, Part::Items);
 
         scale
             .set_label_show(true)
