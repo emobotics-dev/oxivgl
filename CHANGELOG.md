@@ -5,6 +5,45 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.0] — 2026-06-10
+
+### Added
+
+- **Resource diagnostics (`diag` module).** `census()` walks a widget subtree
+  and reports object count + nesting depth (with an estimated-heap-bytes
+  coefficient); `Budget` / `assert_budget` enforce per-view ceilings;
+  `ResourceProbe` (host default `NullProbe`) is a pluggable hook for live
+  on-target heap/stack figures. See `docs/memory-tuning.md`.
+- **`Style::new(|s| …)`** — one-call shared-style constructor collapsing
+  `StyleBuilder::new()` + setters + `.build()`. `add_style` `Rc`-retains the
+  style, so a built `Style` may be applied across many widgets and the handle
+  dropped (build-and-forget).
+- **`StyleBuilder` parity methods**, so every shareable style property has a
+  shared-style path: `pad_hor`, `pad_bottom`, `pad_column`, `pad_row`, `size`,
+  `clip_corner`, `text_align`, `base_dir`, `radial_offset`, `line_opa`,
+  `arc_rounded`, `blur_radius`, `blur_backdrop`, `radius_circle`, and the
+  `bg_image_recolor` / `bg_image_recolor_hex` / `bg_image_recolor_opa` family.
+- **Background-image wrappers on `Obj`**: `style_bg_image_src` (image
+  descriptor), `style_bg_image_recolor[_hex]`, `style_bg_image_recolor_opa`.
+- **Guide** `docs/memory-tuning.md` — measuring and reducing heap/stack on
+  widget-heavy UIs.
+- **Examples** `shared_styles1` (a style guide built from shared styles) and
+  `widget_bar8` (recolored background image).
+
+### Deprecated
+
+- **49 inline `style_*` setters on `Obj`.** Each inline setter allocates a
+  per-object local style; build a shared `Style` (`Style::new`) and apply it
+  with `add_style` to amortize to one property buffer at scale — a heap *and*
+  style-refresh-compute win wherever a treatment repeats. Transforms and
+  image-content setters are intentionally not deprecated (per-instance /
+  dynamic). See `docs/memory-tuning.md`.
+
+### Changed
+
+- All bundled examples migrated off inline setters to shared `Style` +
+  `add_style` (verified pixel-identical via before/after screenshots).
+
 ## [0.3.4] — 2026-06-04
 
 ### Fixed
