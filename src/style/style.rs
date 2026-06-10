@@ -601,6 +601,30 @@ impl StyleBuilder {
         self
     }
 
+    /// Set the recolor tint blended over the background image.
+    ///
+    /// The strength of the tint is controlled by
+    /// [`bg_image_recolor_opa`](Self::bg_image_recolor_opa) (0 by default, so
+    /// the tint is invisible until an opacity is also set).
+    pub fn bg_image_recolor(&mut self, color: lv_color_t) -> &mut Self {
+        unsafe { lv_style_set_bg_image_recolor(&mut self.inner.lv, color) };
+        self
+    }
+
+    /// Set the background image recolor tint from RGB hex.
+    pub fn bg_image_recolor_hex(&mut self, hex: u32) -> &mut Self {
+        let color = unsafe { lv_color_hex(hex) };
+        self.bg_image_recolor(color)
+    }
+
+    /// Set the strength of the background image recolor tint
+    /// (0 = no tint, 255 = fully replace the image color with
+    /// [`bg_image_recolor`](Self::bg_image_recolor)).
+    pub fn bg_image_recolor_opa(&mut self, opa: u8) -> &mut Self {
+        unsafe { lv_style_set_bg_image_recolor_opa(&mut self.inner.lv, opa) };
+        self
+    }
+
     /// Set image recolor tint.
     pub fn image_recolor(&mut self, color: lv_color_t) -> &mut Self {
         unsafe { lv_style_set_image_recolor(&mut self.inner.lv, color) };

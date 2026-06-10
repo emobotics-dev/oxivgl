@@ -599,6 +599,12 @@ Vertical bar filling top-to-bottom via reversed range (100→0), at 70%.
 
 ![widget_bar7](screenshots/widget_bar7.png)
 
+### Widget Bar 8 — Recolored Stripe Pattern
+
+Range-mode bar with the tiled stripe background image tinted green via `bg_image_recolor` + `bg_image_recolor_opa`.
+
+![widget_bar8](screenshots/widget_bar8.png)
+
 ## Widgets — Button
 
 ### Widget Button 1 — Click and Toggle
@@ -1373,7 +1379,7 @@ Status of all [LVGL 9.5 examples](https://docs.lvgl.io/9.5/examples.html) in oxi
 | obj | 3 | 3 | 0 | |
 | arc | 3 | 3 | 0 | |
 | arclabel | 1 | 1 | 0 | v9.5 new widget |
-| bar | 7 | 7 | 0 | |
+| bar | 7 | 8 | 0 | widget_bar8 extra: bg_image recolor |
 | button | 3 | 3 | 0 | |
 | calendar | 2 | 2 | 0 | |
 | checkbox | 2 | 2 | 0 | |

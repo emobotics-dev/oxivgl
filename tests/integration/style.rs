@@ -78,6 +78,33 @@ fn style_bg_image_src_static() {
     pump();
 }
 
+#[test]
+fn style_bg_image_recolor() {
+    let screen = fresh_screen();
+    let mut sb = StyleBuilder::new();
+    sb.bg_image_src(img_skew_strip())
+        .bg_image_tiled(true)
+        .bg_image_opa(255)
+        .bg_image_recolor_hex(0x00A000)
+        .bg_image_recolor_opa(180);
+    let style = sb.build();
+    let obj = Obj::new(&screen).unwrap();
+    obj.add_style(&style, Selector::DEFAULT);
+    obj.size(200, 50);
+    pump();
+}
+
+#[test]
+fn obj_bg_image_src_and_recolor_direct() {
+    let screen = fresh_screen();
+    let obj = Obj::new(&screen).unwrap();
+    obj.size(200, 50);
+    obj.style_bg_image_src(img_skew_strip(), Selector::DEFAULT)
+        .style_bg_image_recolor_hex(0x0000FF, Selector::DEFAULT)
+        .style_bg_image_recolor_opa(200, Selector::DEFAULT);
+    pump();
+}
+
 // ── Style transition ─────────────────────────────────────────────────────────
 
 static TRANS_PROPS: [props::lv_style_prop_t; 3] = [props::BG_COLOR, props::BG_OPA, props::LAST];
