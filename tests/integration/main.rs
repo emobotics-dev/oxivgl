@@ -8,6 +8,7 @@
 mod common;
 
 mod anim;
+mod diag;
 mod draw;
 mod event;
 mod group;

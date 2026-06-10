@@ -56,6 +56,8 @@ pub mod translation;
 pub mod group;
 /// Grid navigation (`LV_USE_GRIDNAV`) — keyboard-driven focus inside containers.
 pub mod gridnav;
+/// Resource diagnostics: widget-tree census, per-view budgets, heap/stack probe.
+pub mod diag;
 
 /// Declare an LVGL image asset compiled by `oxivgl-build`.
 ///
