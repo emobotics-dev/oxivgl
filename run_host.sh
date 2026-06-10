@@ -18,6 +18,7 @@ fi
 ALL_EXAMPLES=(
     getting_started{1,2,3,4,5,6,7,8}
     style{1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,20,21}
+    shared_styles1
     anim{1,2,3,4} anim_timeline1
     event_{click,button,bubble,trickle,streak,draw}
     flex{1,2,3,4,5,6}

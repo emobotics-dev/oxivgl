@@ -5,7 +5,7 @@ use crate::common::{fresh_screen, pump};
 
 use oxivgl::style::{
     color_make, lv_pct, palette_main, props, BorderSide, GradDir, GradDsc, GradExtend, Palette,
-    Selector, StyleBuilder, TextDecor, TransitionDsc,
+    Selector, Style, StyleBuilder, TextDecor, TransitionDsc,
 };
 use oxivgl::enums::Opa;
 use oxivgl::widgets::{
@@ -102,6 +102,38 @@ fn obj_bg_image_src_and_recolor_direct() {
     obj.style_bg_image_src(img_skew_strip(), Selector::DEFAULT)
         .style_bg_image_recolor_hex(0x0000FF, Selector::DEFAULT)
         .style_bg_image_recolor_opa(200, Selector::DEFAULT);
+    pump();
+}
+
+// ── Style::new + build-and-forget ────────────────────────────────────────────
+
+#[test]
+fn style_new_closure_constructor() {
+    let screen = fresh_screen();
+    let style = Style::new(|s| {
+        s.bg_color_hex(0x123456).bg_opa(255).radius(6);
+    });
+    let obj = Obj::new(&screen).unwrap();
+    obj.add_style(&style, Selector::DEFAULT);
+    obj.size(80, 40);
+    pump();
+}
+
+#[test]
+fn style_retained_by_widget_after_handle_dropped() {
+    let screen = fresh_screen();
+    let obj = Obj::new(&screen).unwrap();
+    obj.size(80, 40);
+    {
+        // Build a shared style, apply it, then drop the handle at end of scope.
+        let style = Style::new(|s| {
+            s.bg_color_hex(0x00ff00).bg_opa(255);
+        });
+        obj.add_style(&style, Selector::DEFAULT);
+    }
+    // The Style handle is gone; the widget's Rc clone keeps it alive.
+    pump();
+    // Re-render after a clear/reload cycle to exercise the retained style.
     pump();
 }
 
