@@ -20,6 +20,7 @@ exclude = [
     "examples/doc/screenshots/",
     "examples/common/",
     "run_*.sh",
+    "RELEASE_NOTES_*.md",
 ]
 
 [package.metadata.docs.rs]
