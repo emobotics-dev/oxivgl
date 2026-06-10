@@ -492,6 +492,59 @@ impl<'p> Obj<'p> {
         self
     }
 
+    /// Set background image source to an image descriptor for the given
+    /// selector.
+    ///
+    /// LVGL stores the raw pointer in the style property map, so the
+    /// descriptor must be `'static` (spec §3.1). Use
+    /// [`image_declare!`](crate::image_declare):
+    /// `obj.style_bg_image_src(my_img(), Part::Main)`. For a symbol source,
+    /// see [`style_bg_image_src_symbol`](Self::style_bg_image_src_symbol).
+    pub fn style_bg_image_src(
+        &self,
+        src: &'static lv_image_dsc_t,
+        selector: impl Into<crate::style::Selector>,
+    ) -> &Self {
+        let selector = selector.into().raw();
+        assert_ne!(self.handle(), null_mut(), "Obj handle cannot be null");
+        // SAFETY: handle non-null; src is 'static and points to a valid
+        // compiled image descriptor. LVGL stores the pointer — the static
+        // lifetime guarantees it outlives the widget (spec §3.1).
+        unsafe {
+            lv_obj_set_style_bg_image_src(self.handle(), src as *const lv_image_dsc_t as *const core::ffi::c_void, selector)
+        };
+        self
+    }
+
+    /// Set the recolor tint blended over the background image for the given
+    /// selector. Strength is set by
+    /// [`style_bg_image_recolor_opa`](Self::style_bg_image_recolor_opa).
+    pub fn style_bg_image_recolor(&self, color: lv_color_t, selector: impl Into<crate::style::Selector>) -> &Self {
+        let selector = selector.into().raw();
+        assert_ne!(self.handle(), null_mut(), "Obj handle cannot be null");
+        // SAFETY: handle non-null (asserted above).
+        unsafe { lv_obj_set_style_bg_image_recolor(self.handle(), color, selector) };
+        self
+    }
+
+    /// Set the background image recolor tint from RGB hex for the given
+    /// selector.
+    pub fn style_bg_image_recolor_hex(&self, hex: u32, selector: impl Into<crate::style::Selector>) -> &Self {
+        // SAFETY: lv_color_hex is a pure value conversion.
+        let color = unsafe { lv_color_hex(hex) };
+        self.style_bg_image_recolor(color, selector)
+    }
+
+    /// Set the strength of the background image recolor tint for the given
+    /// selector (0 = no tint, 255 = fully replace the image color).
+    pub fn style_bg_image_recolor_opa(&self, opa: u8, selector: impl Into<crate::style::Selector>) -> &Self {
+        let selector = selector.into().raw();
+        assert_ne!(self.handle(), null_mut(), "Obj handle cannot be null");
+        // SAFETY: handle non-null (asserted above).
+        unsafe { lv_obj_set_style_bg_image_recolor_opa(self.handle(), opa as lv_opa_t, selector) };
+        self
+    }
+
     /// Set shadow width for the given selector.
     pub fn style_shadow_width(&self, w: i32, selector: impl Into<crate::style::Selector>) -> &Self {
         let selector = selector.into().raw();

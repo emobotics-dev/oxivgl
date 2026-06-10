@@ -29,7 +29,7 @@ ALL_EXAMPLES=(
     calendar_1
     calendar_2
     image1
-    widget_bar{1,2,3,4,5,6,7}
+    widget_bar{1,2,3,4,5,6,7,8}
     widget_button{1,2,3}
     widget_checkbox{1,2}
     widget_dropdown{1,2,3}
