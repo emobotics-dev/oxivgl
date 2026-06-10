@@ -105,6 +105,34 @@ fn obj_bg_image_src_and_recolor_direct() {
     pump();
 }
 
+// ── New StyleBuilder methods (shared-style equivalents of inline setters) ─────
+
+#[test]
+fn style_builder_new_methods_apply() {
+    use oxivgl::widgets::{BaseDir, TextAlign};
+    let screen = fresh_screen();
+    let style = Style::new(|s| {
+        s.pad_hor(4)
+            .pad_bottom(2)
+            .pad_column(6)
+            .pad_row(8)
+            .size(40, 20)
+            .clip_corner(true)
+            .text_align(TextAlign::Center)
+            .base_dir(BaseDir::Rtl)
+            .radial_offset(3)
+            .line_opa(128)
+            .arc_rounded(true)
+            .blur_radius(2)
+            .blur_backdrop(false)
+            .radius_circle();
+    });
+    let obj = Obj::new(&screen).unwrap();
+    obj.add_style(&style, Selector::DEFAULT);
+    obj.size(80, 40);
+    pump();
+}
+
 // ── Style::new + build-and-forget ────────────────────────────────────────────
 
 #[test]

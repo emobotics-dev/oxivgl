@@ -4,6 +4,9 @@
 //! Run with: `SDL_VIDEODRIVER=dummy cargo +nightly test --test integration
 //!   --target x86_64-unknown-linux-gnu -- --test-threads=1`
 
+// Tests exercise the deprecated inline style setters to verify they still work.
+#![allow(deprecated)]
+
 #[path = "../common/mod.rs"]
 mod common;
 

@@ -20,7 +20,7 @@ use oxivgl::{
     event::Event,
     layout::FlexFlow,
     math::map,
-    style::{lv_pct, Selector},
+    style::{lv_pct, Selector, Style},
     view::{register_event_on, View},
     widgets::{Button, Label, Obj, WidgetError, RADIUS_MAX},
 };
@@ -28,6 +28,7 @@ use oxivgl::{
 #[derive(Default)]
 struct Scroll6 {
     cont: Option<Obj<'static>>,
+    _cont_style: Option<Style>,
 }
 
 impl View for Scroll6 {
@@ -36,8 +37,10 @@ impl View for Scroll6 {
         let cont = Obj::new(container)?;
         cont.size(200, 200).center();
         cont.set_flex_flow(FlexFlow::Column);
-        cont.style_clip_corner(true, Selector::DEFAULT);
-        cont.radius(RADIUS_MAX, Selector::DEFAULT);
+        let cont_style = Style::new(|s| {
+            s.radius(RADIUS_MAX as i16).clip_corner(true);
+        });
+        cont.add_style(&cont_style, Selector::DEFAULT);
         cont.set_scroll_dir(ScrollDir::VER);
         cont.set_scroll_snap_y(ScrollSnap::Center);
         cont.set_scrollbar_mode(ScrollbarMode::Off);
@@ -58,6 +61,7 @@ impl View for Scroll6 {
         }
 
                 self.cont = Some(cont);
+        self._cont_style = Some(cont_style);
         Ok(())
     }
 
@@ -97,6 +101,8 @@ impl View for Scroll6 {
             };
             child.style_translate_x(x, Selector::DEFAULT);
             let opa = map(x, 0, r, 0, 255) as u8;
+            #[allow(deprecated)]
+            // runtime-varying style; must stay inline
             child.style_opa(255 - opa, Selector::DEFAULT);
         }
         NavAction::None

@@ -24,6 +24,8 @@ struct Style18 {
     _btn1: Option<Button<'static>>,
     _style_radial: Option<Style>,
     _style_linear: Option<Style>,
+    _style_hor: Option<Style>,
+    _style_ver: Option<Style>,
 }
 
 impl View for Style18 {
@@ -57,19 +59,22 @@ impl View for Style18 {
         style_radial.bg_grad(grad_radial).bg_opa(255);
         let style_radial = style_radial.build();
 
+        let style_hor = Style::new(|s| {
+            s.bg_color(c0).bg_grad_color(c1).bg_grad_dir(GradDir::Hor);
+        });
+        let style_ver = Style::new(|s| {
+            s.bg_color(c0).bg_grad_color(c1).bg_grad_dir(GradDir::Ver);
+        });
+
         let btn1 = Button::new(container)?;
         btn1.size(150, 50).align(Align::Center, 0, -100);
-        btn1.style_bg_color(c0, Selector::DEFAULT);
-        btn1.style_bg_grad_color(c1, Selector::DEFAULT);
-        btn1.style_bg_grad_dir(GradDir::Hor, Selector::DEFAULT);
+        btn1.add_style(&style_hor, Selector::DEFAULT);
         let label1 = Label::new(&btn1)?;
         label1.text("Horizontal").center();
 
         let btn2 = Button::new(container)?;
         btn2.size(150, 50).align(Align::Center, 0, -40);
-        btn2.style_bg_color(c0, Selector::DEFAULT);
-        btn2.style_bg_grad_color(c1, Selector::DEFAULT);
-        btn2.style_bg_grad_dir(GradDir::Ver, Selector::DEFAULT);
+        btn2.add_style(&style_ver, Selector::DEFAULT);
         let label2 = Label::new(&btn2)?;
         label2.text("Vertical").center();
 
@@ -95,6 +100,8 @@ impl View for Style18 {
         self._btn1 = Some(btn1);
         self._style_radial = Some(style_radial);
         self._style_linear = Some(style_linear);
+        self._style_hor = Some(style_hor);
+        self._style_ver = Some(style_ver);
         Ok(())
     }
 

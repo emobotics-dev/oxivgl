@@ -18,7 +18,7 @@ use oxivgl::{
     enums::{EventCode, ObjFlag},
     event::Event,
     math::{trigo_cos, trigo_sin, TRIGO_SHIFT},
-    style::{palette_main, Palette},
+    style::{palette_main, Palette, Selector, Style},
     view::{register_event_on, View},
     widgets::{Align, Arc, ArcMode, Label, Obj, Part, WidgetError},
 };
@@ -83,10 +83,19 @@ impl View for WidgetArc3 {
         let cont = Obj::new(container)?;
         let cont_size = CHART_SIZE + 2 * SLICE_OFFSET;
         cont.size(cont_size, cont_size).center();
-        cont.pad(0);
-        cont.border_width(0);
-        cont.bg_opa(0);
+        let cont_style = Style::new(|s| {
+            s.pad_all(0).border_width(0).bg_opa(0);
+        });
+        cont.add_style(&cont_style, Selector::DEFAULT);
         cont.remove_flag(ObjFlag::SCROLLABLE);
+
+        // Shared arc-width styles, applied to every slice (identical values).
+        let arc_main_style = Style::new(|s| {
+            s.arc_width(CHART_SIZE / 2);
+        });
+        let arc_indicator_style = Style::new(|s| {
+            s.arc_width(0);
+        });
 
         let mut angle_accum: f32 = 0.0;
         let mut arcs_vec = Vec::with_capacity(NUM_SLICES);
@@ -110,10 +119,13 @@ impl View for WidgetArc3 {
             arc.set_bg_end_angle(end);
 
             // Main part = filled pie, indicator = invisible
-            arc.style_arc_width(CHART_SIZE / 2, Part::Main);
-            arc.style_arc_width(0, Part::Indicator);
-            arc.style_arc_color(palette_main(COLORS[i]), Part::Main);
-            arc.style_arc_rounded(false, Part::Main);
+            arc.add_style(&arc_main_style, Part::Main);
+            arc.add_style(&arc_indicator_style, Part::Indicator);
+            // Per-slice color (differs per arc, so not shareable across slices).
+            let arc_color_style = Style::new(|s| {
+                s.arc_color(palette_main(COLORS[i])).arc_rounded(false);
+            });
+            arc.add_style(&arc_color_style, Part::Main);
             arc.remove_style(None, Part::Knob);
             arc.add_flag(ObjFlag::ADV_HITTEST);
             arc.bubble_events();

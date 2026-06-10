@@ -14,7 +14,7 @@ use oxivgl::{
     fonts,
     scale_labels,
     style::{
-        Palette, Selector, StyleBuilder, color_white, palette_darken, palette_main,
+        Palette, Selector, Style, StyleBuilder, color_white, palette_darken, palette_main,
     },
     view::{NavAction, View},
     widgets::{
@@ -34,6 +34,10 @@ struct WidgetScale12 {
     _needle: Option<Line<'static>>,
     _needle_style: Option<oxivgl::style::Style>,
     _tick_style: Option<oxivgl::style::Style>,
+    _bg_style: Option<oxivgl::style::Style>,
+    _scale_arc_style: Option<oxivgl::style::Style>,
+    _scale_text_style: Option<oxivgl::style::Style>,
+    _heading_style: Option<oxivgl::style::Style>,
     _heading_lbl: Option<Label<'static>>,
 }
 
@@ -43,17 +47,23 @@ impl View for WidgetScale12 {
         // Dark circular background
         let bg = Obj::new(container)?;
         bg.size(220, 220).center();
-        bg.radius(i32::MAX, Selector::DEFAULT);
-        bg.style_bg_color(palette_darken(Palette::Grey, 4), Selector::DEFAULT);
-        bg.bg_opa(255);
+        let bg_style = Style::new(|s| {
+            s.bg_color(palette_darken(Palette::Grey, 4))
+                .bg_opa(255)
+                .pad_all(0)
+                .radius_circle();
+        });
+        bg.add_style(&bg_style, Selector::DEFAULT);
         bg.remove_scrollable();
-        bg.pad(0);
 
         // Scale — round inner, 8 compass points
         let scale = Scale::new(&bg)?;
         scale.center();
         scale.size(200, 200);
-        scale.style_arc_width(3, Selector::DEFAULT);
+        let scale_arc_style = Style::new(|s| {
+            s.arc_width(3);
+        });
+        scale.add_style(&scale_arc_style, Selector::DEFAULT);
 
         scale.set_mode(ScaleMode::RoundInner);
         scale.set_range(0, 360);
@@ -62,8 +72,9 @@ impl View for WidgetScale12 {
         scale.set_angle_range(360);
         scale.set_rotation(270); // N at top (initial)
         scale.set_label_show(true);
-        scale.style_text_font(fonts::MONTSERRAT_14, Part::Indicator);
-        scale.style_text_color(color_white(), Part::Indicator);
+        let scale_text_style = Style::new(|s| {
+            s.text_font(fonts::MONTSERRAT_14).text_color(color_white());
+        });
 
         // Rotate labels to match tick angles, keep upright
         scale.style_transform_rotation(
@@ -79,6 +90,7 @@ impl View for WidgetScale12 {
             .width(12);
         let tick_style = tick_sb.build();
         scale.add_style(&tick_style, Part::Indicator);
+        scale.add_style(&scale_text_style, Part::Indicator);
 
         // Custom compass labels
         scale.set_text_src(COMPASS_LABELS);
@@ -94,8 +106,10 @@ impl View for WidgetScale12 {
         // "HEADING" label
         let heading_lbl = Label::new(&bg)?;
         heading_lbl.text("COMPASS");
-        heading_lbl.style_text_font(fonts::MONTSERRAT_16, Selector::DEFAULT);
-        heading_lbl.style_text_color(color_white(), Selector::DEFAULT);
+        let heading_style = Style::new(|s| {
+            s.text_font(fonts::MONTSERRAT_16).text_color(color_white());
+        });
+        heading_lbl.add_style(&heading_style, Selector::DEFAULT);
         heading_lbl.align(Align::Center, 0, 30);
 
         // Animation: rotate scale 0 -> 3600 (ten full circles) over 10s, infinite repeat
@@ -113,6 +127,10 @@ impl View for WidgetScale12 {
         self._needle = Some(needle);
         self._needle_style = Some(needle_style);
         self._tick_style = Some(tick_style);
+        self._bg_style = Some(bg_style);
+        self._scale_arc_style = Some(scale_arc_style);
+        self._scale_text_style = Some(scale_text_style);
+        self._heading_style = Some(heading_style);
         self._heading_lbl = Some(heading_lbl);
         Ok(())
     }

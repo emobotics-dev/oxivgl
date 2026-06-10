@@ -24,7 +24,7 @@ use oxivgl::{
     enums::{EventCode, ObjFlag, ObjState},
     event::Event,
     fonts::MONTSERRAT_30,
-    style::{LV_SIZE_CONTENT, lv_pct},
+    style::{LV_SIZE_CONTENT, Selector, Style, lv_pct},
     view::{NavAction, View},
     widgets::{Align, AsLvHandle, Button, Child, Dropdown, Label, Obj, Roller, RollerMode, Screen, Subject, WidgetError},
 };
@@ -52,6 +52,7 @@ struct Observer3 {
     hour_roller: Option<Child<Roller<'static>>>,
     close_btn_handle: *mut c_void,
     last_format: i32,
+    _time_label_style: Option<Style>,
     // Subjects last — drop after widgets so observers removed before deinit.
     hour_subject: Option<Subject>,
     minute_subject: Option<Subject>,
@@ -77,7 +78,11 @@ impl View for Observer3 {
 
         // Time display label.
         let time_label = Label::new(container)?;
-        time_label.text_font(MONTSERRAT_30).pos(24, 24);
+        let time_label_style = Style::new(|s| {
+            s.text_font(MONTSERRAT_30);
+        });
+        time_label.add_style(&time_label_style, Selector::DEFAULT);
+        time_label.pos(24, 24);
 
         // Set button — opens the settings panel.
         let set_btn = Button::new(container)?;
@@ -96,6 +101,7 @@ impl View for Observer3 {
         self.hour_roller = None;
         self.close_btn_handle = null_mut();
         self.last_format = TIME_FORMAT_12;
+        self._time_label_style = Some(time_label_style);
         self.hour_subject = Some(hour_subject);
         self.minute_subject = Some(minute_subject);
         self.format_subject = Some(format_subject);

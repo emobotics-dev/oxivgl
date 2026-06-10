@@ -11,7 +11,7 @@
 //! Shadow style on data-point items.
 
 use oxivgl::{
-    style::Selector,
+    style::{Selector, Style},
     view::{NavAction, View},
     widgets::{Obj, Chart, ChartAxis, ChartType, Part, WidgetError},
 };
@@ -34,9 +34,10 @@ impl View for WidgetChart1 {
         chart.set_axis_range(ChartAxis::SecondaryY, 0, 100);
 
         // Shadow on data points
-        chart.style_shadow_width(8, Selector::from(Part::Items));
-        chart.style_shadow_opa(255, Selector::from(Part::Items));
-        chart.style_shadow_offset_x(0, Selector::from(Part::Items));
+        let items_shadow = Style::new(|s| {
+            s.shadow_width(8).shadow_opa(255).shadow_offset_x(0);
+        });
+        chart.add_style(&items_shadow, Selector::from(Part::Items));
 
         // Green series on primary Y
         let color_green = oxivgl::style::palette_main(oxivgl::style::Palette::Green);

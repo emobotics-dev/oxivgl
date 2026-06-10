@@ -21,7 +21,7 @@ use oxivgl::{
     gridnav::{GridnavCtrl, gridnav_add},
     group::{Group, group_remove_obj},
     layout::FlexFlow,
-    style::{LV_SIZE_CONTENT, Palette, lv_pct, palette_lighten},
+    style::{LV_SIZE_CONTENT, Palette, Style, lv_pct, palette_lighten},
     view::{View, register_event_on},
     widgets::{Button, Label, Obj, WidgetError},
 };
@@ -49,12 +49,21 @@ struct Gridnav3 {
 impl View for Gridnav3 {
     fn create(&mut self, container: &Obj<'static>) -> Result<(), WidgetError> {
 
+        // Shared focused-background styles (one per color, reused across
+        // containers for memory efficiency).
+        let focus_blue = Style::new(|s| {
+            s.bg_color(palette_lighten(Palette::Blue, 5));
+        });
+        let focus_red = Style::new(|s| {
+            s.bg_color(palette_lighten(Palette::Red, 5));
+        });
+
         // ── Main container ────────────────────────────────────────────────
         let cont_main = Obj::new(container)?;
         cont_main
             .set_flex_flow(FlexFlow::RowWrap)
-            .style_bg_color(palette_lighten(Palette::Blue, 5), ObjState::FOCUSED)
             .size(lv_pct(80), LV_SIZE_CONTENT);
+        cont_main.add_style(&focus_blue, ObjState::FOCUSED);
 
         gridnav_add(&cont_main, GridnavCtrl::ROLLOVER | GridnavCtrl::SCROLL_FIRST);
 
@@ -76,9 +85,8 @@ impl View for Gridnav3 {
 
         // ── Sub-container 1: long scrollable text ────────────────────────
         let cont_sub1 = Obj::new(&cont_main)?;
-        cont_sub1
-            .style_bg_color(palette_lighten(Palette::Red, 5), ObjState::FOCUSED)
-            .size(lv_pct(100), 100);
+        cont_sub1.size(lv_pct(100), 100);
+        cont_sub1.add_style(&focus_red, ObjState::FOCUSED);
 
         let sub1_lbl = Label::new(&cont_sub1)?;
         sub1_lbl.width(lv_pct(100));
@@ -99,8 +107,8 @@ impl View for Gridnav3 {
         let cont_sub2 = Obj::new(&cont_main)?;
         cont_sub2
             .set_flex_flow(FlexFlow::RowWrap)
-            .style_bg_color(palette_lighten(Palette::Red, 5), ObjState::FOCUSED)
             .size(lv_pct(100), LV_SIZE_CONTENT);
+        cont_sub2.add_style(&focus_red, ObjState::FOCUSED);
 
         gridnav_add(&cont_sub2, GridnavCtrl::ROLLOVER);
         group.add_obj(&cont_sub2);

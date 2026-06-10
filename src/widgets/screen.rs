@@ -29,9 +29,14 @@ use crate::{
 ///
 /// ```no_run
 /// use oxivgl::widgets::Screen;
+/// use oxivgl::style::{Selector, Style};
 ///
 /// let screen = Screen::active().expect("LVGL not initialized");
-/// screen.bg_color(0x06080f).bg_opa(255).pad_top(6).pad_bottom(6);
+/// // Build the screen's look once as a shared style and apply it.
+/// let bg = Style::new(|s| {
+///     s.bg_color_hex(0x06080f).bg_opa(255).pad_top(6).pad_bottom(6);
+/// });
+/// screen.add_style(&bg, Selector::DEFAULT);
 /// ```
 pub struct Screen {
     handle: *mut lv_obj_t,

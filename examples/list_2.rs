@@ -22,7 +22,7 @@ use oxivgl::{
     gridnav::{GridnavCtrl, gridnav_add},
     group::{Group, group_remove_obj},
     layout::FlexFlow,
-    style::lv_pct,
+    style::{lv_pct, Style},
     symbols,
     view::{View, register_event_on},
     widgets::{Obj, Align, Button, Label, List, Part, WidgetError},
@@ -45,9 +45,11 @@ impl View for List2 {
 
         // ── Left list: 15 plain buttons ───────────────────────────────────
         let list1 = List::new(container)?;
-        list1
-            .size(lv_pct(60), lv_pct(100))
-            .style_pad_row(5, Part::Main);
+        list1.size(lv_pct(60), lv_pct(100));
+        let list1_style = Style::new(|s| {
+            s.pad_row(5);
+        });
+        list1.add_style(&list1_style, Part::Main);
         gridnav_add(&list1, GridnavCtrl::ROLLOVER);
 
         let mut item_labels: heapless::Vec<Label<'static>, 15> = heapless::Vec::new();

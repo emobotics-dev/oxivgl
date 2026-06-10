@@ -6,3 +6,6 @@ docs/plans/
 oxivgl-sys/target/
 .devcontainer/.clco-built
 .cargo/credentials.toml
+
+# Scratch / run output (clco)
+work/

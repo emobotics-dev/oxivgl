@@ -11,6 +11,9 @@
 //! Run with: `SDL_VIDEODRIVER=dummy cargo +nightly test --test leak_check
 //!   --target x86_64-unknown-linux-gnu -- --test-threads=1`
 
+// Tests exercise the deprecated inline style setters to verify they still work.
+#![allow(deprecated)]
+
 use std::alloc::{GlobalAlloc, Layout, System};
 use std::sync::atomic::{AtomicIsize, Ordering};
 

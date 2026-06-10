@@ -7,7 +7,7 @@
 //! Style 15 — Opacity and Transformations
 
 use oxivgl::{
-    style::Selector,
+    style::{Selector, Style},
     view::{NavAction, View},
     widgets::{Obj, Align, Button, Label, WidgetError},
 };
@@ -25,18 +25,25 @@ struct Style15 {
 impl View for Style15 {
     fn create(&mut self, container: &Obj<'static>) -> Result<(), WidgetError> {
 
+        // Shared opacity style (opa 50%) applied to the buttons that need it.
+        let opa_style = Style::new(|s| {
+            s.opa(128);
+        });
+
         let btn1 = Button::new(container)?;
         btn1.size(100, 40).align(Align::Center, 0, -70);
         let label1 = Label::new(&btn1)?;
         label1.text("Normal").center();
 
         let btn2 = Button::new(container)?;
-        btn2.size(100, 40).opa(128).align(Align::Center, 0, 0);
+        btn2.size(100, 40).align(Align::Center, 0, 0);
+        btn2.add_style(&opa_style, Selector::DEFAULT);
         let label2 = Label::new(&btn2)?;
         label2.text("Opa:50%").center();
 
         let btn3 = Button::new(container)?;
-        btn3.size(100, 40).opa(128).align(Align::Center, 0, 70);
+        btn3.size(100, 40).align(Align::Center, 0, 70);
+        btn3.add_style(&opa_style, Selector::DEFAULT);
         btn3.style_transform_rotation(150, Selector::DEFAULT)
             .style_transform_scale(256 + 64, Selector::DEFAULT)
             .style_transform_pivot_x(50, Selector::DEFAULT)

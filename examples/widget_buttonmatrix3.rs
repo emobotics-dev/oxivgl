@@ -40,7 +40,11 @@ impl View for WidgetButtonmatrix3 {
         style_bg
             .pad_all(0)
             .radius(RADIUS_MAX as i16)
-            .border_width(0);
+            .border_width(0)
+            // Clip corners to respect the pill shape
+            .clip_corner(true)
+            // Zero gap between buttons
+            .pad_column(0);
         let style_bg = style_bg.build();
 
         let mut style_btn = StyleBuilder::new();
@@ -56,10 +60,6 @@ impl View for WidgetButtonmatrix3 {
         btnm.set_map(MAP);
         btnm.add_style(&style_bg, Selector::DEFAULT);
         btnm.add_style(&style_btn, Selector::from(Part::Items));
-        // Clip corners to respect the pill shape
-        btnm.style_clip_corner(true, Selector::DEFAULT);
-        // Zero gap between buttons
-        btnm.style_pad_column(0, Selector::DEFAULT);
         btnm.size(225, 35);
         btnm.align(Align::Center, 0, 0);
 

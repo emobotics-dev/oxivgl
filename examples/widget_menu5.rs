@@ -17,7 +17,7 @@
 use oxivgl::{
     enums::{EventCode, ObjFlag, ObjState},
     event::Event,
-    style::{color_brightness, color_darken, Selector},
+    style::{color_brightness, color_darken, Selector, Style},
     symbols,
     view::{NavAction, View},
     widgets::{
@@ -116,19 +116,25 @@ impl View for WidgetMenu5 {
         } else {
             color_darken(bg, 50)
         };
-        menu.style_bg_color(darkened, Selector::DEFAULT);
+        let menu_bg_style = Style::new(|s| {
+            s.bg_color(darkened);
+        });
+        menu.add_style(&menu_bg_style, Selector::DEFAULT);
 
         menu.set_mode_root_back_button(true);
         menu.bubble_events();
         menu.size(320, 240).center();
 
         let header_pad = menu.get_main_header().get_style_pad_left(Part::Main);
+        let header_pad_style = Style::new(|s| {
+            s.pad_hor(header_pad);
+        });
 
         // ── Sub-pages ──────────────────────────────────────────────────
 
         // Mechanics
         let sub_mechanics = menu.page_create(None);
-        sub_mechanics.style_pad_hor(header_pad, Selector::DEFAULT);
+        sub_mechanics.add_style(&header_pad_style, Selector::DEFAULT);
         Menu::separator_create(&sub_mechanics);
         let section = Menu::section_create(&sub_mechanics);
         create_slider(&section, &symbols::SETTINGS, "Velocity", 0, 150, 120);
@@ -137,27 +143,27 @@ impl View for WidgetMenu5 {
 
         // Sound
         let sub_sound = menu.page_create(None);
-        sub_sound.style_pad_hor(header_pad, Selector::DEFAULT);
+        sub_sound.add_style(&header_pad_style, Selector::DEFAULT);
         Menu::separator_create(&sub_sound);
         let section = Menu::section_create(&sub_sound);
         create_switch(&section, &symbols::AUDIO, "Sound", false);
 
         // Display
         let sub_display = menu.page_create(None);
-        sub_display.style_pad_hor(header_pad, Selector::DEFAULT);
+        sub_display.add_style(&header_pad_style, Selector::DEFAULT);
         Menu::separator_create(&sub_display);
         let section = Menu::section_create(&sub_display);
         create_slider(&section, &symbols::SETTINGS, "Brightness", 0, 150, 100);
 
         // Software info
         let sub_sw_info = menu.page_create(None);
-        sub_sw_info.style_pad_hor(header_pad, Selector::DEFAULT);
+        sub_sw_info.add_style(&header_pad_style, Selector::DEFAULT);
         let section = Menu::section_create(&sub_sw_info);
         create_text(&section, None, "Version 1.0", false);
 
         // Legal info
         let sub_legal = menu.page_create(None);
-        sub_legal.style_pad_hor(header_pad, Selector::DEFAULT);
+        sub_legal.add_style(&header_pad_style, Selector::DEFAULT);
         let section = Menu::section_create(&sub_legal);
         for _ in 0..15 {
             create_text(
@@ -170,7 +176,7 @@ impl View for WidgetMenu5 {
 
         // About
         let sub_about = menu.page_create(None);
-        sub_about.style_pad_hor(header_pad, Selector::DEFAULT);
+        sub_about.add_style(&header_pad_style, Selector::DEFAULT);
         Menu::separator_create(&sub_about);
         let section = Menu::section_create(&sub_about);
         let cont = create_text(&section, None, "Software information", false);
@@ -180,7 +186,7 @@ impl View for WidgetMenu5 {
 
         // Menu mode
         let sub_menu_mode = menu.page_create(None);
-        sub_menu_mode.style_pad_hor(header_pad, Selector::DEFAULT);
+        sub_menu_mode.add_style(&header_pad_style, Selector::DEFAULT);
         Menu::separator_create(&sub_menu_mode);
         let section = Menu::section_create(&sub_menu_mode);
         create_switch(&section, &symbols::AUDIO, "Sidebar enable", true);
@@ -188,7 +194,7 @@ impl View for WidgetMenu5 {
         // ── Root page (sidebar) ────────────────────────────────────────
 
         let root_page = menu.page_create(Some("Settings"));
-        root_page.style_pad_hor(header_pad, Selector::DEFAULT);
+        root_page.add_style(&header_pad_style, Selector::DEFAULT);
 
         let section = Menu::section_create(&root_page);
         let cont = create_text(&section, Some(&symbols::SETTINGS), "Mechanics", false);

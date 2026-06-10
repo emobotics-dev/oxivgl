@@ -59,7 +59,10 @@ struct WidgetRoller3 {
 
 impl View for WidgetRoller3 {
     fn create(&mut self, container: &Obj<'static>) -> Result<(), WidgetError> {
-        container.bg_color(0x607D8B); // LV_PALETTE_BLUE_GREY
+        let mut cont_sb = StyleBuilder::new();
+        cont_sb.bg_color_hex(0x607D8B); // LV_PALETTE_BLUE_GREY
+        let cont_style = cont_sb.build();
+        container.add_style(&cont_style, Selector::DEFAULT);
 
         let mut sb = StyleBuilder::new();
         sb.bg_color(color_black())
@@ -68,9 +71,14 @@ impl View for WidgetRoller3 {
             .radius(0);
         let style = sb.build();
 
+        // Selected-row background opacity (shared style for Part::Selected).
+        let mut sel_sb = StyleBuilder::new();
+        sel_sb.bg_opa(50);
+        let sel_style = sel_sb.build();
+
         let roller = Roller::new(container)?;
         roller.add_style(&style, Selector::DEFAULT);
-        roller.bg_opa_selector(50, Part::Selected);
+        roller.add_style(&sel_style, Part::Selected);
         roller.set_options(
             "January\n\
              February\n\

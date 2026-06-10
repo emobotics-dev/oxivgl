@@ -7,7 +7,7 @@
 //! Flex 6 — RTL base direction changes order of the items
 
 use oxivgl::{
-    style::{Selector, LV_SIZE_CONTENT},
+    style::{Selector, Style, LV_SIZE_CONTENT},
     view::{NavAction, View},
     layout::FlexFlow,
     widgets::{BaseDir, Label, Obj, WidgetError},
@@ -24,7 +24,10 @@ impl View for Flex6 {
     fn create(&mut self, container: &Obj<'static>) -> Result<(), WidgetError> {
 
         let cont = Obj::new(container)?;
-        cont.style_base_dir(BaseDir::Rtl, Selector::DEFAULT);
+        let cont_style = Style::new(|s| {
+            s.base_dir(BaseDir::Rtl);
+        });
+        cont.add_style(&cont_style, Selector::DEFAULT);
         cont.size(300, 220).center();
         cont.set_flex_flow(FlexFlow::RowWrap);
 

@@ -15,7 +15,7 @@ use oxivgl::{
     draw::DrawTask,
     enums::EventCode,
     event::Event,
-    style::{lv_pct, palette_main, Palette},
+    style::{lv_pct, palette_main, Palette, Style},
     view::{register_event_on, View},
     widgets::{Obj, Part, Scale, ScaleMode, WidgetError},
 };
@@ -85,8 +85,14 @@ impl View for WidgetScale7 {
         scale.set_total_tick_count(31);
         scale.set_major_tick_every(5);
 
-        scale.style_length(5, Part::Items);
-        scale.style_length(10, Part::Indicator);
+        let minor_len = Style::new(|s| {
+            s.length(5);
+        });
+        let major_len = Style::new(|s| {
+            s.length(10);
+        });
+        scale.add_style(&minor_len, Part::Items);
+        scale.add_style(&major_len, Part::Indicator);
         scale.set_range(10, 40);
 
         scale.send_draw_task_events();

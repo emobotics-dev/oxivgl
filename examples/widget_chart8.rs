@@ -11,7 +11,7 @@
 //! the write cursor are blanked to create a visible gap.
 
 use oxivgl::{
-    style::Selector,
+    style::{Selector, Style},
     timer::Timer,
     view::{NavAction, View},
     widgets::{Obj, Chart, ChartAxis, ChartSeries, ChartType, ChartUpdateMode, Part, WidgetError, CHART_POINT_NONE},
@@ -41,7 +41,10 @@ impl View for WidgetChart8 {
         chart.set_type(ChartType::Line);
         chart.set_update_mode(ChartUpdateMode::Circular);
         chart.set_point_count(80);
-        chart.style_size(0, 0, Selector::from(Part::Indicator));
+        let indicator_style = Style::new(|s| {
+            s.size(0, 0);
+        });
+        chart.add_style(&indicator_style, Selector::from(Part::Indicator));
 
         let color = oxivgl::style::palette_main(oxivgl::style::Palette::Red);
         let ser = chart.add_series(color, ChartAxis::PrimaryY);

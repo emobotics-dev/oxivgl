@@ -47,10 +47,9 @@ impl View for WidgetScale6 {
 
         // Dark background with clipped corners
         let mut sb = StyleBuilder::new();
-        sb.bg_opa(153).bg_color(color_black()).radius(RADIUS_MAX as i16);
+        sb.bg_opa(153).bg_color(color_black()).radius(RADIUS_MAX as i16).clip_corner(true);
         let bg_style = sb.build();
         scale.add_style(&bg_style, Selector::DEFAULT);
-        scale.style_clip_corner(true, Selector::DEFAULT);
 
         // Indicator style: yellow labels + major tick lines
         let mut sb = StyleBuilder::new();

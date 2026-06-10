@@ -91,7 +91,8 @@ pub static SOURCE_HAN_SANS_SC_16_CJK: Font =
 ///
 /// // In View::create():
 /// let font = MONO_FONT.init(MONTSERRAT_20, 20);
-/// label.text_font(font);
+/// let style = oxivgl::style::Style::new(|s| { s.text_font(font); });
+/// label.add_style(&style, oxivgl::style::Selector::DEFAULT);
 /// ```
 pub struct FixedWidthFont {
     inner: UnsafeCell<MaybeUninit<lv_font_t>>,

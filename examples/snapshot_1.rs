@@ -13,8 +13,9 @@
 use oxivgl::{
     layout::{FlexAlign, FlexFlow},
     snapshot::Snapshot,
+    style::{Selector, Style},
     view::{NavAction, View},
-    widgets::{Image, Obj, Part, WidgetError},
+    widgets::{Image, Obj, WidgetError},
 };
 
 #[derive(Default)]
@@ -35,7 +36,11 @@ const ITEM_COLORS: [u32; 4] = [0xe74c3c, 0x2ecc71, 0x3498db, 0xf39c12];
 
 impl View for Snapshot1 {
     fn create(&mut self, container: &Obj<'static>) -> Result<(), WidgetError> {
-        container.bg_color(0xadd8e6).bg_opa(255);
+        // Shared background style for the root screen container.
+        let screen_style = Style::new(|s| {
+            s.bg_color_hex(0xadd8e6).bg_opa(255);
+        });
+        container.add_style(&screen_style, Selector::DEFAULT);
 
         // Image widget that will display the snapshot (source set later).
         let snapshot_img = Image::new(container)?;
@@ -43,25 +48,33 @@ impl View for Snapshot1 {
 
         // Container: 180×180, centered, flex row-wrap, radius 50.
         let container = Obj::new(container)?;
-        container
-            .size(180, 180)
-            .center()
-            .radius(50, Part::Main)
-            .bg_color(0x303030)
-            .bg_opa(255);
+        container.size(180, 180).center();
+        // Shared style: radius 50, dark background, pad 5.
+        let container_style = Style::new(|s| {
+            s.radius(50).bg_color_hex(0x303030).bg_opa(255).pad_all(5);
+        });
+        container.add_style(&container_style, Selector::DEFAULT);
         container.set_flex_flow(FlexFlow::RowWrap);
         container.set_flex_align(FlexAlign::SpaceEvenly, FlexAlign::Center, FlexAlign::Center);
-        container.pad(5);
 
-        // Four colored squares inside the container.
+        // Shared style for the four squares: opaque, no border.
+        let item_style = Style::new(|s| {
+            s.bg_opa(255).border_width(0);
+        });
+        // Four colored squares inside the container. The shared style carries
+        // the common opacity/border; each item gets its own bg color.
         let item0 = Obj::new(&container)?;
-        item0.size(50, 50).bg_color(ITEM_COLORS[0]).bg_opa(255).border_width(0);
+        item0.size(50, 50).add_style(&item_style, Selector::DEFAULT);
+        item0.add_style(&Style::new(|s| { s.bg_color_hex(ITEM_COLORS[0]); }), Selector::DEFAULT);
         let item1 = Obj::new(&container)?;
-        item1.size(50, 50).bg_color(ITEM_COLORS[1]).bg_opa(255).border_width(0);
+        item1.size(50, 50).add_style(&item_style, Selector::DEFAULT);
+        item1.add_style(&Style::new(|s| { s.bg_color_hex(ITEM_COLORS[1]); }), Selector::DEFAULT);
         let item2 = Obj::new(&container)?;
-        item2.size(50, 50).bg_color(ITEM_COLORS[2]).bg_opa(255).border_width(0);
+        item2.size(50, 50).add_style(&item_style, Selector::DEFAULT);
+        item2.add_style(&Style::new(|s| { s.bg_color_hex(ITEM_COLORS[2]); }), Selector::DEFAULT);
         let item3 = Obj::new(&container)?;
-        item3.size(50, 50).bg_color(ITEM_COLORS[3]).bg_opa(255).border_width(0);
+        item3.size(50, 50).add_style(&item_style, Selector::DEFAULT);
+        item3.add_style(&Style::new(|s| { s.bg_color_hex(ITEM_COLORS[3]); }), Selector::DEFAULT);
 
         // Take snapshot of the container (ARGB8888).
         let snapshot = Snapshot::take_widget(&container).ok_or(WidgetError::LvglNullPointer)?;

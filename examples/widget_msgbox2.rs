@@ -12,7 +12,7 @@
 
 use oxivgl::{
     layout::FlexFlow,
-    style::Selector,
+    style::{Selector, Style},
     view::{NavAction, View},
     widgets::{Obj, Child, Label, Msgbox, Slider, WidgetError},
 };
@@ -33,7 +33,10 @@ impl View for WidgetMsgbox2 {
         let mbox = Msgbox::new(Some(container))?;
         mbox.size(300, 200);
         mbox.center();
-        mbox.style_clip_corner(true, Selector::DEFAULT);
+        let mbox_style = Style::new(|s| {
+            s.clip_corner(true);
+        });
+        mbox.add_style(&mbox_style, Selector::DEFAULT);
 
         // Title + header buttons
         mbox.add_title("Settings");
@@ -43,7 +46,10 @@ impl View for WidgetMsgbox2 {
         // Content area — flex column with sliders
         let content = mbox.get_content();
         content.set_flex_flow(FlexFlow::Column);
-        content.pad(10);
+        let content_style = Style::new(|s| {
+            s.pad_all(10);
+        });
+        content.add_style(&content_style, Selector::DEFAULT);
 
         let lbl_bright = Label::new(&*content)?;
         lbl_bright.text("Brightness");
@@ -73,8 +79,10 @@ impl View for WidgetMsgbox2 {
         // Style footer with indigo background
         let footer = mbox.get_footer().expect("footer exists after add_footer_button");
         let indigo = oxivgl::style::palette_main(oxivgl::style::Palette::Indigo);
-        footer.style_bg_color(indigo, Selector::DEFAULT);
-        footer.bg_opa(255);
+        let footer_style = Style::new(|s| {
+            s.bg_color(indigo).bg_opa(255);
+        });
+        footer.add_style(&footer_style, Selector::DEFAULT);
 
         self._mbox = Some(mbox);
         self._lbl_bright = Some(lbl_bright);

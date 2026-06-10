@@ -11,7 +11,7 @@
 
 use oxivgl::{
     fonts::DEJAVU_16_PERSIAN_HEBREW,
-    style::Selector,
+    style::{Selector, Style},
     view::{NavAction, View},
     widgets::{BaseDir, Label, Obj, WidgetError},
 };
@@ -26,14 +26,21 @@ impl View for Scroll5 {
     fn create(&mut self, container: &Obj<'static>) -> Result<(), WidgetError> {
 
         let cont = Obj::new(container)?;
-        cont.style_base_dir(BaseDir::Rtl, Selector::DEFAULT);
+        let cont_style = Style::new(|s| {
+            s.base_dir(BaseDir::Rtl);
+        });
+        cont.add_style(&cont_style, Selector::DEFAULT);
         cont.size(200, 100);
         cont.center();
+
+        let font_style = Style::new(|s| {
+            s.text_font(DEJAVU_16_PERSIAN_HEBREW);
+        });
 
         let label = Label::new(&cont)?;
         label.text("به وسیله یک ماشین نوشته شده است");
         label.width(400);
-        label.style_text_font(DEJAVU_16_PERSIAN_HEBREW, Selector::DEFAULT);
+        label.add_style(&font_style, Selector::DEFAULT);
 
         self._cont = Some(cont);
         self._label = Some(label);

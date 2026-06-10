@@ -9,7 +9,7 @@
 //! Two bars side by side: one left-to-right (default), one right-to-left.
 
 use oxivgl::{
-    style::Selector,
+    style::{Selector, Style},
     view::{NavAction, View},
     widgets::{Obj, Align, Bar, BaseDir, Label, WidgetError},
 };
@@ -20,6 +20,7 @@ struct WidgetBar5 {
     _bar_rtl: Option<Bar<'static>>,
     _label_ltr: Option<Label<'static>>,
     _label_rtl: Option<Label<'static>>,
+    _style_rtl: Option<Style>,
 }
 
 impl View for WidgetBar5 {
@@ -41,7 +42,10 @@ impl View for WidgetBar5 {
         bar_rtl.size(200, 20);
         bar_rtl.set_range_raw(0, 100);
         bar_rtl.set_value_raw(70, false);
-        bar_rtl.style_base_dir(BaseDir::Rtl, Selector::DEFAULT);
+        let style_rtl = Style::new(|s| {
+            s.base_dir(BaseDir::Rtl);
+        });
+        bar_rtl.add_style(&style_rtl, Selector::DEFAULT);
         bar_rtl.align(Align::Center, 0, 30);
 
         let label_rtl = Label::new(container)?;
@@ -52,6 +56,7 @@ impl View for WidgetBar5 {
         self._bar_rtl = Some(bar_rtl);
         self._label_ltr = Some(label_ltr);
         self._label_rtl = Some(label_rtl);
+        self._style_rtl = Some(style_rtl);
         Ok(())
     }
 

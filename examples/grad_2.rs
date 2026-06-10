@@ -20,6 +20,8 @@ struct Grad2 {
     _obj: Option<Obj<'static>>,
     _bullet1: Option<Button<'static>>,
     _bullet2: Option<Button<'static>>,
+    _bullet1_style: Option<Style>,
+    _bullet2_style: Option<Style>,
     _style: Option<Style>, // last — drop after widgets that reference it
 }
 
@@ -45,16 +47,24 @@ impl View for Grad2 {
         obj.add_style(&style, Selector::DEFAULT);
 
         // Bullet 1: blue at (100, 100)
+        let bullet1_style = Style::new(|s| {
+            s.bg_color_hex(0x0000ff).bg_opa(255);
+        });
         let bullet1 = Button::new(&obj)?;
         bullet1.size(15, 15).pos(100, 100);
-        bullet1.bg_color(0x0000ff).bg_opa(255);
+        bullet1.add_style(&bullet1_style, Selector::DEFAULT);
 
         // Bullet 2: cyan at (200, 150)
+        let bullet2_style = Style::new(|s| {
+            s.bg_color_hex(0x00ffff).bg_opa(255);
+        });
         let bullet2 = Button::new(&obj)?;
         bullet2.size(15, 15).pos(200, 150);
-        bullet2.bg_color(0x00ffff).bg_opa(255);
+        bullet2.add_style(&bullet2_style, Selector::DEFAULT);
 
                 self._style = Some(style);
+        self._bullet1_style = Some(bullet1_style);
+        self._bullet2_style = Some(bullet2_style);
         self._obj = Some(obj);
         self._bullet1 = Some(bullet1);
         self._bullet2 = Some(bullet2);

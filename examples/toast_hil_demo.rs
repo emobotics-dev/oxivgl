@@ -29,6 +29,7 @@
 //! (The rapid-toast sequencing fix is covered by host integration tests.)
 
 use oxivgl::{
+    style::{Selector, Style},
     view::{NavAction, View},
     widgets::{Align, Label, Obj, WidgetError},
 };
@@ -49,8 +50,11 @@ impl ToastView {
 
 impl View for ToastView {
     fn create(&mut self, container: &Obj<'static>) -> Result<(), WidgetError> {
-        container.bg_color(self.bg).bg_opa(255);
-        container.text_color(0x000000);
+        let bg = self.bg;
+        let card_style = Style::new(|s| {
+            s.bg_color_hex(bg).bg_opa(255).text_color_hex(0x000000);
+        });
+        container.add_style(&card_style, Selector::DEFAULT);
         let label = Label::new(container)?;
         label.text(self.text).align(Align::Center, 0, 0);
         self.label = Some(label);
@@ -71,8 +75,10 @@ impl View for ToastDemo {
     fn create(&mut self, container: &Obj<'static>) -> Result<(), WidgetError> {
         // Solid bright green — a color no other app on the rig uses, so the
         // board running this example is unmistakable in the camera frame.
-        container.bg_color(0x18a018).bg_opa(255);
-        container.text_color(0xffffff);
+        let root_style = Style::new(|s| {
+            s.bg_color_hex(0x18a018).bg_opa(255).text_color_hex(0xffffff);
+        });
+        container.add_style(&root_style, Selector::DEFAULT);
         let label = Label::new(container)?;
         label.text("TOAST TEST").align(Align::Center, 0, 0);
         self.label = Some(label);

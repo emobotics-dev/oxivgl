@@ -16,7 +16,7 @@ use oxivgl::{
     gridnav::{GridnavCtrl, gridnav_add},
     group::{Group, group_remove_obj},
     layout::FlexFlow,
-    style::{LV_SIZE_CONTENT, Palette, lv_pct, palette_lighten},
+    style::{LV_SIZE_CONTENT, Palette, Style, lv_pct, palette_lighten},
     view::{NavAction, View},
     widgets::{Align, Button, Checkbox, Label, Obj, Switch, Textarea, WidgetError},
 };
@@ -40,15 +40,17 @@ struct Gridnav1 {
 impl View for Gridnav1 {
     fn create(&mut self, container: &Obj<'static>) -> Result<(), WidgetError> {
 
+        // Shared focused-background style for both containers.
+        let focused_bg = Style::new(|s| {
+            s.bg_color(palette_lighten(Palette::Blue, 5));
+        });
+
         // ── Container 1: buttons, no rollover ──────────────────────────────
         let cont1 = oxivgl::widgets::Obj::new(container)?;
         cont1
             .set_flex_flow(FlexFlow::RowWrap)
-            .style_bg_color(
-                palette_lighten(Palette::Blue, 5),
-                ObjState::FOCUSED,
-            )
             .size(lv_pct(50), lv_pct(100));
+        cont1.add_style(&focused_bg, ObjState::FOCUSED);
 
         gridnav_add(&cont1, GridnavCtrl::NONE);
 
@@ -79,12 +81,9 @@ impl View for Gridnav1 {
         // ── Container 2: textarea/checkbox/switches, rollover ──────────────
         let cont2 = oxivgl::widgets::Obj::new(container)?;
         cont2
-            .style_bg_color(
-                palette_lighten(Palette::Blue, 5),
-                ObjState::FOCUSED,
-            )
             .size(lv_pct(50), lv_pct(100))
             .align(Align::RightMid, 0, 0);
+        cont2.add_style(&focused_bg, ObjState::FOCUSED);
 
         gridnav_add(&cont2, GridnavCtrl::ROLLOVER);
 

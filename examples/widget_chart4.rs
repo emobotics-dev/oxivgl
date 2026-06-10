@@ -14,7 +14,7 @@ use oxivgl::view::NavAction;
 use oxivgl::{
     enums::EventCode,
     event::Event,
-    style::{color_make, color_mix, palette_main, Palette, Selector},
+    style::{color_make, color_mix, palette_main, Palette, Selector, Style},
     view::{register_event_on, View},
     widgets::{Obj, Chart, ChartAxis, ChartSeries, ChartType, Part, WidgetError},
 };
@@ -33,6 +33,7 @@ struct WidgetChart4 {
     chart: Option<Chart<'static>>,
     _ser: Option<ChartSeries>,
     values: [i32; NUM_POINTS],
+    _style: Option<Style>,
 }
 
 impl View for WidgetChart4 {
@@ -41,7 +42,10 @@ impl View for WidgetChart4 {
         let chart = Chart::new(container)?;
         chart.set_type(ChartType::Bar);
         chart.set_point_count(NUM_POINTS as u32);
-        chart.style_pad_column(2, Selector::DEFAULT);
+        let style = Style::new(|s| {
+            s.pad_column(2);
+        });
+        chart.add_style(&style, Selector::DEFAULT);
         chart.size(260, 160);
         chart.center();
 
@@ -60,6 +64,7 @@ impl View for WidgetChart4 {
         self.chart = Some(chart);
         self._ser = Some(ser);
         self.values = values;
+        self._style = Some(style);
         Ok(())
     }
 

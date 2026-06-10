@@ -8,7 +8,7 @@
 
 use oxivgl::{
     anim::{anim_path_ease_in_out, anim_set_size, anim_set_x, Anim, ANIM_REPEAT_INFINITE},
-    style::{palette_main, Palette, Selector},
+    style::{palette_main, Palette, Selector, Style},
     view::{NavAction, View},
     widgets::{Align, Obj, WidgetError, RADIUS_MAX},
 };
@@ -23,8 +23,10 @@ impl View for Anim2 {
 
         let obj = Obj::new(container)?;
         obj.remove_scrollable();
-        obj.style_bg_color(palette_main(Palette::Red), Selector::DEFAULT);
-        obj.radius(RADIUS_MAX, Selector::DEFAULT);
+        let obj_style = Style::new(|s| {
+            s.bg_color(palette_main(Palette::Red)).radius(RADIUS_MAX as i16);
+        });
+        obj.add_style(&obj_style, Selector::DEFAULT);
         obj.align(Align::LeftMid, 10, 0);
 
         let mut a = Anim::new();

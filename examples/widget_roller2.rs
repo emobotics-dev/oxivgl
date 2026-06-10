@@ -45,7 +45,8 @@ impl View for WidgetRoller2 {
         sb_green
             .bg_color_hex(0x00FF00)
             .bg_grad_color_hex(0xAAFFAA)
-            .bg_grad_dir(GradDir::Ver);
+            .bg_grad_dir(GradDir::Ver)
+            .text_align(TextAlign::Left);
         let style_green = sb_green.build();
 
         // Left roller: left-aligned text, green gradient, 2 visible rows
@@ -55,7 +56,6 @@ impl View for WidgetRoller2 {
         r1.width(100);
         r1.add_style(&style_sel, Selector::from(Part::Selected));
         r1.add_style(&style_green, Selector::DEFAULT);
-        r1.text_align(TextAlign::Left);
         r1.align(Align::LeftMid, 10, 0);
         r1.set_selected(2, false);
 
@@ -73,7 +73,10 @@ impl View for WidgetRoller2 {
         r3.set_visible_row_count(4);
         r3.width(80);
         r3.add_style(&style_sel, Selector::from(Part::Selected));
-        r3.text_align(TextAlign::Right);
+        let style_align_right = Style::new(|s| {
+            s.text_align(TextAlign::Right);
+        });
+        r3.add_style(&style_align_right, Selector::DEFAULT);
         r3.align(Align::RightMid, -10, 0);
         r3.set_selected(8, false);
 

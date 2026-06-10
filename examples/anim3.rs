@@ -18,7 +18,7 @@ use oxivgl::{
     event::Event,
     layout::{GridAlign, GridCell, GRID_TEMPLATE_LAST, grid_fr},
     math::bezier3,
-    style::{Palette, Selector, palette_main},
+    style::{Palette, Selector, Style, palette_main},
     view::{NavAction, View},
     widgets::{Button, Chart, ChartAxis, ChartSeries, ChartType, Label, Obj, Part,
         Slider, WidgetError,
@@ -66,9 +66,10 @@ impl View for Anim3 {
     fn create(&mut self, container: &Obj<'static>) -> Result<(), WidgetError> {
 
         let cont = Obj::new(container)?;
-        cont.pad(2);
-        cont.style_pad_column(10, Selector::DEFAULT);
-        cont.style_pad_row(10, Selector::DEFAULT);
+        let cont_style = Style::new(|s| {
+            s.pad_all(2).pad_column(10).pad_row(10);
+        });
+        cont.add_style(&cont_style, Selector::DEFAULT);
         cont.set_grid_dsc_array(&COL_DSC, &ROW_DSC);
         cont.size(320, 240).center();
         cont.remove_scrollable();
@@ -78,12 +79,19 @@ impl View for Anim3 {
         let anim_obj = Obj::new(&cont)?;
         anim_obj.size(30, 30);
         anim_obj.remove_scrollable();
-        anim_obj.style_bg_color(palette_main(Palette::Red), Selector::DEFAULT);
-        anim_obj.bg_opa(255);
+        let anim_obj_style = Style::new(|s| {
+            s.bg_color(palette_main(Palette::Red)).bg_opa(255);
+        });
+        anim_obj.add_style(&anim_obj_style, Selector::DEFAULT);
         anim_obj.set_grid_cell(
             GridCell::new(GridAlign::Start, 0, 1),
             GridCell::new(GridAlign::Start, 0, 1),
         );
+
+        // Shared knob padding style for both sliders.
+        let knob_pad_style = Style::new(|s| {
+            s.pad_all(2);
+        });
 
         // P1 label + slider
         let p1_label = Label::new(&cont)?;
@@ -92,7 +100,7 @@ impl View for Anim3 {
 
         let p1_slider = Slider::new(&cont)?;
         p1_slider.set_range(0, 1024);
-        p1_slider.style_pad_all(2, Part::Knob);
+        p1_slider.add_style(&knob_pad_style, Part::Knob);
         p1_slider.bubble_events();
         p1_slider.set_grid_cell(
             GridCell::new(GridAlign::Stretch, 1, 1),
@@ -106,7 +114,7 @@ impl View for Anim3 {
 
         let p2_slider = Slider::new(&cont)?;
         p2_slider.set_range(0, 1024);
-        p2_slider.style_pad_all(2, Part::Knob);
+        p2_slider.add_style(&knob_pad_style, Part::Knob);
         p2_slider.bubble_events();
         p2_slider.set_grid_cell(
             GridCell::new(GridAlign::Stretch, 1, 1),
@@ -125,8 +133,14 @@ impl View for Anim3 {
 
         // Chart
         let chart = Chart::new(&cont)?;
-        chart.pad(0);
-        chart.style_size(2, 2, Part::Indicator);
+        let chart_style = Style::new(|s| {
+            s.pad_all(0);
+        });
+        chart.add_style(&chart_style, Selector::DEFAULT);
+        let chart_indicator_style = Style::new(|s| {
+            s.size(2, 2);
+        });
+        chart.add_style(&chart_indicator_style, Part::Indicator);
         chart.set_type(ChartType::Scatter);
         let series = chart.add_series(palette_main(Palette::Red), ChartAxis::PrimaryY);
         chart.set_axis_range(ChartAxis::PrimaryY, 0, 1024);
