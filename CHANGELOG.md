@@ -5,6 +5,27 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Fixed
+
+- **Text setters no longer silently truncate at 127 bytes** (#105). Every
+  `&str`-taking setter — `Textarea::{set_text, add_text, set_placeholder_text}`,
+  `Label::text`, `Checkbox::text`, `List::{add_text, add_button}`,
+  `Msgbox::{add_title, add_text, add_footer_button}`, `Table::set_cell_value`,
+  `Win::add_title`, `Menu::page_create`, `Label::set_translation_tag`, and the
+  `Label::bind_text_map` updater — previously copied through a fixed `[u8; 128]`
+  stack buffer and dropped everything past 127 bytes with no error. They now
+  pass the full string through a heap-backed NUL-terminated temporary (LVGL
+  copies it internally), so text of any length is rendered verbatim. This also
+  removes 15 per-call 128-byte stack temporaries from widget construction.
+
+### Deprecated
+
+- **`Label::text_long`** — `Label::text` is now itself uncapped, so the two are
+  identical. `text_long` remains as an alias and will be removed in a future
+  release; call `text` directly.
+
 ## [0.4.0] — 2026-06-10
 
 ### Added

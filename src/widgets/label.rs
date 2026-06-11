@@ -1,13 +1,12 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
-use alloc::vec::Vec;
-use core::{ffi::{c_char, c_void}, ops::Deref, ptr::null_mut};
+use core::{ffi::c_void, ops::Deref, ptr::null_mut};
 
 use oxivgl_sys::*;
 
 use super::{
     obj::{AsLvHandle, Obj},
     subject::Subject,
-    WidgetError,
+    with_cstr, WidgetError,
 };
 
 /// LVGL text label widget.
@@ -56,18 +55,13 @@ impl<'p> Label<'p> {
         }
     }
 
-    /// Set label text. Accepts any `&str` (no NUL terminator required).
-    /// LVGL copies the string internally. Truncates at 127 bytes.
-    /// For longer text use [`text_long`](Self::text_long).
+    /// Set label text. Accepts any `&str` (no length cap, no NUL terminator
+    /// required); LVGL copies the string internally.
     pub fn text(&self, s: &str) -> &Self {
         assert_ne!(self.obj.handle(), null_mut(), "Label handle cannot be null");
-        let bytes = s.as_bytes();
-        let len = bytes.len().min(127);
-        let mut buf = [0u8; 128];
-        buf[..len].copy_from_slice(&bytes[..len]);
-        // SAFETY: handle non-null (asserted above); buf is NUL-terminated
-        // (zero-initialized, len ≤ 127).
-        unsafe { lv_label_set_text(self.obj.handle(), buf.as_ptr() as *const c_char) };
+        // SAFETY: handle non-null (asserted above); with_cstr supplies a
+        // NUL-terminated buffer valid for the call. LVGL copies internally.
+        with_cstr(s, |p| unsafe { lv_label_set_text(self.obj.handle(), p) });
         self
     }
 
@@ -77,28 +71,22 @@ impl<'p> Label<'p> {
     /// Requires `LV_USE_TRANSLATION = 1` in `lv_conf.h`.
     pub fn set_translation_tag(&self, tag: &str) -> &Self {
         assert_ne!(self.obj.handle(), null_mut(), "Label handle cannot be null");
-        let len = tag.len().min(127);
-        let mut buf = [0u8; 128];
-        buf[..len].copy_from_slice(&tag.as_bytes()[..len]);
-        // SAFETY: handle non-null; buf is NUL-terminated (zero-initialized).
-        // LVGL copies the string via lv_strdup (see lv_label_set_translation_tag
-        // in lv_label.c), so passing a stack buffer is safe — no pointer is
-        // retained after this call returns.
-        unsafe { lv_label_set_translation_tag(self.obj.handle(), buf.as_ptr() as *const c_char) };
+        // SAFETY: handle non-null (asserted above); with_cstr supplies a
+        // NUL-terminated buffer valid for the call. LVGL copies the string via
+        // lv_strdup (see lv_label_set_translation_tag in lv_label.c), so no
+        // pointer is retained after this call returns.
+        with_cstr(tag, |p| unsafe { lv_label_set_translation_tag(self.obj.handle(), p) });
         self
     }
 
-    /// Set label text without the 127-byte limit. Heap-allocates a
-    /// NUL-terminated copy. Use [`text`](Self::text) for short UI labels.
+    /// Set label text without a length limit.
+    ///
+    /// Equivalent to [`text`](Self::text), which is now itself uncapped — kept
+    /// as a deprecated alias for callers written against the old 127-byte
+    /// `text`.
+    #[deprecated(note = "`text` is now uncapped; call `text` directly")]
     pub fn text_long(&self, s: &str) -> &Self {
-        assert_ne!(self.obj.handle(), null_mut(), "Label handle cannot be null");
-        let mut buf = Vec::with_capacity(s.len() + 1);
-        buf.extend_from_slice(s.as_bytes());
-        buf.push(0);
-        // SAFETY: handle non-null (asserted above); buf is NUL-terminated.
-        // LVGL copies the string internally so buf can be dropped.
-        unsafe { lv_label_set_text(self.obj.handle(), buf.as_ptr() as *const c_char) };
-        self
+        self.text(s)
     }
 
     /// Set the label long mode (wrap, scroll, clip, etc.).
@@ -174,13 +162,8 @@ impl<'p> Label<'p> {
                 let value = lv_subject_get_int(subject);
                 let text = map(value);
                 let label_ptr = lv_observer_get_target_obj(observer);
-                // Copy &str to NUL-terminated stack buffer for LVGL.
-                let bytes = text.as_bytes();
-                let mut buf = [0u8; 128];
-                let len = bytes.len().min(127);
-                buf[..len].copy_from_slice(&bytes[..len]);
-                // buf[len] is already 0 from zero-init.
-                lv_label_set_text(label_ptr, buf.as_ptr() as *const core::ffi::c_char);
+                // Pass the mapped &str to LVGL as a NUL-terminated string.
+                with_cstr(text, |p| lv_label_set_text(label_ptr, p));
             }
         }
         // SAFETY: lv_handle() non-null; subject pinned; fn pointer is pointer-sized.

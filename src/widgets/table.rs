@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
 use alloc::string::String;
-use core::{ffi::c_char, ops::Deref, ptr::null_mut};
+use core::{ops::Deref, ptr::null_mut};
 
 use oxivgl_sys::*;
 
 use super::{
-    WidgetError,
+    WidgetError, with_cstr,
     obj::{AsLvHandle, Obj},
 };
 
@@ -99,15 +99,13 @@ impl<'p> Table<'p> {
     /// Set the text of a cell. LVGL copies the string internally.
     ///
     /// New rows/columns are added automatically if `row`/`col` exceed the
-    /// current count. Strings longer than 127 bytes are silently truncated.
+    /// current count. Accepts any `&str` (no length cap); LVGL copies the text.
     pub fn set_cell_value(&self, row: u32, col: u32, text: &str) -> &Self {
-        let bytes = text.as_bytes();
-        let len = bytes.len().min(127);
-        let mut buf = [0u8; 128];
-        buf[..len].copy_from_slice(&bytes[..len]);
-        // SAFETY: handle non-null; buf is NUL-terminated; LVGL copies the text
-        // (lv_table.c: lv_strdup used internally).
-        unsafe { lv_table_set_cell_value(self.lv_handle(), row, col, buf.as_ptr() as *const c_char) };
+        // SAFETY: with_cstr supplies a NUL-terminated buffer valid for the call;
+        // LVGL copies the text (lv_table.c: lv_strdup used internally).
+        with_cstr(text, |p| unsafe {
+            lv_table_set_cell_value(self.lv_handle(), row, col, p)
+        });
         self
     }
 

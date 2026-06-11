@@ -34,13 +34,13 @@ impl View for WidgetLabel2 {
         shadow_label.add_style(&style_shadow, Selector::DEFAULT);
 
         let main_label = Label::new(container)?;
-        main_label.text_long(
+        main_label.text(
             "A simple method to create\nshadows on a text.\n\
              It even works with\n\nnewlines     and spaces.",
         );
 
         // Copy shadow text from main label (use same string)
-        shadow_label.text_long(
+        shadow_label.text(
             "A simple method to create\nshadows on a text.\n\
              It even works with\n\nnewlines     and spaces.",
         );

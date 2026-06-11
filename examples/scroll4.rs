@@ -39,7 +39,7 @@ impl View for Scroll4 {
         let label = Label::new(&obj)?;
         // Constrain label width so text wraps and overflows vertically
         label.width(200);
-        label.text_long(concat!(
+        label.text(concat!(
             "Lorem ipsum dolor sit amet, consectetur adipiscing elit.\n",
             "Etiam dictum, tortor vestibulum lacinia laoreet, ",
             "mi neque consectetur neque, vel mattis odio dolor egestas ligula.\n",

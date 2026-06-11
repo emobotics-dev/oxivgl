@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
-use core::{ffi::c_char, ops::Deref, ptr::null_mut};
+use core::{ops::Deref, ptr::null_mut};
 
 use oxivgl_sys::*;
 
 use super::{
-    WidgetError,
+    WidgetError, with_cstr,
     child::Child,
     obj::{AsLvHandle, Obj},
 };
@@ -68,16 +68,12 @@ impl<'p> Win<'p> {
     /// Add a title label to the header. The returned handle is a label widget
     /// owned by the window's header.
     ///
-    /// `txt` is truncated to 127 bytes. LVGL copies the string internally.
+    /// Accepts any `&str` (no length cap). LVGL copies the string internally.
     pub fn add_title(&self, txt: &str) -> Child<Obj<'p>> {
-        let bytes = txt.as_bytes();
-        let len = bytes.len().min(127);
-        let mut buf = [0u8; 128];
-        buf[..len].copy_from_slice(&bytes[..len]);
-        // SAFETY: handle non-null (constructor guarantees); buf is
-        // NUL-terminated; LVGL copies the text into an internal label.
-        let ptr =
-            unsafe { lv_win_add_title(self.obj.handle(), buf.as_ptr() as *const c_char) };
+        // SAFETY: handle non-null (constructor guarantees); with_cstr supplies a
+        // NUL-terminated buffer valid for the call; LVGL copies the text into an
+        // internal label.
+        let ptr = with_cstr(txt, |p| unsafe { lv_win_add_title(self.obj.handle(), p) });
         assert!(!ptr.is_null(), "lv_win_add_title returned NULL");
         Child::new(Obj::from_raw(ptr))
     }
