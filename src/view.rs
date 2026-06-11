@@ -378,7 +378,7 @@ pub async fn run_app<V: View, const BYTES: usize>(
     assert!(!screen_handle.is_null(), "no active screen after display init");
     let container = Obj::from_raw_non_owning(screen_handle);
 
-    if let Err(e) = view.create(&container) {
+    if let Err(e) = create_view(&mut view, &container) {
         warn!("Could not create LVGL widgets: {:?}, disabling UI", e);
         loop {
             Timer::after(embassy_time::Duration::from_secs(60)).await;
@@ -389,7 +389,7 @@ pub async fn run_app<V: View, const BYTES: usize>(
 
     loop {
         debug!("Rendering UI loop iteration");
-        let action = view.update()
+        let action = update_view(&mut view)
             .unwrap_or_else(|e| { warn!("Failed to update widgets: {:?}", e); NavAction::None });
         debug_assert!(action.is_none(), "NavAction ignored in run_app — use run_app_nav for navigation");
 
@@ -408,6 +408,26 @@ pub async fn run_app<V: View, const BYTES: usize>(
         // run_app_nav). This simple run_app ignores actions —
         // use run_app_nav for multi-screen applications.
     }
+}
+
+// `run_app` dispatches `View::create` / `View::update` *statically*, so under
+// the crate's fat-LTO release profile they inline into the embassy task's
+// `poll`. The Xtensa `entry` prologue then sizes the **persistent** task frame
+// for their worst-case widget-construction stack — measured at ~31.7 KiB on an
+// esp32s3 build (issue #107) — even though that working set is dead by the next
+// `await`. Routing both calls through these `#[inline(never)]` boundaries keeps
+// each method's frame a *transient* call frame, released on return, instead of
+// being folded into the frame the task holds across every await. (The navigator
+// run loop already gets this for free: it calls `update` through a
+// `dyn AnyView`, an un-inlinable virtual dispatch.)
+#[inline(never)]
+fn create_view<V: View>(view: &mut V, container: &Obj<'static>) -> Result<(), WidgetError> {
+    view.create(container)
+}
+
+#[inline(never)]
+fn update_view<V: View>(view: &mut V) -> Result<NavAction, WidgetError> {
+    view.update()
 }
 
 /// Run the LVGL render loop with navigation support.

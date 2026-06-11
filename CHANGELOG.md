@@ -9,6 +9,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **`run_app` no longer inlines `View::create` / `View::update` into the task
+  poll frame** (#107). Because `run_app` dispatches the view statically, under
+  the fat-LTO release profile both methods were inlined into the embassy task's
+  `poll`, so the Xtensa prologue sized the *persistent* task stack frame for
+  their worst-case widget-construction working set (measured at ~31.7 KiB on an
+  esp32s3 build) even though it is dead by the next `await`. Both calls now go
+  through `#[inline(never)]` boundaries, keeping each method's frame a transient
+  call frame released on return. No API or behaviour change; the navigator run
+  loop was already unaffected (it dispatches through `dyn AnyView`).
 - **Built-in font constants are now gated to the faces enabled in `lv_conf.h`**
   (#106). `src/fonts.rs` previously referenced every `lv_font_montserrat_*`
   (8–48), the DejaVu Persian/Hebrew face, and both Source Han CJK faces
