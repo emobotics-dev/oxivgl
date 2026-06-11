@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **Built-in font constants are now gated to the faces enabled in `lv_conf.h`**
+  (#106). `src/fonts.rs` previously referenced every `lv_font_montserrat_*`
+  (8–48), the DejaVu Persian/Hebrew face, and both Source Han CJK faces
+  unconditionally, so disabling *any* of them in an application's `lv_conf.h`
+  broke `oxivgl`'s own compile (`cannot find value …` deep in the bindings) —
+  forcing every app to ship ~400 KiB of fonts it may not use. `oxivgl-sys`
+  (now **0.2.2**) reports which faces the LVGL build exposed, and each `Font`
+  const is gated behind a `font_*` cfg derived from that report. Apps can now
+  set `LV_FONT_* 0` to drop unused faces; referencing a disabled face is a
+  plain "cannot find value" error pointing at the app's own code. Requires
+  `oxivgl-sys >= 0.2.2`. (The previous `fonts` module docs claiming a *linker*
+  error and "no code-size cost" were wrong and have been corrected.)
+
 ### Fixed
 
 - **Text setters no longer silently truncate at 127 bytes** (#105). Every
