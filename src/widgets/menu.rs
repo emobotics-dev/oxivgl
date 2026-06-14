@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
-use core::{ffi::c_char, ops::Deref, ptr::null_mut};
+use core::{ops::Deref, ptr::null_mut};
 
 use oxivgl_sys::*;
 
 use super::{
-    WidgetError,
+    WidgetError, with_cstr,
     child::Child,
     obj::{AsLvHandle, Obj},
 };
@@ -82,23 +82,13 @@ impl<'p> Menu<'p> {
     /// the menu — wrap in [`Child`](super::Child) if you need to keep a handle.
     pub fn page_create(&self, title: Option<&str>) -> Child<Obj<'p>> {
         assert_ne!(self.obj.handle(), null_mut(), "Menu handle cannot be null");
-        // `_buf` must remain live until after `lv_menu_page_create` returns —
-        // `ptr` points into it. Do NOT rename `_buf` to `_` (that would drop
-        // it immediately, making `ptr` a dangling pointer).
-        let (ptr, _buf) = match title {
-            Some(t) => {
-                let bytes = t.as_bytes();
-                let len = bytes.len().min(127);
-                let mut buf = [0u8; 128];
-                buf[..len].copy_from_slice(&bytes[..len]);
-                (buf.as_ptr() as *const c_char, Some(buf))
-            }
-            None => (core::ptr::null(), None),
+        // SAFETY: menu handle non-null (asserted above); the title pointer is
+        // NULL (untitled) or a NUL-terminated buffer valid for the call. LVGL
+        // copies the title (lv_menu.c creates a label child with the text).
+        let page = match title {
+            Some(t) => with_cstr(t, |p| unsafe { lv_menu_page_create(self.obj.handle(), p) }),
+            None => unsafe { lv_menu_page_create(self.obj.handle(), core::ptr::null()) },
         };
-        // SAFETY: menu handle non-null (asserted above); ptr is NULL or points
-        // to a NUL-terminated stack buffer live until end of this block.
-        // LVGL copies the title (lv_menu.c creates a label child with the text).
-        let page = unsafe { lv_menu_page_create(self.obj.handle(), ptr) };
         assert!(!page.is_null(), "lv_menu_page_create returned NULL");
         Child::new(Obj::from_raw(page))
     }

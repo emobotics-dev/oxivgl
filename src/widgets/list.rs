@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
-use core::{ffi::c_char, ops::Deref, ptr::null_mut};
+use core::{ops::Deref, ptr::null_mut};
 
 use oxivgl_sys::*;
 
 use super::{
-    WidgetError,
+    WidgetError, with_cstr,
     button::Button,
     child::Child,
     obj::{AsLvHandle, Obj},
@@ -67,13 +67,10 @@ impl<'p> List<'p> {
     /// list — do not store or drop it separately.
     pub fn add_text(&self, text: &str) -> &Self {
         assert_ne!(self.obj.handle(), null_mut(), "List handle cannot be null");
-        let bytes = text.as_bytes();
-        let len = bytes.len().min(127);
-        let mut buf = [0u8; 128];
-        buf[..len].copy_from_slice(&bytes[..len]);
-        // SAFETY: handle non-null (asserted above); buf is NUL-terminated
-        // (zero-initialized, len <= 127). LVGL copies the text (lv_list.c:81).
-        unsafe { lv_list_add_text(self.obj.handle(), buf.as_ptr() as *const c_char) };
+        // SAFETY: handle non-null (asserted above); with_cstr supplies a
+        // NUL-terminated buffer valid for the call. LVGL copies the text
+        // (lv_list.c:81).
+        with_cstr(text, |p| unsafe { lv_list_add_text(self.obj.handle(), p) });
         self
     }
 
@@ -87,18 +84,17 @@ impl<'p> List<'p> {
     /// owned by the list widget. Use it for event registration or styling.
     pub fn add_button(&self, icon: Option<&Symbol>, text: &str) -> Child<Button<'p>> {
         assert_ne!(self.obj.handle(), null_mut(), "List handle cannot be null");
-        let bytes = text.as_bytes();
-        let len = bytes.len().min(127);
-        let mut buf = [0u8; 128];
-        buf[..len].copy_from_slice(&bytes[..len]);
         let icon_ptr = match icon {
             Some(sym) => sym.as_ptr() as *const core::ffi::c_void,
             None => core::ptr::null(),
         };
         // SAFETY: handle non-null (asserted above); icon_ptr is NULL or a valid
-        // symbol string pointer; buf is NUL-terminated. LVGL creates child
-        // widgets that are owned by the list (lv_list.c:88-106).
-        let btn_ptr = unsafe { lv_list_add_button(self.obj.handle(), icon_ptr, buf.as_ptr() as *const c_char) };
+        // symbol string pointer; with_cstr supplies a NUL-terminated text buffer
+        // valid for the call. LVGL creates child widgets that are owned by the
+        // list (lv_list.c:88-106).
+        let btn_ptr = with_cstr(text, |p| unsafe {
+            lv_list_add_button(self.obj.handle(), icon_ptr, p)
+        });
         assert!(!btn_ptr.is_null(), "lv_list_add_button returned NULL");
         // The button is a child of the list — wrap as Child to suppress Drop.
         Child::new(Button::from_raw(btn_ptr))

@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
-use core::{ffi::c_char, ops::Deref, ptr::null_mut};
+use core::{ops::Deref, ptr::null_mut};
 
 use oxivgl_sys::*;
 
 use super::{
-    WidgetError,
+    WidgetError, with_cstr,
     obj::{AsLvHandle, Obj},
 };
 
@@ -53,15 +53,13 @@ impl<'p> Checkbox<'p> {
         cstr.to_str().ok()
     }
 
-    /// Set checkbox label text. Truncates at 127 bytes.
+    /// Set checkbox label text. Accepts any `&str` (no length cap); LVGL copies
+    /// the string internally.
     pub fn text(&self, s: &str) -> &Self {
         assert_ne!(self.obj.handle(), null_mut(), "Checkbox handle cannot be null");
-        let bytes = s.as_bytes();
-        let len = bytes.len().min(127);
-        let mut buf = [0u8; 128];
-        buf[..len].copy_from_slice(&bytes[..len]);
-        // SAFETY: handle non-null (asserted above); buf is NUL-terminated.
-        unsafe { lv_checkbox_set_text(self.obj.handle(), buf.as_ptr() as *const c_char) };
+        // SAFETY: handle non-null (asserted above); with_cstr supplies a
+        // NUL-terminated buffer valid for the call. LVGL copies internally.
+        with_cstr(s, |p| unsafe { lv_checkbox_set_text(self.obj.handle(), p) });
         self
     }
 }

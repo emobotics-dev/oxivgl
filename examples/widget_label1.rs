@@ -25,7 +25,7 @@ impl View for WidgetLabel1 {
 
         let label1 = Label::new(container)?;
         label1.set_long_mode(LabelLongMode::Wrap);
-        label1.text_long(
+        label1.text(
             "Words of a label, align the lines to the center \
              and wrap long text automatically.",
         );

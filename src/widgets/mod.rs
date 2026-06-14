@@ -1,12 +1,34 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
 //! Type-safe LVGL widget wrappers and supporting types.
 
+use alloc::vec::Vec;
+use core::ffi::c_char;
+
 use heapless::c_string::ExtendError;
 use thiserror_no_std::Error;
 
 /// Internal LVGL integer scale: physical values are mapped to `0..LVGL_SCALE`
 /// for arc/bar ranges.
 pub(crate) const LVGL_SCALE: i32 = 1000;
+
+/// Build a NUL-terminated copy of `s` on the heap and invoke `f` with a pointer
+/// to it. The pointer is valid only for the duration of `f`.
+///
+/// Every LVGL text setter wrapped by this crate copies the string into the
+/// widget's own storage before returning (`lv_strdup` / label-child creation),
+/// so the temporary buffer may be freed as soon as `f` returns. Unlike a
+/// fixed-size stack buffer, this imposes **no length cap** — text of any size
+/// is passed through verbatim — and keeps the caller's stack frame to a single
+/// pointer, which matters where setters are inlined into the render task.
+///
+/// A `&str` cannot be handed to C directly because it is not NUL-terminated;
+/// this is the one allocation that bridges that gap.
+pub(crate) fn with_cstr<R>(s: &str, f: impl FnOnce(*const c_char) -> R) -> R {
+    let mut buf = Vec::with_capacity(s.len() + 1);
+    buf.extend_from_slice(s.as_bytes());
+    buf.push(0);
+    f(buf.as_ptr() as *const c_char)
+}
 
 /// Map a physical value `v` in `0..max` to LVGL's integer range
 /// `0..LVGL_SCALE`. Returns 0 if `max` is 0 to avoid division by zero.

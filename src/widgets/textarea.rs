@@ -4,7 +4,7 @@ use core::{ffi::c_char, ops::Deref, ptr::null_mut};
 use oxivgl_sys::*;
 
 use super::{
-    WidgetError,
+    WidgetError, with_cstr,
     obj::{AsLvHandle, Obj},
 };
 
@@ -52,14 +52,13 @@ impl<'p> Textarea<'p> {
         if handle.is_null() { Err(WidgetError::LvglNullPointer) } else { Ok(Textarea { obj: Obj::from_raw(handle) }) }
     }
 
-    /// Set the textarea text. LVGL copies the string internally.
+    /// Set the textarea text. Accepts any `&str` (no length cap); LVGL copies
+    /// the string internally.
     pub fn set_text(&self, text: &str) -> &Self {
         assert_ne!(self.obj.handle(), null_mut(), "Textarea handle cannot be null");
-        let mut buf = [0u8; 128];
-        let len = text.len().min(127);
-        buf[..len].copy_from_slice(&text.as_bytes()[..len]);
-        // SAFETY: handle non-null; buf is NUL-terminated. LVGL copies internally.
-        unsafe { lv_textarea_set_text(self.obj.handle(), buf.as_ptr() as *const c_char) };
+        // SAFETY: handle non-null (asserted above); with_cstr supplies a
+        // NUL-terminated buffer valid for the call. LVGL copies internally.
+        with_cstr(text, |p| unsafe { lv_textarea_set_text(self.obj.handle(), p) });
         self
     }
 
@@ -80,14 +79,13 @@ impl<'p> Textarea<'p> {
         cstr.to_str().ok()
     }
 
-    /// Append text at the cursor position. LVGL copies the string internally.
+    /// Append text at the cursor position. Accepts any `&str` (no length cap);
+    /// LVGL copies the string internally.
     pub fn add_text(&self, text: &str) -> &Self {
         assert_ne!(self.obj.handle(), null_mut(), "Textarea handle cannot be null");
-        let mut buf = [0u8; 128];
-        let len = text.len().min(127);
-        buf[..len].copy_from_slice(&text.as_bytes()[..len]);
-        // SAFETY: handle non-null; buf is NUL-terminated. LVGL copies internally.
-        unsafe { lv_textarea_add_text(self.obj.handle(), buf.as_ptr() as *const c_char) };
+        // SAFETY: handle non-null (asserted above); with_cstr supplies a
+        // NUL-terminated buffer valid for the call. LVGL copies internally.
+        with_cstr(text, |p| unsafe { lv_textarea_add_text(self.obj.handle(), p) });
         self
     }
 
@@ -107,15 +105,13 @@ impl<'p> Textarea<'p> {
         self
     }
 
-    /// Set placeholder text shown when the textarea is empty.
-    /// LVGL copies the string internally.
+    /// Set placeholder text shown when the textarea is empty. Accepts any
+    /// `&str` (no length cap); LVGL copies the string internally.
     pub fn set_placeholder_text(&self, text: &str) -> &Self {
         assert_ne!(self.obj.handle(), null_mut(), "Textarea handle cannot be null");
-        let mut buf = [0u8; 128];
-        let len = text.len().min(127);
-        buf[..len].copy_from_slice(&text.as_bytes()[..len]);
-        // SAFETY: handle non-null; buf is NUL-terminated. LVGL copies internally.
-        unsafe { lv_textarea_set_placeholder_text(self.obj.handle(), buf.as_ptr() as *const c_char) };
+        // SAFETY: handle non-null (asserted above); with_cstr supplies a
+        // NUL-terminated buffer valid for the call. LVGL copies internally.
+        with_cstr(text, |p| unsafe { lv_textarea_set_placeholder_text(self.obj.handle(), p) });
         self
     }
 

@@ -28,7 +28,7 @@ impl View for WidgetLabel3 {
 
         // LTR English label
         let ltr_label = Label::new(container)?;
-        ltr_label.text_long(
+        ltr_label.text(
             "In modern terminology, a microcontroller is similar to a \
              system on a chip (SoC).",
         );
@@ -41,7 +41,7 @@ impl View for WidgetLabel3 {
 
         // RTL Hebrew label
         let rtl_label = Label::new(container)?;
-        rtl_label.text_long(
+        rtl_label.text(
             "\u{05DE}\u{05E2}\u{05D1}\u{05D3}, \u{05D0}\u{05D5} \
              \u{05D1}\u{05E9}\u{05DE}\u{05D5} \u{05D4}\u{05DE}\u{05DC}\u{05D0} \
              \u{05D9}\u{05D7}\u{05D9}\u{05D3}\u{05EA} \u{05E2}\u{05D9}\u{05D1}\u{05D5}\u{05D3} \
@@ -59,7 +59,7 @@ impl View for WidgetLabel3 {
 
         // Chinese label
         let cjk_label = Label::new(container)?;
-        cjk_label.text_long(
+        cjk_label.text(
             "\u{5D4C}\u{5165}\u{5F0F}\u{7CFB}\u{7EDF}\u{FF08}Embedded System\u{FF09}\u{FF0C}\n\
              \u{662F}\u{4E00}\u{79CD}\u{5D4C}\u{5165}\u{673A}\u{68B0}\u{6216}\u{7535}\u{6C14}\
              \u{7CFB}\u{7EDF}\u{5185}\u{90E8}\u{3001}\u{5177}\u{6709}\u{4E13}\u{4E00}\u{529F}\

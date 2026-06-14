@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
-use core::{ffi::c_char, ops::Deref, ptr::null_mut};
+use core::{ops::Deref, ptr::null_mut};
 
 use oxivgl_sys::*;
 
 use super::{
-    WidgetError,
+    WidgetError, with_cstr,
     child::Child,
     obj::{AsLvHandle, Obj},
 };
@@ -74,13 +74,10 @@ impl<'p> Msgbox<'p> {
     /// LVGL copies the string internally.
     pub fn add_title(&self, title: &str) -> &Self {
         assert_ne!(self.obj.handle(), null_mut(), "Msgbox handle cannot be null");
-        let bytes = title.as_bytes();
-        let len = bytes.len().min(127);
-        let mut buf = [0u8; 128];
-        buf[..len].copy_from_slice(&bytes[..len]);
-        // SAFETY: handle non-null (asserted above); buf is NUL-terminated.
-        // LVGL copies the text (lv_msgbox.c creates a label child).
-        unsafe { lv_msgbox_add_title(self.obj.handle(), buf.as_ptr() as *const c_char) };
+        // SAFETY: handle non-null (asserted above); with_cstr supplies a
+        // NUL-terminated buffer valid for the call. LVGL copies the text
+        // (lv_msgbox.c creates a label child).
+        with_cstr(title, |p| unsafe { lv_msgbox_add_title(self.obj.handle(), p) });
         self
     }
 
@@ -90,13 +87,9 @@ impl<'p> Msgbox<'p> {
     /// labels stacked vertically.
     pub fn add_text(&self, text: &str) -> &Self {
         assert_ne!(self.obj.handle(), null_mut(), "Msgbox handle cannot be null");
-        let bytes = text.as_bytes();
-        let len = bytes.len().min(127);
-        let mut buf = [0u8; 128];
-        buf[..len].copy_from_slice(&bytes[..len]);
-        // SAFETY: handle non-null (asserted above); buf is NUL-terminated.
-        // LVGL copies the text.
-        unsafe { lv_msgbox_add_text(self.obj.handle(), buf.as_ptr() as *const c_char) };
+        // SAFETY: handle non-null (asserted above); with_cstr supplies a
+        // NUL-terminated buffer valid for the call. LVGL copies the text.
+        with_cstr(text, |p| unsafe { lv_msgbox_add_text(self.obj.handle(), p) });
         self
     }
 
@@ -115,12 +108,11 @@ impl<'p> Msgbox<'p> {
     /// LVGL copies the string internally.
     pub fn add_footer_button(&self, text: &str) -> Child<Obj<'_>> {
         assert_ne!(self.obj.handle(), null_mut(), "Msgbox handle cannot be null");
-        let bytes = text.as_bytes();
-        let len = bytes.len().min(127);
-        let mut buf = [0u8; 128];
-        buf[..len].copy_from_slice(&bytes[..len]);
-        // SAFETY: handle non-null; buf is NUL-terminated. LVGL copies the text.
-        let btn = unsafe { lv_msgbox_add_footer_button(self.obj.handle(), buf.as_ptr() as *const c_char) };
+        // SAFETY: handle non-null (asserted above); with_cstr supplies a
+        // NUL-terminated buffer valid for the call. LVGL copies the text.
+        let btn = with_cstr(text, |p| unsafe {
+            lv_msgbox_add_footer_button(self.obj.handle(), p)
+        });
         assert!(!btn.is_null(), "lv_msgbox_add_footer_button returned NULL");
         Child::new(Obj::from_raw(btn))
     }

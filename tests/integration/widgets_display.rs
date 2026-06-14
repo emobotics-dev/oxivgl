@@ -6,7 +6,8 @@ use oxivgl::style::{
     Selector, color_make,
 };
 use oxivgl::widgets::{
-    AnimImg, ArcLabel, ArcLabelDir, Button, Image, Label, Led, Line, Screen, ValueLabel,
+    AnimImg, ArcLabel, ArcLabelDir, Button, Checkbox, Image, Label, Led, Line, Screen, Textarea,
+    ValueLabel,
 };
 
 // ── Screen ───────────────────────────────────────────────────────────────────
@@ -207,15 +208,45 @@ fn image_set_src_symbol() {
     pump();
 }
 
-// ── Label::text_long / LabelLongMode variants ─────────────────────────────────
+// ── Long-text setters (issue #105: no silent truncation at 127 bytes) ─────────
+
+/// A 300-byte string — well past the old fixed 128-byte stack buffer.
+const LONG_TEXT: &str = "The quick brown fox jumps over the lazy dog. \
+    The quick brown fox jumps over the lazy dog. \
+    The quick brown fox jumps over the lazy dog. \
+    The quick brown fox jumps over the lazy dog. \
+    The quick brown fox jumps over the lazy dog. \
+    The quick brown fox jumps over the lazy dog.";
 
 #[test]
-fn label_text_long() {
+fn label_long_text_no_panic() {
     let screen = fresh_screen();
     let lbl = Label::new(&screen).unwrap();
-    lbl.text_long("A much longer string that would overflow the 127-byte stack buffer in text()");
+    assert!(LONG_TEXT.len() > 127);
+    lbl.text(LONG_TEXT);
     pump();
     assert!(lbl.get_width() > 0);
+}
+
+#[test]
+fn textarea_long_text_roundtrips_in_full() {
+    let screen = fresh_screen();
+    let ta = Textarea::new(&screen).unwrap();
+    assert!(LONG_TEXT.len() > 127);
+    ta.set_text(LONG_TEXT);
+    pump();
+    // The whole string must survive — not the first 127 bytes (issue #105).
+    assert_eq!(ta.get_text(), Some(LONG_TEXT));
+}
+
+#[test]
+fn checkbox_long_text_roundtrips_in_full() {
+    let screen = fresh_screen();
+    let cb = Checkbox::new(&screen).unwrap();
+    assert!(LONG_TEXT.len() > 127);
+    cb.text(LONG_TEXT);
+    pump();
+    assert_eq!(cb.get_text(), Some(LONG_TEXT));
 }
 
 #[test]
