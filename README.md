@@ -143,12 +143,14 @@ oxivgl is under active development. Even if it has reached some degree of maturi
 | `AnimTimeline` | `anim` | Sequenced animation timeline |
 | `Timer` | `timer` | Periodic timer with `triggered()` polling in `update()` |
 
-**Input devices** — non-owning wrappers for querying LVGL input state.
+**Input devices** — query the active device, or own a keypad/pointer device fed by the application.
 
 | Type | Module | Role |
 |------|--------|------|
 | `Indev` | `indev` | Non-owning handle to active input device |
 | `Point` | `indev` | 2D point (x, y) for movement vectors |
+| `KeypadIndev` / `KeypadState` | `indev` | Owning KEYPAD device fed by the app (held + one-shot key models; `with_repeat` for hold-to-repeat) |
+| `PointerIndev` / `PointerState` | `indev` | Owning POINTER (touchscreen) device fed by raw `(x, y)` coords or a polling closure |
 
 **Draw tasks** — custom draw hooks via `DRAW_TASK_ADDED` events.
 
