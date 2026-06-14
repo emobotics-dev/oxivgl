@@ -14,4 +14,9 @@ categories = ["development-tools::build-utils"]
 [dependencies]
 cc = "1"
 
+# Zero-warnings policy: any rustc warning is a hard build error.
+# Equivalent to `-D warnings`, scoped to this crate's own code.
+[lints.rust]
+warnings = "deny"
+
 [workspace]
