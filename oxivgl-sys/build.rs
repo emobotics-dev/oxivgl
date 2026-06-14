@@ -12,6 +12,56 @@ use sha2::{Digest, Sha256};
 const LVGL_VERSION: &str = "9.5.0";
 const LVGL_SHA256: &str = "34a955cdf3a2d005507b704e87357af669a114523b6d3f77b5344fdc68717bc6";
 
+/// Built-in LVGL font faces that the application may disable in its `lv_conf.h`.
+/// Each entry is the `lv_font_<NAME>` suffix; a face is "available" only when
+/// its `LV_FONT_*` option is enabled, in which case bindgen emits the matching
+/// `extern static` and we surface a `font_<NAME>` flag for `oxivgl` to gate on.
+/// Keep in sync with the list in `oxivgl/build.rs` and the consts in
+/// `oxivgl/src/fonts.rs`.
+const GATED_FONTS: &[&str] = &[
+    "montserrat_8", "montserrat_10", "montserrat_12", "montserrat_14",
+    "montserrat_16", "montserrat_18", "montserrat_20", "montserrat_22",
+    "montserrat_24", "montserrat_26", "montserrat_28", "montserrat_30",
+    "montserrat_32", "montserrat_34", "montserrat_36", "montserrat_38",
+    "montserrat_40", "montserrat_42", "montserrat_44", "montserrat_46",
+    "montserrat_48", "dejavu_16_persian_hebrew", "source_han_sans_sc_14_cjk",
+    "source_han_sans_sc_16_cjk",
+];
+
+/// Inspect the generated `bindings.rs` and emit a `cargo:font_<NAME>=1`
+/// metadata value for every built-in font whose `extern static` is present.
+/// Via `links = "lv"` this reaches `oxivgl`'s build script as
+/// `DEP_LV_FONT_<NAME>`, which it turns into a `font_<NAME>` cfg. Using the
+/// generated bindings as the source of truth means the flag matches symbol
+/// availability exactly — including faces left at their `lv_conf_internal.h`
+/// default rather than spelled out in the app's `lv_conf.h`.
+fn emit_font_flags(bindings_path: &Path) {
+    let src = std::fs::read_to_string(bindings_path).unwrap_or_default();
+    for name in GATED_FONTS {
+        if contains_ident(&src, &format!("lv_font_{name}")) {
+            println!("cargo:font_{name}=1");
+        }
+    }
+}
+
+/// True if `ident` occurs in `src` as a whole identifier — i.e. not
+/// immediately followed by another identifier character. Robust to bindgen's
+/// spacing (`lv_font_x :` vs `lv_font_x:`) and collision-free across numeric
+/// suffixes (`montserrat_4` does not match `montserrat_40`).
+fn contains_ident(src: &str, ident: &str) -> bool {
+    let bytes = src.as_bytes();
+    let mut from = 0;
+    while let Some(pos) = src[from..].find(ident) {
+        let end = from + pos + ident.len();
+        let next = bytes.get(end).copied().unwrap_or(b' ');
+        if !next.is_ascii_alphanumeric() && next != b'_' {
+            return true;
+        }
+        from = end;
+    }
+    false
+}
+
 /// Download and extract LVGL source tree into `out_dir/lvgl-{version}/`.
 /// Returns the path to the extracted LVGL root.
 /// Respects `LVGL_SRC_DIR` env var override for local development.
@@ -83,11 +133,10 @@ fn main() {
     if env::var("DOCS_RS").is_ok() {
         let manifest_dir = PathBuf::from(env::var("CARGO_MANIFEST_DIR").unwrap());
         let out_path = PathBuf::from(env::var("OUT_DIR").unwrap());
-        std::fs::copy(
-            manifest_dir.join("bindings_docsrs.rs"),
-            out_path.join("bindings.rs"),
-        )
-        .expect("failed to install bundled bindings_docsrs.rs");
+        let bindings_path = out_path.join("bindings.rs");
+        std::fs::copy(manifest_dir.join("bindings_docsrs.rs"), &bindings_path)
+            .expect("failed to install bundled bindings_docsrs.rs");
+        emit_font_flags(&bindings_path);
         return;
     }
 
@@ -374,6 +423,10 @@ fn main() {
     // bindgen 0.72 emits `transmute` for signed↔unsigned bitfield casts;
     // newer rustc warns (unnecessary_transmutes). Patch to use direct casts.
     fix_bindgen_transmutes(&bindings_path);
+
+    // Surface which built-in fonts actually made it into the bindings so
+    // `oxivgl` can gate its font consts and avoid forcing every face on.
+    emit_font_flags(&bindings_path);
 
     cfg.file(out_path.join("static_fns.c"));
     cfg.compile("lvgl");

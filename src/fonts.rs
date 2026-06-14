@@ -3,16 +3,19 @@
 //!
 //! # Font availability
 //!
-//! The `MONTSERRAT_*` constants (and other built-in font statics) reference
-//! `extern "C"` symbols that are compiled into the LVGL binary **only when the
-//! corresponding `LV_FONT_MONTSERRAT_*` option is enabled** in the
-//! application's `lv_conf.h`.
+//! Each built-in font constant — the `MONTSERRAT_*` sizes,
+//! `DEJAVU_16_PERSIAN_HEBREW`, and the Source Han CJK faces — exists **only
+//! when the matching `LV_FONT_*` option is enabled** in the application's
+//! `lv_conf.h`. The `oxivgl-sys` build script reports which faces the LVGL
+//! build actually exposed, and each constant here is gated behind a `font_*`
+//! cfg derived from that report.
 //!
-//! Referencing a font that was not enabled causes a **linker error** at build
-//! time — fail-fast, not undefined behaviour.  Applications must ensure their
-//! `lv_conf.h` enables every font they intend to use.  LTO removes unused font
-//! symbols automatically, so enabling extras you don't use has no code-size
-//! cost.
+//! This means an application can trim faces it doesn't use — each Montserrat
+//! size is several KiB of flash — by setting the corresponding `LV_FONT_* 0`,
+//! and `oxivgl` still compiles. Referencing a disabled face is then an
+//! ordinary "cannot find value" error pointing at your own code, instead of an
+//! opaque failure deep in the generated bindings. Keep `LV_FONT_DEFAULT` (and
+//! the face it points at) enabled.
 use core::cell::UnsafeCell;
 use core::mem::MaybeUninit;
 use core::ptr::addr_of;
@@ -62,15 +65,18 @@ impl Font {
 }
 
 /// LVGL built-in DejaVu 16 pt with Persian/Hebrew glyphs.
+#[cfg(font_dejavu_16_persian_hebrew)]
 pub static DEJAVU_16_PERSIAN_HEBREW: Font =
     Font(addr_of!(oxivgl_sys::lv_font_dejavu_16_persian_hebrew));
 
 
 /// LVGL built-in Source Han Sans SC 14 pt with CJK glyphs.
+#[cfg(font_source_han_sans_sc_14_cjk)]
 pub static SOURCE_HAN_SANS_SC_14_CJK: Font =
     Font(addr_of!(oxivgl_sys::lv_font_source_han_sans_sc_14_cjk));
 
 /// LVGL built-in Source Han Sans SC 16 pt with CJK glyphs.
+#[cfg(font_source_han_sans_sc_16_cjk)]
 pub static SOURCE_HAN_SANS_SC_16_CJK: Font =
     Font(addr_of!(oxivgl_sys::lv_font_source_han_sans_sc_16_cjk));
 
@@ -160,50 +166,73 @@ unsafe extern "C" fn fixed_width_get_glyph_dsc(
     }
 }
 
-// SAFETY: All lv_font_montserrat_* are valid static fonts compiled into the
-// binary (enabled via LV_FONT_MONTSERRAT_* in lv_conf.h). LTO removes unused.
+// SAFETY: each lv_font_montserrat_* is a valid static font that is present in
+// the bindings exactly when LV_FONT_MONTSERRAT_* is enabled — which is also
+// precisely when the `font_montserrat_*` cfg below is set, so each addr_of!
+// only ever names a symbol that exists.
 
 /// LVGL built-in Montserrat 8 pt.
+#[cfg(font_montserrat_8)]
 pub static MONTSERRAT_8: Font = Font(addr_of!(oxivgl_sys::lv_font_montserrat_8));
 /// LVGL built-in Montserrat 10 pt.
+#[cfg(font_montserrat_10)]
 pub static MONTSERRAT_10: Font = Font(addr_of!(oxivgl_sys::lv_font_montserrat_10));
 /// LVGL built-in Montserrat 12 pt.
+#[cfg(font_montserrat_12)]
 pub static MONTSERRAT_12: Font = Font(addr_of!(oxivgl_sys::lv_font_montserrat_12));
 /// LVGL built-in Montserrat 14 pt.
+#[cfg(font_montserrat_14)]
 pub static MONTSERRAT_14: Font = Font(addr_of!(oxivgl_sys::lv_font_montserrat_14));
 /// LVGL built-in Montserrat 16 pt.
+#[cfg(font_montserrat_16)]
 pub static MONTSERRAT_16: Font = Font(addr_of!(oxivgl_sys::lv_font_montserrat_16));
 /// LVGL built-in Montserrat 18 pt.
+#[cfg(font_montserrat_18)]
 pub static MONTSERRAT_18: Font = Font(addr_of!(oxivgl_sys::lv_font_montserrat_18));
 /// LVGL built-in Montserrat 20 pt.
+#[cfg(font_montserrat_20)]
 pub static MONTSERRAT_20: Font = Font(addr_of!(oxivgl_sys::lv_font_montserrat_20));
 /// LVGL built-in Montserrat 22 pt.
+#[cfg(font_montserrat_22)]
 pub static MONTSERRAT_22: Font = Font(addr_of!(oxivgl_sys::lv_font_montserrat_22));
 /// LVGL built-in Montserrat 24 pt.
+#[cfg(font_montserrat_24)]
 pub static MONTSERRAT_24: Font = Font(addr_of!(oxivgl_sys::lv_font_montserrat_24));
 /// LVGL built-in Montserrat 26 pt.
+#[cfg(font_montserrat_26)]
 pub static MONTSERRAT_26: Font = Font(addr_of!(oxivgl_sys::lv_font_montserrat_26));
 /// LVGL built-in Montserrat 28 pt.
+#[cfg(font_montserrat_28)]
 pub static MONTSERRAT_28: Font = Font(addr_of!(oxivgl_sys::lv_font_montserrat_28));
 /// LVGL built-in Montserrat 30 pt.
+#[cfg(font_montserrat_30)]
 pub static MONTSERRAT_30: Font = Font(addr_of!(oxivgl_sys::lv_font_montserrat_30));
 /// LVGL built-in Montserrat 32 pt.
+#[cfg(font_montserrat_32)]
 pub static MONTSERRAT_32: Font = Font(addr_of!(oxivgl_sys::lv_font_montserrat_32));
 /// LVGL built-in Montserrat 34 pt.
+#[cfg(font_montserrat_34)]
 pub static MONTSERRAT_34: Font = Font(addr_of!(oxivgl_sys::lv_font_montserrat_34));
 /// LVGL built-in Montserrat 36 pt.
+#[cfg(font_montserrat_36)]
 pub static MONTSERRAT_36: Font = Font(addr_of!(oxivgl_sys::lv_font_montserrat_36));
 /// LVGL built-in Montserrat 38 pt.
+#[cfg(font_montserrat_38)]
 pub static MONTSERRAT_38: Font = Font(addr_of!(oxivgl_sys::lv_font_montserrat_38));
 /// LVGL built-in Montserrat 40 pt.
+#[cfg(font_montserrat_40)]
 pub static MONTSERRAT_40: Font = Font(addr_of!(oxivgl_sys::lv_font_montserrat_40));
 /// LVGL built-in Montserrat 42 pt.
+#[cfg(font_montserrat_42)]
 pub static MONTSERRAT_42: Font = Font(addr_of!(oxivgl_sys::lv_font_montserrat_42));
 /// LVGL built-in Montserrat 44 pt.
+#[cfg(font_montserrat_44)]
 pub static MONTSERRAT_44: Font = Font(addr_of!(oxivgl_sys::lv_font_montserrat_44));
 /// LVGL built-in Montserrat 46 pt.
+#[cfg(font_montserrat_46)]
 pub static MONTSERRAT_46: Font = Font(addr_of!(oxivgl_sys::lv_font_montserrat_46));
 /// LVGL built-in Montserrat 48 pt.
+#[cfg(font_montserrat_48)]
 pub static MONTSERRAT_48: Font = Font(addr_of!(oxivgl_sys::lv_font_montserrat_48));
 
 #[cfg(test)]
