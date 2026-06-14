@@ -5,7 +5,24 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.5.0] — 2026-06-14
+
+### Added
+
+- **POINTER (touchscreen) input device** (#111). `PointerIndev` is the
+  direct-touch analogue of `KeypadIndev`: a view can be navigated by tapping a
+  widget at a coordinate, not only via focus keys. It is fed in oxivgl's own
+  vocabulary — raw `(x, y)` coordinates — via either a lock-free `PointerState`
+  cell (`PointerIndev::new`) or a polling closure (`PointerIndev::new_with`,
+  e.g. `PointerIndev::new_with(|| ft6336u::read_touch())`). No BSP/MCU/driver
+  type is involved, so it stays portable across boards. Both `PointerIndev` and
+  `PointerState` are re-exported from the prelude.
+- **Keypad hold-to-repeat** (#111). `KeypadIndev::with_repeat(after, every)` —
+  while a key is held (the *held* model), LVGL re-sends it to the focused group
+  first after `after`, then every `every`, for value/setpoint editing. A thin
+  pass-through to LVGL's `long_press_time` / `long_press_repeat_time`.
+- **Example** `touch_setpoint` — a setpoint editor combining both: hold `-`/`+`
+  to repeat (keypad) and tap a preset to jump the value (touch).
 
 ### Changed
 

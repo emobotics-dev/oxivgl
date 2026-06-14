@@ -21,6 +21,7 @@ mod navigator_modal;
 mod navigator_toast;
 mod obj;
 mod observer;
+mod pointer;
 mod style;
 mod timer;
 mod widgets_container;

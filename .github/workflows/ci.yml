@@ -150,3 +150,8 @@ jobs:
 
       - name: Build example getting_started1 (ESP32)
         run: cargo +esp -Zbuild-std=alloc,core build --target xtensa-esp32-none-elf --release --example getting_started1
+
+      - name: Build example touch_setpoint (ESP32)
+        # Cross-checks the input-device code paths (KeypadIndev/PointerIndev,
+        # with_repeat) and the example's no_std path on Xtensa.
+        run: cargo +esp -Zbuild-std=alloc,core build --target xtensa-esp32-none-elf --release --example touch_setpoint
