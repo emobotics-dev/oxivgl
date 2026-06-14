@@ -33,4 +33,9 @@ features = []
 targets = ["x86_64-unknown-linux-gnu"]
 no-default-features = true
 
+# Zero-warnings policy: any rustc warning is a hard build error.
+# Equivalent to `-D warnings`, scoped to this crate's own code.
+[lints.rust]
+warnings = "deny"
+
 [workspace]

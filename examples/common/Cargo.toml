@@ -32,3 +32,8 @@ lcd-async            = "0.1.1"
 log                  = "0.4"
 static_cell          = { version = "2.1.1", features = ["nightly"] }
 async-button         = "0.2.0"
+
+# Zero-warnings policy: any rustc warning is a hard build error.
+# Equivalent to `-D warnings`, scoped to this crate's own code.
+[lints.rust]
+warnings = "deny"

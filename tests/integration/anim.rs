@@ -35,8 +35,8 @@ fn anim_pause_for_during_animation() {
     let handle = a.start();
     pump();
 
-    // SAFETY: animation just started (1000 ms), guaranteed still running.
-    unsafe { handle.pause_for(500) };
+    // animation just started (1000 ms), guaranteed still running.
+    handle.pause_for(500);
     pump();
 }
 
