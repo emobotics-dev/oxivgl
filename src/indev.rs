@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
-//! Input devices — non-owning query wrappers plus an owning keypad device.
+//! Input devices — non-owning query wrappers plus owning keypad and pointer
+//! devices.
 //!
 //! [`Indev`](crate::indev::Indev) is a read-only handle for inspecting the
 //! active device inside an event handler.
@@ -8,6 +9,14 @@
 //! [`KeypadState`](crate::indev::KeypadState): a lock-free cell that any task —
 //! a debounced GPIO button task, or an on-screen button's event handler on a
 //! touchscreen — writes, and LVGL's focus engine reads.
+//! [`PointerIndev`](crate::indev::PointerIndev) is the touchscreen analogue: an
+//! *owning* POINTER device fed raw `(x, y)` coordinates through a
+//! [`PointerState`](crate::indev::PointerState) cell or a polling closure, so a
+//! view can be navigated by tapping a widget at a coordinate.
+//!
+//! Both owning devices take input in oxivgl's own vocabulary — LVGL keys and
+//! raw coordinates — never a BSP/MCU/driver type, so they stay portable across
+//! boards and MCUs.
 //!
 //! # Driving focus navigation
 //!
@@ -66,6 +75,7 @@
 //! [`run_app_nav_keypad_events`](crate::view::run_app_nav_keypad_events), which
 //! wires the wake for you.
 
+use alloc::boxed::Box;
 use core::ffi::c_void;
 use core::marker::PhantomData;
 use core::sync::atomic::{AtomicBool, AtomicU32, AtomicUsize, Ordering};
@@ -344,6 +354,41 @@ impl KeypadIndev {
         Ok(Self { ptr, state, _not_send: PhantomData })
     }
 
+    /// Enable **hold-to-repeat**: while a key is held (the *held* model —
+    /// [`KeypadState::press`] without a matching [`release`](KeypadState::release)),
+    /// LVGL re-sends it to the focused group, first after `after`, then once
+    /// every `every`. Use this for value/setpoint editing — hold a button to
+    /// keep incrementing.
+    ///
+    /// A thin pass-through to LVGL's `long_press_time` /
+    /// `long_press_repeat_time`. Has no effect on the *one-shot* model
+    /// ([`KeypadState::send`]), which never holds a key across reads.
+    ///
+    /// Durations are clamped to `u16::MAX` milliseconds (LVGL's field width).
+    /// Builder-style — chain it onto construction:
+    ///
+    /// ```no_run
+    /// use core::time::Duration;
+    /// use oxivgl::indev::{KeypadIndev, KeypadState};
+    /// static KEYPAD: KeypadState = KeypadState::new();
+    /// # fn demo() -> Result<(), oxivgl::widgets::WidgetError> {
+    /// let keypad = KeypadIndev::new(&KEYPAD)?
+    ///     .with_repeat(Duration::from_millis(400), Duration::from_millis(80));
+    /// # let _ = keypad; Ok(()) }
+    /// ```
+    pub fn with_repeat(self, after: core::time::Duration, every: core::time::Duration) -> Self {
+        let after = after.as_millis().min(u16::MAX as u128) as u16;
+        let every = every.as_millis().min(u16::MAX as u128) as u16;
+        // SAFETY: self.ptr is a live indev created in create(). These setters
+        // only store the timing fields into the indev struct.
+        // See lvgl/src/indev/lv_indev.c — lv_indev_set_long_press_time/repeat_time.
+        unsafe {
+            lv_indev_set_long_press_time(self.ptr, after);
+            lv_indev_set_long_press_repeat_time(self.ptr, every);
+        }
+        self
+    }
+
     /// Bind this device to `group` so its keys drive that group's focus.
     ///
     /// Equivalent to adding the device to the group's keyboard/encoder set.
@@ -451,6 +496,279 @@ unsafe extern "C" fn keypad_read_cb(indev: *mut lv_indev_t, data: *mut lv_indev_
         } else {
             lv_indev_state_t_LV_INDEV_STATE_RELEASED
         };
+        (*data).continue_reading = false;
+    }
+}
+
+/// Lock-free touch state shared between an input producer and a
+/// [`PointerIndev`] — the POINTER analogue of [`KeypadState`].
+///
+/// A producer (a touch-panel polling task, or an interrupt handler) writes raw
+/// `(x, y)` coordinates with [`touch`](Self::touch) and lifts with
+/// [`release`](Self::release); LVGL's read callback reads the latest state. All
+/// fields are atomic, so the producer may run on a different task than the one
+/// driving LVGL.
+///
+/// The input is plain coordinates — no driver, board, or MCU type — so it stays
+/// BSP- and MCU-agnostic. The consumer's binary writes the few-line bridge from
+/// its touch driver (e.g. `ft6336u::read_touch() -> Option<(u16, u16)>`) to
+/// this cell.
+///
+/// Declare it as a `static` so it satisfies [`PointerIndev::new`]'s `'static`
+/// requirement (LVGL stores a pointer to it for the device's lifetime).
+///
+/// ```no_run
+/// use oxivgl::indev::{PointerIndev, PointerState};
+///
+/// static TOUCH: PointerState = PointerState::new();
+///
+/// # fn demo() -> Result<(), oxivgl::widgets::WidgetError> {
+/// let _pointer = PointerIndev::new(&TOUCH)?;
+///
+/// // From a touch-panel task, on each sample:
+/// TOUCH.touch(120, 48);   // finger down at (120, 48)
+/// TOUCH.release();        // finger up
+/// # Ok(()) }
+/// ```
+#[derive(Debug)]
+pub struct PointerState {
+    /// Last reported coordinates packed as `(x << 16) | y` (both `u16`), so the
+    /// pair is read atomically — `x` and `y` can never tear across an update.
+    /// Latched on release so LVGL sees the release at the point of the last
+    /// touch (the conventional touchscreen behaviour).
+    xy: AtomicU32,
+    /// Whether the panel is currently being touched. Stored with `Release`
+    /// *after* `xy` and loaded with `Acquire` *before* it, so a reader that
+    /// observes a press also observes the coordinates that press was reported
+    /// with — there is a happens-before from the coordinate store to the press.
+    pressed: AtomicBool,
+}
+
+impl PointerState {
+    /// Create a new, released state.
+    ///
+    /// `const` so it can initialise a `static`:
+    /// `static TOUCH: PointerState = PointerState::new();`
+    pub const fn new() -> Self {
+        Self {
+            xy: AtomicU32::new(0),
+            pressed: AtomicBool::new(false),
+        }
+    }
+
+    /// Report a touch (press) at `(x, y)`.
+    pub fn touch(&self, x: u16, y: u16) {
+        // Publish the coordinates first, then the press with Release so the
+        // matching `sample()` Acquire-load of `pressed` sees these coords.
+        self.xy.store(((x as u32) << 16) | y as u32, Ordering::Relaxed);
+        self.pressed.store(true, Ordering::Release);
+    }
+
+    /// Report that the panel is no longer touched (release). The last
+    /// coordinates are kept, so the release is reported at the touch point.
+    pub fn release(&self) {
+        self.pressed.store(false, Ordering::Release);
+    }
+
+    /// Consumer side (read callback): the current `(x, y, pressed)`.
+    ///
+    /// Loads `pressed` (Acquire) before the coordinates so a press is paired
+    /// with the coordinates it was reported with (single producer).
+    fn sample(&self) -> (i32, i32, bool) {
+        let pressed = self.pressed.load(Ordering::Acquire);
+        let xy = self.xy.load(Ordering::Relaxed);
+        (((xy >> 16) & 0xffff) as i32, (xy & 0xffff) as i32, pressed)
+    }
+}
+
+impl Default for PointerState {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+/// Owning POINTER (touchscreen) input device — the direct-touch analogue of
+/// [`KeypadIndev`].
+///
+/// A view can be navigated by *tapping a widget at a coordinate*, not only via
+/// focus keys. Created once at startup (e.g. in
+/// [`View::create`](crate::view::View::create)) and kept alive for as long as
+/// touch input is wanted; dropping it removes the device via `lv_indev_delete`.
+///
+/// LVGL polls the device on its own read timer (TIMER mode), driven by
+/// `lv_timer_handler` in the render loop — no group binding and no run-loop
+/// wiring is required, unlike the keypad's focus routing.
+///
+/// Fed in oxivgl's own vocabulary — raw `(x, y)` coordinates — via either a
+/// [`PointerState`] cell ([`new`](Self::new)) or a polling closure
+/// ([`new_with`](Self::new_with)). No BSP/MCU type is involved.
+///
+/// # Thread safety
+///
+/// `PointerIndev` is `!Send + !Sync` — LVGL must be driven from a single task.
+pub struct PointerIndev {
+    ptr: *mut lv_indev_t,
+    /// Owned heap allocation backing a closure-fed device ([`new_with`]): the
+    /// `outer` thin pointer to the boxed fat `dyn FnMut` pointer. `Drop`
+    /// reclaims both boxes from this — the device's own record, not whatever is
+    /// in the LVGL user-data slot at drop time. `None` for the
+    /// [`PointerState`]-backed form.
+    closure: Option<*mut *mut PointerReadFn>,
+    _not_send: PhantomData<*const ()>,
+}
+
+/// Boxed polling closure stored as a [`PointerIndev`]'s user data.
+type PointerReadFn = dyn FnMut() -> Option<(u16, u16)>;
+
+impl core::fmt::Debug for PointerIndev {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        f.debug_struct("PointerIndev").finish_non_exhaustive()
+    }
+}
+
+impl PointerIndev {
+    /// Create a POINTER device backed by a `'static` [`PointerState`].
+    ///
+    /// `state` must be `'static` because LVGL stores a pointer to it (in the
+    /// device's user data) and reads it for the device's lifetime — see
+    /// `spec-memory-lifetime.md` §1.
+    ///
+    /// Returns `Err(WidgetError::LvglNullPointer)` if LVGL allocation fails.
+    pub fn new(state: &'static PointerState) -> Result<Self, WidgetError> {
+        // SAFETY: lv_indev_create allocates and registers a new indev; returns
+        // NULL on OOM (checked). See lvgl/src/indev/lv_indev.c.
+        let ptr = unsafe { lv_indev_create() };
+        if ptr.is_null() {
+            return Err(WidgetError::LvglNullPointer);
+        }
+        // SAFETY: ptr non-null (checked). Mark it a POINTER device, point its
+        // read_cb at `pointer_state_read_cb`, and store `state` (a `&'static`
+        // reference that outlives the device) as the user data the callback
+        // reads. lv_indev_set_* only store these into the indev struct.
+        unsafe {
+            lv_indev_set_type(ptr, lv_indev_type_t_LV_INDEV_TYPE_POINTER);
+            lv_indev_set_read_cb(ptr, Some(pointer_state_read_cb));
+            lv_indev_set_user_data(ptr, state as *const PointerState as *mut c_void);
+        }
+        Ok(Self { ptr, closure: None, _not_send: PhantomData })
+    }
+
+    /// Create a POINTER device fed by a polling closure.
+    ///
+    /// `read` is called by LVGL on each read: `Some((x, y))` reports a touch at
+    /// that coordinate, `None` reports release. This is the ergonomic form for a
+    /// driver that already exposes a poll function, e.g.
+    /// `PointerIndev::new_with(|| ft6336u::read_touch())`.
+    ///
+    /// The closure is heap-allocated and owned by the device; it is reclaimed
+    /// when the device is dropped.
+    ///
+    /// Returns `Err(WidgetError::LvglNullPointer)` if LVGL allocation fails.
+    pub fn new_with(read: impl FnMut() -> Option<(u16, u16)> + 'static) -> Result<Self, WidgetError> {
+        let boxed: Box<PointerReadFn> = Box::new(read);
+        // Box<dyn> is a fat pointer; double-box to get a thin pointer for the
+        // single user-data slot. The inner raw pointer is reclaimed in Drop.
+        let raw: *mut PointerReadFn = Box::into_raw(boxed);
+        let outer = Box::into_raw(Box::new(raw));
+        // SAFETY: lv_indev_create allocates a new indev; NULL on OOM (checked).
+        let ptr = unsafe { lv_indev_create() };
+        if ptr.is_null() {
+            // Reclaim both boxes before bailing out.
+            // SAFETY: `outer` and `raw` were just produced by Box::into_raw and
+            // not yet handed to LVGL, so they are still uniquely owned here.
+            unsafe {
+                let _ = Box::from_raw(*Box::from_raw(outer));
+            }
+            return Err(WidgetError::LvglNullPointer);
+        }
+        // SAFETY: ptr non-null (checked). Store the thin pointer-to-fat-pointer
+        // as user data; the device owns it until Drop reclaims it.
+        unsafe {
+            lv_indev_set_type(ptr, lv_indev_type_t_LV_INDEV_TYPE_POINTER);
+            lv_indev_set_read_cb(ptr, Some(pointer_closure_read_cb));
+            lv_indev_set_user_data(ptr, outer as *mut c_void);
+        }
+        Ok(Self { ptr, closure: Some(outer), _not_send: PhantomData })
+    }
+}
+
+impl Drop for PointerIndev {
+    fn drop(&mut self) {
+        // SAFETY: self.ptr was returned by lv_indev_create and is non-null.
+        // lv_indev_delete unlinks and frees the device. Called once via Drop.
+        unsafe { lv_indev_delete(self.ptr) };
+        // Reclaim the closure boxes from our own stored pointer (not a re-read
+        // of LVGL's user-data slot), if this was a closure-fed device.
+        if let Some(outer) = self.closure {
+            // SAFETY: `outer` is the pointer produced by Box::into_raw in
+            // new_with and never freed; the device is gone, so we now hold
+            // unique ownership of both the outer box (a `Box<*mut PointerReadFn>`)
+            // and the inner boxed closure it points to.
+            unsafe {
+                let inner: Box<*mut PointerReadFn> = Box::from_raw(outer);
+                let _ = Box::from_raw(*inner);
+            }
+        }
+    }
+}
+
+/// LVGL read callback for a [`PointerState`]-backed [`PointerIndev`].
+unsafe extern "C" fn pointer_state_read_cb(indev: *mut lv_indev_t, data: *mut lv_indev_data_t) {
+    if indev.is_null() || data.is_null() {
+        return;
+    }
+    // SAFETY: indev non-null (checked); user data is a `&'static PointerState`
+    // set in PointerIndev::new (NULL only if unset, handled below).
+    let state = unsafe { lv_indev_get_user_data(indev) } as *const PointerState;
+    if state.is_null() {
+        return;
+    }
+    // SAFETY: state points to a live `'static` PointerState; all fields atomic.
+    let (x, y, pressed) = unsafe { &*state }.sample();
+    // SAFETY: data is a valid lv_indev_data_t LVGL gave us to populate.
+    unsafe {
+        (*data).point.x = x;
+        (*data).point.y = y;
+        (*data).state = if pressed {
+            lv_indev_state_t_LV_INDEV_STATE_PRESSED
+        } else {
+            lv_indev_state_t_LV_INDEV_STATE_RELEASED
+        };
+        (*data).continue_reading = false;
+    }
+}
+
+/// LVGL read callback for a closure-fed [`PointerIndev`] (see [`new_with`]).
+///
+/// [`new_with`]: PointerIndev::new_with
+unsafe extern "C" fn pointer_closure_read_cb(indev: *mut lv_indev_t, data: *mut lv_indev_data_t) {
+    if indev.is_null() || data.is_null() {
+        return;
+    }
+    // SAFETY: indev non-null (checked); user data is the thin pointer-to-fat-
+    // pointer set in new_with (NULL only if unset, handled below).
+    let outer = unsafe { lv_indev_get_user_data(indev) } as *mut *mut PointerReadFn;
+    if outer.is_null() {
+        return;
+    }
+    // SAFETY: `outer` points to a valid `*mut PointerReadFn` owned by the
+    // device; the read callback runs on the LVGL task with exclusive access, so
+    // taking `&mut` to the closure for the duration of the call is sound.
+    let read: &mut PointerReadFn = unsafe { &mut **outer };
+    let touched = read();
+    // SAFETY: data is a valid lv_indev_data_t LVGL gave us to populate.
+    unsafe {
+        match touched {
+            Some((x, y)) => {
+                (*data).point.x = x as i32;
+                (*data).point.y = y as i32;
+                (*data).state = lv_indev_state_t_LV_INDEV_STATE_PRESSED;
+            }
+            None => {
+                // Leave point unchanged: report release at the last touch point.
+                (*data).state = lv_indev_state_t_LV_INDEV_STATE_RELEASED;
+            }
+        }
         (*data).continue_reading = false;
     }
 }

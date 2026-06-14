@@ -18,6 +18,7 @@ static KP_REG: KeypadState = KeypadState::new();
 static KP_FOCUS: KeypadState = KeypadState::new();
 static KP_SEND: KeypadState = KeypadState::new();
 static KP_BURST: KeypadState = KeypadState::new();
+static KP_REPEAT: KeypadState = KeypadState::new();
 
 /// Find the registered KEYPAD indev whose user data points at `state`.
 fn find_keypad(state: &KeypadState) -> Option<*mut oxivgl_sys::lv_indev_t> {
@@ -132,6 +133,48 @@ fn keypad_send_one_shot_moves_focus_once() {
     kp.read();
     pump();
     assert!(b.has_state(ObjState::FOCUSED), "idle read does not repeat");
+
+    drop(kp);
+}
+
+#[test]
+fn keypad_with_repeat_sets_long_press_timing_and_still_navigates() {
+    use core::time::Duration;
+    let screen = fresh_screen();
+
+    let group = Group::new().unwrap();
+    let a = Button::new(&screen).unwrap();
+    let b = Button::new(&screen).unwrap();
+    group.add_obj(&a);
+    group.add_obj(&b);
+
+    let kp = KeypadIndev::new(&KP_REPEAT)
+        .unwrap()
+        .with_repeat(Duration::from_millis(400), Duration::from_millis(80));
+    kp.set_group(&group);
+    pump();
+
+    let indev = find_keypad(&KP_REPEAT).expect("keypad present");
+    // with_repeat is a thin pass-through to LVGL's long-press timing fields.
+    // SAFETY: indev is a live KEYPAD device; the timing fields are plain u16.
+    unsafe {
+        assert_eq!((*indev).long_press_time, 400, "long_press_time set from `after`");
+        assert_eq!(
+            (*indev).long_press_repeat_time, 80,
+            "long_press_repeat_time set from `every`",
+        );
+    }
+
+    // The device still works: a held NEXT advances focus once on press.
+    assert!(a.has_state(ObjState::FOCUSED), "first item focused on add");
+    KP_REPEAT.press(Key::NEXT);
+    // SAFETY: same live indev.
+    unsafe { oxivgl_sys::lv_indev_read(indev) };
+    KP_REPEAT.release();
+    // SAFETY: same live indev.
+    unsafe { oxivgl_sys::lv_indev_read(indev) };
+    pump();
+    assert!(b.has_state(ObjState::FOCUSED), "NEXT still advances focus with repeat enabled");
 
     drop(kp);
 }

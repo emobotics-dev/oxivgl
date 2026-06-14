@@ -57,5 +57,5 @@ pub use crate::{
 // Group and gridnav
 pub use crate::group::{Group, GroupRef, group_get_default, group_remove_obj};
 pub use crate::gridnav::{GridnavCtrl, gridnav_add, gridnav_remove};
-// Keypad input device
-pub use crate::indev::{KeypadIndev, KeypadState};
+// Input devices (keypad + pointer/touch)
+pub use crate::indev::{KeypadIndev, KeypadState, PointerIndev, PointerState};
