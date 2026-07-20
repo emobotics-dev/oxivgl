@@ -82,11 +82,13 @@ jobs:
             --target x86_64-unknown-linux-gnu -- --test-threads=1
 
       # Was never in CI, which is how leak_check.rs came to stop compiling on
-      # master unnoticed.
+      # master unnoticed. `--nocapture` is required: without it libtest buffers
+      # output in memory and LVGL's log callback allocates inside the
+      # measurement window, reporting ~88 bytes/iter of phantom leak everywhere.
       - name: Leak detection tests
         run: |
           SDL_VIDEODRIVER=dummy cargo +nightly test --test leak_check \
-            --target x86_64-unknown-linux-gnu -- --test-threads=1
+            --target x86_64-unknown-linux-gnu -- --test-threads=1 --nocapture
 
       # Catches undocumented public items *and* doc-build failures. A broken
       # intra-doc link produces no HTML at all, which previously shipped a

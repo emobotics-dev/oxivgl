@@ -9,7 +9,13 @@
 //! After N create/destroy iterations, net allocation must be zero.
 //!
 //! Run with: `SDL_VIDEODRIVER=dummy cargo +nightly test --test leak_check
-//!   --target x86_64-unknown-linux-gnu -- --test-threads=1`
+//!   --target x86_64-unknown-linux-gnu -- --test-threads=1 --nocapture`
+//!
+//! **`--nocapture` is mandatory, not cosmetic.** Without it libtest captures
+//! stdout/stderr into a growing in-memory buffer, and LVGL's log callback
+//! (`eprintln!` on host) writes into that buffer *inside* the measurement
+//! window — so every test reports a uniform ~88 bytes/iter of phantom leak.
+//! Use `./run_tests.sh leak`, which passes it.
 
 // Tests exercise the deprecated inline style setters to verify they still work.
 #![allow(deprecated)]
