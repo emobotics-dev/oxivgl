@@ -29,8 +29,8 @@
  * The host tests and the ESP32 examples share this file and want opposite
  * things, hence the split:
  *  - Host has no runtime pool to fall back on, so the pool must cover the whole
- *    integration suite. At 64 KiB the suite exhausts it and LV_ASSERT_MALLOC
- *    spins in LV_ASSERT_HANDLER (`while(1);`) forever — a hang, not a failure.
+ *    integration suite; at 64 KiB the suite exhausts it and every test after
+ *    that point fails on LV_ASSERT_MALLOC.
  *  - ESP32 has ~320 KiB of internal DRAM in total; a 512 KiB array does not
  *    link ("cannot move location counter backwards"). Embedded targets want a
  *    small internal pool plus a PSRAM region registered via oxivgl::mem. */
@@ -147,7 +147,15 @@
 #define LV_USE_ASSERT_OBJ           0
 
 #define LV_ASSERT_HANDLER_INCLUDE <stdint.h>
-#define LV_ASSERT_HANDLER while(1);   /*Halt by default*/
+/* Route assertions into Rust's panic path instead of LVGL's default
+ * `while(1);`. Spinning turns every assertion — a failed allocation, a NULL
+ * object, a corrupt style — into an indefinite hang: on host a CI job sits at
+ * its timeout with no failing test and no message, and on target the device
+ * wedges with no backtrace. Panicking reports the LVGL log line that precedes
+ * it, then hands over to the platform's panic handler (esp-backtrace on
+ * target). `oxivgl` provides this symbol. */
+void oxivgl_lv_assert_handler(void);
+#define LV_ASSERT_HANDLER oxivgl_lv_assert_handler();
 
 /*-------------
  * Debug
