@@ -20,12 +20,35 @@ for arg in "$@"; do
 done
 
 if [ "$CHECK" -eq 1 ]; then
-    RUSTDOCFLAGS="-W missing-docs" \
+    # Capture rather than pipe. Two traps this avoids:
+    #  - Broken intra-doc links are `error:`, not `warning:`, and a failed doc
+    #    build emits no HTML at all — so grepping only for "warning:" reports a
+    #    clean audit while the module you just added is missing from the docs.
+    #  - Piping discards cargo's exit status, and the old `|| true; exit 0` made
+    #    this check incapable of ever failing.
+    # `set -e` would abort at the capture on a failed doc build, printing
+    # nothing at all — so suspend it and handle the status explicitly.
+    set +e
+    out=$(RUSTDOCFLAGS="-W missing-docs" \
         cargo +nightly doc \
             --target "$TARGET" \
             --no-deps \
             -j1 \
-            2>&1 | grep "warning:" || true
+            2>&1)
+    status=$?
+    set -e
+
+    echo "$out" | grep -E "^(error|warning)" || true
+
+    if [ "$status" -ne 0 ]; then
+        echo "FAIL: doc build failed — see errors above" >&2
+        exit 1
+    fi
+    if echo "$out" | grep -q "warning:"; then
+        echo "FAIL: undocumented public items" >&2
+        exit 1
+    fi
+    echo "Doc check passed: build succeeded, no undocumented public items."
     exit 0
 fi
 
