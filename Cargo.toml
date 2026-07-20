@@ -2,7 +2,7 @@
 [package]
 name = "oxivgl"
 edition = "2024"
-version = "0.5.0"
+version = "0.6.0"
 license = "MIT OR Apache-2.0"
 description = "Safe no_std Rust bindings for LVGL — embedded GUI on ESP32 and host SDL2"
 repository = "https://github.com/emobotics-dev/oxivgl"
@@ -34,12 +34,28 @@ no-default-features = true
 default = []
 esp-hal = ["dep:esp-hal"]
 esp32 = ["esp-hal/esp32"]
+esp32s3 = ["esp-hal/esp32s3"]
 defmt = ["dep:defmt"]
 log-04 = ["dep:log-04"]
 png = ["dep:png"]
 
+# Board selection for the examples (built with `cargo --example`). Each forwards
+# the chip to the library (esp32/esp32s3) and to the example harness crate, which
+# in turn drives the m5stack-core BSP's board feature. Exactly one may be active;
+# `fire27` is the default the run scripts and CI use when none is passed.
+fire27 = [
+    "esp-hal", "esp32", "oxivgl-examples-common/fire27",
+    "esp-rtos/esp32", "esp-bootloader-esp-idf/esp32", "esp-sync/esp32",
+    "m5stack-core/fire27",
+]
+cores3 = [
+    "esp-hal", "esp32s3", "oxivgl-examples-common/cores3",
+    "esp-rtos/esp32s3", "esp-bootloader-esp-idf/esp32s3", "esp-sync/esp32s3",
+    "m5stack-core/cores3",
+]
+
 [dependencies]
-oxivgl_sys = { package = "oxivgl-sys", version = "0.2.2", path = "oxivgl-sys", default-features = false }
+oxivgl_sys = { package = "oxivgl-sys", version = "0.2.3", path = "oxivgl-sys", default-features = false }
 embassy-sync = "0.8"
 embassy-time = "0.5.0"
 heapless = { version = "0.9.1", features = ["nightly"] }
@@ -59,14 +75,31 @@ exclude = ["examples/common", "oxivgl-build", "oxivgl-sys"]
 
 [dev-dependencies]
 oxivgl-examples-common = { path = "examples/common" }
-oxivgl_sys = { package = "oxivgl-sys", version = "0.2.2", path = "oxivgl-sys", default-features = false }
+oxivgl_sys = { package = "oxivgl-sys", version = "0.2.3", path = "oxivgl-sys", default-features = false }
 
-# Proc-macro crates needed by fire27_main! attribute/macro expansion on xtensa
+# Crates the example harness names directly on xtensa (attribute macros +
+# BSP entry points). Chip features are supplied by the active board feature
+# (`fire27`/`cores3`) above, never hardcoded, so both boards share these lines.
 [target.'cfg(target_arch = "xtensa")'.dev-dependencies]
 embassy-executor       = { version = "0.10.0", features = ["nightly"] }
-esp-bootloader-esp-idf = { version = "0.5.0", features = ["esp32"] }
-esp-hal                = { version = "=1.1.1", features = ["esp32", "unstable"] }
-esp-rtos               = { version = "0.3.0", features = ["esp32", "embassy"] }
+esp-bootloader-esp-idf = { version = "0.5.0" }
+esp-hal                = { version = "=1.1.1", features = ["unstable"] }
+esp-rtos               = { version = "0.3.0", features = ["embassy"] }
+esp-sync               = { version = "0.2.1" }
+m5stack-core = { git = "https://github.com/emobotics-dev/m5stack-core", tag = "v0.4.1", default-features = false, features = ["display", "psram", "console-serial", "panic-handler"] }
+
+# esp-hal family — stock crates.io for the published library; redirected to the
+# emobotics fork (a coherent 1.1.1 snapshot + SPI/DMA fixes the BSP's DMA flush
+# needs) for local + CI + example builds. `cargo publish` ignores [patch], so
+# downstream consumers of the library still resolve stock crates.io. See #119.
+[patch.crates-io]
+esp-hal                = { git = "https://github.com/emobotics-dev/esp-hal.git", rev = "b7a4c74a024383cb9808453cf3e34296c5e870b0" }
+esp-radio              = { git = "https://github.com/emobotics-dev/esp-hal.git", rev = "b7a4c74a024383cb9808453cf3e34296c5e870b0" }
+esp-sync               = { git = "https://github.com/emobotics-dev/esp-hal.git", rev = "b7a4c74a024383cb9808453cf3e34296c5e870b0" }
+esp-alloc              = { git = "https://github.com/emobotics-dev/esp-hal.git", rev = "b7a4c74a024383cb9808453cf3e34296c5e870b0" }
+esp-rom-sys            = { git = "https://github.com/emobotics-dev/esp-hal.git", rev = "b7a4c74a024383cb9808453cf3e34296c5e870b0" }
+esp-bootloader-esp-idf = { git = "https://github.com/emobotics-dev/esp-hal.git", rev = "b7a4c74a024383cb9808453cf3e34296c5e870b0" }
+esp-rtos               = { git = "https://github.com/emobotics-dev/esp-hal.git", rev = "b7a4c74a024383cb9808453cf3e34296c5e870b0" }
 
 [profile.dev]
 opt-level = "s"

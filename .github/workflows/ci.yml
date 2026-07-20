@@ -134,9 +134,21 @@ jobs:
           minColorRange: 30
           maxColorRange: 80
 
-  # ── ESP32 firmware ─────────────────────────────────────────────────────
+  # ── Firmware (both boards) ─────────────────────────────────────────────
+  # One matrix arm per board. Both build through the m5stack-core BSP; the
+  # `fire27`/`cores3` feature selects the chip across the whole esp-hal family
+  # (redirected to the emobotics fork via the workspace [patch]), the BSP board,
+  # and oxivgl's chip feature. See examples/common.
   firmware:
-    name: Build (ESP32)
+    name: Build (${{ matrix.board }})
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - board: fire27
+            target: xtensa-esp32-none-elf
+          - board: cores3
+            target: xtensa-esp32s3-none-elf
     runs-on:
       group: rust
       labels: [rust, esp32]
@@ -168,10 +180,10 @@ jobs:
           ESP_ELF_BIN=$(cat /opt/esp_elf_bin_path)
           [ -n "$ESP_ELF_BIN" ] && echo "$ESP_ELF_BIN" >> "$GITHUB_PATH"
 
-      - name: Build example getting_started1 (ESP32)
-        run: cargo +esp -Zbuild-std=alloc,core build --target xtensa-esp32-none-elf --release --example getting_started1
+      - name: Build example getting_started1 (${{ matrix.board }})
+        run: cargo +esp -Zbuild-std=alloc,core build --target ${{ matrix.target }} --release --features ${{ matrix.board }} --example getting_started1
 
-      - name: Build example touch_setpoint (ESP32)
+      - name: Build example touch_setpoint (${{ matrix.board }})
         # Cross-checks the input-device code paths (KeypadIndev/PointerIndev,
         # with_repeat) and the example's no_std path on Xtensa.
-        run: cargo +esp -Zbuild-std=alloc,core build --target xtensa-esp32-none-elf --release --example touch_setpoint
+        run: cargo +esp -Zbuild-std=alloc,core build --target ${{ matrix.target }} --release --features ${{ matrix.board }} --example touch_setpoint

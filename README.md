@@ -227,15 +227,22 @@ These guarantees are verified by [integration tests](#testing) that exercise sty
 ./run_host.sh getting_started1      # interactive SDL2 window
 ./run_host.sh -s getting_started1   # headless screenshot
 ./run_host.sh -s                    # screenshot all 171 examples
-./run_fire27.sh event_trickle       # flash to ESP32
+./run_fire27.sh event_trickle       # flash to M5Stack Fire27 (ESP32)
+./run_cores3.sh event_trickle       # flash to M5Stack CoreS3 (ESP32-S3)
 ```
 
 ## Supported Platforms
 
 | Platform | Target | Display | Use |
 |----------|--------|---------|-----|
-| **ESP32** (Xtensa) | `xtensa-esp32-none-elf` | SPI TFT via DMA flush pipeline | Production firmware |
+| **M5Stack Fire27** (ESP32, Xtensa) | `xtensa-esp32-none-elf` | ILI9342C SPI TFT via DMA flush pipeline | Production firmware |
+| **M5Stack CoreS3** (ESP32-S3, Xtensa) | `xtensa-esp32s3-none-elf` | Same panel; touch input; PSRAM base moves at link time | Production firmware |
 | **Linux / macOS** (x86_64, aarch64) | `x86_64-unknown-linux-gnu` | SDL2 window or `SDL_VIDEODRIVER=dummy` (headless) | Development, testing, screenshots |
+
+Both boards are brought up through the [`m5stack-core`](https://github.com/emobotics-dev/m5stack-core)
+BSP; the example harness selects one with the `fire27` / `cores3` cargo feature
+(see `examples/common`). The board's input model — Fire27 keypad, CoreS3 touch —
+is chosen automatically.
 
 ## Testing
 
