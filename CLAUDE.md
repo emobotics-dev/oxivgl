@@ -37,7 +37,11 @@ cargo +esp -Zbuild-std=alloc,core check --target xtensa-esp32-none-elf --feature
 cargo test to_lvgl_half
 
 # Audit doc coverage (should report 0 missing):
-RUSTDOCFLAGS="-W missing-docs" cargo doc --no-deps 2>&1 | grep "warning:"
+./run_docs.sh --check   # fails on undocumented items AND on doc-build errors
+
+# Do NOT audit with `cargo doc ... | grep "warning:"` — broken intra-doc links
+# are `error:`, and a failed doc build produces no HTML at all, so that pipeline
+# reports a clean audit while the module is silently absent from the docs.
 
 # Run host example (interactive SDL window):
 ./run_host.sh getting_started1
