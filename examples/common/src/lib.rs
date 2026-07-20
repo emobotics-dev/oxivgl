@@ -74,3 +74,24 @@ macro_rules! example_main_nav {
         $crate::host_main_nav!($view_expr);
     };
 }
+
+/// Generate a `main` that puts LVGL's heap in PSRAM on target.
+///
+/// Identical to [`example_main!`] on host, which has no PSRAM — the example
+/// still builds, runs and screenshots there, it simply uses LVGL's internal
+/// pool.
+#[macro_export]
+macro_rules! example_main_psram {
+    ($view_expr:expr, $bytes:expr) => {
+        #[cfg(target_arch = "xtensa")]
+        $crate::fire27_main_psram!($view_expr, $bytes);
+
+        // Host has no PSRAM, so `$bytes` goes unused there. Bind it to a
+        // discarded const so the example's size constant is still "used" and
+        // does not trip the crate's deny-dead-code policy.
+        #[cfg(not(target_arch = "xtensa"))]
+        const _: usize = $bytes;
+        #[cfg(not(target_arch = "xtensa"))]
+        $crate::host_main!($view_expr);
+    };
+}
