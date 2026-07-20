@@ -180,6 +180,16 @@ oxivgl is under active development. Even if it has reached some degree of maturi
 | `DisplayOutput` | `flush_pipeline` | Trait for async display write (ESP32 only) |
 | `Snapshot` | `snapshot` | Widget or screen capture; `take_widget()`, `take()`, `write_png()` (host-only, `png` feature) |
 
+**Memory** — hand LVGL's heap a region discovered at run time, e.g. PSRAM.
+
+| Type | Module | Role |
+|------|--------|------|
+| `mem::reserve_pool` | `mem` | Register a `&'static mut [MaybeUninit<u8>]` as an additional LVGL heap pool, applied during driver init. Draw buffers are automatically kept out of it, since the ESP32 cannot DMA from PSRAM |
+| `mem::reserve_pool_raw` | `mem` | `unsafe` raw-parts variant for allocators that return pointer + length |
+| `MemError` | `mem` | Why a region was refused — misaligned, too small, too large for TLSF's index |
+
+Requires `LV_USE_STDLIB_MALLOC = LV_STDLIB_BUILTIN`; the module is not compiled otherwise.
+
 **Enums & constants** — newtype wrappers over LVGL C constants.
 
 | Type | Module | Role |
@@ -229,20 +239,22 @@ These guarantees are verified by [integration tests](#testing) that exercise sty
 
 ## Testing
 
-624 automated tests across four tiers — all run on host without hardware:
+704 automated tests across five tiers — all run on host without hardware:
 
 | Tier | Count | What it covers |
 |------|-------|----------------|
-| **Unit** | 55 | Pure logic — enums, value mapping, style bitflags, grid helpers |
-| **Doc** | 34 | Doctests embedded in API documentation |
-| **Integration** | 478 | Full LVGL instance — widget lifecycle, style add/remove/drop ordering, layout, events, every widget type incl. Canvas and observer |
-| **Leak detection** | 57 | Global heap tracking via `mallinfo2()` — catches leaks in both Rust and LVGL's C code across the FFI boundary |
+| **Unit** | 62 | Pure logic — enums, value mapping, style bitflags, grid helpers, memory-pool validation |
+| **Doc** | 41 | Doctests embedded in API documentation |
+| **Integration** | 535 | Full LVGL instance — widget lifecycle, style add/remove/drop ordering, layout, events, every widget type incl. Canvas and observer |
+| **Memory pool** | 1 | Registers a runtime pool and asserts it reaches LVGL's heap, and that draw buffers stay outside it |
+| **Leak detection** | 65 | Rust-side allocation balance across create/destroy cycles, each in a forked process. Does **not** see LVGL's C heap — a Rust `#[global_allocator]` never observes it under either allocator backend |
 | **Visual** | 171 | Screenshot capture for all ported examples |
 
 ```sh
-./run_tests.sh all          # unit + integration + leak (< 5 seconds)
+./run_tests.sh all          # unit + integration + pool + leak (< 5 seconds)
 ./run_tests.sh unit         # unit + doctests
 ./run_tests.sh int          # integration (headless LVGL)
+./run_tests.sh pool         # runtime memory pool registration
 ./run_tests.sh leak         # memory leak detection
 ./run_host.sh -s            # visual — screenshot all examples
 ```
@@ -270,6 +282,11 @@ LVGL is compiled from source with a project-specific `lv_conf.h`. Key settings:
 | `LV_USE_SDL` | 1 (host) / 0 (ESP32) | SDL2 display driver for host development |
 | `LV_USE_SNAPSHOT` | 1 (host) | Screenshot capture for visual regression |
 | `LV_USE_OS` | `LV_OS_NONE` | Single-threaded; no RTOS mutex overhead |
+| `LV_USE_STDLIB_MALLOC` | `LV_STDLIB_BUILTIN` | LVGL's own TLSF heap. Required for [`oxivgl::mem`](src/mem.rs) — under `LV_STDLIB_CLIB` runtime pools are a silent no-op and the module is not compiled |
+| `LV_MEM_SIZE` | 48 KiB (ESP32) / 512 KiB (host) | LVGL's static pool — a real RAM cost. Host has no PSRAM to fall back on; ESP32 has ~320 KiB DRAM total |
+| `LV_MEM_POOL_EXPAND_SIZE` | 512 KiB | Raises TLSF's largest indexable block so a runtime pool of that size is accepted. Costs ~0.5 KB of index, not the pool |
+| `LV_MEM_ADR` | 0 | Never hardcode a PSRAM address — on ESP32-S3 the base moves with binary size. Register the region at runtime instead |
+| `LV_ASSERT_HANDLER` | `oxivgl_lv_assert_handler();` | Panics instead of LVGL's default `while(1);`, which turns any assertion into a silent hang |
 
 Only widgets actually used are enabled (`LV_USE_<WIDGET> 1`) to minimize binary size on embedded. Adding a new widget requires enabling it here first.
 

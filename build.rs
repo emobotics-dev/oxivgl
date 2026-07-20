@@ -28,10 +28,27 @@ fn emit_font_cfgs() {
     }
 }
 
+/// Turn the `stdlib_malloc` metadata emitted by `oxivgl-sys` (which reads the
+/// application's effective `lv_conf.h`) into the `lvgl_builtin_malloc` cfg.
+///
+/// Only LVGL's built-in TLSF allocator supports runtime memory pools. The CLIB
+/// backend exports `lv_mem_add_pool` as a no-op returning NULL, so without this
+/// gate a pool registration would link and silently do nothing; gating makes it
+/// a compile error on the wrong backend instead.
+fn emit_stdlib_cfgs() {
+    println!("cargo::rustc-check-cfg=cfg(lvgl_builtin_malloc)");
+    if std::env::var("DEP_LV_STDLIB_MALLOC").as_deref() == Ok("builtin") {
+        println!("cargo::rustc-cfg=lvgl_builtin_malloc");
+    }
+}
+
 fn main() {
     // Font gating must run on every build (including docs.rs) so the `Font`
     // consts match the symbols `oxivgl-sys` exposed.
     emit_font_cfgs();
+
+    // Allocator-backend gating, likewise on every build.
+    emit_stdlib_cfgs();
 
     // docs.rs has no lv_conf.h and oxivgl-sys skips C compilation under DOCS_RS,
     // so skip image asset generation here too — only Rust docs need to render.

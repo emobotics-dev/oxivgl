@@ -40,6 +40,21 @@ macro_rules! fire27_main_nav {
     };
 }
 
+/// Like [`fire27_main!`], but hands LVGL's heap a PSRAM region of `$bytes`
+/// before the render loop starts.
+///
+/// The region must not exceed TLSF's largest indexable block, which LVGL
+/// derives at compile time from `LV_MEM_SIZE + LV_MEM_POOL_EXPAND_SIZE` — see
+/// `oxivgl::mem`. Panics rather than continuing if the pool is refused: a
+/// silently unregistered pool would leave LVGL on the internal heap with no
+/// indication, which is the failure this whole path exists to prevent.
+#[macro_export]
+macro_rules! fire27_main_psram {
+    ($view_expr:expr, $bytes:expr) => {
+        $crate::fire27_body!($view_expr, single, psram_bytes = $bytes);
+    };
+}
+
 /// Spawn a task, panicking with call-site context if the task pool is exhausted.
 ///
 /// Replaces embassy-executor's `Spawner::must_spawn`, which was removed in
@@ -66,6 +81,9 @@ macro_rules! must_spawn {
 #[doc(hidden)]
 macro_rules! fire27_body {
     ($view_expr:expr, $mode:ident) => {
+        $crate::fire27_body!($view_expr, $mode, psram_bytes = 0);
+    };
+    ($view_expr:expr, $mode:ident, psram_bytes = $psram_bytes:expr) => {
         // Crate aliases for proc-macro attributes (#[embassy_executor::task], etc.)
         use $crate::esp_hal as esp_hal;
 
@@ -277,6 +295,39 @@ macro_rules! fire27_body {
             let p =
                 esp_hal::init(esp_hal::Config::default().with_cpu_clock(CpuClock::max()));
             $crate::esp_alloc::heap_allocator!(#[ram(reclaimed)] size: 50 * 1024);
+
+            // Give LVGL's heap a PSRAM region, if this example asked for one.
+            // Must precede LvglDriver::init (inside run_app below), which is
+            // where the reservation is actually handed to LVGL.
+            //
+            // PSRAM is deliberately NOT added to the global allocator: keeping
+            // it out is what lets oxivgl route LVGL's draw buffers to internal,
+            // DMA-capable RAM. The ESP32 cannot DMA from PSRAM at all.
+            if $psram_bytes > 0 {
+                let psram = esp_hal::psram::Psram::new(p.PSRAM, Default::default());
+                let (base, total) = psram.raw_parts();
+                assert!(
+                    total >= $psram_bytes,
+                    "PSRAM mapped {} B, need {}", total, $psram_bytes
+                );
+                // SAFETY: the mapping is a hardware side effect recorded in
+                // esp-hal's range statics and is not undone when `psram` drops
+                // (no Drop impl), so the region really is 'static. It is handed
+                // to LVGL exclusively and never registered with any allocator.
+                let region = unsafe {
+                    core::slice::from_raw_parts_mut(
+                        base as *mut core::mem::MaybeUninit<u8>,
+                        $psram_bytes,
+                    )
+                };
+                match $crate::oxivgl::mem::reserve_pool(region) {
+                    Ok(()) => info!(
+                        "LVGL pool: {} KiB PSRAM @ {:#x} (of {} KiB mapped)",
+                        $psram_bytes / 1024, base as usize, total / 1024
+                    ),
+                    Err(e) => panic!("PSRAM pool rejected: {:?}", e),
+                }
+            }
 
             let tg0 = TimerGroup::new(p.TIMG0);
             let sw_int = SoftwareInterruptControl::new(p.SW_INTERRUPT);

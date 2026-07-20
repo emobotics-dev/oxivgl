@@ -21,8 +21,23 @@
    STDLIB WRAPPER SETTINGS
  *=========================*/
 
-/* Use standard C malloc/free (was LV_MEM_CUSTOM=1 in v8) */
-#define LV_USE_STDLIB_MALLOC    LV_STDLIB_CLIB
+/* LVGL's built-in TLSF allocator. Required for runtime memory pools
+ * (`oxivgl::mem::reserve_pool`, e.g. putting LVGL's heap in PSRAM): under
+ * LV_STDLIB_CLIB, `lv_mem_add_pool` is a no-op returning NULL, so a pool is
+ * accepted and silently ignored — and `oxivgl::mem` is not compiled at all. */
+#define LV_USE_STDLIB_MALLOC    LV_STDLIB_BUILTIN
+/* LVGL's own pool: a real static array, so this is a hard RAM cost. Size it for
+ * the application — small on targets where internal RAM is scarce, paired with
+ * a PSRAM region registered at runtime. */
+#define LV_MEM_SIZE             (64 * 1024U)
+/* Raises TLSF's block_size_max to admit pools added at run time:
+ * TLSF_MAX_POOL_SIZE = LV_MEM_SIZE + LV_MEM_POOL_EXPAND_SIZE (lv_tlsf.c).
+ * Must be >= the largest pool ever passed to lv_mem_add_pool, or registration
+ * is rejected. Costs only TLSF's index (~0.5 KB), not the pool itself. */
+#define LV_MEM_POOL_EXPAND_SIZE (512 * 1024U)
+/* 0 = let LVGL place the internal pool. Never hardcode a PSRAM address here:
+ * on ESP32-S3 the PSRAM base moves with the binary's rodata size. */
+#define LV_MEM_ADR              0
 #define LV_USE_STDLIB_STRING    LV_STDLIB_CLIB
 #define LV_USE_STDLIB_SPRINTF   LV_STDLIB_BUILTIN
 
@@ -124,7 +139,14 @@
 #define LV_USE_ASSERT_OBJ           0
 
 #define LV_ASSERT_HANDLER_INCLUDE <stdint.h>
-#define LV_ASSERT_HANDLER while(1);   /*Halt by default*/
+/* Route assertions into Rust's panic path rather than LVGL's default
+ * `while(1);`, which turns any assertion — a failed allocation, a NULL object,
+ * a corrupt style — into an indefinite hang with no message and no backtrace.
+ * Panicking reports through the platform's normal path, with LVGL's own log
+ * line (expression, file, line) immediately above it. `oxivgl` provides this
+ * symbol; replace it here if your application prefers to halt. */
+void oxivgl_lv_assert_handler(void);
+#define LV_ASSERT_HANDLER oxivgl_lv_assert_handler();
 
 /*-------------
  * Debug

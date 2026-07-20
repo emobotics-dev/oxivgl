@@ -59,6 +59,13 @@ pub mod gridnav;
 /// Resource diagnostics: widget-tree census, per-view budgets, heap/stack probe.
 pub mod diag;
 
+/// Runtime memory pools for LVGL's heap (e.g. PSRAM).
+///
+/// Only available when the application's `lv_conf.h` selects
+/// `LV_USE_STDLIB_MALLOC = LV_STDLIB_BUILTIN`; see the module docs.
+#[cfg(lvgl_builtin_malloc)]
+pub mod mem;
+
 /// Declare an LVGL image asset compiled by `oxivgl-build`.
 ///
 /// Equivalent to LVGL's `LV_IMAGE_DECLARE`. Generates a safe

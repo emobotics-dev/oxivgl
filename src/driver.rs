@@ -24,6 +24,10 @@ fn init_common() {
         lv_log_register_print_cb(Some(lvgl_log_print));
         lv_tick_set_cb(Some(get_tick_ms));
     }
+    // Register any pool reserved by the application. Must follow lv_init()
+    // (which creates the TLSF instance) and precede the first allocation.
+    #[cfg(lvgl_builtin_malloc)]
+    crate::mem::apply_pending();
 }
 
 impl LvglDriver {
@@ -187,6 +191,29 @@ pub unsafe extern "C" fn lvgl_log_print(_level: i8, c_str: *const c_char) {
     }
     let text = unsafe { core::ffi::CStr::from_ptr(c_str) };
     debug!("LVGL: {}", text.to_str().unwrap_or("").trim());
+}
+
+// ── Assertion handler
+// ─────────────────────────────────────────────────────────
+
+/// Handler for failed LVGL assertions, for applications whose `lv_conf.h`
+/// sets `LV_ASSERT_HANDLER` to `oxivgl_lv_assert_handler();`.
+///
+/// LVGL's default is `while(1);`, which converts every assertion into an
+/// indefinite hang: on host that is a CI job stuck at its timeout with no
+/// failing test, and on target a wedged device with no backtrace. Panicking
+/// instead surfaces the failure through the platform's normal reporting —
+/// a failed test on host, esp-backtrace on target.
+///
+/// LVGL logs the failing expression, file and line immediately before calling
+/// this (`LV_LOG_ERROR`), so the diagnosis is the log line preceding the panic.
+///
+/// Declaring it in `lv_conf.h` is opt-in: `lv_conf.h` belongs to the
+/// application, and an application that prefers halting can leave LVGL's
+/// default in place.
+#[unsafe(no_mangle)]
+pub extern "C" fn oxivgl_lv_assert_handler() -> ! {
+    panic!("LVGL assertion failed — see the preceding LVGL log line for expression and location");
 }
 
 // ── Tick source

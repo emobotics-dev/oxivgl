@@ -81,6 +81,11 @@ jobs:
           SDL_VIDEODRIVER=dummy cargo +nightly test --test integration \
             --target x86_64-unknown-linux-gnu -- --test-threads=1
 
+      - name: Memory pool tests
+        run: |
+          SDL_VIDEODRIVER=dummy cargo +nightly test --test mem_pool \
+            --target x86_64-unknown-linux-gnu -- --test-threads=1
+
       # Was never in CI, which is how leak_check.rs came to stop compiling on
       # master unnoticed. `--nocapture` is required: without it libtest buffers
       # output in memory and LVGL's log callback allocates inside the

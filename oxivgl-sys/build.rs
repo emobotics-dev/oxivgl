@@ -44,6 +44,61 @@ fn emit_font_flags(bindings_path: &Path) {
     }
 }
 
+/// Emit `cargo:stdlib_malloc=builtin` when the application's `lv_conf.h`
+/// selects LVGL's built-in TLSF allocator. Via `links = "lv"` this reaches
+/// `oxivgl`'s build script as `DEP_LV_STDLIB_MALLOC`, which turns it into the
+/// `lvgl_builtin_malloc` cfg.
+///
+/// Gating is not cosmetic: runtime memory pools only *work* under
+/// `LV_STDLIB_BUILTIN`. The CLIB backend still exports `lv_mem_add_pool`
+/// (`lv_mem_core_clib.c`), but as a no-op returning NULL — so an ungated call
+/// links cleanly and silently adds nothing. Gating turns that into a compile
+/// error instead.
+fn emit_stdlib_flags(bindings_path: &Path) {
+    let src = std::fs::read_to_string(bindings_path).unwrap_or_default();
+    let selected = bindgen_const(&src, "LV_USE_STDLIB_MALLOC");
+    let builtin = bindgen_const(&src, "LV_STDLIB_BUILTIN");
+    if selected.is_some() && selected == builtin {
+        println!("cargo:stdlib_malloc=builtin");
+    }
+}
+
+/// Value of a bindgen-emitted object-like macro. Returns `None` if the constant
+/// is absent or is not a plain integer.
+///
+/// Tolerates both spacings bindgen produces — `LV_MEM_SIZE : u32 = 1 ;` when the
+/// output is raw token stream, `LV_MEM_SIZE: u32 = 1;` once rustfmt has run —
+/// which differ between host and cross builds. Matching only one silently
+/// yields `None` on the other target.
+fn bindgen_const(src: &str, name: &str) -> Option<u64> {
+    let mut from = 0;
+    while let Some(pos) = src[from..].find(name) {
+        let start = from + pos;
+        let end = start + name.len();
+        from = end;
+
+        // Reject a partial match inside a longer identifier.
+        let before = src[..start].chars().next_back().unwrap_or(' ');
+        if before.is_alphanumeric() || before == '_' {
+            continue;
+        }
+        let rest = src[end..].trim_start();
+        let Some(rest) = rest.strip_prefix(':') else {
+            continue; // e.g. a mention in a type position, not a definition
+        };
+        let Some((_ty, tail)) = rest.split_once('=') else {
+            continue;
+        };
+        let Some((value, _)) = tail.split_once(';') else {
+            continue;
+        };
+        if let Ok(v) = value.trim().parse() {
+            return Some(v);
+        }
+    }
+    None
+}
+
 /// True if `ident` occurs in `src` as a whole identifier — i.e. not
 /// immediately followed by another identifier character. Robust to bindgen's
 /// spacing (`lv_font_x :` vs `lv_font_x:`) and collision-free across numeric
@@ -137,6 +192,7 @@ fn main() {
         std::fs::copy(manifest_dir.join("bindings_docsrs.rs"), &bindings_path)
             .expect("failed to install bundled bindings_docsrs.rs");
         emit_font_flags(&bindings_path);
+        emit_stdlib_flags(&bindings_path);
         return;
     }
 
@@ -427,6 +483,10 @@ fn main() {
     // Surface which built-in fonts actually made it into the bindings so
     // `oxivgl` can gate its font consts and avoid forcing every face on.
     emit_font_flags(&bindings_path);
+
+    // Likewise for the allocator backend, which decides whether runtime memory
+    // pools are usable at all.
+    emit_stdlib_flags(&bindings_path);
 
     cfg.file(out_path.join("static_fns.c"));
     cfg.compile("lvgl");
