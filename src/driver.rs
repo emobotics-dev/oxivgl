@@ -24,6 +24,10 @@ fn init_common() {
         lv_log_register_print_cb(Some(lvgl_log_print));
         lv_tick_set_cb(Some(get_tick_ms));
     }
+    // Register any pool reserved by the application. Must follow lv_init()
+    // (which creates the TLSF instance) and precede the first allocation.
+    #[cfg(lvgl_builtin_malloc)]
+    crate::mem::apply_pending();
 }
 
 impl LvglDriver {
