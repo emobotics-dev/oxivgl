@@ -9,6 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **ESP32-S3 (M5Stack CoreS3) support** (#119). New `esp32s3` library feature —
+  `src/` is chip-agnostic (generic over `DisplayOutput`), so it is a one-liner.
+  The example harness now bring-ups both boards through the
+  [`m5stack-core`](https://github.com/emobotics-dev/m5stack-core) BSP and picks
+  one with the `fire27` / `cores3` cargo feature; the board's input model
+  (Fire27 keypad vs CoreS3 touch) is selected automatically. `run_cores3.sh`
+  flashes the S3. HIL-validated on both boards.
 - `oxivgl::mem` — register a memory region with LVGL's heap at run time
   (`reserve_pool`, `reserve_pool_raw`, `MemError`). Lets LVGL's heap live in
   PSRAM, whose base address is not known at compile time: on ESP32-S3 it moves
@@ -36,6 +43,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **The example harness was ported to the `m5stack-core` BSP** (#119),
+  replacing ~400 lines of hand-rolled Fire27 SPI/GPIO/button bring-up with the
+  BSP's `Board::split` + `board::display` + input/console/heap loops. The public
+  `example_main!` / `_nav!` / `_psram!` macros are unchanged, so no example file
+  changed. LVGL-in-PSRAM now routes through the BSP's `mem::psram_split`.
+  Library-only users are unaffected — the BSP is an example dev-dependency.
+- **Local, CI, and example builds now compile against the emobotics `esp-hal`
+  fork** via a workspace `[patch.crates-io]` at a pinned rev (#119): the BSP's
+  DMA display flush needs its SPI/DMA fixes, and stock ESP32 PDMA wedges after
+  the first frame. This does **not** affect crates.io consumers of the library —
+  `cargo publish` strips `[patch]`, and oxivgl's own dependency on `esp-hal`
+  stays a plain crates.io version, so a downstream `cargo add oxivgl` resolves
+  stock esp-hal with no fork and no git sources.
 - **Bundled `lv_conf.h` files now select `LV_STDLIB_BUILTIN`** instead of
   `LV_STDLIB_CLIB`. This changes where LVGL allocates: from the Rust global
   allocator to LVGL's own static TLSF pool sized by `LV_MEM_SIZE`. Applications

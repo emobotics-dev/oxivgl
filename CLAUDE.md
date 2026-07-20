@@ -24,8 +24,16 @@ For Xtensa targets, `oxivgl-sys/build.rs` auto-detects the ESP clang.
 # Check host (std, no ESP toolchain needed):
 cargo check
 
-# Check embedded (requires Xtensa toolchain):
+# Check the library for a chip (requires Xtensa toolchain). src/ is generic
+# over DisplayOutput, so the chip feature is all it needs:
 cargo +esp -Zbuild-std=alloc,core check --target xtensa-esp32-none-elf --features esp-hal,esp32,log-04
+cargo +esp -Zbuild-std=alloc,core check --target xtensa-esp32s3-none-elf --features esp-hal,esp32s3,log-04
+
+# Build an example for a board (via the m5stack-core BSP). The fire27/cores3
+# feature selects the chip across the esp-hal family, the BSP board, and
+# oxivgl's chip feature (see examples/common):
+cargo +esp -Zbuild-std=alloc,core build --target xtensa-esp32-none-elf   --release --features fire27 --example getting_started1
+cargo +esp -Zbuild-std=alloc,core build --target xtensa-esp32s3-none-elf --release --features cores3  --example getting_started1
 
 # Run tests (preferred — handles SDL_VIDEODRIVER, test separation):
 ./run_tests.sh unit        # unit + doc tests
@@ -53,8 +61,9 @@ cargo test to_lvgl_half
 # Capture all screenshots:
 ./run_host.sh -s
 
-# Flash ESP32 example (requires Xtensa toolchain + connected board):
-./run_fire27.sh getting_started1
+# Flash an example (requires Xtensa toolchain + connected board):
+./run_fire27.sh getting_started1   # M5Stack Fire27 (ESP32)
+./run_cores3.sh getting_started1   # M5Stack CoreS3 (ESP32-S3)
 ```
 
 ## Architecture
