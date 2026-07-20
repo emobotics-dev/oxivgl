@@ -52,6 +52,14 @@ impl StaticCStr {
 /// - `translations`: flattened by language (tags × languages)
 ///
 /// All arrays must be `'static`. LVGL stores the pointers directly.
+///
+/// # Call once, at startup
+///
+/// Every call pushes a new pack onto LVGL's internal list and allocates on
+/// LVGL's heap. There is no per-pack removal — LVGL offers only
+/// `lv_translation_deinit`, which drops all packs at once — so calling this
+/// repeatedly (for example to "reload" translations) grows the heap without
+/// bound. Register each pack once and use [`set_language`] to switch.
 pub fn add_static(
     languages: &'static [StaticCStr],
     tags: &'static [StaticCStr],

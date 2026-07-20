@@ -29,7 +29,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `lv_mem_monitor` reports real figures; compiled out under CLIB rather than
   degrading to an assertion that can only pass. A negative control
   (`leak_negative_control_forgotten_obj`) leaks an `lv_obj` per iteration and
-  requires the assertion to fire.
+  requires the assertion to fire. Both heaps assert an exact zero with no noise
+  floor, and the sensitivity is itself tested: a leak of one byte per
+  iteration, and the smallest allocation LVGL can make, are each required to
+  fail.
 
 ### Changed
 
@@ -56,6 +59,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   (`write`, `open`) diverged from their real signatures, which newer rustc
   rejects. Its module docs also claimed to track LVGL's C heap — a Rust
   `#[global_allocator]` never observes it under either allocator backend.
+- `translation::add_static` now documents that it must be called once per pack.
+  Each call allocates on LVGL's heap and LVGL exposes no per-pack removal, so
+  repeated registration grows the heap without bound. Surfaced by the new
+  C-heap coverage, which measured the old `leak_translation` body — registering
+  inside its loop — leaking one `lv_translation_pack_t` (72 bytes) per
+  iteration while the Rust-side balance stayed clean.
 
 ## [0.5.0] — 2026-06-14
 
