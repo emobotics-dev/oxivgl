@@ -21,6 +21,10 @@ case "$mode" in
     echo "=== Integration tests ==="
     SDL_VIDEODRIVER=dummy cargo test --test integration --target "$TARGET" -- --test-threads=1 "$@"
     ;;
+  pool)
+    echo "=== Memory pool tests ==="
+    SDL_VIDEODRIVER=dummy cargo test --test mem_pool --target "$TARGET" -- --test-threads=1 "$@"
+    ;;
   leak)
     echo "=== Leak check tests ==="
     SDL_VIDEODRIVER=dummy cargo test --test leak_check --target "$TARGET" -- --test-threads=1 --nocapture "$@"
@@ -35,13 +39,17 @@ case "$mode" in
     echo "=== Integration tests ==="
     SDL_VIDEODRIVER=dummy cargo test --test integration --target "$TARGET" -- --test-threads=1 "$@"
     echo ""
+    echo "=== Memory pool tests ==="
+    SDL_VIDEODRIVER=dummy cargo test --test mem_pool --target "$TARGET" -- --test-threads=1 "$@"
+    echo ""
     echo "=== Leak check tests ==="
     SDL_VIDEODRIVER=dummy cargo test --test leak_check --target "$TARGET" -- --test-threads=1 --nocapture "$@"
     ;;
   *)
-    echo "Usage: $0 [unit|int|leak|all] [-- extra cargo args]"
+    echo "Usage: $0 [unit|int|pool|leak|all] [-- extra cargo args]"
     echo "  unit  — unit tests + doctests"
     echo "  int   — integration tests (headless LVGL)"
+    echo "  pool  — LVGL runtime memory pool registration"
     echo "  leak  — memory leak detection tests"
     echo "  all   — all of the above (default)"
     exit 1
