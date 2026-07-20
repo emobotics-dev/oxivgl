@@ -15,6 +15,7 @@
 #![allow(deprecated)]
 
 use std::alloc::{GlobalAlloc, Layout, System};
+use std::ffi::{c_char, c_void};
 use std::sync::atomic::{AtomicIsize, Ordering};
 
 // ── Counting allocator ───────────────────────────────────────────────────────
@@ -77,12 +78,15 @@ fn run_isolated(name: &str, test_fn: fn() -> isize) {
     use std::io::Read;
     use std::os::unix::io::FromRawFd;
 
+    // Signatures must match libc exactly — rustc denies redeclaring a symbol the
+    // standard library's runtime also uses (`write`, `open`) with a divergent
+    // signature. Keep the `c_void` / `c_char` types and `open`'s varargs.
     unsafe extern "C" {
         fn pipe(fds: *mut i32) -> i32;
         fn fork() -> i32;
         fn _exit(status: i32) -> !;
         fn close(fd: i32) -> i32;
-        fn write(fd: i32, buf: *const u8, count: usize) -> isize;
+        fn write(fd: i32, buf: *const c_void, count: usize) -> isize;
         fn waitpid(pid: i32, status: *mut i32, options: i32) -> i32;
     }
 
@@ -98,8 +102,8 @@ fn run_isolated(name: &str, test_fn: fn() -> isize) {
         unsafe { close(read_fd) };
 
         // Silence child output to avoid confusing the test harness
-        unsafe extern "C" { fn open(path: *const u8, flags: i32) -> i32; fn dup2(old: i32, new: i32) -> i32; }
-        let devnull = unsafe { open(b"/dev/null\0".as_ptr(), 2) }; // O_RDWR=2
+        unsafe extern "C" { fn open(path: *const c_char, flags: i32, ...) -> i32; fn dup2(old: i32, new: i32) -> i32; }
+        let devnull = unsafe { open(c"/dev/null".as_ptr(), 2) }; // O_RDWR=2
         if devnull >= 0 {
             unsafe { dup2(devnull, 1); dup2(devnull, 2); close(devnull); }
         }
@@ -110,7 +114,7 @@ fn run_isolated(name: &str, test_fn: fn() -> isize) {
         let per_iter = test_fn();
 
         let bytes = per_iter.to_le_bytes();
-        unsafe { write(write_fd, bytes.as_ptr(), bytes.len()) };
+        unsafe { write(write_fd, bytes.as_ptr().cast::<c_void>(), bytes.len()) };
         unsafe { close(write_fd) };
         unsafe { _exit(0) };
     }
