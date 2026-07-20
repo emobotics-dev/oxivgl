@@ -239,7 +239,7 @@ These guarantees are verified by [integration tests](#testing) that exercise sty
 
 ## Testing
 
-704 automated tests across five tiers — all run on host without hardware:
+709 automated tests across five tiers — all run on host without hardware:
 
 | Tier | Count | What it covers |
 |------|-------|----------------|
@@ -247,7 +247,7 @@ These guarantees are verified by [integration tests](#testing) that exercise sty
 | **Doc** | 41 | Doctests embedded in API documentation |
 | **Integration** | 535 | Full LVGL instance — widget lifecycle, style add/remove/drop ordering, layout, events, every widget type incl. Canvas and observer |
 | **Memory pool** | 1 | Registers a runtime pool and asserts it reaches LVGL's heap, and that draw buffers stay outside it |
-| **Leak detection** | 65 | Rust-side allocation balance across create/destroy cycles, each in a forked process. Does **not** see LVGL's C heap — a Rust `#[global_allocator]` never observes it under either allocator backend |
+| **Leak detection** | 70 | Allocation balance across create/destroy cycles, each in a forked process. Covers **both heaps**: Rust-side via a counting `#[global_allocator]`, and LVGL's own C heap via `lv_mem_monitor` — so a `Drop` impl that stopped calling `lv_obj_delete` fails the suite. Asserts an exact zero on both heaps — no noise floor. Sensitivity is proven by negative controls: a leak of **one byte per iteration** must fail, as must the smallest allocation LVGL can make. Two further tests pin the one-shot LVGL initialisation costs the measurement window excludes |
 | **Visual** | 171 | Screenshot capture for all ported examples |
 
 ```sh

@@ -20,6 +20,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   end-to-end demonstration, validated on Fire27 hardware.
 - `run_tests.sh pool` — asserts a reserved pool actually reaches LVGL's heap and
   that draw buffers stay outside it.
+- **Leak detection now covers LVGL's own C heap**, not just the Rust side
+  (#118). Every leak test additionally asserts on
+  `lv_mem_monitor().total_size - free_size`, so a wrapper whose `Drop` stopped
+  calling `lv_obj_delete` now fails the suite — previously it passed, because
+  the wrapper struct itself was freed and LVGL's heap is invisible to a Rust
+  `#[global_allocator]`. Gated on `LV_STDLIB_BUILTIN`, under which
+  `lv_mem_monitor` reports real figures; compiled out under CLIB rather than
+  degrading to an assertion that can only pass. A negative control
+  (`leak_negative_control_forgotten_obj`) leaks an `lv_obj` per iteration and
+  requires the assertion to fire.
 
 ### Changed
 

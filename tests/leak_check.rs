@@ -3,27 +3,41 @@
 //!
 //! Each test forks a child process with a fresh LVGL instance and counting
 //! global allocator. This gives perfect isolation — no cross-test cache
-//! contamination, no warmup needed.
+//! contamination. A fresh instance is not the same as a warm one, so each test
+//! establishes one explicit precondition first — see [`prime_parent`].
 //!
-//! The counting allocator tracks **Rust-side allocations only**. A Rust
-//! `#[global_allocator]` never observes LVGL's C heap: under
-//! `LV_STDLIB_BUILTIN` LVGL allocates from its own static TLSF pool, and under
-//! `LV_STDLIB_CLIB` it calls libc `malloc` directly — neither routes through
-//! `GlobalAlloc`. So these tests catch leaks in the Rust wrappers (the boxed
-//! callbacks, styles and strings they own), not leaks inside LVGL itself.
-//! After N create/destroy iterations, net Rust allocation must be zero.
+//! Each iteration is measured on **two independent heaps**, because a wrapper
+//! can balance perfectly on one while leaking on the other:
 //!
-//! Covering the C side would mean asserting on `lv_mem_monitor`, which reports
-//! real figures only under `LV_STDLIB_BUILTIN`. See `oxivgl::mem`.
+//! * **Rust** — a counting `#[global_allocator]`, covering what the wrappers
+//!   themselves own: boxed callbacks, `CString`s, style `Rc`s.
+//! * **LVGL's C heap** — `lv_mem_monitor().total_size - free_size`, covering
+//!   `lv_obj_t`s and their sub-descriptors.
+//!
+//! The second is the one that matters most, because a C-side leak is the exact
+//! failure mode the wrappers exist to prevent. If a `Drop` impl stopped calling
+//! `lv_obj_delete`, the Rust side would still balance — the wrapper struct was
+//! freed — while LVGL's heap grew every iteration. Rust-only measurement sails
+//! straight past that.
+//!
+//! A Rust `#[global_allocator]` cannot observe the C heap under either backend:
+//! with `LV_STDLIB_BUILTIN` LVGL allocates from its own TLSF pool, with
+//! `LV_STDLIB_CLIB` it calls libc `malloc` directly. Hence the separate probe.
+//! `lv_mem_monitor` reports real figures only under `LV_STDLIB_BUILTIN`, so the
+//! C-side assertion is `#[cfg(lvgl_builtin_malloc)]` and compiles out entirely
+//! under CLIB rather than silently passing. See `oxivgl::mem`.
 //!
 //! Run with: `SDL_VIDEODRIVER=dummy cargo +nightly test --test leak_check
-//!   --target x86_64-unknown-linux-gnu -- --test-threads=1 --nocapture`
+//!   --target x86_64-unknown-linux-gnu -- --test-threads=1`, or
+//! `./run_tests.sh leak`. `--test-threads=1` is required — LVGL is
+//! single-threaded and each child inherits one process-wide allocator counter.
 //!
-//! **`--nocapture` is mandatory, not cosmetic.** Without it libtest captures
-//! stdout/stderr into a growing in-memory buffer, and LVGL's log callback
-//! (`eprintln!` on host) writes into that buffer *inside* the measurement
-//! window — so every test reports a uniform ~88 bytes/iter of phantom leak.
-//! Use `./run_tests.sh leak`, which passes it.
+//! No `--nocapture` needed. It used to be mandatory: libtest's output capture
+//! is a Rust-level sink rather than an fd redirect, so LVGL's `eprintln!` log
+//! callback grew an in-memory buffer *inside* the measurement window and every
+//! test reported ~8880 bytes of phantom leak. The child now installs a no-op
+//! log callback (see `silent_log`), so the result no longer depends on how the
+//! suite is invoked.
 
 // Tests exercise the deprecated inline style setters to verify they still work.
 #![allow(deprecated)]
@@ -80,15 +94,68 @@ fn stop_tracking() {
     TRACKING_ENABLED.store(false, Ordering::Relaxed);
 }
 
+// ── LVGL C heap probe ────────────────────────────────────────────────────────
+
+/// Bytes currently in use on LVGL's own heap.
+///
+/// `lv_mem_monitor` walks every pool in `state.pool_ll` and accumulates each
+/// block's payload size, so `total_size - free_size` is the live total across
+/// the `LV_MEM_SIZE` array plus any pool added via `lv_mem_add_pool`.
+///
+/// Meaningful only under `LV_STDLIB_BUILTIN`; under CLIB the whole probe is
+/// compiled out along with the assertion that consumes it.
+#[cfg(lvgl_builtin_malloc)]
+fn lv_used_bytes() -> isize {
+    let mut mon = unsafe { core::mem::zeroed::<oxivgl_sys::lv_mem_monitor_t>() };
+    unsafe { oxivgl_sys::lv_mem_monitor(&mut mon) };
+    (mon.total_size - mon.free_size) as isize
+}
+
+/// Under CLIB there is no queryable LVGL heap. Reporting a constant keeps the
+/// harness monomorphic; the parent never asserts on it (see `run_isolated`).
+#[cfg(not(lvgl_builtin_malloc))]
+fn lv_used_bytes() -> isize {
+    0
+}
+
 // ── Forked test runner ───────────────────────────────────────────────────────
 
+/// Discards LVGL log output in the forked child. See the call site for why this
+/// is a correctness requirement and not merely quieter.
+///
+/// Signature must match `driver::lvgl_log_print` (`lv_log_print_g_cb_t`).
+unsafe extern "C" fn silent_log(_level: i8, _text: *const c_char) {}
+
+/// Iterations per measurement window.
+///
+/// Not a divisor: the assertions below compare the **raw total** across all
+/// `MEASURE` iterations against zero. Repeating serves only to make a
+/// per-iteration leak large enough to be unmistakable — every iteration,
+/// including the first, is expected to balance exactly.
 const MEASURE: isize = 100;
-const NOISE_FLOOR: isize = 32;
+
+// There is deliberately no noise floor on either heap.
+//
+// A tolerance band is a place for a small leak to hide, and picking its width
+// is guesswork dressed up as rigor. Both heaps balance to *exactly* zero here —
+// see `prime_parent` for the single structural precondition that makes that
+// true — so the assertions demand exactly that.
+//
+// TLSF was the expected obstacle: blocks split and coalesce as the heap churns,
+// and `lv_mem_walker` under-reports by one header per live block, so some drift
+// looked inevitable. Measured over 100 iterations of all 65 bodies, there is
+// none. Asserting on the raw total rather than a `/ MEASURE` average matters
+// for the same reason: the division was itself an unstated ±99-byte tolerance.
 
 /// Fork a child process, run `test_fn` in a fresh LVGL instance.
 /// Uses libc fork() directly — child inherits the counting allocator
 /// but gets a completely fresh LVGL via LvglDriver::init.
-fn run_isolated(name: &str, test_fn: fn() -> isize) {
+///
+/// `test_fn` returns two `isize`s, which this returns verbatim — for the leak
+/// tests, net bytes on each heap across the whole measurement window. They
+/// travel back through a pipe rather than being printed: the child redirects
+/// stdout and stderr to `/dev/null` (below), so anything written is swallowed.
+fn measure_isolated(name: &str, test_fn: fn() -> (isize, isize)) -> (isize, isize) {
     use std::io::Read;
     use std::os::unix::io::FromRawFd;
 
@@ -125,9 +192,28 @@ fn run_isolated(name: &str, test_fn: fn() -> isize) {
         // Init LVGL with tracking disabled — don't count init allocations
         let _driver = oxivgl::driver::LvglDriver::init(320, 240);
 
-        let per_iter = test_fn();
+        // Replace LVGL's log callback with a no-op, for measurement integrity
+        // rather than tidiness.
+        //
+        // The default host callback (`driver::lvgl_log_print`) is an
+        // `eprintln!`, and libtest's output capture is a *Rust-level* sink
+        // (`std::io::set_output_capture`), not an fd redirect — so the `dup2`
+        // above does not intercept it. Under a plain `cargo test` the child's
+        // log lines therefore land in a growing in-memory `Vec` *inside* the
+        // measurement window, and the counting allocator dutifully counts the
+        // growth: ~8880 bytes of phantom leak on every test.
+        //
+        // That used to be worked around by requiring `--nocapture` at every
+        // call site. This removes the cause instead: the child's output is
+        // discarded either way, so the logging was pure waste, and the suite no
+        // longer depends on how it happens to be invoked.
+        unsafe { oxivgl_sys::lv_log_register_print_cb(Some(silent_log)) };
 
-        let bytes = per_iter.to_le_bytes();
+        let (rust_total, c_total) = test_fn();
+
+        let mut bytes = [0u8; 16];
+        bytes[..8].copy_from_slice(&(rust_total as i64).to_le_bytes());
+        bytes[8..].copy_from_slice(&(c_total as i64).to_le_bytes());
         unsafe { write(write_fd, bytes.as_ptr().cast::<c_void>(), bytes.len()) };
         unsafe { close(write_fd) };
         unsafe { _exit(0) };
@@ -146,15 +232,33 @@ fn run_isolated(name: &str, test_fn: fn() -> isize) {
         "{name}: child crashed or failed (raw status {status:#x})"
     );
 
-    let mut buf = [0u8; 8];
+    let mut buf = [0u8; 16];
     let mut file = unsafe { std::fs::File::from_raw_fd(read_fd) };
     file.read_exact(&mut buf).expect("failed to read from child");
-    let per_iter = isize::from_le_bytes(buf);
+    let rust_total = i64::from_le_bytes(buf[..8].try_into().unwrap()) as isize;
+    let c_total = i64::from_le_bytes(buf[8..].try_into().unwrap()) as isize;
+    (rust_total, c_total)
+}
 
-    assert!(
-        per_iter.abs() <= NOISE_FLOOR,
-        "{name}: leaked {per_iter} bytes/iter (noise floor ±{NOISE_FLOOR})"
+/// Run `test_fn` in isolation and require it to have moved neither heap.
+fn run_isolated(name: &str, test_fn: fn() -> (isize, isize)) {
+    let (rust_total, c_total) = measure_isolated(name, test_fn);
+
+    assert_eq!(
+        rust_total, 0,
+        "{name}: Rust heap moved {rust_total} bytes over {MEASURE} iterations \
+         (expected exactly 0)"
     );
+
+    // Compiled out under CLIB, where `lv_used_bytes` has nothing to report —
+    // an assertion that can only ever pass reads as coverage without being any.
+    #[cfg(lvgl_builtin_malloc)]
+    assert_eq!(
+        c_total, 0,
+        "{name}: LVGL's C heap moved {c_total} bytes over {MEASURE} iterations \
+         (expected exactly 0)"
+    );
+    let _ = c_total;
 }
 
 // ── Test helpers (run inside forked child) ───────────────────────────────────
@@ -169,31 +273,67 @@ fn pump_child() {
     unsafe { oxivgl_sys::lv_refr_now(core::ptr::null_mut()) };
 }
 
-/// Measure per-iteration leak for a widget test closure.
-fn measure_widget(f: impl Fn(&oxivgl::widgets::Screen)) -> isize {
-    let screen = screen();
+/// Establish the one structural precondition the measurement window assumes:
+/// that `parent` already owns its `lv_obj_spec_attr_t`.
+///
+/// An `lv_obj_t` does not allocate that struct up front. LVGL adds it lazily —
+/// `lv_obj_allocate_spec_attr` — the first time an object needs a child list,
+/// event list or group membership, and it then lives as long as the object.
+/// So the *first* child ever added to the screen costs exactly
+/// `size_of::<lv_obj_spec_attr_t>()` = 72 bytes, and every later create/destroy
+/// cycle on that same parent costs nothing.
+///
+/// The cost is therefore the screen's, not the body-under-test's, and it is
+/// paid once per process rather than once per iteration.
+///
+/// The second call flushes LVGL's deferred init cleanup. One 40-byte block
+/// allocated during `LvglDriver::init` is *released* on the first
+/// timer-handler pass — `lv_refr_now` drives that pass, which is why a render
+/// triggers it. Note the direction: it is a release, so it could never hide a
+/// leak, only manufacture a spurious `-40` failure.
+///
+/// Neither step is a warm-up. There is no waiting, no repetition and no
+/// convergence check — two named, understood, one-shot effects, each pinned by
+/// a test ([`spec_attr_is_the_only_one_shot_cost`],
+/// [`init_scratch_is_released_once`]) so the harness fails loudly with the
+/// exact number if LVGL's behaviour ever changes.
+fn prime_parent(parent: &oxivgl::widgets::Screen) {
+    let probe = oxivgl::widgets::Obj::new(parent).expect("probe child");
+    drop(probe);
     pump_child();
+}
+
+/// Measure net allocation across a widget test closure.
+///
+/// Returns `(rust_total, c_total)` — net bytes over `MEASURE` iterations, which
+/// must be exactly zero on both heaps.
+fn measure_widget(f: impl Fn(&oxivgl::widgets::Screen)) -> (isize, isize) {
+    let screen = screen();
+    prime_parent(&screen);
     start_tracking();
-    let before = total_alloc_bytes();
+    let (rust_before, c_before) = (total_alloc_bytes(), lv_used_bytes());
     for _ in 0..MEASURE {
         f(&screen);
         pump_child();
     }
-    let after = total_alloc_bytes();
+    let (rust_after, c_after) = (total_alloc_bytes(), lv_used_bytes());
     stop_tracking();
-    (after - before) / MEASURE
+    (rust_after - rust_before, c_after - c_before)
 }
 
-/// Measure per-iteration leak for a pure Rust closure (no widgets).
-fn measure_rust(f: impl Fn()) -> isize {
+/// Measure net allocation across a pure Rust closure (no widgets).
+///
+/// Returns `(rust_total, c_total)` — the C figure is still measured, since
+/// several of these bodies (styles, subjects, translations) do reach into LVGL.
+fn measure_rust(f: impl Fn()) -> (isize, isize) {
     start_tracking();
-    let before = total_alloc_bytes();
+    let (rust_before, c_before) = (total_alloc_bytes(), lv_used_bytes());
     for _ in 0..MEASURE {
         f();
     }
-    let after = total_alloc_bytes();
+    let (rust_after, c_after) = (total_alloc_bytes(), lv_used_bytes());
     stop_tracking();
-    (after - before) / MEASURE
+    (rust_after - rust_before, c_after - c_before)
 }
 
 // ── Imports for test closures ────────────────────────────────────────────────
@@ -243,25 +383,227 @@ macro_rules! leak_rust_test {
     };
 }
 
+// ── Baseline invariant ──────────────────────────────────────────────────────
+
+/// Pins the single one-shot allocation the measurement window has to exclude,
+/// so it stays a known quantity rather than something the harness waits out.
+///
+/// LVGL allocates `lv_obj_spec_attr_t` lazily (`lv_obj_allocate_spec_attr`) the
+/// first time an object needs a child list, and keeps it for that object's
+/// lifetime. Two consequences, both asserted here:
+///
+/// * the first child added to a parent costs exactly `size_of` that struct;
+/// * every subsequent create/destroy cycle on the same parent costs nothing.
+///
+/// Together those say the cost belongs to the *parent* and is paid once, which
+/// is what makes [`prime_parent`] a precondition rather than a warm-up. If LVGL
+/// ever changes this — a second lazy allocation, a different size, a cost that
+/// recurs — this test fails with the exact number, instead of the harness
+/// silently absorbing it and every leak test drifting.
+#[cfg(lvgl_builtin_malloc)]
+#[test]
+fn spec_attr_is_the_only_one_shot_cost() {
+    let (first, second) = measure_isolated("spec_attr invariant", || {
+        let s = screen();
+        let before_first = lv_used_bytes();
+        drop(Obj::new(&s).expect("first child"));
+        let after_first = lv_used_bytes();
+        drop(Obj::new(&s).expect("second child"));
+        let after_second = lv_used_bytes();
+        (after_first - before_first, after_second - after_first)
+    });
+
+    let spec_attr = core::mem::size_of::<oxivgl_sys::lv_obj_spec_attr_t>() as isize;
+    assert_eq!(
+        first, spec_attr,
+        "first child on a fresh parent should cost exactly one \
+         lv_obj_spec_attr_t ({spec_attr} bytes), not {first} — LVGL's lazy \
+         allocation behaviour changed, so prime_parent no longer describes it"
+    );
+    assert_eq!(
+        second, 0,
+        "second create/destroy cycle on the same parent should be free, not \
+         {second} bytes — the cost is recurring, which makes it a leak rather \
+         than a one-shot initialisation"
+    );
+}
+
+/// Bytes released by LVGL's deferred init cleanup on the first timer pass.
+///
+/// One 40-byte block, allocated somewhere in `LvglDriver::init` and freed when
+/// the timer handler first runs. The block has not been attributed to a
+/// specific LVGL structure — it is not a `lv_timer_t` (the timer count is
+/// unchanged across the pass), and `used_cnt` drops by exactly one. Pinned as a
+/// constant rather than absorbed, so a change trips a test instead of quietly
+/// shifting every leak measurement.
+#[cfg(lvgl_builtin_malloc)]
+const INIT_CLEANUP_BYTES: isize = -40;
+
+/// Pins the second one-shot effect [`prime_parent`] excludes.
+///
+/// The safety-relevant half is the **sign**: this is a release, so it can only
+/// ever produce a spurious failure, never mask a real leak. The magnitude is
+/// pinned too, so that if LVGL starts deferring something larger — or something
+/// that recurs — this test says so precisely instead of the harness absorbing it.
+#[cfg(lvgl_builtin_malloc)]
+#[test]
+fn init_scratch_is_released_once() {
+    let (first, second) = measure_isolated("deferred init cleanup", || {
+        let before = lv_used_bytes();
+        pump_child();
+        let after_first = lv_used_bytes();
+        pump_child();
+        let after_second = lv_used_bytes();
+        (after_first - before, after_second - after_first)
+    });
+
+    assert_eq!(
+        first, INIT_CLEANUP_BYTES,
+        "the first timer-handler pass should release exactly \
+         {INIT_CLEANUP_BYTES} bytes of init scratch, not {first}"
+    );
+    assert_eq!(
+        second, 0,
+        "the second pass should be neutral, not {second} bytes — a recurring \
+         per-render delta is a leak, not deferred initialisation"
+    );
+}
+
+// ── Negative control ────────────────────────────────────────────────────────
+
+/// Proves the C-side assertion can actually fail.
+///
+/// Every other test in this file asserts a leak is *absent*, which is
+/// indistinguishable from an assertion that never fires — and a leak check that
+/// cannot go red is worse than none, because it reads as coverage. This one
+/// deliberately leaks an `lv_obj` per iteration and requires the panic.
+///
+/// It is the C probe specifically that has to catch this: the Rust side stays
+/// balanced, because `Obj::new` is followed by `core::mem::forget`, which frees
+/// nothing but also allocates nothing. Only LVGL's heap grows.
+#[cfg(lvgl_builtin_malloc)]
+#[test]
+#[should_panic(expected = "LVGL's C heap moved")]
+fn leak_negative_control_forgotten_obj() {
+    run_isolated("Negative control (forgotten Obj)", || {
+        measure_widget(|s| {
+            // Skips the Drop impl, so lv_obj_delete is never called.
+            core::mem::forget(Obj::new(s).unwrap());
+        })
+    });
+}
+
+/// Proves the *sensitivity* of the Rust-side assertion: **one byte per
+/// iteration** must fail, not merely a conspicuous one.
+///
+/// A leak check that only catches whole objects would miss the interesting
+/// cases — a `Vec` that grows by one element, a string that keeps a byte, an
+/// off-by-one in a buffer handed to C. Because the assertion is exact equality
+/// against zero with no floor, one leaked byte per iteration accumulates to
+/// exactly `MEASURE` bytes and trips it. The expected panic message pins the
+/// magnitude, so this fails just as loudly if a tolerance is ever reintroduced:
+/// any floor at all would swallow this and the test would stop panicking.
+#[test]
+#[should_panic(expected = "Rust heap moved 100 bytes")]
+fn leak_negative_control_one_byte_per_iteration() {
+    run_isolated("Negative control (1 byte/iteration)", || {
+        measure_rust(|| {
+            // layout.size() == 1, and nothing ever frees it.
+            //
+            // `black_box` is load-bearing, not decoration. Tests build with
+            // optimisations here, and an allocation whose result is never
+            // observed is simply deleted by LLVM — without this the leak never
+            // happens and the control silently "passes", which is the exact
+            // false-negative this test exists to rule out.
+            let leaked: &'static mut u8 = Box::leak(Box::new(0u8));
+            core::hint::black_box(leaked);
+        })
+    });
+}
+
+/// Same sensitivity claim for LVGL's heap: the *smallest allocation LVGL can
+/// make*, leaked once per iteration, must fail.
+///
+/// One byte is not expressible on this side — TLSF rounds every request up to a
+/// minimum block — so the smallest possible C-heap leak is a single
+/// minimum-sized block, which is what this leaks. That establishes the floor of
+/// what the C probe can resolve: any leaked allocation, however small the
+/// request, is caught.
+#[cfg(lvgl_builtin_malloc)]
+#[test]
+#[should_panic(expected = "LVGL's C heap moved")]
+fn leak_negative_control_smallest_c_allocation() {
+    run_isolated("Negative control (smallest C allocation)", || {
+        measure_rust(|| {
+            // A 1-byte request, never freed.
+            unsafe { oxivgl_sys::lv_malloc(1) };
+        })
+    });
+}
+
 // ── LVGL C baseline (custom — not using measure_widget/measure_rust) ────────
 
 #[test]
 fn leak_aa_lvgl_baseline() {
     run_isolated("LVGL C baseline", || {
         let screen_ptr = unsafe { oxivgl_sys::lv_screen_active() };
+        let raw_cycle = || unsafe {
+            let obj = oxivgl_sys::lv_obj_create(screen_ptr);
+            oxivgl_sys::lv_obj_set_size(obj, 100, 50);
+            oxivgl_sys::lv_obj_delete(obj);
+            oxivgl_sys::lv_refr_now(core::ptr::null_mut());
+        };
+        prime_parent(&screen());
         start_tracking();
-        let before = total_alloc_bytes();
+        let (rust_before, c_before) = (total_alloc_bytes(), lv_used_bytes());
         for _ in 0..MEASURE {
-            unsafe {
-                let obj = oxivgl_sys::lv_obj_create(screen_ptr);
-                oxivgl_sys::lv_obj_set_size(obj, 100, 50);
-                oxivgl_sys::lv_obj_delete(obj);
-                oxivgl_sys::lv_refr_now(core::ptr::null_mut());
-            }
+            raw_cycle();
         }
-        let after = total_alloc_bytes();
+        let (rust_after, c_after) = (total_alloc_bytes(), lv_used_bytes());
         stop_tracking();
-        (after - before) / MEASURE
+        (rust_after - rust_before, c_after - c_before)
+    });
+}
+
+// ── Translation (custom — registration must sit outside the loop) ───────────
+
+/// Language switching must not leak; pack registration is deliberately excluded.
+///
+/// `lv_translation_add_static` pushes a new pack onto LVGL's `packs_ll` on every
+/// call, and LVGL exposes no per-pack removal — only `lv_translation_deinit`,
+/// which drops all of them. So repeated registration grows the C heap
+/// unboundedly *by design*, and this test hoists it out of the measured loop
+/// rather than asserting it balances.
+///
+/// That distinction only became visible when C-heap tracking landed: with
+/// Rust-side measurement alone the original body (registering inside the loop)
+/// passed cleanly, because the pack LVGL allocates is invisible to
+/// `GlobalAlloc`. The moment the C probe was added it showed one
+/// `lv_translation_pack_t` — 72 bytes — accumulating per iteration.
+#[test]
+fn leak_translation() {
+    run_isolated("Translation", || {
+        // Register once, as an application would at startup.
+        translation::add_static(&LEAK_TRANS_LANGS, &LEAK_TRANS_TAGS, &LEAK_TRANS_VALUES);
+        let switch = || {
+            translation::set_language(c"en");
+            translation::set_language(c"de");
+        };
+        // `lv_translation_set_language` keeps the active language in a global
+        // it `lv_strdup`s: `if(selected_lang) lv_free(selected_lang);
+        // selected_lang = lv_strdup(lang)`. The global starts NULL, so the very
+        // first call allocates without freeing — 24 bytes, once. Every later
+        // call frees the previous string first, and "en"/"de" are the same
+        // length, so the pair nets to zero. Establish the slot before measuring.
+        translation::set_language(c"en");
+        start_tracking();
+        let (rust_before, c_before) = (total_alloc_bytes(), lv_used_bytes());
+        for _ in 0..MEASURE {
+            switch();
+        }
+        let (rust_after, c_after) = (total_alloc_bytes(), lv_used_bytes());
+        stop_tracking();
+        (rust_after - rust_before, c_after - c_before)
     });
 }
 
@@ -299,16 +641,20 @@ fn leak_navigator_toast_show_dismiss() {
         let mut nav = oxivgl::navigator::Navigator::new();
         nav.push_root(EmptyRoot);
         pump_child();
-        start_tracking();
-        let before = total_alloc_bytes();
-        for _ in 0..MEASURE {
+        let toast_cycle = |nav: &mut oxivgl::navigator::Navigator| {
             nav.show_toast(LabelToast, None);
             nav.dismiss_toast().expect("dismiss_toast");
             pump_child();
+        };
+        prime_parent(&screen());
+        start_tracking();
+        let (rust_before, c_before) = (total_alloc_bytes(), lv_used_bytes());
+        for _ in 0..MEASURE {
+            toast_cycle(&mut nav);
         }
-        let after = total_alloc_bytes();
+        let (rust_after, c_after) = (total_alloc_bytes(), lv_used_bytes());
         stop_tracking();
-        (after - before) / MEASURE
+        (rust_after - rust_before, c_after - c_before)
     });
 }
 
@@ -398,12 +744,6 @@ leak_rust_test! {
         let mut sb = StyleBuilder::new();
         sb.bg_color_hex(0xFF0000).bg_opa(255).transition(trans);
         drop(sb.build());
-    };
-
-    leak_translation, "Translation", || {
-        translation::add_static(&LEAK_TRANS_LANGS, &LEAK_TRANS_TAGS, &LEAK_TRANS_VALUES);
-        translation::set_language(c"en");
-        translation::set_language(c"de");
     };
 
     leak_subject_int, "Subject::new_int", || {
