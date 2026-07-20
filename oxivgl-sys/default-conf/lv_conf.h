@@ -124,7 +124,14 @@
 #define LV_USE_ASSERT_OBJ           0
 
 #define LV_ASSERT_HANDLER_INCLUDE <stdint.h>
-#define LV_ASSERT_HANDLER while(1);   /*Halt by default*/
+/* Route assertions into Rust's panic path rather than LVGL's default
+ * `while(1);`, which turns any assertion — a failed allocation, a NULL object,
+ * a corrupt style — into an indefinite hang with no message and no backtrace.
+ * Panicking reports through the platform's normal path, with LVGL's own log
+ * line (expression, file, line) immediately above it. `oxivgl` provides this
+ * symbol; replace it here if your application prefers to halt. */
+void oxivgl_lv_assert_handler(void);
+#define LV_ASSERT_HANDLER oxivgl_lv_assert_handler();
 
 /*-------------
  * Debug
