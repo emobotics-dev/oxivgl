@@ -20,6 +20,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   end-to-end demonstration, validated on Fire27 hardware.
 - `run_tests.sh pool` — asserts a reserved pool actually reaches LVGL's heap and
   that draw buffers stay outside it.
+- **Leak detection now covers LVGL's own C heap**, not just the Rust side
+  (#118). Every leak test additionally asserts on
+  `lv_mem_monitor().total_size - free_size`, so a wrapper whose `Drop` stopped
+  calling `lv_obj_delete` now fails the suite — previously it passed, because
+  the wrapper struct itself was freed and LVGL's heap is invisible to a Rust
+  `#[global_allocator]`. Gated on `LV_STDLIB_BUILTIN`, under which
+  `lv_mem_monitor` reports real figures; compiled out under CLIB rather than
+  degrading to an assertion that can only pass. A negative control
+  (`leak_negative_control_forgotten_obj`) leaks an `lv_obj` per iteration and
+  requires the assertion to fire. Both heaps assert an exact zero with no noise
+  floor, and the sensitivity is itself tested: a leak of one byte per
+  iteration, and the smallest allocation LVGL can make, are each required to
+  fail.
 
 ### Changed
 
@@ -46,6 +59,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   (`write`, `open`) diverged from their real signatures, which newer rustc
   rejects. Its module docs also claimed to track LVGL's C heap — a Rust
   `#[global_allocator]` never observes it under either allocator backend.
+- `translation::add_static` now documents that it must be called once per pack.
+  Each call allocates on LVGL's heap and LVGL exposes no per-pack removal, so
+  repeated registration grows the heap without bound. Surfaced by the new
+  C-heap coverage, which measured the old `leak_translation` body — registering
+  inside its loop — leaking one `lv_translation_pack_t` (72 bytes) per
+  iteration while the Rust-side balance stayed clean.
 
 ## [0.5.0] — 2026-06-14
 

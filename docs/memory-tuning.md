@@ -40,10 +40,16 @@ application, a library-level probe cannot assume either — and on target the
 figure that usually matters is the **system** heap (esp-hal) anyway, exposed via
 a `ResourceProbe`.
 
-A Rust `#[global_allocator]` counter (as in `tests/leak_check.rs`) sees only
-Rust-side bytes under *both* backends, never LVGL's C-side object allocations:
-`BUILTIN` allocates from LVGL's own static array and `CLIB` calls libc directly,
-so neither passes through `GlobalAlloc`.
+A Rust `#[global_allocator]` counter sees only Rust-side bytes under *both*
+backends, never LVGL's C-side object allocations: `BUILTIN` allocates from
+LVGL's own static array and `CLIB` calls libc directly, so neither passes
+through `GlobalAlloc`.
+
+That is a constraint on a *library-level* probe, not on the test suite.
+`tests/leak_check.rs` does assert on `lv_mem_monitor` in addition to the
+allocator counter — it can, because the tests own their `lv_conf.h` and so know
+the backend is `BUILTIN`, the assumption a library cannot make. The C-side
+assertion is `#[cfg(lvgl_builtin_malloc)]` and compiles out under CLIB.
 
 ## 2. What is already lean — don't chase these
 

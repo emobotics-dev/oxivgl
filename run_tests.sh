@@ -27,7 +27,7 @@ case "$mode" in
     ;;
   leak)
     echo "=== Leak check tests ==="
-    SDL_VIDEODRIVER=dummy cargo test --test leak_check --target "$TARGET" -- --test-threads=1 --nocapture "$@"
+    SDL_VIDEODRIVER=dummy cargo test --test leak_check --target "$TARGET" -- --test-threads=1 "$@"
     ;;
   all)
     echo "=== Unit tests ==="
@@ -43,7 +43,7 @@ case "$mode" in
     SDL_VIDEODRIVER=dummy cargo test --test mem_pool --target "$TARGET" -- --test-threads=1 "$@"
     echo ""
     echo "=== Leak check tests ==="
-    SDL_VIDEODRIVER=dummy cargo test --test leak_check --target "$TARGET" -- --test-threads=1 --nocapture "$@"
+    SDL_VIDEODRIVER=dummy cargo test --test leak_check --target "$TARGET" -- --test-threads=1 "$@"
     ;;
   *)
     echo "Usage: $0 [unit|int|pool|leak|all] [-- extra cargo args]"
