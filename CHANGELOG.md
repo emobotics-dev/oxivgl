@@ -5,6 +5,48 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- `oxivgl::mem` — register a memory region with LVGL's heap at run time
+  (`reserve_pool`, `reserve_pool_raw`, `MemError`). Lets LVGL's heap live in
+  PSRAM, whose base address is not known at compile time: on ESP32-S3 it moves
+  with the binary's rodata size, so `LV_MEM_ADR` cannot name it. Available only
+  under `LV_USE_STDLIB_MALLOC = LV_STDLIB_BUILTIN`; the module is not compiled
+  otherwise, because the CLIB backend implements `lv_mem_add_pool` as a no-op
+  returning NULL and would accept a pool while silently ignoring it.
+- `examples/psram_pool.rs` plus the `example_main_psram!` harness macro —
+  end-to-end demonstration, validated on Fire27 hardware.
+- `run_tests.sh pool` — asserts a reserved pool actually reaches LVGL's heap and
+  that draw buffers stay outside it.
+
+### Changed
+
+- **Bundled `lv_conf.h` files now select `LV_STDLIB_BUILTIN`** instead of
+  `LV_STDLIB_CLIB`. This changes where LVGL allocates: from the Rust global
+  allocator to LVGL's own static TLSF pool sized by `LV_MEM_SIZE`. Applications
+  that copied `examples/conf/lv_conf.h` or `oxivgl-sys/default-conf/lv_conf.h`
+  should size `LV_MEM_SIZE` for their workload — it is a real static array, and
+  too small a value now fails allocations rather than falling back to the system
+  heap.
+- **`LV_ASSERT_HANDLER` now panics** (`oxivgl_lv_assert_handler`) instead of
+  LVGL's default `while(1);`. Spinning turned every assertion — a failed
+  allocation, a NULL object — into an indefinite hang with no message and no
+  backtrace; downstream traced a recurring-freeze class to exactly this.
+  Applications keeping their own handler are unaffected: the symbol is prefixed
+  precisely so it cannot collide with an unprefixed `lv_assert_handler`.
+- When a runtime pool is registered, LVGL's draw buffers are routed through the
+  Rust global allocator so they cannot be served from that pool. TLSF pools are
+  fungible, and a draw buffer in PSRAM is unreachable by the ESP32's DMA engine.
+
+### Fixed
+
+- `tests/leak_check.rs` did not compile: two hand-declared libc externs
+  (`write`, `open`) diverged from their real signatures, which newer rustc
+  rejects. Its module docs also claimed to track LVGL's C heap — a Rust
+  `#[global_allocator]` never observes it under either allocator backend.
+
 ## [0.5.0] — 2026-06-14
 
 ### Added

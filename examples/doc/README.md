@@ -50,6 +50,7 @@ runner (`example_main!` macro selects host SDL2 or ESP32 fire27 backend).
 - [Observer](#observer)
 - [Gradients](#gradients)
 - [Snapshot](#snapshot)
+- [Memory](#memory)
 - [Implementation Coverage](#implementation-coverage)
 - [Running](#running)
 
@@ -1358,6 +1359,24 @@ Conical gradient.
 Capture and display a rotated/scaled widget snapshot.
 
 ![snapshot_1](screenshots/snapshot_1.png)
+
+## Memory
+
+Not a port of an LVGL example — an oxivgl-specific demonstration, so it is not
+counted in the coverage table below.
+
+### psram_pool — LVGL's heap in external RAM
+
+On ESP32 the harness maps PSRAM and hands 512 KiB of it to
+`oxivgl::mem::reserve_pool` before the render loop starts, so LVGL allocates its
+objects and styles from external RAM instead of the scarce internal heap. Draw
+buffers stay in internal, DMA-capable RAM — the ESP32 cannot DMA from PSRAM at
+all. The screen carries a partially-opaque panel deliberately: that forces LVGL
+to render into an intermediate layer buffer, which is what exercises the
+draw-buffer allocator. On host there is no PSRAM and it runs on LVGL's internal
+pool unchanged.
+
+![psram_pool](screenshots/psram_pool.png)
 
 ## Implementation Coverage
 

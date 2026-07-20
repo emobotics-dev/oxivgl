@@ -5,8 +5,16 @@
 //! global allocator. This gives perfect isolation — no cross-test cache
 //! contamination, no warmup needed.
 //!
-//! The counting allocator tracks ALL malloc/free calls (Rust + LVGL C).
-//! After N create/destroy iterations, net allocation must be zero.
+//! The counting allocator tracks **Rust-side allocations only**. A Rust
+//! `#[global_allocator]` never observes LVGL's C heap: under
+//! `LV_STDLIB_BUILTIN` LVGL allocates from its own static TLSF pool, and under
+//! `LV_STDLIB_CLIB` it calls libc `malloc` directly — neither routes through
+//! `GlobalAlloc`. So these tests catch leaks in the Rust wrappers (the boxed
+//! callbacks, styles and strings they own), not leaks inside LVGL itself.
+//! After N create/destroy iterations, net Rust allocation must be zero.
+//!
+//! Covering the C side would mean asserting on `lv_mem_monitor`, which reports
+//! real figures only under `LV_STDLIB_BUILTIN`. See `oxivgl::mem`.
 //!
 //! Run with: `SDL_VIDEODRIVER=dummy cargo +nightly test --test leak_check
 //!   --target x86_64-unknown-linux-gnu -- --test-threads=1 --nocapture`

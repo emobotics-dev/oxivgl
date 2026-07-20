@@ -33,12 +33,17 @@ are meaningless, so [`NullProbe`] returns `None`.
 
 ### Why not `lv_mem_monitor`?
 
-These bindings ship `LV_USE_STDLIB_MALLOC = LV_STDLIB_CLIB`, so LVGL has no
-internal pool to introspect — it calls libc `malloc` directly and
-`lv_mem_monitor` reports nothing useful. The figure that matters on target is
-the **system** heap (esp-hal), exposed via a `ResourceProbe`. For the same
-reason, a Rust `#[global_allocator]` counter (as in `tests/leak_check.rs`) sees
-only Rust-side bytes, **not** LVGL C-side object allocations.
+It reports meaningfully only under `LV_USE_STDLIB_MALLOC = LV_STDLIB_BUILTIN`,
+where LVGL owns a TLSF pool to introspect. Under `LV_STDLIB_CLIB` it delegates
+to libc `malloc` and reports nothing useful. Since `lv_conf.h` belongs to the
+application, a library-level probe cannot assume either — and on target the
+figure that usually matters is the **system** heap (esp-hal) anyway, exposed via
+a `ResourceProbe`.
+
+A Rust `#[global_allocator]` counter (as in `tests/leak_check.rs`) sees only
+Rust-side bytes under *both* backends, never LVGL's C-side object allocations:
+`BUILTIN` allocates from LVGL's own static array and `CLIB` calls libc directly,
+so neither passes through `GlobalAlloc`.
 
 ## 2. What is already lean — don't chase these
 

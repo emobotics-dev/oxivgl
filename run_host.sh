@@ -86,6 +86,7 @@ ALL_EXAMPLES=(
     list_2
     translation_1
     translation_2
+    psram_pool
 )
 
 run_example() {

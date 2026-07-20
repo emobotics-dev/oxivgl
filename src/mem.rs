@@ -2,8 +2,8 @@
 //! Runtime memory pools for LVGL's heap.
 //!
 //! LVGL's built-in allocator manages a TLSF heap whose primary pool is the
-//! `LV_MEM_SIZE` static array. [`reserve_pool`] hands it a *second* region whose
-//! address is not known until run time.
+//! `LV_MEM_SIZE` static array. [`reserve_pool`](crate::mem::reserve_pool) hands
+//! it a *second* region whose address is not known until run time.
 //!
 //! That is the whole point: `LV_MEM_ADR` is a compile-time constant, but on
 //! ESP32-S3 the PSRAM window maps after the flash rodata mmap, so its base moves
@@ -19,8 +19,8 @@
 //! ```
 //!
 //! The pool is registered with LVGL during driver initialisation, so
-//! [`reserve_pool`] must be called *before* the render loop starts — see
-//! [`MemError::TooLate`].
+//! [`reserve_pool`](crate::mem::reserve_pool) must be called *before* the render
+//! loop starts — see [`MemError::TooLate`](crate::mem::MemError::TooLate).
 //!
 //! # Availability
 //!

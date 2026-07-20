@@ -30,6 +30,7 @@ cargo +esp -Zbuild-std=alloc,core check --target xtensa-esp32-none-elf --feature
 # Run tests (preferred — handles SDL_VIDEODRIVER, test separation):
 ./run_tests.sh unit        # unit + doc tests
 ./run_tests.sh int         # integration tests (needs SDL_VIDEODRIVER=dummy)
+./run_tests.sh pool        # LVGL runtime memory pool registration
 ./run_tests.sh leak        # memory leak detection tests
 ./run_tests.sh all         # all of the above
 
