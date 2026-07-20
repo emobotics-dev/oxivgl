@@ -13,17 +13,38 @@ env_logger = "0.11"
 critical-section = { version = "1", features = ["std"] }
 heapless = { version = "0.8" }
 
-# --- ESP32 (xtensa) dependencies ---
+# --- Board selection (xtensa) ---
+# Exactly one board feature drives the chip across every esp crate, the
+# m5stack-core BSP's board feature, and oxivgl's own chip feature. The harness
+# then bring-ups the board through the BSP (see src/board.rs), so the two boards
+# share one code path — CoreS3 differs only in touch-vs-keypad input and the
+# I2C power/reset sequence, both handled by the BSP.
+[features]
+fire27 = [
+    "oxivgl/esp32",
+    "esp-hal/esp32", "esp-rtos/esp32", "esp-bootloader-esp-idf/esp32", "esp-sync/esp32",
+    "m5stack-core/fire27", "m5stack-core/buttons",
+]
+cores3 = [
+    "oxivgl/esp32s3",
+    "esp-hal/esp32s3", "esp-rtos/esp32s3", "esp-rtos/log-04",
+    "esp-bootloader-esp-idf/esp32s3", "esp-sync/esp32s3", "esp-sync/log-04",
+    "embassy-executor/log", "embassy-time/log",
+    "m5stack-core/cores3",
+]
+
+# --- ESP32 / ESP32-S3 (xtensa) dependencies ---
+# Chip features are supplied by the active board feature above, never hardcoded.
+# The esp-hal family resolves to the emobotics fork via the workspace-root
+# [patch.crates-io] (the BSP's DMA display flush needs its SPI/DMA fixes).
 [target.'cfg(target_arch = "xtensa")'.dependencies]
-oxivgl = { path = "../..", features = ["esp-hal", "esp32", "log-04"] }
+oxivgl = { path = "../..", default-features = false, features = ["esp-hal", "log-04"] }
 oxivgl_sys = { package = "oxivgl-sys", path = "../../oxivgl-sys", default-features = false }
-esp-alloc            = { version = "0.10.0", features = ["esp32", "internal-heap-stats"] }
-esp-backtrace        = { version = "0.18.1", features = ["esp32", "panic-handler", "custom-halt", "colors", "println"] }
-esp-bootloader-esp-idf = { version = "0.5.0", features = ["esp32"] }
-esp-hal              = { version = "=1.1.1", features = ["esp32", "unstable"] }
-esp-println          = { version = "0.16.1", features = ["esp32", "log-04", "colors", "uart"], default-features = false }
-esp-rtos             = { version = "0.3.0", features = ["esp32", "embassy"] }
-esp-sync             = { version = "0.2.1", features = ["esp32"] }
+m5stack-core = { git = "https://github.com/emobotics-dev/m5stack-core", tag = "v0.4.1", default-features = false, features = ["display", "psram", "console-serial", "panic-handler"] }
+esp-bootloader-esp-idf = { version = "0.5.0" }
+esp-hal              = { version = "=1.1.1", features = ["unstable"] }
+esp-rtos             = { version = "0.3.0", features = ["embassy"] }
+esp-sync             = { version = "0.2.1" }
 embassy-embedded-hal = { version = "0.6.0", features = ["time"] }
 embassy-executor     = { version = "0.10.0", features = ["nightly"] }
 embassy-sync         = "0.8"
@@ -31,7 +52,6 @@ embassy-time         = "0.5.0"
 lcd-async            = "0.1.1"
 log                  = "0.4"
 static_cell          = { version = "2.1.1", features = ["nightly"] }
-async-button         = "0.2.0"
 
 # Zero-warnings policy: any rustc warning is a hard build error.
 # Equivalent to `-D warnings`, scoped to this crate's own code.
