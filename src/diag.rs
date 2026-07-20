@@ -17,11 +17,15 @@
 //!
 //! ## Why not `lv_mem_monitor`?
 //!
-//! With `LV_USE_STDLIB_MALLOC = LV_STDLIB_CLIB` (the configuration these
-//! bindings ship with), LVGL has no internal pool to introspect — it delegates
-//! straight to libc `malloc`, so `lv_mem_monitor` reports nothing useful. The
-//! figure that actually matters on target is the *system* heap (esp-hal), which
-//! a [`ResourceProbe`](crate::diag::ResourceProbe) exposes.
+//! Because it only means anything under one allocator backend. With
+//! `LV_USE_STDLIB_MALLOC = LV_STDLIB_CLIB` LVGL delegates straight to libc
+//! `malloc` and has no internal pool to introspect, so `lv_mem_monitor` reports
+//! nothing useful; under `LV_STDLIB_BUILTIN` it does report real TLSF figures.
+//! Since `lv_conf.h` belongs to the application, neither can be assumed here.
+//!
+//! The figure that matters on target is in any case the *system* heap (esp-hal)
+//! rather than LVGL's own pool, and that is what a
+//! [`ResourceProbe`](crate::diag::ResourceProbe) exposes.
 
 use crate::widgets::Obj;
 
