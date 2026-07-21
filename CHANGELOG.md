@@ -7,6 +7,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.6.1] — Unreleased
+
+### Fixed
+
+- **Transient per-frame render scratch no longer leaks into a PSRAM pool**
+  (#124). The software renderer allocates a scratch buffer per draw op, every
+  frame — draw-task descriptors (`lv_draw_add_task`), scanline masks (arc, line,
+  fill, border, triangle, rect-mask), box-shadow blur/mask buffers, and image
+  mask/transform buffers — through a plain `lv_malloc`/`lv_free` with no callback
+  hook (unlike draw buffers). Once a runtime pool was registered this scratch
+  became eligible to land in it; when the pool is PSRAM, serving that per-frame
+  churn against PSRAM-resident TLSF metadata halved the meter-screen render on
+  ESP32 (16 → 7 FPS, measured downstream). `oxivgl-sys` now patches the SW draw
+  sources to route these allocations through
+  `oxivgl_render_scratch_{malloc,zalloc,free}`, which keep them in internal DRAM
+  while a pool is active — the direct analogue of the existing draw-buffer guard,
+  extended from pixel buffers to all transient render scratch. So the whole
+  render hot path stays internal while the persistent widget tree lives in PSRAM,
+  making render cost track dirty-region complexity rather than total UI size.
+  The radius/circle mask cache (`lv_draw_sw_mask.c`), read per-scanline every
+  frame by arc, rounded-rect, border and shadow draws, is routed too — its
+  alloc/free sites are all self-contained in that file, so it is as safe to route
+  as the per-frame scratch. LVGL's gradient cache (`lv_draw_sw_grad.c`) is left on
+  LVGL's allocator: gradient-only and cross-function with multi-path frees. With
+  no pool registered (or under `LV_STDLIB_CLIB`) the calls delegate straight to
+  LVGL's allocator, so behaviour is unchanged. Requires `oxivgl-sys 0.2.4`.
+
 ## [0.6.0] — 2026-07-20
 
 ### Added

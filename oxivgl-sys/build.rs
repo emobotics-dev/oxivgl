@@ -311,6 +311,7 @@ fn main() {
         add_c_files(&mut cfg, p)
     }
     patch_btnmatrix_text_length(&lvgl_src);
+    patch_render_scratch(&lvgl_src);
     println!("cargo:SRC_DIR={}", lvgl_dir.display());
     add_c_files(&mut cfg, &lvgl_src);
     add_c_files(&mut cfg, &lv_config_dir);
@@ -535,6 +536,160 @@ fn patch_btnmatrix_text_length(lvgl_src: &Path) {
         );
         std::fs::write(&file, patched).unwrap();
     }
+}
+
+/// Route LVGL's transient per-frame render scratch to internal DRAM.
+///
+/// The SW renderer allocates a scratch buffer per draw op, every frame, and
+/// frees it in the same draw call — draw-task descriptors, scanline masks (arc,
+/// line, fill, border, triangle, rect-mask), box-shadow blur/mask buffers, and
+/// image mask/transform buffers. All use a plain `lv_malloc`/`lv_free` with no
+/// callback hook (unlike draw buffers). Once a runtime pool is registered they
+/// become eligible to land in it; when that pool is PSRAM, the churn against
+/// PSRAM-resident TLSF metadata halves render throughput on ESP32 (issue #124).
+///
+/// Redirect them to `oxivgl_render_scratch_{malloc,zalloc,free}` (defined in
+/// `oxivgl::render_scratch`), which keep the scratch in internal DRAM while a
+/// pool is active and delegate to LVGL's allocator otherwise. Those symbols are
+/// always linked, so this patch is unconditional.
+///
+/// Both the transient per-frame scratch and the radius/circle mask cache are
+/// routed. The mask cache (`lv_draw_sw_mask.c`) is read per-scanline every
+/// frame — from PSRAM it is a hot cost on ESP32 — and although it is a
+/// cross-*function* cache, every one of its alloc/free sites is lexically inside
+/// `lv_draw_sw_mask.c` (even `lv_draw_sw_mask_free_param`, which arc/line call),
+/// so exhaustive file routing keeps every pair in one regime. The gradient cache
+/// in `lv_draw_sw_grad.c` stays on LVGL's allocator: gradient-only (outside the
+/// arc/line/rounded path) and cross-function with multi-path frees, so it needs
+/// a separate, careful pass if a gradient-heavy UI ever calls for it.
+fn patch_render_scratch(lvgl_src: &Path) {
+    // The draw-task descriptor lives in lv_draw.c, which also holds non-scratch
+    // allocations (draw units, layers, sub-descriptors), so only its two
+    // descriptor sites are routed — targeted, not exhaustive.
+    route_scratch_descriptor(lvgl_src);
+
+    // These SW-draw sources allocate *only* render-internal buffers (per-frame
+    // scratch, plus the self-contained radius/circle mask cache), so every
+    // lv_malloc/lv_malloc_zeroed/lv_free is routed and the site counts are
+    // pinned: a future LVGL that adds a non-render allocation here fails the
+    // build loudly rather than silently half-routing (which would corrupt the
+    // heap). Columns: (path, n_malloc, n_malloc_zeroed, n_free).
+    for (rel, n_malloc, n_zeroed, n_free) in [
+        ("draw/sw/lv_draw_sw_arc.c", 2, 0, 2),
+        ("draw/sw/lv_draw_sw_border.c", 1, 0, 1),
+        ("draw/sw/lv_draw_sw_box_shadow.c", 6, 0, 4),
+        ("draw/sw/lv_draw_sw_fill.c", 1, 0, 1),
+        ("draw/sw/lv_draw_sw_line.c", 3, 0, 3),
+        ("draw/sw/lv_draw_sw_img.c", 5, 0, 3),
+        ("draw/sw/lv_draw_sw_mask_rect.c", 1, 0, 1),
+        ("draw/sw/lv_draw_sw_triangle.c", 1, 0, 1),
+        ("draw/sw/lv_draw_sw_mask.c", 1, 2, 5),
+    ] {
+        route_scratch_exhaustive(lvgl_src, rel, n_malloc, n_zeroed, n_free);
+    }
+}
+
+/// Prepend the render-scratch prototypes (and `<stddef.h>` for `size_t`) to a
+/// patched source. Prepending — rather than anchoring after includes — makes
+/// the declarations unconditionally visible to every routed call site, so a
+/// missing prototype can never silently degrade to an implicit `int` return
+/// that truncates the 64-bit pointer on host.
+fn with_scratch_protos(code: &str) -> String {
+    const HEAD: &str = "#include <stddef.h>\n\
+        extern void * oxivgl_render_scratch_malloc(size_t size);\n\
+        extern void * oxivgl_render_scratch_zalloc(size_t size);\n\
+        extern void oxivgl_render_scratch_free(void * ptr);\n";
+    format!("{HEAD}{code}")
+}
+
+/// Route the two draw-task descriptor sites in `lv_draw.c` (targeted: this file
+/// also holds non-scratch allocations that must stay on LVGL's allocator).
+fn route_scratch_descriptor(lvgl_src: &Path) {
+    let file = lvgl_src.join("draw/lv_draw.c");
+    if !file.exists() {
+        return;
+    }
+    let code = std::fs::read_to_string(&file).unwrap();
+    if code.contains("oxivgl_render_scratch") {
+        return; // already patched (source persists in OUT_DIR across reruns)
+    }
+    let alloc_needle = "lv_draw_task_t * new_task = lv_malloc_zeroed(LV_ALIGN_UP(sizeof(lv_draw_task_t), 8) + dsc_size);";
+    let free_needle = "lv_free(t);";
+    assert!(
+        code.contains(alloc_needle) && code.contains(free_needle),
+        "lv_draw.c descriptor sites do not match the pinned LVGL v{LVGL_VERSION} \
+         source — the render-scratch patch (issue #124) would silently no-op."
+    );
+    let code = code
+        .replace(
+            alloc_needle,
+            "lv_draw_task_t * new_task = oxivgl_render_scratch_zalloc(LV_ALIGN_UP(sizeof(lv_draw_task_t), 8) + dsc_size);",
+        )
+        .replace(free_needle, "oxivgl_render_scratch_free(t);");
+    std::fs::write(&file, with_scratch_protos(&code)).unwrap();
+}
+
+/// Route every `lv_malloc`/`lv_malloc_zeroed`/`lv_free` in an SW-draw source
+/// that allocates only render-internal buffers, pinning the site counts against
+/// version drift. Safe because every alloc/free pair is lexically in the file,
+/// so both ends are routed together (one allocation regime).
+fn route_scratch_exhaustive(
+    lvgl_src: &Path,
+    rel: &str,
+    n_malloc: usize,
+    n_zeroed: usize,
+    n_free: usize,
+) {
+    let file = lvgl_src.join(rel);
+    if !file.exists() {
+        return;
+    }
+    let code = std::fs::read_to_string(&file).unwrap();
+    if code.contains("oxivgl_render_scratch") {
+        return;
+    }
+    // Pin the shape against the verified LVGL source. `lv_malloc(` does not
+    // match inside `lv_malloc_zeroed(` (a `_` follows, not `(`), so the two
+    // counts are independent. A mismatch means the file changed — fail loudly
+    // rather than silently half-route or miss a site.
+    assert_eq!(
+        code.matches("lv_realloc(").count(), 0,
+        "{rel}: unexpected lv_realloc — re-verify scratch routing (#124)"
+    );
+    assert_eq!(
+        code.matches("lv_malloc_zeroed(").count(), n_zeroed,
+        "{rel}: lv_malloc_zeroed site count changed vs pinned LVGL v{LVGL_VERSION} — re-verify scratch routing (#124)"
+    );
+    assert_eq!(
+        code.matches("lv_malloc(").count(), n_malloc,
+        "{rel}: lv_malloc site count changed vs pinned LVGL v{LVGL_VERSION} — re-verify scratch routing (#124)"
+    );
+    assert_eq!(
+        code.matches("lv_free(").count(), n_free,
+        "{rel}: lv_free site count changed vs pinned LVGL v{LVGL_VERSION} — re-verify scratch routing (#124)"
+    );
+
+    // Replace `lv_malloc_zeroed(` before `lv_malloc(` so the plain-malloc pass
+    // never touches the zeroed sites (they are disjoint, but order makes it
+    // obviously correct).
+    let patched = code
+        .replace("lv_malloc_zeroed(", "oxivgl_render_scratch_zalloc(")
+        .replace("lv_malloc(", "oxivgl_render_scratch_malloc(")
+        .replace("lv_free(", "oxivgl_render_scratch_free(");
+    let patched = with_scratch_protos(&patched);
+    assert_eq!(
+        patched.matches("lv_malloc(").count(), 0,
+        "{rel}: unrouted lv_malloc remains after patch"
+    );
+    assert_eq!(
+        patched.matches("lv_malloc_zeroed(").count(), 0,
+        "{rel}: unrouted lv_malloc_zeroed remains after patch"
+    );
+    assert_eq!(
+        patched.matches("lv_free(").count(), 0,
+        "{rel}: unrouted lv_free remains after patch"
+    );
+    std::fs::write(&file, patched).unwrap();
 }
 
 fn add_c_files(build: &mut cc::Build, path: impl AsRef<Path>) {
