@@ -698,3 +698,41 @@ from `src` into `dst`. Safe (no pointer aliasing). Can be exposed directly.
 | **Could** | Expose `lv_anim_pause`, `lv_style_merge` | 12.3, 12.10 |
 | **Could** | Wrap `lv_obj_bind_style_prop` with lifetime safety | 12.4 |
 | **Won't** (single-task) | Expose `lv_lock`/`lv_unlock` | 12.7 |
+
+---
+
+## 13. Runtime Pool and Render-Scratch Allocators (v0.6.0–v0.6.1)
+
+Two oxivgl-owned allocator guards route specific LVGL allocations to
+controlled regions. Both are gated on `LV_STDLIB_BUILTIN` (the bundled
+default) and are no-ops otherwise.
+
+### 13.1 Runtime memory pool (`oxivgl::mem`, v0.6.0)
+
+`reserve_pool(region: &'static mut [MaybeUninit<u8>])` hands a
+runtime-discovered region (typically PSRAM) to LVGL's TLSF heap via
+`lv_mem_add_pool`, so the persistent object/style tree can live there.
+
+**Ownership / lifetime**: the region is `'static` and **never removed** —
+LVGL keeps allocating from it for the process lifetime, and
+`lv_mem_remove_pool` while allocations are live would corrupt the heap, so
+it is not exposed. The `&'static mut [MaybeUninit<u8>]` type encodes this,
+and the call site needs no `unsafe`. Only one pool may be registered.
+
+**Draw-buffer guard**: a registered pool makes TLSF one fungible arena, so
+LVGL's draw *buffers* (`buf_malloc`/`buf_free` in `lv_draw_buf.c`) are
+re-pointed to the Rust global allocator — internal, DMA-capable DRAM, since
+the original ESP32 cannot DMA from PSRAM. See `install_draw_buf_guard`.
+
+### 13.2 Render-scratch guard (`oxivgl::render_scratch`, v0.6.1)
+
+LVGL's transient per-frame render scratch — draw-task descriptors
+(`lv_draw_task_t`, §2) and the SW-draw mask / blur / mask-cache buffers —
+has no allocation hook. When a pool is active, a build-time source patch
+routes these through the Rust global allocator (internal DRAM), keeping the
+render hot path out of PSRAM while the tree stays in it. With no pool the
+calls delegate to LVGL's allocator unchanged. The `lv_draw_task_t` row in
+§2 is one of these rerouted allocations.
+
+Both guards flip once at driver init, before the first frame, so every
+buffer is allocated and freed under a single allocator regime.

@@ -3,7 +3,9 @@
 LVGL example screens ported from the [LVGL docs](https://docs.lvgl.io/9.5/examples.html).
 
 Each example is a self-contained file with a `View` impl and a cfg-gated
-runner (`example_main!` macro selects host SDL2 or ESP32 fire27 backend).
+runner (`example_main!` / `example_main_nav!` / `example_main_psram!` macros
+select host SDL2 or an ESP32 board backend — `fire27` (ESP32) or `cores3`
+(ESP32-S3)).
 
 ## Contents
 
