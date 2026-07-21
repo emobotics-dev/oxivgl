@@ -85,8 +85,9 @@ invariant.
 
 ## 7. Doc Comments
 
-Every public type and method must have `///` doc comments. CI enforces
-this via `-W missing-docs`. Include a brief description of what the
+Every public type and method must have `///` doc comments. The audit is
+`./run_docs.sh --check` (it catches `error:` and build failures, not just
+`warning:`). Include a brief description of what the
 LVGL function does and any constraints (e.g. value ranges, required
 config flags).
 

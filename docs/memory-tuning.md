@@ -114,6 +114,10 @@ on these targets.
    - **Dithered / multi-stop gradients** allocate; a 2-stop undithered gradient
      does not.
 
+   With a runtime PSRAM pool (`oxivgl::mem::reserve_pool`), this transient render
+   scratch is deliberately kept in **internal** DRAM — so these spikes hit the
+   internal heap even when the object tree lives in PSRAM. Budget for them there.
+
 6. **Compile out what you don't use** (`lv_conf.h`, app-owned). Disable unused
    widgets (smaller `.text`, fewer registrations). In production builds, turn
    **off** the dev-only `LV_USE_PERF_MONITOR` / `LV_USE_SYSMON` (each adds a

@@ -26,11 +26,12 @@
 //! or `LV_STDLIB_BUILTIN` with no pool registered — the calls delegate straight
 //! to LVGL's allocator, so behaviour is byte-for-byte unchanged.
 //!
-//! Only *transient* per-frame scratch is routed. LVGL's gradient and
-//! circle-mask *caches* — allocated once and read across frames, and freed
-//! cross-function — are intentionally left on LVGL's allocator: they are not the
-//! per-frame churn this targets, and their alloc/free pairing does not fit the
-//! single-regime invariant below.
+//! Both the transient per-frame scratch and the radius/circle mask cache
+//! (`lv_draw_sw_mask.c`, read per-scanline every frame by arc, rounded-rect,
+//! border and shadow draws) are routed — the mask cache is safe to route because
+//! all of its alloc/free sites are lexically inside that one file, so both ends
+//! move together. LVGL's gradient cache (`lv_draw_sw_grad.c`) is left on LVGL's
+//! allocator: gradient-only and cross-function with multi-path frees.
 
 use core::ffi::c_void;
 use core::sync::atomic::{AtomicBool, Ordering};
