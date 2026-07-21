@@ -1,11 +1,12 @@
 # Navigation Specification
 
-**Status**: Draft
+**Status**: Implemented
 **LVGL version**: v9.5
 
 How oxivgl manages screen transitions, navigation stacks, and modal
-overlays. This spec evolves the `View` trait into a richer `View` +
-`Navigator` model that supports multi-screen applications.
+overlays. oxivgl provides a `View` + `Navigator` model for multi-screen
+applications, built on LVGL's screen and layer primitives. This document
+specifies the shipped design.
 
 ---
 
@@ -23,10 +24,10 @@ structural limitations:
 | Raw pointer handles for dynamic widgets | Error-prone, no Rust-side invalidation |
 | Poll-only `update()` | No framework-level dirty tracking |
 
-This spec evolves the `View` trait into a navigation-aware lifecycle
-and adds a `Navigator` for managing a stack of views with push/pop
-transitions and modal overlays, built on LVGL's screen and layer
-primitives (`lv_screen_load_anim`, `lv_layer_top`, `lv_obj_clean`).
+The `View` trait is a navigation-aware lifecycle, and a `Navigator`
+manages a stack of views with push/pop transitions and modal overlays,
+built on LVGL's screen and layer primitives (`lv_screen_load_anim`,
+`lv_layer_top`, `lv_obj_clean`).
 
 ---
 
@@ -59,11 +60,10 @@ overlap, the API vision spec takes precedence.
 
 ---
 
-## 3. The `View` Trait (evolved)
+## 3. The `View` Trait
 
-The `View` trait keeps its name but gains new capabilities: repeatable
-`create`, lifecycle hooks, and `NavAction` returns. Every screen of UI
-implements `View`.
+The `View` trait provides a repeatable `create`, lifecycle hooks, and
+`NavAction` returns. Every screen of UI implements `View`.
 
 ```rust
 /// A single view of UI (one screen or modal in a navigation stack).
@@ -72,15 +72,15 @@ implements `View`.
 ///
 /// 1. **Construction** — caller creates the struct (e.g. `Default::default()`)
 /// 2. [`create`] — build widgets into `container`; may be called multiple times
-/// 3. [`did_show`] — post-creation setup (optional)
-/// 4. [`update`] — per-tick polling (runs in render loop)
-/// 5. [`on_event`] — LVGL event dispatch
+/// 3. [`register_events_on`] — attach the event trampoline to `container`
+/// 4. [`did_show`] — post-creation setup (optional)
+/// 5. [`update`] / [`on_event`] — per-tick polling and LVGL event dispatch
 /// 6. [`will_hide`] — save transient state before widget teardown (optional)
 /// 7. Widget tree destroyed (navigator calls `lv_obj_clean`)
 ///
 /// Steps 2–7 repeat on each push/pop cycle for views that remain on
 /// the stack.
-pub trait View: 'static {
+pub trait View: Sized + 'static {
     /// Build all LVGL widgets for this view into `container`.
     ///
     /// Called each time this view becomes the active (topmost) view —
@@ -154,36 +154,12 @@ pub trait View: 'static {
 }
 ```
 
-### 3.1 Key Changes from Current `View`
+### 3.1 Single-View Usage
 
-| Aspect | Current `View` | Evolved `View` |
-|---|---|---|
-| Construction | `create() -> Result<Self>` | Caller constructs struct; `create(&mut self, container)` builds widgets |
-| Widget rebuilding | Not possible (create runs once) | `create` called on every push/pop return |
-| Lifecycle hooks | None | `will_hide`, `did_show` |
-| Bound | `Sized` | `'static` (must live on navigator stack) |
-| Active screen access | `lv_screen_active()` in create | `container` parameter passed by navigator |
-| `update` return | `Result<(), WidgetError>` | `Result<NavAction, WidgetError>` |
-
-### 3.2 Migration for Single-View Examples
-
-For the common case of a single-screen example, the migration is
-mechanical:
+A single-screen example implements `View` directly; the harness pushes it
+as the root:
 
 ```rust
-// Current View:
-struct MyExample { label: Label<'static> }
-impl View for MyExample {
-    fn create() -> Result<Self, WidgetError> {
-        let scr = Screen::active().unwrap();
-        let label = Label::new(&scr)?;
-        Ok(Self { label })
-    }
-    fn update(&mut self) -> Result<(), WidgetError> { Ok(()) }
-}
-example_main!(MyExample);
-
-// Evolved View:
 #[derive(Default)]
 struct MyExample { label: Option<Label<'static>> }
 impl View for MyExample {
@@ -195,9 +171,9 @@ impl View for MyExample {
 example_main!(MyExample::default());
 ```
 
-Widget fields become `Option<W>` because the struct exists before
-`create` is called. `#[derive(Default)]` eliminates manual `None`
-initialization. The `example_main!` macro accepts an expression that
+Widget fields are `Option<W>` because the struct exists before `create`
+is called, and `create` may run again after a pop. `#[derive(Default)]`
+supplies the initial `None`s. `example_main!` takes an expression that
 produces the initial view instance.
 
 ---
@@ -229,7 +205,11 @@ pub struct Navigator {
     // lv_layer_sys(). See §4.3.
     toast: Option<Box<dyn AnyView>>,
     toast_container: Option<Obj<'static>>,
-    toast_deadline: Option<Instant>,
+    // Auto-dismiss deadline in wrap-aware tick milliseconds (`get_tick_ms`),
+    // not `Instant`. See §4.3.
+    toast_deadline_ms: Option<u32>,
+    // FIFO of timed toasts waiting behind the active one (capacity 4).
+    toast_queue: VecDeque<PendingToast>,
 }
 ```
 
@@ -237,27 +217,35 @@ pub struct Navigator {
 
 ```rust
 impl Navigator {
-    /// Push a new view onto the stack.
+    /// Push the root view. Called once at startup (by `run_app_nav`); the
+    /// root gets its own created + loaded screen so pop-to-root and toast
+    /// re-parenting are uniform.
+    pub fn push_root(&mut self, view: impl View);
+
+    /// Push a new view onto the stack. Each view owns its own
+    /// `Obj<'static>` screen (via `Screen::create`), so the previous
+    /// screen's tree is destroyed *after* the new one is built.
     ///
     /// 1. Calls `will_hide()` on the current top view.
-    /// 2. Destroys the current view's widget tree (`lv_obj_clean`).
-    /// 3. Stores the current view (state preserved, widgets gone).
-    /// 4. Calls `create(container)` on the new view.
-    /// 5. Registers the event trampoline.
-    /// 6. Calls `did_show()` on the new view.
+    /// 2. Creates and loads a new screen, then calls `create(container)`
+    ///    and `register_events_on(container)` on the new view.
+    /// 3. Re-parents any active toast onto the new screen.
+    /// 4. Destroys the previous view's widget tree (`lv_obj_clean`) — its
+    ///    struct state stays on the stack.
+    /// 5. Calls `did_show()` on the new view.
     ///
     /// `anim` controls the screen transition animation. Pass `None` for
     /// an instant switch.
     pub fn push(&mut self, view: impl View, anim: Option<ScreenAnim>);
 
-    /// Pop the current view and return to the previous one.
+    /// Pop the current view and return to the previous one. The restored
+    /// view's screen is loaded and its widgets rebuilt via `create`; the
+    /// popped view's screen is cleaned up afterward.
     ///
-    /// 1. Calls `will_hide()` on the current top view.
-    /// 2. Destroys the current view's widget tree.
-    /// 3. Drops the current view entirely (removed from stack).
-    /// 4. Calls `create(container)` on the now-top view (rebuild widgets).
-    /// 5. Registers the event trampoline.
-    /// 6. Calls `did_show()` on the restored view.
+    /// 1. Loads the restored view's screen and rebuilds it (`create`,
+    ///    `register_events_on`), re-parenting any active toast onto it.
+    /// 2. Drops the popped view and destroys its widget tree.
+    /// 3. Calls `did_show()` on the restored view.
     ///
     /// Returns `Err(NavigationError::StackEmpty)` if only one view
     /// remains (the root view cannot be popped).
@@ -527,6 +515,10 @@ pub enum NavAction {
 }
 ```
 
+Convenience constructors reduce boilerplate: `NavAction::push(view)`,
+`NavAction::replace(view)`, `NavAction::modal(view)`,
+`NavAction::show_toast(view, duration)`, plus `NavAction::is_none()`.
+
 Both `update` and `on_event` return `NavAction`:
 
 ```rust
@@ -582,90 +574,53 @@ point agnostic to how data arrives. oxivgl provides `run_app`,
 `View`, and `Navigator`; the application provides the event
 infrastructure and the tasks that feed it.
 
-To reduce latency when events arrive between render ticks, `run_app`
-accepts an **async wake closure** (see §5.2) that is raced against the
-inter-tick timer, short-circuiting the sleep when the closure resolves.
+To reduce latency when events arrive between render ticks, the
+event-driven entry point `run_app_nav_keypad_events` accepts an **async
+wake closure** (see §5.2) that is raced against the inter-tick timer,
+short-circuiting the sleep when the closure resolves.
 
-### 5.2 `run_app`
+### 5.2 The `run_app` family
 
-Replaces `run_lvgl`. Initializes LVGL, creates the navigator with an
-initial screen, and runs the render loop.
+Each entry point initializes LVGL, builds the render loop, and never
+returns. There is no single universal `run_app(...wake...)`; the shape
+depends on whether the app navigates and how input arrives:
 
 ```rust
-/// Run the LVGL application with navigation support.
-///
-/// This is an embassy async task. Spawn it alongside your other
-/// application tasks. It initializes LVGL, pushes `initial` as the
-/// root screen, and loops forever: calling `update`, driving
-/// `lv_timer_handler`, and processing navigation actions.
-///
-/// `wake` is an async closure called each render tick and raced against
-/// the inter-tick timer. If `wake` resolves before the timer, `run_app`
-/// breaks out of the timer loop early and runs `update()` immediately,
-/// reducing worst-case event-to-screen latency from ~33ms to
-/// near-instant. For timer-only operation, pass
-/// `async || core::future::pending().await`.
-///
-/// Never returns.
-pub async fn run_app<const BYTES: usize, Fut: Future<Output = ()>>(
-    w: i32,
-    h: i32,
-    bufs: &'static mut LvglBuffers<BYTES>,
-    initial: impl View,
-    wake: impl Fn() -> Fut,
-) -> ! {
-    let driver = LvglDriver::init(w, h);
-    unsafe { lvgl_disp_init(w, h, bufs) };
-    DISPLAY_READY.wait().await;
+/// Single view, no navigation. Ignores NavAction (asserts it is None).
+pub async fn run_app<V: View, const BYTES: usize>(
+    w: i32, h: i32, bufs: &'static mut LvglBuffers<BYTES>, view: V) -> !;
 
-    let mut nav = Navigator::new();
-    nav.push(initial, None);
+/// Navigation entry point: creates the Navigator, pushes `initial` as
+/// the root (`push_root`), and processes NavActions each tick.
+pub async fn run_app_nav<const BYTES: usize>(
+    w: i32, h: i32, bufs: &'static mut LvglBuffers<BYTES>, initial: impl View) -> !;
 
-    const LVGL_TIMER_DELAY: u64 = LV_DEF_REFR_PERIOD as u64 / 4;
+/// Navigation + keypad input (timer-paced).
+pub async fn run_app_nav_keypad<const BYTES: usize>(
+    w: i32, h: i32, bufs: &'static mut LvglBuffers<BYTES>,
+    initial: impl View, keypad: KeypadIndev) -> !;
 
-    loop {
-        // Update active view — polls app state, returns NavAction
-        let action = nav.active_view_mut()
-            .update()
-            .unwrap_or_else(|e| { warn!("view update: {:?}", e); NavAction::None });
-
-        // Update modal if present
-        let modal_action = if let Some(modal) = nav.active_modal_mut() {
-            modal.update()
-                .unwrap_or_else(|e| { warn!("modal update: {:?}", e); NavAction::None })
-        } else {
-            NavAction::None
-        };
-
-        // Drive LVGL timers (processes widget events → on_event → NavAction)
-        for _ in 0..4 {
-            driver.timer_handler();
-
-            // Race the tick timer against the wake closure. If wake
-            // resolves first, break out early to run update() sooner.
-            let timer = Timer::after(Duration::from_millis(LVGL_TIMER_DELAY));
-            match select(timer, wake()).await {
-                Either::First(()) => {},   // normal tick
-                Either::Second(()) => break, // early wake → run update
-            }
-        }
-
-        // Process navigation: on_event actions (collected during timer_handler)
-        // take priority, then update actions.
-        nav.process_pending_event_action();
-        if !nav.has_pending() {
-            nav.process_action(action);
-        }
-        if !nav.has_pending() {
-            nav.process_action(modal_action);
-        }
-    }
-}
+/// Navigation + keypad input, event-driven: `wake` is raced against the
+/// inter-tick timer to run the loop sooner when input arrives.
+pub async fn run_app_nav_keypad_events<const BYTES: usize, Fut: Future<Output = ()>>(
+    w: i32, h: i32, bufs: &'static mut LvglBuffers<BYTES>,
+    initial: impl View, keypad: KeypadIndev, wake: impl Fn() -> Fut) -> !;
 ```
 
-The `wake` closure is called fresh each tick, producing a new future
-to race. It only needs `core::future::Future` — no dependency on any
-specific async runtime or synchronization primitive.
+All navigation variants share one inner loop (`run_app_nav_inner`):
+
+1. `update()` the active view (and the modal, if present), collecting
+   their `NavAction`s.
+2. Drive `lv_timer_handler` four times, each iteration racing the tick
+   timer against `wake()` via `embassy_time::with_timeout`, so an early
+   wake shortens the sleep. Widget events fire here, producing pending
+   `on_event` actions.
+3. `process_pending_event_action()` first — `on_event` actions win over
+   `update` actions in the same tick — then the `update` / modal actions.
+4. `drain_toast_requests()` (cross-task `post_toast`), then `tick_toast()`.
+
+The `wake` closure is called fresh each tick and only needs
+`core::future::Future` — no dependency on a specific async runtime.
 
 ### 5.3 Real Application Example
 
@@ -725,8 +680,9 @@ async fn button_task(back_pin: Input<'static>) {
 
 // Entry point — async closure wakes on signal
 #[embassy_executor::task]
-async fn ui_task(bufs: &'static mut LvglBuffers<BUF_BYTES>) -> ! {
-    run_app(320, 240, bufs, DashboardView::default(),
+async fn ui_task(bufs: &'static mut LvglBuffers<BUF_BYTES>, keypad: KeypadIndev) -> ! {
+    // The event-driven entry point is where the wake closure lives.
+    run_app_nav_keypad_events(320, 240, bufs, DashboardView::default(), keypad,
         async || WAKE.wait().await,
     ).await
 }
@@ -780,22 +736,19 @@ async || BACK_PIN.wait_for_falling_edge().await
 async || core::future::pending().await
 ```
 
-### 5.4 `example_main!` Update
+### 5.4 Harness macros
 
-The macro signature changes to accept an initial screen expression:
+The example harness (`examples/common`) provides three macros, each
+taking an expression that produces the initial view:
 
 ```rust
-// Old:
-example_main!(MyView);
-
-// New:
-example_main!(MyExample::default());
+example_main!(MyExample::default());                    // single view → run_app
+example_main_nav!(RootView::default());                // navigation → run_app_nav
+example_main_psram!(MyExample::default(), 512 * 1024);  // + runtime PSRAM pool
 ```
 
-The macro expands to
-`run_app(W, H, bufs, <expr>, async || core::future::pending().await).await`
-on embedded (timer-only, no external wake) and to the host SDL loop
-with equivalent logic.
+Each expands to the matching `run_app*` call on the selected board
+(`fire27` / `cores3`), or to the host SDL loop with equivalent logic.
 
 ---
 
@@ -807,12 +760,14 @@ stack entries. `AnyView` is an object-safe supertrait of `View`.
 ```rust
 /// Object-safe trait for type-erased views. Not implemented directly
 /// — the blanket impl covers all `View` types.
-pub trait AnyView {
+pub trait AnyView: 'static {
     fn create(&mut self, container: &Obj<'static>) -> Result<(), WidgetError>;
     fn update(&mut self) -> Result<NavAction, WidgetError>;
     fn on_event(&mut self, event: &Event) -> NavAction;
+    fn register_events_on(&mut self, container: &Obj<'static>);
     fn will_hide(&mut self);
     fn did_show(&mut self);
+    fn input_group(&self) -> Option<GroupRef>;
 }
 
 impl<T: View> AnyView for T {
@@ -883,11 +838,11 @@ observer bindings.
 | Active screen handle | `lv_screen_active()` | `Screen::active()` → `Screen` (non-owning) | Exists |
 | Top layer | `lv_layer_top()` | `Screen::layer_top()` → `Child<Obj>` | Exists |
 | Widget teardown | `lv_obj_clean()` | `Obj::clean()` | Exists |
-| New screen object | `lv_obj_create(NULL)` | `Screen::create()` → `Obj<'static>` | **Phase 1** |
-| Full-screen transition | `lv_screen_load_anim()` | `Screen::load()` | **Phase 1** |
-| Instant screen switch | `lv_screen_load()` | `Screen::load()` (with `ScreenAnimType::None`) | **Phase 1** |
-| System layer | `lv_layer_sys()` | `Screen::layer_sys()` → `Child<Obj>` | **Phase 1** |
-| Screen anim types | `lv_screen_load_anim_t` | `ScreenAnimType` enum | **Phase 1** |
+| New screen object | `lv_obj_create(NULL)` | `Screen::create()` → `Obj<'static>` | Shipped |
+| Full-screen transition | `lv_screen_load_anim()` | `Screen::load(scr, anim, auto_del)` | Shipped |
+| Instant screen switch | `lv_screen_load()` | `Screen::load_instant(scr)` | Shipped |
+| System layer | `lv_layer_sys()` | `Screen::layer_sys()` → `Child<Obj>` | Shipped |
+| Screen anim types | `lv_screen_load_anim_t` | `ScreenAnimType` enum | Shipped |
 
 `Screen` is the namespace for LVGL's screen concept. It has two roles:
 
@@ -905,64 +860,26 @@ No deprecated or experimental LVGL APIs are used.
 
 ---
 
-## 9. Migration Plan
+## 9. Implementation Status
 
-### Phase 1: Prerequisites (additive, build stays green)
-
-Add screen lifecycle wrappers to `src/widgets/screen.rs`:
-- `Screen::create() -> Obj<'static>` — wraps `lv_obj_create(NULL)`,
-  returns an owned screen object for Navigator to manage
-- `Screen::load(obj, anim)` — wraps `lv_screen_load_anim`, takes
-  any `&impl AsLvHandle`
-- `Screen::layer_sys()` — wraps `lv_layer_sys`, same pattern as
-  existing `layer_top()`
-- `ScreenAnimType` enum mirroring `lv_screen_load_anim_t`
-- `ScreenAnim` struct (type + duration + delay)
-
-### Phase 2: Core Implementation
-
-1. Evolve `View` trait in `src/view.rs` with new method signatures.
-2. Add `AnyView` trait with blanket impl.
-3. Add `Navigator` struct with push/pop/replace/modal.
-4. Add `NavAction` enum.
-5. Replace `run_lvgl` with `run_app` in `src/view.rs`.
-6. Update `example_main!` macro.
-
-### Phase 3: Validation
-
-Port one complex multi-state example to evolved `View` + `Navigator`:
-- `observer5.rs` (firmware update state machine) — currently simulates
-  multi-screen behavior with manual widget teardown and rebuilding.
-  Natural fit for push/pop.
-
-Port one simple single-screen example to verify the mechanical
-migration path works cleanly.
-
-### Phase 4: Full Migration
-
-1. Port all remaining examples to evolved `View` signatures.
-2. Remove `run_lvgl` and old `register_view_events`.
-3. Update all documentation.
-
-### Phase 5: Extend
-
-- Write a multi-screen example (e.g. menu → settings → back).
-- Write a modal example (e.g. confirmation dialog).
-- Add integration tests for push/pop/modal lifecycle.
-- Add a leak test for navigator teardown.
+Fully shipped. Reference examples: `nav1.rs` (two-screen push/pop),
+`toast_hil_demo.rs` (toasts), `menu_keypad.rs` (keypad-navigated menu).
 
 ---
 
 ## 10. Error Types
 
 ```rust
-/// Errors from navigation operations.
+/// Errors from navigation operations. Implements `Debug` and `Display`.
+#[derive(Debug)]
 pub enum NavigationError {
     /// Cannot pop the root screen.
     StackEmpty,
     /// No modal is currently active.
     NoActiveModal,
-    /// Screen creation failed.
+    /// No toast is currently active.
+    NoActiveToast,
+    /// View creation failed during a navigation transition.
     CreateFailed(WidgetError),
 }
 ```
@@ -989,27 +906,10 @@ The current spec does not define animation for modal show/dismiss.
 animations would need to use `lv_anim_*` on the backdrop/content
 objects directly.
 
-**Recommendation**: defer. Implement instant modal show/dismiss first.
-Add animation support when needed.
+**Recommendation**: modal show/dismiss is instant today; animation
+remains deferred. Full-screen transitions do animate via `ScreenAnim`.
 
-### 11.3 `NavAction` Ergonomics
-
-Returning `NavAction` from `on_event` is explicit but slightly
-inconvenient for views that never navigate. The default implementation
-returns `NavAction::None`, so non-navigating views don't need to
-override `on_event` at all. For navigating screens, a helper constructor
-pattern reduces boilerplate:
-
-```rust
-fn on_event(&mut self, event: &Event) -> NavAction {
-    if event.matches(&self.settings_btn, EventCode::CLICKED) {
-        return NavAction::push(SettingsView::default());
-    }
-    NavAction::None
-}
-```
-
-### 11.4 Background View `update`
+### 11.3 Background View `update`
 
 Only the active (topmost) full-screen view and the modal get `update`
 calls. Views lower in the stack do not receive `update` while hidden.
@@ -1037,5 +937,5 @@ channel / `watch`) for high-frequency data like sensor readings.
 | `Rc` not `Arc` | `spec-memory-lifetime.md` §4.3 | Navigator is single-task; no `Send`/`Sync` required |
 | Thin wrappers | `spec-api-vision.md` §3 | Navigator maps directly to `lv_screen_load_anim` + `lv_layer_top` |
 | `no_std` + `alloc` | `spec-api-vision.md` §4 | Uses `Vec`, `Box` from `alloc` (already a dependency) |
-| Zero warnings | `spec-rust-code.md` §2 | All types fully documented; no `#[allow()]` |
+| Zero warnings | `CLAUDE.md` (zero-warnings policy) | All types fully documented; no `#[allow()]` |
 | Hardware input via channels | §5.1, §5.3 | Button/sensor tasks send events through embassy channels; `update()` polls; no GPIO interrupts or LVGL indev required |

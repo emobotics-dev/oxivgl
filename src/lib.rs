@@ -66,6 +66,12 @@ pub mod diag;
 #[cfg(lvgl_builtin_malloc)]
 pub mod mem;
 
+// Internal: keeps LVGL's transient per-frame render scratch (draw-task
+// descriptors + SW draw masks/buffers) in internal DRAM via symbols the
+// `oxivgl-sys` build-time patch of the SW draw sources calls by name. Always
+// compiled so those symbols exist under every allocator backend.
+mod render_scratch;
+
 /// Declare an LVGL image asset compiled by `oxivgl-build`.
 ///
 /// Equivalent to LVGL's `LV_IMAGE_DECLARE`. Generates a safe

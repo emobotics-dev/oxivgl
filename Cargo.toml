@@ -2,7 +2,7 @@
 [package]
 name = "oxivgl"
 edition = "2024"
-version = "0.6.0"
+version = "0.6.1"
 license = "MIT OR Apache-2.0"
 description = "Safe no_std Rust bindings for LVGL — embedded GUI on ESP32 and host SDL2"
 repository = "https://github.com/emobotics-dev/oxivgl"
@@ -55,7 +55,7 @@ cores3 = [
 ]
 
 [dependencies]
-oxivgl_sys = { package = "oxivgl-sys", version = "0.2.3", path = "oxivgl-sys", default-features = false }
+oxivgl_sys = { package = "oxivgl-sys", version = "0.2.4", path = "oxivgl-sys", default-features = false }
 embassy-sync = "0.8"
 embassy-time = "0.5.0"
 heapless = { version = "0.9.1", features = ["nightly"] }
@@ -75,7 +75,7 @@ exclude = ["examples/common", "oxivgl-build", "oxivgl-sys"]
 
 [dev-dependencies]
 oxivgl-examples-common = { path = "examples/common" }
-oxivgl_sys = { package = "oxivgl-sys", version = "0.2.3", path = "oxivgl-sys", default-features = false }
+oxivgl_sys = { package = "oxivgl-sys", version = "0.2.4", path = "oxivgl-sys", default-features = false }
 
 # Crates the example harness names directly on xtensa (attribute macros +
 # BSP entry points). Chip features are supplied by the active board feature

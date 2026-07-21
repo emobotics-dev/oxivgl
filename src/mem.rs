@@ -229,8 +229,10 @@ pub(crate) fn apply_pending() {
     );
 
     // The pool is now part of the same TLSF heap as everything else, so LVGL's
-    // draw buffers could be served from it. They must not be — keep them out.
+    // draw buffers and per-frame draw-task descriptors could be served from it.
+    // They must not be — keep the whole render hot path out of the pool.
     install_draw_buf_guard();
+    crate::render_scratch::activate();
 
     APPLIED.store(true, Ordering::Release);
 }

@@ -46,7 +46,8 @@ Every example file needs:
 2. The `SPDX-License-Identifier: MIT OR Apache-2.0` header.
 3. A `//!` doc comment with a title and brief description.
 4. A single struct implementing `View`.
-5. `oxivgl_examples_common::example_main!(StructName);` at the end.
+5. `oxivgl_examples_common::example_main!(StructName::default());` at the end
+   (the macro takes a view *expression*, not a bare type name).
 
 Look at any existing example for the exact boilerplate.
 
@@ -56,26 +57,28 @@ Look at any existing example for the exact boilerplate.
 
 ### create()
 
-Builds the entire UI once. Get the active screen, create widgets, apply
-styles, return the struct. All widgets and styles that LVGL references
-must be stored in the struct to prevent drop.
+`fn create(&mut self, container: &Obj<'static>) -> Result<(), WidgetError>`.
+Builds the UI into `container` (the screen the harness supplies). Store all
+widgets and styles that LVGL references in the struct — as `Option<W>` fields,
+since the struct exists before `create` and `create` may run again — to prevent
+drop.
 
 ### update()
 
-Called every render tick. Use for polling widget values, timer-triggered
-updates, or frame-counter animations. Return `Ok(())` for static
-examples.
+`fn update(&mut self) -> Result<NavAction, WidgetError>`. Called every render
+tick. Use for polling widget values, timer-triggered updates, or frame-counter
+animations. Return `Ok(NavAction::None)` for static examples.
 
 ### on_event()
 
 Override for input-driven behavior (clicks, value changes). Use
 `event.matches(&widget, EventCode)` to dispatch. By default, events
-bubble to the active screen.
+bubble to the passed `container`.
 
-### register_events()
+### register_events_on()
 
 Override when events should be caught on intermediate containers instead
-of the screen.
+of the passed `container`.
 
 ### Extending the View trait
 
@@ -122,10 +125,9 @@ When a C example uses LVGL APIs not yet wrapped:
 5. Update the Implementation Coverage table and TOC in
    `examples/doc/README.md`.
 6. Check for regressions: `./run_tests.sh unit`.
-7. Check doc coverage:
-   ```
-   RUSTDOCFLAGS="-W missing-docs" cargo doc --no-deps
-   ```
+7. Check doc coverage: `./run_docs.sh --check` (it checks the exit status and
+   catches `error:` / build failures, which a raw `cargo doc | grep warning:`
+   silently misses).
 
 ---
 

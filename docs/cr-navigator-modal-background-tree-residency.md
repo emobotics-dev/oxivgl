@@ -72,7 +72,9 @@ A as the default.
   `bitmap_mask` / non-normal `blend_mode` — none used by the OSD. **0 KB to save.**
 - **Draw buffers are correctly in `.bss`** (`LVGL_BUFS`, `ui/mod.rs`), not heap.
 - **No global LVGL heap pool** (`LV_USE_STDLIB_MALLOC = CLIB`); style/image/object
-  caches already at 0 in `lv_conf.h`.
+  caches already at 0 in `lv_conf.h`. *(Config snapshot at time of writing;
+  oxivgl v0.6.0+ adds `oxivgl::mem::reserve_pool`, a runtime PSRAM heap pool, as
+  a complementary mitigation under `LV_STDLIB_BUILTIN`.)*
 - **Shadows are transient** (alloc+free within the draw call) — but the ~2 KB
   card-shadow spike *coincides with the create-time OOM instant*; cheap app-side
   mitigation is to lower `shadow_width`.

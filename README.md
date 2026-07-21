@@ -302,8 +302,14 @@ Only widgets actually used are enabled (`LV_USE_<WIDGET> 1`) to minimize binary 
 | Feature | Effect |
 |---------|--------|
 | `esp-hal` | ESP32 tick source (`esp_hal::time`) + DMA flush pipeline |
+| `esp32` / `esp32s3` | Select the target chip across the esp-hal family (with `esp-hal`) |
 | `defmt` | `defmt` logging (embedded) |
 | `log-04` | `log` v0.4 logging (host) |
+| `png` | PNG snapshot output on host (`Snapshot::write_png`) |
+
+The examples additionally use board features `fire27` (M5Stack Fire27 / ESP32)
+and `cores3` (M5Stack CoreS3 / ESP32-S3), which select the chip across esp-hal,
+the `m5stack-core` BSP, and oxivgl's chip feature. See `examples/common`.
 
 ## Build
 
@@ -314,8 +320,8 @@ LIBCLANG_PATH=/usr/lib64 cargo +nightly check --target x86_64-unknown-linux-gnu
 # Host tests:
 LIBCLANG_PATH=/usr/lib64 cargo +nightly test --target x86_64-unknown-linux-gnu
 
-# Embedded check (requires Xtensa toolchain):
-cargo +esp -Zbuild-std=alloc,core check --features esp-hal,log-04
+# Embedded check (requires Xtensa toolchain); the chip feature selects the target:
+cargo +esp -Zbuild-std=alloc,core check --target xtensa-esp32-none-elf --features esp-hal,esp32,log-04
 ```
 
 `oxivgl-sys/build.rs` downloads and compiles LVGL from source via the `cc` crate. Expects `DEP_LV_CONFIG_PATH` pointing to `lv_conf.h`.
