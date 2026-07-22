@@ -57,6 +57,22 @@ macro_rules! board_main_psram {
     };
 }
 
+/// Like [`board_main_nav!`], but drives the UI as an **encoder** rather than a
+/// keypad/pointer: the board's three inputs (Fire27 physical buttons, CoreS3
+/// touch-strip zones — both via the BSP's unified `ButtonEvent`) feed an
+/// [`EncoderState`](oxivgl::indev::EncoderState), and the loop runs via
+/// [`run_app_nav_encoder`](oxivgl::view::run_app_nav_encoder) (event mode +
+/// integrated wake, so input reaches LVGL with no read-timer latency).
+///
+/// `Short(n)` on the outer buttons is `turn(∓n)`, a center `Short` is `click`,
+/// and a center `Long` is `long_press` (toggle edit mode).
+#[macro_export]
+macro_rules! board_main_nav_encoder {
+    ($view_expr:expr) => {
+        $crate::board_body!($view_expr, nav_encoder, psram_bytes = 0);
+    };
+}
+
 /// Spawn a task, panicking with call-site context if the task pool is exhausted.
 ///
 /// Replaces embassy-executor's `Spawner::must_spawn` (removed in 0.10.0). For
@@ -149,20 +165,34 @@ macro_rules! board_body {
             (rx, tx)
         }
 
-        // ── Input: keypad (Fire27) or pointer (CoreS3) ──────────────────────
+        // ── Input: keypad / pointer (nav, single) or encoder (nav_encoder) ──
+        //
+        // All input primitives for both modes are declared here; the active
+        // `$mode` selects which is spawned (see `board_input_spawn!`) and which
+        // indev is registered (see `board_maybe_indev!`). The others are inert,
+        // hence `#[allow(dead_code)]`.
 
         /// Woken by the input task after it enqueues a key, so the render loop
         /// need not busy-poll. Unused on the pointer path (LVGL's read timer
         /// polls the `PointerState` directly).
         #[cfg(feature = "fire27")]
+        #[allow(dead_code)]
         static __OXIVGL_HARNESS_KEYPAD: $crate::oxivgl::indev::KeypadState =
             $crate::oxivgl::indev::KeypadState::new();
         #[cfg(feature = "cores3")]
+        #[allow(dead_code)]
         static __OXIVGL_HARNESS_POINTER: $crate::oxivgl::indev::PointerState =
             $crate::oxivgl::indev::PointerState::new();
+        /// Encoder state for the `nav_encoder` mode, fed by the board's unified
+        /// `ButtonEvent`. Every producer call fires its integrated wake, so
+        /// `run_app_nav_encoder` reads with no read-timer latency.
+        #[allow(dead_code)]
+        static __OXIVGL_HARNESS_ENCODER: $crate::oxivgl::indev::EncoderState =
+            $crate::oxivgl::indev::EncoderState::new();
 
         /// Fire27: map the three debounced front-panel buttons to LVGL keys.
         #[cfg(feature = "fire27")]
+        #[allow(dead_code)]
         #[embassy_executor::task]
         async fn input_task(mut input: m5stack_core::io::buttons::Buttons<'static>) -> ! {
             use m5stack_core::io::buttons::ButtonId;
@@ -180,6 +210,7 @@ macro_rules! board_body {
 
         /// CoreS3: poll the FT6336U (~50 Hz) and feed the pointer state.
         #[cfg(feature = "cores3")]
+        #[allow(dead_code)]
         #[embassy_executor::task]
         async fn touch_poll_task(
             i2c: &'static m5stack_core::io::shared_i2c::SharedI2cBus,
@@ -195,14 +226,68 @@ macro_rules! board_body {
             }
         }
 
+        /// Map one BSP `ButtonEvent` onto the encoder: outer buttons turn (with
+        /// the multi-tap count), center short-clicks, center long-press toggles
+        /// edit mode. Shared by both boards (identical `ButtonEvent`).
+        #[allow(dead_code)]
+        fn __oxivgl_encoder_feed(ev: m5stack_core::io::buttons::ButtonEvent) {
+            use m5stack_core::io::buttons::{ButtonAction, ButtonId};
+            match (ev.id, ev.action) {
+                (ButtonId::Left, ButtonAction::Short(n)) => {
+                    __OXIVGL_HARNESS_ENCODER.turn(-(n as i32))
+                }
+                (ButtonId::Right, ButtonAction::Short(n)) => {
+                    __OXIVGL_HARNESS_ENCODER.turn(n as i32)
+                }
+                (ButtonId::Center, ButtonAction::Short(_)) => __OXIVGL_HARNESS_ENCODER.click(),
+                (ButtonId::Center, ButtonAction::Long) => __OXIVGL_HARNESS_ENCODER.long_press(),
+                // Outer long-press has no encoder meaning; leave to the app.
+                _ => {}
+            }
+        }
+
+        /// Fire27 (`nav_encoder`): feed the three physical buttons to the encoder.
+        #[cfg(feature = "fire27")]
+        #[allow(dead_code)]
+        #[embassy_executor::task]
+        async fn encoder_input_task(mut input: m5stack_core::io::buttons::Buttons<'static>) -> ! {
+            loop {
+                __oxivgl_encoder_feed(input.next_event().await);
+            }
+        }
+
+        /// CoreS3 (`nav_encoder`): the touch-strip zones emulate the same three
+        /// buttons (BSP `TouchButtons`); feed their events to the encoder.
+        #[cfg(feature = "cores3")]
+        #[allow(dead_code)]
+        #[embassy_executor::task]
+        async fn encoder_touch_task(
+            i2c: &'static m5stack_core::io::shared_i2c::SharedI2cBus,
+        ) -> ! {
+            use m5stack_core::io::touch_buttons::{TouchButtons, TouchButtonsConfig};
+            // multi_tap_ms = 0: emit each tap immediately (no multi-tap window),
+            // so the encoder feels responsive. The encoder accumulator still
+            // sums rapid taps into multi-step, so no count is lost. See
+            // m5stack-core#58 for the equivalent Fire27 (async-button) knob.
+            let config = TouchButtonsConfig { multi_tap_ms: 0, ..TouchButtonsConfig::default() };
+            let mut buttons = TouchButtons::new(i2c, config);
+            loop {
+                __oxivgl_encoder_feed(buttons.next_event().await);
+            }
+        }
+
         /// Thin wrapper that registers the board's LVGL indev on first `create`
         /// (after `lv_init`, before any widget), then delegates to the user view.
         /// Holds the indev so it lives for the program's duration.
         struct BoardView<V: $crate::oxivgl::view::View> {
             inner: V,
+            // In `nav_encoder` mode the encoder indev is owned by
+            // `run_app_nav_encoder`, so this stays `None` — hence the allow.
             #[cfg(feature = "fire27")]
+            #[allow(dead_code)]
             _indev: Option<$crate::oxivgl::indev::KeypadIndev>,
             #[cfg(feature = "cores3")]
+            #[allow(dead_code)]
             _indev: Option<$crate::oxivgl::indev::PointerIndev>,
         }
 
@@ -211,16 +296,10 @@ macro_rules! board_body {
                 &mut self,
                 container: &$crate::oxivgl::widgets::Obj<'static>,
             ) -> Result<(), $crate::oxivgl::widgets::WidgetError> {
-                if self._indev.is_none() {
-                    #[cfg(feature = "fire27")]
-                    {
-                        self._indev = Some($crate::oxivgl::indev::KeypadIndev::new(&__OXIVGL_HARNESS_KEYPAD)?);
-                    }
-                    #[cfg(feature = "cores3")]
-                    {
-                        self._indev = Some($crate::oxivgl::indev::PointerIndev::new(&__OXIVGL_HARNESS_POINTER)?);
-                    }
-                }
+                // Register the keypad/pointer indev (nav, single). In
+                // nav_encoder mode this is a no-op; the encoder indev is created
+                // and bound by run_app_nav_encoder.
+                $crate::board_maybe_indev!($mode, self)?;
                 self.inner.create(container)
             }
 
@@ -330,10 +409,14 @@ macro_rules! board_body {
             let hi_spawner = int_exec.start(Priority::min());
             $crate::must_spawn!(hi_spawner, flush_task(driver));
 
+            // Unify the per-board input source into one local so the spawn can
+            // be dispatched on `$mode` (the token must be passed, not named
+            // across the macro boundary, to keep local-variable hygiene).
             #[cfg(feature = "fire27")]
-            $crate::must_spawn!(spawner, input_task(input));
+            let __input_src = input;
             #[cfg(feature = "cores3")]
-            $crate::must_spawn!(spawner, touch_poll_task(i2c));
+            let __input_src = i2c;
+            $crate::board_input_spawn!($mode, spawner, __input_src);
 
             static mut LVGL_BUFS: LvglBuffers<LVGL_BUF_BYTES> = LvglBuffers::new();
             // SAFETY: accessed only here, before the single-threaded LVGL render
@@ -360,4 +443,57 @@ macro_rules! board_launch {
             SCREEN_W.into(), SCREEN_H.into(), $bufs, $wrapper,
         ).await
     };
+    ($wrapper:ident, $bufs:ident, nav_encoder) => {
+        $crate::oxivgl::view::run_app_nav_encoder::<LVGL_BUF_BYTES>(
+            SCREEN_W.into(), SCREEN_H.into(), $bufs, $wrapper, &__OXIVGL_HARNESS_ENCODER,
+        ).await
+    };
+}
+
+/// Internal: spawn the input task for the selected mode. Do not call directly.
+///
+/// `$src` is the per-board input source (Fire27 `Buttons`, CoreS3 shared I2C),
+/// passed as a token so local-variable hygiene is preserved across the macro
+/// boundary; the referenced task fns are declared in `board_body!`.
+#[macro_export]
+#[doc(hidden)]
+macro_rules! board_input_spawn {
+    (nav_encoder, $spawner:expr, $src:expr) => {
+        #[cfg(feature = "fire27")]
+        $crate::must_spawn!($spawner, encoder_input_task($src));
+        #[cfg(feature = "cores3")]
+        $crate::must_spawn!($spawner, encoder_touch_task($src));
+    };
+    ($other:ident, $spawner:expr, $src:expr) => {
+        #[cfg(feature = "fire27")]
+        $crate::must_spawn!($spawner, input_task($src));
+        #[cfg(feature = "cores3")]
+        $crate::must_spawn!($spawner, touch_poll_task($src));
+    };
+}
+
+/// Internal: register the keypad/pointer indev for the selected mode. Do not
+/// call directly. A no-op in `nav_encoder` mode (the encoder indev is owned by
+/// `run_app_nav_encoder`). Evaluates to `Result<(), WidgetError>`.
+#[macro_export]
+#[doc(hidden)]
+macro_rules! board_maybe_indev {
+    (nav_encoder, $self:expr) => {
+        core::result::Result::<(), $crate::oxivgl::widgets::WidgetError>::Ok(())
+    };
+    ($other:ident, $self:expr) => {{
+        if $self._indev.is_none() {
+            #[cfg(feature = "fire27")]
+            {
+                $self._indev =
+                    Some($crate::oxivgl::indev::KeypadIndev::new(&__OXIVGL_HARNESS_KEYPAD)?);
+            }
+            #[cfg(feature = "cores3")]
+            {
+                $self._indev =
+                    Some($crate::oxivgl::indev::PointerIndev::new(&__OXIVGL_HARNESS_POINTER)?);
+            }
+        }
+        core::result::Result::<(), $crate::oxivgl::widgets::WidgetError>::Ok(())
+    }};
 }
