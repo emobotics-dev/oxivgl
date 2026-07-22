@@ -40,7 +40,10 @@ cores3 = [
 [target.'cfg(target_arch = "xtensa")'.dependencies]
 oxivgl = { path = "../..", default-features = false, features = ["esp-hal", "log-04"] }
 oxivgl_sys = { package = "oxivgl-sys", path = "../../oxivgl-sys", default-features = false }
-m5stack-core = { git = "https://github.com/emobotics-dev/m5stack-core", tag = "v0.4.1", default-features = false, features = ["display", "psram", "console-serial", "panic-handler"] }
+# TEMP: main pin for the button-timing fix (m5stack-core#58 / PR #59), ahead of a
+# tagged release. Revert to `tag = "v0.4.2"` once cut. Keep in sync with the root
+# Cargo.toml pin.
+m5stack-core = { git = "https://github.com/emobotics-dev/m5stack-core", rev = "c306796603e44a7d60dac66ebe49efc61df73f90", default-features = false, features = ["display", "psram", "console-serial", "panic-handler"] }
 esp-bootloader-esp-idf = { version = "0.5.0" }
 esp-hal              = { version = "=1.1.1", features = ["unstable"] }
 esp-rtos             = { version = "0.3.0", features = ["embassy"] }

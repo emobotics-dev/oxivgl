@@ -423,7 +423,7 @@ pub async fn run_app_nav<const BYTES: usize>(
     bufs: &'static mut LvglBuffers<BYTES>,
     initial: impl View,
 ) -> ! {
-    run_app_nav_inner(w, h, bufs, initial, None, false, no_wake).await
+    run_app_nav_inner(w, h, bufs, initial, None, None, false, no_wake).await
 }
 
 /// Like [`run_app_nav`], but also registers a **TIMER-mode** keypad input
@@ -449,7 +449,7 @@ pub async fn run_app_nav_keypad<const BYTES: usize>(
     initial: impl View,
     keypad: &'static crate::indev::KeypadState,
 ) -> ! {
-    run_app_nav_inner(w, h, bufs, initial, Some(keypad), false, no_wake).await
+    run_app_nav_inner(w, h, bufs, initial, Some(keypad), None, false, no_wake).await
 }
 
 /// Like [`run_app_nav_keypad`], but **event-driven and poll-free**.
@@ -473,7 +473,45 @@ pub async fn run_app_nav_keypad_events<const BYTES: usize, Fut>(
 where
     Fut: core::future::Future<Output = ()>,
 {
-    run_app_nav_inner(w, h, bufs, initial, Some(keypad), true, wake).await
+    run_app_nav_inner(w, h, bufs, initial, Some(keypad), None, true, wake).await
+}
+
+/// Like [`run_app_nav`], but also registers an encoder input device driven by
+/// `encoder` — **event-driven and poll-free by default**.
+///
+/// The navigator routes each active view's
+/// [`input_group`](View::input_group) to the encoder, so focusable widgets can
+/// be navigated *and edited in place* with three inputs (turn−, turn+, press) —
+/// from a rotary encoder or three buttons that call
+/// [`EncoderState::turn`](crate::indev::EncoderState::turn) /
+/// [`click`](crate::indev::EncoderState::click) /
+/// [`long_press`](crate::indev::EncoderState::long_press). LVGL owns the
+/// navigate ↔ edit toggle.
+///
+/// The device is created in EVENT mode and the loop awaits the encoder's
+/// **integrated wake** ([`EncoderState::wait`](crate::indev::EncoderState::wait)):
+/// a decoded press from the producer task is read the instant the LVGL task is
+/// scheduled, with no ~30 ms read-timer latency and no separate signal to wire.
+///
+/// `encoder` must be `'static` (typically a `static EncoderState`). Never returns.
+pub async fn run_app_nav_encoder<const BYTES: usize>(
+    w: i32,
+    h: i32,
+    bufs: &'static mut LvglBuffers<BYTES>,
+    initial: impl View,
+    encoder: &'static crate::indev::EncoderState,
+) -> ! {
+    run_app_nav_inner(
+        w,
+        h,
+        bufs,
+        initial,
+        None,
+        Some(encoder),
+        true,
+        || encoder.wait(),
+    )
+    .await
 }
 
 /// No-wake closure for the timer-only loops: a future that never resolves, so
@@ -493,6 +531,7 @@ async fn run_app_nav_inner<const BYTES: usize, Fut>(
     bufs: &'static mut LvglBuffers<BYTES>,
     initial: impl View,
     keypad: Option<&'static crate::indev::KeypadState>,
+    encoder: Option<&'static crate::indev::EncoderState>,
     event_mode: bool,
     wake: impl Fn() -> Fut,
 ) -> !
@@ -507,9 +546,10 @@ where
     DISPLAY_READY.wait().await;
     info!("Display ready");
 
-    // Register the keypad device (if any) BEFORE push_root, so the root view's
-    // input_group binds to it. Held for the loop's lifetime; since the loop
-    // never returns, its Drop never runs.
+    // Register the keypad/encoder device (if any) BEFORE push_root, so the root
+    // view's input_group binds to it. Held for the loop's lifetime; since the
+    // loop never returns, its Drop never runs. A single loop uses at most one of
+    // the two — the public entry points pass exactly one.
     let keypad_dev = keypad.and_then(|state| {
         let res = if event_mode {
             crate::indev::KeypadIndev::new_event(state)
@@ -520,6 +560,20 @@ where
             Ok(kp) => Some(kp),
             Err(e) => {
                 warn!("keypad indev create failed: {:?}", e);
+                None
+            }
+        }
+    });
+    let encoder_dev = encoder.and_then(|state| {
+        let res = if event_mode {
+            crate::indev::EncoderIndev::new_event(state)
+        } else {
+            crate::indev::EncoderIndev::new(state)
+        };
+        match res {
+            Ok(enc) => Some(enc),
+            Err(e) => {
+                warn!("encoder indev create failed: {:?}", e);
                 None
             }
         }
@@ -562,6 +616,9 @@ where
                 Ok(()) => {
                     if let Some(kp) = &keypad_dev {
                         kp.read();
+                    }
+                    if let Some(enc) = &encoder_dev {
+                        enc.read();
                     }
                     break;
                 }

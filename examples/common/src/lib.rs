@@ -55,6 +55,25 @@ macro_rules! example_main_nav {
     };
 }
 
+/// Generate a `main` for a **navigation** example driven as an **encoder**.
+///
+/// On target, the board's three inputs feed an
+/// [`EncoderState`](oxivgl::indev::EncoderState) via
+/// [`board_main_nav_encoder!`], launched with
+/// [`run_app_nav_encoder`](oxivgl::view::run_app_nav_encoder). On host (no
+/// hardware buttons) it falls back to [`host_main_nav!`]; the example supplies
+/// its own on-screen controls there.
+#[macro_export]
+macro_rules! example_main_nav_encoder {
+    ($view_expr:expr) => {
+        #[cfg(target_arch = "xtensa")]
+        $crate::board_main_nav_encoder!($view_expr);
+
+        #[cfg(not(target_arch = "xtensa"))]
+        $crate::host_main_nav!($view_expr);
+    };
+}
+
 /// Generate a `main` that puts LVGL's heap in PSRAM on target.
 ///
 /// Identical to [`example_main!`] on host, which has no PSRAM — the example
