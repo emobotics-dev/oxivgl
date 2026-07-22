@@ -86,7 +86,10 @@ esp-bootloader-esp-idf = { version = "0.5.0" }
 esp-hal                = { version = "=1.1.1", features = ["unstable"] }
 esp-rtos               = { version = "0.3.0", features = ["embassy"] }
 esp-sync               = { version = "0.2.1" }
-m5stack-core = { git = "https://github.com/emobotics-dev/m5stack-core", tag = "v0.4.1", default-features = false, features = ["display", "psram", "console-serial", "panic-handler"] }
+# TEMP: main pin for the button-timing fix (immediate single-press / ButtonTiming),
+# m5stack-core#58 / PR #59, ahead of a tagged release. Revert to `tag = "v0.4.2"`
+# once cut. Dev-dependency only — never part of the published library.
+m5stack-core = { git = "https://github.com/emobotics-dev/m5stack-core", rev = "c306796603e44a7d60dac66ebe49efc61df73f90", default-features = false, features = ["display", "psram", "console-serial", "panic-handler"] }
 
 # esp-hal family — stock crates.io for the published library; redirected to the
 # emobotics fork (a coherent 1.1.1 snapshot + SPI/DMA fixes the BSP's DMA flush

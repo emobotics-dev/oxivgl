@@ -264,13 +264,13 @@ macro_rules! board_body {
         async fn encoder_touch_task(
             i2c: &'static m5stack_core::io::shared_i2c::SharedI2cBus,
         ) -> ! {
-            use m5stack_core::io::touch_buttons::{TouchButtons, TouchButtonsConfig};
-            // multi_tap_ms = 0: emit each tap immediately (no multi-tap window),
-            // so the encoder feels responsive. The encoder accumulator still
-            // sums rapid taps into multi-step, so no count is lost. See
-            // m5stack-core#58 for the equivalent Fire27 (async-button) knob.
-            let config = TouchButtonsConfig { multi_tap_ms: 0, ..TouchButtonsConfig::default() };
-            let mut buttons = TouchButtons::new(i2c, config);
+            use m5stack_core::io::buttons::ButtonTiming;
+            use m5stack_core::io::touch_buttons::TouchButtons;
+            // Immediate single-press: no multi-tap counting window, so each tap
+            // registers at once (the encoder accumulator still sums rapid taps
+            // into multi-step). Cross-driver preset shared with Fire27 below.
+            let mut buttons =
+                TouchButtons::with_timing(i2c, ButtonTiming::immediate_single_press());
             loop {
                 __oxivgl_encoder_feed(buttons.next_event().await);
             }
@@ -386,7 +386,9 @@ macro_rules! board_body {
             #[cfg(feature = "fire27")]
             let (dbus, input) = {
                 let dbus = b.spi2.into_display_only(dma_rx, dma_tx).await.expect("display init");
-                (dbus, b.buttons.into_buttons())
+                // Encoder mode uses immediate single-press timing (no double-click
+                // wait, 500 ms long-press); nav/keypad keeps the default window.
+                (dbus, $crate::board_fire27_buttons!($mode, b.buttons))
             };
             #[cfg(feature = "cores3")]
             let (dbus, i2c) = {
@@ -447,6 +449,22 @@ macro_rules! board_launch {
         $crate::oxivgl::view::run_app_nav_encoder::<LVGL_BUF_BYTES>(
             SCREEN_W.into(), SCREEN_H.into(), $bufs, $wrapper, &__OXIVGL_HARNESS_ENCODER,
         ).await
+    };
+}
+
+/// Internal: build the Fire27 buttons with mode-appropriate timing. Do not call
+/// directly. `nav_encoder` uses immediate single-press (no double-click wait,
+/// snappier long-press); other modes keep async-button's default window.
+#[macro_export]
+#[doc(hidden)]
+macro_rules! board_fire27_buttons {
+    (nav_encoder, $res:expr) => {
+        $res.into_buttons_with_timing(
+            $crate::m5stack_core::io::buttons::ButtonTiming::immediate_single_press(),
+        )
+    };
+    ($other:ident, $res:expr) => {
+        $res.into_buttons()
     };
 }
 
