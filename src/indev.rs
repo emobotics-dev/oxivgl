@@ -9,14 +9,19 @@
 //! [`KeypadState`](crate::indev::KeypadState): a lock-free cell that any task —
 //! a debounced GPIO button task, or an on-screen button's event handler on a
 //! touchscreen — writes, and LVGL's focus engine reads.
+//! [`EncoderIndev`](crate::indev::EncoderIndev) is the three-input analogue: an
+//! *owning* ENCODER device fed turn deltas and a push-button state through an
+//! [`EncoderState`](crate::indev::EncoderState) cell, so one interaction set
+//! (turn−, turn+, press) drives both focus navigation and in-place value
+//! editing — LVGL owns the navigate ↔ edit toggle.
 //! [`PointerIndev`](crate::indev::PointerIndev) is the touchscreen analogue: an
 //! *owning* POINTER device fed raw `(x, y)` coordinates through a
 //! [`PointerState`](crate::indev::PointerState) cell or a polling closure, so a
 //! view can be navigated by tapping a widget at a coordinate.
 //!
-//! Both owning devices take input in oxivgl's own vocabulary — LVGL keys and
-//! raw coordinates — never a BSP/MCU/driver type, so they stay portable across
-//! boards and MCUs.
+//! Every owning device takes input in oxivgl's own vocabulary — LVGL keys,
+//! turn deltas, raw coordinates — never a BSP/MCU/driver type, so they stay
+//! portable across boards and MCUs.
 //!
 //! # Driving focus navigation
 //!
@@ -78,8 +83,10 @@
 use alloc::boxed::Box;
 use core::ffi::c_void;
 use core::marker::PhantomData;
-use core::sync::atomic::{AtomicBool, AtomicU32, AtomicUsize, Ordering};
+use core::sync::atomic::{AtomicBool, AtomicI32, AtomicU32, AtomicUsize, Ordering};
 
+use embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
+use embassy_sync::signal::Signal;
 use oxivgl_sys::*;
 
 use crate::enums::Key;
@@ -142,6 +149,11 @@ impl Indev {
 /// outstanding discrete events absorb a short burst of decoded key presses
 /// without dropping any before the render loop drains them.
 const KEYPAD_QUEUE_CAP: usize = 8;
+
+/// Maximum outstanding one-shot encoder clicks (see [`EncoderState::click`]) —
+/// far more than a human can queue before the render loop drains them, so a
+/// dropped click only means the UI was already wedged.
+const ENCODER_CLICK_CAP: usize = 8;
 
 /// Lock-free key state shared between an input producer and a [`KeypadIndev`].
 ///
@@ -497,6 +509,428 @@ unsafe extern "C" fn keypad_read_cb(indev: *mut lv_indev_t, data: *mut lv_indev_
             lv_indev_state_t_LV_INDEV_STATE_RELEASED
         };
         (*data).continue_reading = false;
+    }
+}
+
+/// Lock-free encoder state shared between an input producer and an
+/// [`EncoderIndev`] — the ENCODER analogue of [`KeypadState`].
+///
+/// LVGL's ENCODER device drives a focus group with a single interaction set —
+/// **turn−**, **turn+**, **press** — and LVGL itself owns the navigate ↔ edit
+/// toggle: while navigating, a turn moves focus and a press enters edit (or
+/// clicks a button); while editing, a turn changes the focused widget's value
+/// and a press leaves edit. The *same* three inputs therefore drive both, and
+/// the producer never needs to know which mode the UI is in. Despite the name,
+/// ENCODER is an *interaction model*, not wheel-specific hardware — three
+/// buttons are a first-class driver (the classic M5Stack idiom).
+///
+/// The producer reports input in two independent channels, both **discrete
+/// and event-driven** — this matches the M5Stack input stack (and the
+/// `async-button` crate under it), which hands the application *pre-decoded,
+/// fire-once* events (`Short { count }`, `Long`), never raw press/release
+/// edges. There is no held level to report, so nothing here is a level.
+///
+/// **Turn** ([`turn`](Self::turn)) — a signed step delta, `-1` per counter-
+/// clockwise detent (or a "−" button tap), `+1` per clockwise. Deltas
+/// **accumulate** until LVGL next reads the device, so N steps in a burst move
+/// N — and a *multi-tap* event carries its own count, so a double-tap "+" maps
+/// straight to `turn(2)`. LVGL applies the accumulated delta as `enc_diff`;
+/// there is no auto-repeat.
+///
+/// **Click** ([`click`](Self::click)) — one discrete *short* press of the push
+/// button, delivered to LVGL as a single PRESSED → RELEASED pulse. On an
+/// editable widget in navigate mode a click **enters** edit; on a plain button
+/// it clicks it; in edit mode it activates/confirms.
+///
+/// **Long press** ([`long_press`](Self::long_press)) — a *direct route* for a
+/// pre-decoded long press of the OK/center button: it performs LVGL's encoder
+/// long-press action — **toggle edit mode** — on the focused group. This is the
+/// canonical (and, for a multi-object group, the *only*) way to **leave** edit
+/// mode. It exists because LVGL normally derives long press from the button
+/// being *held* past `long_press_time`, but the M5Stack input stack (and
+/// `async-button`) hands us a finished `Long` event, never a held edge — so we
+/// feed the decoded result straight into LVGL instead of faking a hold.
+///
+/// All input fields are atomic, so the producer may run on a different task than
+/// the one driving LVGL (e.g. an interrupt-driven button task whose debounced
+/// `next_event().await` calls [`turn`](Self::turn) / [`click`](Self::click) /
+/// [`long_press`](Self::long_press)).
+///
+/// # Immediate delivery, no polling
+///
+/// Because the producer task must not call into LVGL (LVGL runs on a single
+/// task), input crosses to the LVGL task through an **integrated wake signal**:
+/// every producer call fires it, and the event-driven render loop
+/// ([`run_app_nav_encoder`](crate::view::run_app_nav_encoder)) awaits it, so a
+/// decoded press reaches LVGL as soon as the LVGL task is scheduled — no ~30 ms
+/// read-timer latency. This is built in, not opt-in; the producer just calls
+/// [`turn`](Self::turn) / [`click`](Self::click) / [`long_press`](Self::long_press).
+///
+/// Declare it as a `static` so it satisfies [`EncoderIndev::new`]'s `'static`
+/// requirement (LVGL stores a pointer to it for the device's lifetime).
+///
+/// ```no_run
+/// use oxivgl::indev::{EncoderIndev, EncoderState};
+///
+/// static ENC: EncoderState = EncoderState::new();
+///
+/// # fn demo() -> Result<(), oxivgl::widgets::WidgetError> {
+/// let _enc = EncoderIndev::new(&ENC)?;
+///
+/// // From a three-button task, mapping each pre-decoded event:
+/// // (ButtonId, ButtonAction) → encoder input
+/// ENC.turn(-1);      // Left,   Short(1) → one step counter-clockwise
+/// ENC.turn(2);       // Right,  Short(2) → two steps clockwise (multi-tap count)
+/// ENC.click();       // Center, Short(_) → enter edit, or click a button
+/// ENC.long_press();  // Center, Long     → toggle edit mode (leave edit)
+/// # Ok(()) }
+/// ```
+pub struct EncoderState {
+    /// Accumulated signed turn delta not yet delivered to LVGL. The producer
+    /// adds with [`turn`](Self::turn); the read callback drains it into
+    /// `enc_diff`. Widened to `i32` so a burst cannot overflow LVGL's `i16`
+    /// field mid-accumulation — the callback clamps and carries any remainder.
+    turn: AtomicI32,
+    /// Count of queued one-shot clicks not yet delivered. Each is reported to
+    /// LVGL as a PRESSED then RELEASED across successive reads (a short click).
+    /// A count, not a bool, so a rapid second click is never dropped.
+    clicks: AtomicUsize,
+    /// Release phase of a click just reported PRESSED: the next read reports it
+    /// RELEASED, so the button is never held across reads and LVGL sees a short
+    /// click (not a synthesized long press).
+    release_pending: AtomicBool,
+    /// A decoded long press awaiting delivery. The read callback consumes it and
+    /// toggles edit mode on the focused group directly (LVGL's long-press
+    /// action), rather than through a held button it would have to time.
+    long_press: AtomicBool,
+    /// Wake for the LVGL task: fired by every producer call so the event-driven
+    /// render loop reads immediately instead of on a poll timer. Latching, so a
+    /// signal raised between waits is never lost.
+    notify: Signal<CriticalSectionRawMutex, ()>,
+}
+
+impl core::fmt::Debug for EncoderState {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        f.debug_struct("EncoderState").finish_non_exhaustive()
+    }
+}
+
+impl EncoderState {
+    /// Create a new, idle state.
+    ///
+    /// `const` so it can initialise a `static`:
+    /// `static ENC: EncoderState = EncoderState::new();`
+    pub const fn new() -> Self {
+        Self {
+            turn: AtomicI32::new(0),
+            clicks: AtomicUsize::new(0),
+            release_pending: AtomicBool::new(false),
+            long_press: AtomicBool::new(false),
+            notify: Signal::new(),
+        }
+    }
+
+    /// Add `steps` to the pending turn delta: negative counter-clockwise,
+    /// positive clockwise. Accumulates until LVGL next reads the device, so a
+    /// burst of N moves N steps and a multi-tap event maps straight to its
+    /// count (`turn(2)` for a double-tap) — LVGL adds no repeat.
+    pub fn turn(&self, steps: i32) {
+        self.turn.fetch_add(steps, Ordering::Relaxed);
+        self.notify.signal(());
+    }
+
+    /// Queue one discrete button click — delivered to LVGL as a single
+    /// PRESSED → RELEASED pulse (a short click: enter/leave edit, or click the
+    /// focused widget). Lock-free and best-effort; call once per decoded press
+    /// event (a long press is app-routed, not a click — see the type docs).
+    ///
+    /// Saturates at a small cap of outstanding clicks — far more than a human
+    /// can queue before the render loop drains them, so a dropped click only
+    /// means the UI was already wedged. Single-producer.
+    pub fn click(&self) {
+        if self.clicks.load(Ordering::Relaxed) < ENCODER_CLICK_CAP {
+            self.clicks.fetch_add(1, Ordering::Relaxed);
+        }
+        self.notify.signal(());
+    }
+
+    /// Deliver a decoded **long press** of the OK/center button: on the next
+    /// read the device toggles edit mode on the focused group — LVGL's encoder
+    /// long-press action, and the only way to *leave* edit mode in a
+    /// multi-object group.
+    ///
+    /// Call this for a driver's already-decoded long-press event (e.g. M5Stack
+    /// `ButtonAction::Long` on the center button). It is a direct route into
+    /// LVGL's group state, not a button hold — see the type docs.
+    pub fn long_press(&self) {
+        self.long_press.store(true, Ordering::Relaxed);
+        self.notify.signal(());
+    }
+
+    /// Await the next producer input (turn / click / long press). The
+    /// event-driven render loop awaits this so a decoded press is read the
+    /// instant the LVGL task is scheduled — no read-timer polling. Latching, so
+    /// input raised while not awaiting is delivered on the next call.
+    pub async fn wait(&self) {
+        self.notify.wait().await;
+    }
+
+    /// Whether any input is still undelivered — the render loop uses this to
+    /// drain via [`EncoderIndev::read`]: a pending turn delta, a queued click,
+    /// a click mid release-phase, or a pending long press.
+    pub fn has_pending(&self) -> bool {
+        self.turn.load(Ordering::Acquire) != 0
+            || self.clicks.load(Ordering::Acquire) != 0
+            || self.release_pending.load(Ordering::Acquire)
+            || self.long_press.load(Ordering::Acquire)
+    }
+
+    /// Consumer side (read callback): take up to one `i16` worth of accumulated
+    /// turn delta, returning it and whether a remainder is left (which only
+    /// happens after an implausibly large burst). The remainder stays in the
+    /// accumulator for the next read.
+    fn drain_turn(&self) -> (i16, bool) {
+        let acc = self.turn.load(Ordering::Acquire);
+        if acc == 0 {
+            return (0, false);
+        }
+        let delivered = acc.clamp(i16::MIN as i32, i16::MAX as i32);
+        // Subtract exactly what we deliver; any concurrent `turn` adds survive.
+        self.turn.fetch_sub(delivered, Ordering::Relaxed);
+        (delivered as i16, delivered != acc)
+    }
+
+    /// Consumer side: pop one queued click, or `false` if none.
+    fn take_click(&self) -> bool {
+        if self.clicks.load(Ordering::Relaxed) == 0 {
+            return false;
+        }
+        // Only the read callback (single consumer) decrements; concurrent
+        // producer `click`s only add, so this never underflows.
+        self.clicks.fetch_sub(1, Ordering::Relaxed);
+        true
+    }
+
+    /// Consumer side: take a pending long press, or `false` if none.
+    fn take_long_press(&self) -> bool {
+        self.long_press.swap(false, Ordering::AcqRel)
+    }
+}
+
+impl Default for EncoderState {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+/// Owning ENCODER input device, backed by an [`EncoderState`].
+///
+/// The three-input analogue of [`KeypadIndev`]: one interaction set (turn−,
+/// turn+, press) drives both focus navigation and in-place value editing,
+/// because LVGL owns the navigate ↔ edit toggle. Created once at startup and
+/// kept alive for the application's lifetime (commonly owned by the
+/// [`Navigator`](crate::navigator::Navigator) via
+/// [`run_app_nav_encoder`](crate::view::run_app_nav_encoder)). Dropping it
+/// removes the device via `lv_indev_delete`.
+///
+/// Bind it to a focus [`Group`] — either explicitly with
+/// [`set_group`](Self::set_group), or automatically by the navigator, which
+/// routes each active view's [`input_group`](crate::view::View::input_group) to
+/// every registered keypad/encoder device.
+///
+/// # Thread safety
+///
+/// `EncoderIndev` is `!Send + !Sync` — LVGL must be driven from a single task.
+pub struct EncoderIndev {
+    ptr: *mut lv_indev_t,
+    /// The state this device reads from — kept so [`read`](Self::read) can
+    /// drain the turn accumulator. `'static`, so it does not constrain the
+    /// device.
+    state: &'static EncoderState,
+    _not_send: PhantomData<*const ()>,
+}
+
+impl core::fmt::Debug for EncoderIndev {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        f.debug_struct("EncoderIndev").finish_non_exhaustive()
+    }
+}
+
+impl EncoderIndev {
+    /// Create an ENCODER device in **TIMER mode** (LVGL polls it on its own read
+    /// timer, ~30 ms).
+    ///
+    /// `state` must be `'static` because LVGL stores a pointer to it (in the
+    /// device's user data) and reads it for the device's lifetime — see
+    /// `spec-memory-lifetime.md` §1.
+    ///
+    /// Returns `Err(WidgetError::LvglNullPointer)` if LVGL allocation fails.
+    pub fn new(state: &'static EncoderState) -> Result<Self, WidgetError> {
+        Self::create(state, false)
+    }
+
+    /// Create an ENCODER device in **EVENT mode** — LVGL does **not** poll it on
+    /// a timer; nothing is read until you call [`read`](Self::read).
+    ///
+    /// The poll-free path: an interrupt-driven producer calls
+    /// [`turn`](EncoderState::turn) / [`click`](EncoderState::click), signals
+    /// the render loop, and the loop calls `read`, so input reaches the screen
+    /// with no periodic polling of either the buttons or the device.
+    ///
+    /// Returns `Err(WidgetError::LvglNullPointer)` if LVGL allocation fails.
+    pub fn new_event(state: &'static EncoderState) -> Result<Self, WidgetError> {
+        Self::create(state, true)
+    }
+
+    /// Shared constructor. `event_mode` selects `LV_INDEV_MODE_EVENT`.
+    fn create(state: &'static EncoderState, event_mode: bool) -> Result<Self, WidgetError> {
+        // SAFETY: lv_indev_create allocates and registers a new indev in the
+        // global indev list; returns NULL on OOM (checked below).
+        // See lvgl/src/indev/lv_indev.c — lv_indev_create.
+        let ptr = unsafe { lv_indev_create() };
+        if ptr.is_null() {
+            return Err(WidgetError::LvglNullPointer);
+        }
+        // SAFETY: ptr is non-null (checked). We mark it an ENCODER device, point
+        // its read_cb at `encoder_read_cb`, store `state` (a `&'static`
+        // reference, so it outlives the device) as the user data the callback
+        // reads, and optionally switch it to EVENT mode (no read timer).
+        // lv_indev_set_* only store these into the indev struct.
+        // See lvgl/src/indev/lv_indev.c — lv_indev_set_type/read_cb/user_data/mode.
+        unsafe {
+            lv_indev_set_type(ptr, lv_indev_type_t_LV_INDEV_TYPE_ENCODER);
+            lv_indev_set_read_cb(ptr, Some(encoder_read_cb));
+            lv_indev_set_user_data(ptr, state as *const EncoderState as *mut c_void);
+            if event_mode {
+                lv_indev_set_mode(ptr, lv_indev_mode_t_LV_INDEV_MODE_EVENT);
+            }
+        }
+        Ok(Self { ptr, state, _not_send: PhantomData })
+    }
+
+    /// Bind this device to `group` so its turns/press drive that group's focus
+    /// and editing.
+    ///
+    /// The navigator does this automatically for the active view's
+    /// [`input_group`](crate::view::View::input_group); call this only for
+    /// manual (non-navigator) setups.
+    pub fn set_group(&self, group: &Group) -> &Self {
+        // SAFETY: self.ptr is non-null (checked in create()); group.raw_ptr()
+        // returns the group's non-null lv_group_t. lv_indev_set_group stores
+        // the group pointer into the indev.
+        // See lvgl/src/indev/lv_indev.c — lv_indev_set_group.
+        unsafe { lv_indev_set_group(self.ptr, group.raw_ptr()) };
+        self
+    }
+
+    /// Process pending input now, draining the turn accumulator. Call from your
+    /// render loop when your input signal fires — essential in EVENT mode (where
+    /// LVGL never reads on its own), harmless in TIMER mode.
+    ///
+    /// The loop is bounded so it can never spin: the accumulator is delivered in
+    /// at most `i16`-sized chunks, and one read suffices for any realistic
+    /// (single-detent) burst.
+    pub fn read(&self) -> &Self {
+        // At most two reads (PRESSED + RELEASED) per queued click, plus a margin
+        // for the turn remainder and long-press reads. Bounded so it can't spin.
+        let mut budget = 2 * ENCODER_CLICK_CAP + 2;
+        loop {
+            // SAFETY: self.ptr is a live ENCODER indev created in create().
+            // lv_indev_read invokes our read_cb and processes one input state.
+            unsafe { lv_indev_read(self.ptr) };
+            budget -= 1;
+            if !self.state.has_pending() || budget == 0 {
+                break;
+            }
+        }
+        self
+    }
+}
+
+impl Drop for EncoderIndev {
+    fn drop(&mut self) {
+        // SAFETY: self.ptr was returned by lv_indev_create and is non-null.
+        // lv_indev_delete unlinks the device from the global indev list and
+        // any group binding, then frees it. Called exactly once via Drop.
+        // See lvgl/src/indev/lv_indev.c — lv_indev_delete.
+        unsafe { lv_indev_delete(self.ptr) };
+    }
+}
+
+/// LVGL read callback for an [`EncoderIndev`].
+///
+/// Populates `lv_indev_data_t { enc_diff, state }` from the [`EncoderState`]:
+/// the accumulated turn delta (drained, `i16`-clamped) as `enc_diff`, and the
+/// one-shot click state machine as `state` — a queued click reports PRESSED,
+/// arming its RELEASED for the next read (a short click). A pending long press
+/// is applied first, toggling edit mode on the bound group directly. Sets
+/// `continue_reading` while more turn remainder or clicks remain. Invoked by
+/// LVGL on its own task.
+unsafe extern "C" fn encoder_read_cb(indev: *mut lv_indev_t, data: *mut lv_indev_data_t) {
+    if indev.is_null() || data.is_null() {
+        return;
+    }
+    // SAFETY: indev is non-null (checked). The user data was set in
+    // EncoderIndev::new* to a `&'static EncoderState` pointer that outlives the
+    // device; NULL only if unset (handled below).
+    let state = unsafe { lv_indev_get_user_data(indev) } as *const EncoderState;
+    if state.is_null() {
+        return;
+    }
+    // SAFETY: state points to a live `'static` EncoderState (see above). All its
+    // fields are atomics, so shared access from this C callback is sound.
+    let st = unsafe { &*state };
+
+    // A decoded long press: perform LVGL's encoder long-press action directly on
+    // the bound group, since the button driver already classified it and we have
+    // no held edge for LVGL to time. This mirrors indev_encoder_proc's long-press
+    // handling (lv_indev.c): toggle edit mode for an editable/scrollable focus in
+    // a multi-object group.
+    if st.take_long_press() {
+        // SAFETY: indev is a live encoder device; lv_indev_get_group returns its
+        // bound group or NULL. All calls below are LVGL group/object queries that
+        // only read, except lv_group_set_editing, which LVGL itself calls from
+        // this same read path (indev_encoder_proc). We run on the LVGL task.
+        unsafe {
+            let g = lv_indev_get_group(indev);
+            if !g.is_null() {
+                let focused = lv_group_get_focused(g);
+                if !focused.is_null()
+                    && (lv_obj_is_editable(focused)
+                        || lv_obj_has_flag(focused, lv_obj_flag_t_LV_OBJ_FLAG_SCROLLABLE))
+                    // "Don't leave edit mode if there is only one object" — LVGL.
+                    && lv_group_get_obj_count(g) > 1
+                {
+                    let editing = lv_group_get_editing(g);
+                    lv_group_set_editing(g, !editing);
+                }
+            }
+        }
+    }
+
+    // Turn delta rides on every read, independent of the button.
+    let (diff, more) = st.drain_turn();
+
+    // Button one-shot: finish a click's release, else start the next click,
+    // else report idle (released). Only one phase per read.
+    let (button_state, click_more) = if st.release_pending.swap(false, Ordering::AcqRel) {
+        // Finish a click just reported PRESSED.
+        (lv_indev_state_t_LV_INDEV_STATE_RELEASED, st.clicks.load(Ordering::Acquire) != 0)
+    } else if st.take_click() {
+        // Start the next queued click; come back next read to release it.
+        st.release_pending.store(true, Ordering::Release);
+        (lv_indev_state_t_LV_INDEV_STATE_PRESSED, true)
+    } else {
+        (lv_indev_state_t_LV_INDEV_STATE_RELEASED, false)
+    };
+
+    // SAFETY: data is a valid lv_indev_data_t LVGL gave us to populate.
+    unsafe {
+        (*data).enc_diff = diff;
+        (*data).state = button_state;
+        // Revisit within this read while a turn remainder (an >i16 burst) or
+        // any click phase is still outstanding.
+        (*data).continue_reading = more || click_more;
     }
 }
 

@@ -13,6 +13,7 @@ mod common;
 mod anim;
 mod diag;
 mod draw;
+mod encoder;
 mod event;
 mod group;
 mod keypad;

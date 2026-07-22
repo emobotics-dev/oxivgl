@@ -7,6 +7,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **`EncoderIndev` — owning LVGL ENCODER input device** (#127), the three-input
+  analogue of `KeypadIndev`. One interaction set (turn−, turn+, press) drives
+  *both* focus navigation and in-place value editing, because LVGL owns the
+  navigate ↔ edit toggle — the classic three-button embedded idiom (M5Stack
+  Fire buttons, CoreS3 touch zones) or a rotary encoder. `EncoderState` is a
+  lock-free cell an input producer writes:
+  - `turn(steps)` — signed step delta; deltas accumulate, so a multi-tap event
+    maps straight to its count (a double-tap `+` is `turn(2)`);
+  - `click()` — one short click (enter edit / confirm / click a button);
+  - `long_press()` — a **direct route** for a pre-decoded long press that
+    toggles edit mode on the focused group (the only way to *leave* edit in a
+    multi-object group). It exists because the M5Stack input stack (and
+    `async-button`) hands the app finished `Long` events, never held edges, so
+    LVGL cannot re-derive the long press from a hold.
+
+  Every producer call fires an **integrated wake signal**, so the event-driven
+  loop `run_app_nav_encoder` reads the instant the LVGL task is scheduled — no
+  ~30 ms read-timer latency and no separate signal to wire. New example
+  `menu_encoder.rs`; `EncoderIndev`/`EncoderState` are re-exported from the
+  prelude.
+
 ## [0.6.1] — 2026-07-21
 
 ### Fixed

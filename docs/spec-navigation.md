@@ -863,7 +863,8 @@ No deprecated or experimental LVGL APIs are used.
 ## 9. Implementation Status
 
 Fully shipped. Reference examples: `nav1.rs` (two-screen push/pop),
-`toast_hil_demo.rs` (toasts), `menu_keypad.rs` (keypad-navigated menu).
+`toast_hil_demo.rs` (toasts), `menu_keypad.rs` (keypad-navigated menu),
+`menu_encoder.rs` (encoder navigate ↔ edit with three inputs).
 
 ---
 
