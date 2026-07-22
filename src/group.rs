@@ -89,6 +89,19 @@ impl Group {
         self
     }
 
+    /// Whether this group is in **edit** mode (as opposed to navigate mode).
+    ///
+    /// Meaningful for an encoder ([`EncoderIndev`](crate::indev::EncoderIndev)):
+    /// LVGL toggles this with a press/long-press on an editable focused widget.
+    /// In navigate mode a turn moves focus; in edit mode a turn changes the
+    /// focused widget's value. A UI can read this to show the current mode.
+    /// See lvgl/src/core/lv_group.c — lv_group_get_editing.
+    pub fn is_editing(&self) -> bool {
+        // SAFETY: self.ptr is non-null (checked in new()); lv_group_get_editing
+        // only reads the group's editing flag.
+        unsafe { lv_group_get_editing(self.ptr) }
+    }
+
     /// Raw `lv_group_t` pointer for crate-internal binding (e.g.
     /// [`KeypadIndev::set_group`](crate::indev::KeypadIndev::set_group)).
     pub(crate) fn raw_ptr(&self) -> *mut lv_group_t {
@@ -182,6 +195,13 @@ impl GroupRef {
             }
         }
         self
+    }
+
+    /// Whether this group is in **edit** mode. Same semantics as
+    /// [`Group::is_editing`].
+    pub fn is_editing(&self) -> bool {
+        // SAFETY: self.ptr is non-null; lv_group_get_editing only reads a flag.
+        unsafe { lv_group_get_editing(self.ptr) }
     }
 
     /// Add a widget to this group.

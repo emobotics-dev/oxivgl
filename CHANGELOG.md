@@ -27,8 +27,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   Every producer call fires an **integrated wake signal**, so the event-driven
   loop `run_app_nav_encoder` reads the instant the LVGL task is scheduled — no
   ~30 ms read-timer latency and no separate signal to wire. New example
-  `menu_encoder.rs`; `EncoderIndev`/`EncoderState` are re-exported from the
-  prelude.
+  `menu_encoder.rs`, driven on hardware by the board's three buttons (M5Stack
+  Fire physical buttons / CoreS3 touch-strip zones) through the shared harness;
+  `EncoderIndev`/`EncoderState` are re-exported from the prelude.
+
+  Follows LVGL's standard encoder edit model: a short press enters edit (or
+  confirms / clicks a button), a long press leaves edit. This refines issue
+  #127's prose, which described a short press leaving edit.
+
+- **`Group::is_editing()`** — reports whether a focus group is in edit vs
+  navigate mode (`lv_group_get_editing`). Lets a UI show the current encoder
+  mode; used by `menu_encoder` for a live NAVIGATE/EDIT indicator.
 
 ## [0.6.1] — 2026-07-21
 
