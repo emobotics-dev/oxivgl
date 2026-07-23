@@ -605,6 +605,14 @@ pub async fn run_app_nav_keypad<const BYTES: usize>(
 pub async fn run_app_nav_keypad_events<const BYTES: usize, Fut: Future<Output = ()>>(
     w: i32, h: i32, bufs: &'static mut LvglBuffers<BYTES>,
     initial: impl View, keypad: KeypadIndev, wake: impl Fn() -> Fut) -> !;
+
+/// Navigation + encoder input (three inputs: turn−, turn+, press), driving
+/// both focus navigation and in-place edit. Always event-driven with an
+/// integrated wake — the loop reads the instant a decoded press arrives, so
+/// there is no separate `wake` closure to wire.
+pub async fn run_app_nav_encoder<const BYTES: usize>(
+    w: i32, h: i32, bufs: &'static mut LvglBuffers<BYTES>,
+    initial: impl View, encoder: &'static EncoderState) -> !;
 ```
 
 All navigation variants share one inner loop (`run_app_nav_inner`):
