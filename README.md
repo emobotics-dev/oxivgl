@@ -143,13 +143,14 @@ oxivgl is under active development. Even if it has reached some degree of maturi
 | `AnimTimeline` | `anim` | Sequenced animation timeline |
 | `Timer` | `timer` | Periodic timer with `triggered()` polling in `update()` |
 
-**Input devices** — query the active device, or own a keypad/pointer device fed by the application.
+**Input devices** — query the active device, or own a keypad, encoder or pointer device fed by the application.
 
 | Type | Module | Role |
 |------|--------|------|
 | `Indev` | `indev` | Non-owning handle to active input device |
 | `Point` | `indev` | 2D point (x, y) for movement vectors |
 | `KeypadIndev` / `KeypadState` | `indev` | Owning KEYPAD device fed by the app (held + one-shot key models; `with_repeat` for hold-to-repeat) |
+| `EncoderIndev` / `EncoderState` | `indev` | Owning ENCODER device fed by three inputs (turn−, turn+, press); drives focus navigation *and* in-place edit |
 | `PointerIndev` / `PointerState` | `indev` | Owning POINTER (touchscreen) device fed by raw `(x, y)` coords or a polling closure |
 
 **Draw tasks** — custom draw hooks via `DRAW_TASK_ADDED` events.
@@ -219,14 +220,14 @@ These guarantees are verified by [integration tests](#testing) that exercise sty
 
 ## Examples
 
-171 ported LVGL examples covering getting started, styles, animations, events, layouts, scrolling, gradients, observer/reactive UI, and individual widgets (including canvas). Each is a self-contained `View` impl — runs on host SDL2 or ESP32 with zero code changes.
+196 examples — ports of the LVGL C examples plus oxivgl-specific demos — covering getting started, styles, animations, events, layouts, scrolling, gradients, observer/reactive UI, input devices (keypad/encoder/touch), and individual widgets (including canvas). Each is a self-contained `View` impl — runs on host SDL2 or ESP32 with zero code changes.
 
 **[Browse the full gallery with screenshots](examples/doc/README.md)**
 
 ```sh
 ./run_host.sh getting_started1      # interactive SDL2 window
 ./run_host.sh -s getting_started1   # headless screenshot
-./run_host.sh -s                    # screenshot all 171 examples
+./run_host.sh -s                    # screenshot all 196 examples
 ./run_fire27.sh event_trickle       # flash to M5Stack Fire27 (ESP32)
 ./run_cores3.sh event_trickle       # flash to M5Stack CoreS3 (ESP32-S3)
 ```
@@ -246,16 +247,16 @@ is chosen automatically.
 
 ## Testing
 
-709 automated tests across five tiers — all run on host without hardware:
+718 automated tests across five tiers — all run on host without hardware:
 
 | Tier | Count | What it covers |
 |------|-------|----------------|
-| **Unit** | 62 | Pure logic — enums, value mapping, style bitflags, grid helpers, memory-pool validation |
-| **Doc** | 41 | Doctests embedded in API documentation |
-| **Integration** | 535 | Full LVGL instance — widget lifecycle, style add/remove/drop ordering, layout, events, every widget type incl. Canvas and observer |
+| **Unit** | 65 | Pure logic — enums, value mapping, style bitflags, grid helpers, memory-pool validation |
+| **Doc** | 42 | Doctests embedded in API documentation |
+| **Integration** | 540 | Full LVGL instance — widget lifecycle, style add/remove/drop ordering, layout, events, every widget type incl. Canvas and observer, encoder navigate/edit |
 | **Memory pool** | 1 | Registers a runtime pool and asserts it reaches LVGL's heap, and that draw buffers stay outside it |
 | **Leak detection** | 70 | Allocation balance across create/destroy cycles, each in a forked process. Covers **both heaps**: Rust-side via a counting `#[global_allocator]`, and LVGL's own C heap via `lv_mem_monitor` — so a `Drop` impl that stopped calling `lv_obj_delete` fails the suite. Asserts an exact zero on both heaps — no noise floor. Sensitivity is proven by negative controls: a leak of **one byte per iteration** must fail, as must the smallest allocation LVGL can make. Two further tests pin the one-shot LVGL initialisation costs the measurement window excludes |
-| **Visual** | 171 | Screenshot capture for all ported examples |
+| **Visual** | 196 | Screenshot capture for all bundled examples |
 
 ```sh
 ./run_tests.sh all          # unit + integration + pool + leak (< 5 seconds)
