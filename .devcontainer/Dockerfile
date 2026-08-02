@@ -2,7 +2,7 @@
 
 # Devcontainer for oxivgl — Rust (nightly + ESP/Xtensa), libclang,
 # SDL2, cmake, and Python image-conversion tools.
-FROM ghcr.io/emobotics-dev/claude-code:latest
+FROM registry:3000/emobotics/claude-code:latest
 
 USER root
 
