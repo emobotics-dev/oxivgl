@@ -39,19 +39,40 @@ defmt = ["dep:defmt"]
 log-04 = ["dep:log-04"]
 png = ["dep:png"]
 
+# Ship `SemaphoreFlushSync`, so the LVGL render task blocks in the scheduler
+# instead of parking the core with `waiti 0` for the whole 15-30 ms panel
+# transfer (#1). Pulls `esp-radio-rtos-driver`, which is an *interface* crate,
+# not a scheduler: it declares the `esp_rtos_semaphore_*` symbols that a
+# scheduler registers at link time (esp-rtos is the usual one; ArielOS and
+# ESP-IDF/FreeRTOS shims implement the same interface). oxivgl therefore stays
+# RTOS-agnostic — the application's scheduler crate picks the implementation,
+# and linking none is a link error rather than a silent fallback.
+rtos-sem = ["dep:esp-radio-rtos-driver"]
+
 # Board selection for the examples (built with `cargo --example`). Each forwards
 # the chip to the library (esp32/esp32s3) and to the example harness crate, which
 # in turn drives the m5stack-core BSP's board feature. Exactly one may be active;
 # `fire27` is the default the run scripts and CI use when none is passed.
+#
+# `rtos-sem` + `esp-rtos/esp-radio`: the threaded harness blocks the render
+# thread on a `SemaphoreFlushSync`, whose `esp_rtos_semaphore_*` symbols are
+# registered at link time by the *application's* scheduler. For esp-rtos that
+# registration lives in an `esp-radio`-gated module, so the feature must be
+# turned on here, in the consumer — oxivgl itself must not, since depending on
+# esp-rtos is exactly the RTOS coupling the FlushSync trait exists to avoid.
+# Despite the name this pulls no radio blob: it is esp-rtos's FreeRTOS-compat
+# IPC objects (semaphores, queues, timers).
 fire27 = [
     "esp-hal", "esp32", "oxivgl-examples-common/fire27",
     "esp-rtos/esp32", "esp-bootloader-esp-idf/esp32", "esp-sync/esp32",
     "m5stack-core/fire27",
+    "rtos-sem", "esp-rtos/esp-radio", "esp-rtos/esp-alloc",
 ]
 cores3 = [
     "esp-hal", "esp32s3", "oxivgl-examples-common/cores3",
     "esp-rtos/esp32s3", "esp-bootloader-esp-idf/esp32s3", "esp-sync/esp32s3",
     "m5stack-core/cores3",
+    "rtos-sem", "esp-rtos/esp-radio", "esp-rtos/esp-alloc",
 ]
 
 [dependencies]
@@ -63,6 +84,9 @@ cfg-if = "1"
 thiserror-no-std = "2.0.2"
 critical-section = "1"
 esp-hal = { version = "1.1.0", features = ["unstable"], optional = true }
+# Scheduler *interface* only (cfg-if + esp-sync + portable-atomic — it depends on
+# neither esp-hal nor esp-rtos). See the `rtos-sem` feature comment above.
+esp-radio-rtos-driver = { version = "0.3.0", optional = true }
 defmt = { version = "1.0.1", optional = true }
 log-04 = { package = "log", version = "0.4", optional = true }
 png = { version = "0.17", optional = true }
@@ -98,6 +122,11 @@ m5stack-core = { git = "https://github.com/emobotics-dev/m5stack-core", rev = "c
 [patch.crates-io]
 esp-hal                = { git = "https://github.com/emobotics-dev/esp-hal.git", rev = "b7a4c74a024383cb9808453cf3e34296c5e870b0" }
 esp-radio              = { git = "https://github.com/emobotics-dev/esp-hal.git", rev = "b7a4c74a024383cb9808453cf3e34296c5e870b0" }
+# Must be patched alongside the rest: esp-radio depends on this by *path* inside
+# the fork, so without this line our direct crates.io dep would resolve to a
+# second, distinct copy. The `esp_rtos_semaphore_*` registration is link-time, so
+# two copies is a duplicate/undefined-symbol link failure, not a version warning.
+esp-radio-rtos-driver  = { git = "https://github.com/emobotics-dev/esp-hal.git", rev = "b7a4c74a024383cb9808453cf3e34296c5e870b0" }
 esp-sync               = { git = "https://github.com/emobotics-dev/esp-hal.git", rev = "b7a4c74a024383cb9808453cf3e34296c5e870b0" }
 esp-alloc              = { git = "https://github.com/emobotics-dev/esp-hal.git", rev = "b7a4c74a024383cb9808453cf3e34296c5e870b0" }
 esp-rom-sys            = { git = "https://github.com/emobotics-dev/esp-hal.git", rev = "b7a4c74a024383cb9808453cf3e34296c5e870b0" }
