@@ -1,0 +1,98 @@
+# SPDX-License-Identifier: MIT OR Apache-2.0
+# Builds (and on master: pushes) registry:3000/emobotics/oxivgl/oxivgl-ci:vN from
+# .forgejo/docker/Dockerfile when that Dockerfile changes. PRs get a build-only
+# run to catch errors before merge.
+#
+# Tagged by IMAGE_VERSION below, never `:latest` — the runner fleet shares one
+# podman image store with forcePull=false, so a mutable tag silently goes stale
+# the moment any runner has pulled it once. Bump IMAGE_VERSION and update the tag
+# in ci.yml in the same commit whenever the Dockerfile changes; never move an
+# existing tag. (Same reasoning as the org's m5stack-core-ci / oxicharge-ci
+# images — see emobotics/forgejo-instance docs/runners.md.)
+#
+# Runs on the `docker` label with buildah (vfs storage driver) — the runner fleet
+# allows no privileged or docker-in-docker containers, so there is no docker
+# daemon to build against.
+#
+# ---- one-time setup: the REGISTRY_TOKEN secret (a human step) -----------------
+# Pushing to registry:3000 needs a credential the `agent` token cannot create
+# (`fj actions secrets create` 403s for a repo-scoped token). Provision it once:
+#   1. Mint a package (NuGet-auth) token for the emobotics owner, via a live UI
+#      session on http://forgejo:3000 (token mint needs the session, not the
+#      plain API token):
+#        fj-ex token mint nuget --owner emobotics --token-name oxivgl-ci-push \
+#          --json -H http://forgejo:3000
+#   2. Add it as the repo secret REGISTRY_TOKEN, and set the repo variable
+#      REGISTRY_USER to the token owner (`emobotics`) that buildah logs in as.
+#      Both need repo-admin, so set them as the owner (web UI, or the REST API
+#      with an admin token) — the agent token 403s:
+#        http://forgejo:3000/emobotics/oxivgl/settings/actions/secrets
+#   3. Trigger this workflow once so v1 lands in the registry (workflow_dispatch
+#      below, or the first push to master that touches the Dockerfile). Only then
+#      can ci.yml pull registry:3000/emobotics/oxivgl/oxivgl-ci:v1.
+# ------------------------------------------------------------------------------
+name: oxivgl CI image
+
+on:
+  push:
+    branches: [master]
+    paths:
+      - .forgejo/docker/Dockerfile
+      - .forgejo/workflows/build-ci-image.yml
+  pull_request:
+    paths:
+      - .forgejo/docker/Dockerfile
+      - .forgejo/workflows/build-ci-image.yml
+  workflow_dispatch:
+
+env:
+  IMAGE: registry:3000/emobotics/oxivgl/oxivgl-ci
+  IMAGE_VERSION: v1
+
+jobs:
+  build-push:
+    name: Build & push oxivgl-ci
+    runs-on: docker
+    container:
+      image: quay.io/buildah/stable
+
+    steps:
+      # No Node in quay.io/buildah/stable, so actions/checkout@v4 can't run here —
+      # plain clone instead. (A workflow that provides a runtime must not consume
+      # it; see conventions/containers.md §1.)
+      - name: Checkout
+        run: |
+          git init -q .
+          git remote add origin "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY"
+          git fetch -q --depth 1 origin "$GITHUB_SHA"
+          git checkout -q FETCH_HEAD
+
+      - name: Build
+        run: |
+          # --tls-verify=false: the base image (FROM registry:3000/...) is on the
+          # plain-HTTP Forgejo registry, so the FROM pull needs it too, not just
+          # the push below (conventions/containers.md §3).
+          buildah bud --storage-driver vfs --tls-verify=false \
+            -t "$IMAGE:$IMAGE_VERSION" \
+            .forgejo/docker
+
+      - name: Log in and push
+        if: github.event_name != 'pull_request'
+        env:
+          REGISTRY_TOKEN: ${{ secrets.REGISTRY_TOKEN }}
+        run: |
+          set -eu
+          if [ -z "${REGISTRY_TOKEN:-}" ]; then
+            echo "REGISTRY_TOKEN is not set — image built, push skipped."
+            echo "One-time setup: see the comment at the top of this workflow."
+            exit 0
+          fi
+          # Plain HTTP registry (no TLS, by deliberate org decision) —
+          # --tls-verify=false is required on both calls or buildah defaults to
+          # HTTPS and fails to even reach it. The token is read from the env by
+          # --password-stdin, never written to a file or a CLI argument.
+          echo "$REGISTRY_TOKEN" | buildah login --storage-driver vfs --tls-verify=false \
+            -u "${{ vars.REGISTRY_USER }}" --password-stdin registry:3000
+          buildah push --storage-driver vfs --tls-verify=false \
+            "$IMAGE:$IMAGE_VERSION" \
+            "docker://$IMAGE:$IMAGE_VERSION"

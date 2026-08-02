@@ -14,7 +14,7 @@ authors = ["emobotics-dev"]
 categories = ["embedded", "no-std", "gui"]
 exclude = [
     ".devcontainer/",
-    ".github/",
+    ".forgejo/",
     "CLAUDE.md",
     "docs/",
     "examples/doc/screenshots/",
