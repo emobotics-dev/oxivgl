@@ -49,6 +49,13 @@ png = ["dep:png"]
 # and linking none is a link error rather than a silent fallback.
 rtos-sem = ["dep:esp-radio-rtos-driver"]
 
+# Measurement apparatus for the threaded render pipeline demo: a 10 ms latency
+# probe and a once-a-second stats line (see examples/common/src/metrics.rs).
+# Declared on *this* package, not just the harness, because `#[cfg(feature)]`
+# inside an exported macro is evaluated against the crate the macro expands
+# into — the examples are built by this package, so the feature must live here.
+perf-probe = ["oxivgl-examples-common/perf-probe"]
+
 # Board selection for the examples (built with `cargo --example`). Each forwards
 # the chip to the library (esp32/esp32s3) and to the example harness crate, which
 # in turn drives the m5stack-core BSP's board feature. Exactly one may be active;

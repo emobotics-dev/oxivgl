@@ -7,6 +7,22 @@
 //! Widget Scale 10 — Heart rate gauge
 //!
 //! Round gauge with timer-driven needle oscillating between 80–180 BPM.
+//!
+//! # Threaded render pipeline
+//!
+//! This example runs on oxivgl's **threaded** pipeline
+//! ([`example_main_threaded!`]): the render loop and the panel flush each get
+//! their own esp-rtos thread, ranked below the application (app 3 / flush 2 /
+//! render 1), and the render thread blocks on a semaphore while the panel
+//! transfer runs instead of parking the core with `waiti 0`.
+//!
+//! A continuously swept needle is the load this matters for — cost tracks the
+//! number of *animated objects per frame*, and an arc draw task is the
+//! expensive kind (~425 us against ~108 us for a plain fill), independent of
+//! how large it is drawn.
+//!
+//! Build with `--features perf-probe` to log wakeup latency and flush
+//! throughput once a second; see `docs/render-pipeline.md`.
 
 use core::fmt::Write;
 
@@ -106,4 +122,4 @@ impl View for WidgetScale10 {
     }
 }
 
-oxivgl_examples_common::example_main!(WidgetScale10::default());
+oxivgl_examples_common::example_main_threaded!(WidgetScale10::default());

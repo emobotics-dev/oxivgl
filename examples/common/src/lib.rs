@@ -10,6 +10,12 @@ pub mod host;
 #[cfg(target_arch = "xtensa")]
 pub mod board;
 
+#[cfg(target_arch = "xtensa")]
+pub mod sched;
+
+#[cfg(all(target_arch = "xtensa", feature = "perf-probe"))]
+pub mod metrics;
+
 // Re-exports used by the harness macros (via `$crate::`).
 #[cfg(not(target_arch = "xtensa"))]
 pub use env_logger;
@@ -25,6 +31,12 @@ pub use log;
 #[cfg(target_arch = "xtensa")]
 pub use static_cell;
 #[cfg(target_arch = "xtensa")]
+pub use esp_rtos;
+#[cfg(target_arch = "xtensa")]
+pub use embassy_sync;
+#[cfg(target_arch = "xtensa")]
+pub use esp_radio_rtos_driver;
+#[cfg(target_arch = "xtensa")]
 pub use oxivgl_sys;
 
 /// Generate a `main` function for the given [`oxivgl::view::View`] instance,
@@ -34,6 +46,22 @@ macro_rules! example_main {
     ($view_expr:expr) => {
         #[cfg(target_arch = "xtensa")]
         $crate::board_main!($view_expr);
+
+        #[cfg(not(target_arch = "xtensa"))]
+        $crate::host_main!($view_expr);
+    };
+}
+
+/// Generate a `main` that runs the render loop and the flush on their own
+/// **esp-rtos threads**, with a blocking semaphore handoff (oxivgl#1).
+///
+/// On host this falls back to [`host_main!`] — there is no RTOS and the SDL
+/// backend flushes synchronously, so the distinction does not exist there.
+#[macro_export]
+macro_rules! example_main_threaded {
+    ($view_expr:expr) => {
+        #[cfg(target_arch = "xtensa")]
+        $crate::board_main_threaded!($view_expr);
 
         #[cfg(not(target_arch = "xtensa"))]
         $crate::host_main!($view_expr);
