@@ -198,6 +198,15 @@ pub struct SemaphoreFlushSync {
     from_isr: bool,
 }
 
+// SAFETY: `sem` is an opaque handle to an RTOS semaphore, which is precisely an
+// object built to be used from several threads and from interrupt context at
+// once — the scheduler provides the internal synchronisation, and every
+// `SemaphoreHandle` method takes `&self` for that reason. Sharing it is the
+// intended use (esp-radio drives the same interface this way); `NonNull` is
+// merely not `Sync` by default because the compiler cannot know that.
+#[cfg(feature = "rtos-sem")]
+unsafe impl Sync for SemaphoreFlushSync {}
+
 #[cfg(feature = "rtos-sem")]
 impl SemaphoreFlushSync {
     /// Create the semaphore and leak it, for a flush that runs **in interrupt

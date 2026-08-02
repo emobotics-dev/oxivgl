@@ -26,6 +26,72 @@ use crate::{
 /// per refresh cycle, keeping animations smooth at ~30 fps.
 const LVGL_TICK_MS: u64 = LV_DEF_REFR_PERIOD as u64 / 4;
 
+// ---------------------------------------------------------------------------
+// RenderConfig
+// ---------------------------------------------------------------------------
+
+/// Cadence of the render loop.
+///
+/// The defaults reproduce the historical fixed cadence exactly, so an existing
+/// [`run_app`] caller sees no change. Override them to lift the frame-rate
+/// ceiling or to decouple [`View::update`] from the redraw rate.
+///
+/// # Why the default caps at ~31 fps
+///
+/// The loop used to run a fixed `4 × (lv_timer_handler + sleep
+/// LV_DEF_REFR_PERIOD/4)` per `update()`, so a cycle cost
+/// `LV_DEF_REFR_PERIOD + render_time` — 31 fps at the stock 32 ms *before*
+/// drawing anything, and under 30 once real draw load lands. Setting
+/// [`refresh_period_ms`](Self::refresh_period_ms) changes the ceiling;
+/// [`max_idle_ms`](Self::max_idle_ms) stops the loop oversleeping past it.
+#[derive(Debug, Clone, Copy)]
+pub struct RenderConfig {
+    /// LVGL redraw period in ms, applied at runtime via
+    /// [`display::set_refresh_period`](crate::display::set_refresh_period).
+    /// `None` keeps whatever `lv_conf.h` set (`LV_DEF_REFR_PERIOD`).
+    pub refresh_period_ms: Option<u32>,
+    /// How often [`View::update`] is polled, in ms. Independent of the redraw
+    /// rate: application state rarely needs polling at frame rate, and cost
+    /// scales with how often widgets are *touched*, not with pixels.
+    pub update_period_ms: u64,
+    /// Upper bound on how long the loop sleeps between `lv_timer_handler`
+    /// calls. `lv_timer_handler` returns its own recommended delay; this caps
+    /// it so animations and input stay responsive.
+    pub max_idle_ms: u64,
+}
+
+impl Default for RenderConfig {
+    fn default() -> Self {
+        Self {
+            // Keep lv_conf.h's period — changing the default frame rate of
+            // every existing application would be a surprise, not a fix.
+            refresh_period_ms: None,
+            update_period_ms: LV_DEF_REFR_PERIOD as u64,
+            max_idle_ms: LVGL_TICK_MS,
+        }
+    }
+}
+
+impl RenderConfig {
+    /// Target `fps` frames per second, by setting the LVGL redraw period to
+    /// `1000 / fps` and letting the loop idle no longer than one such period.
+    ///
+    /// This raises only the *ceiling* — the achieved rate still depends on how
+    /// much drawing each frame costs. `fps` is clamped to at least 1.
+    pub fn with_target_fps(mut self, fps: u32) -> Self {
+        let period = (1000 / fps.max(1)).max(1);
+        self.refresh_period_ms = Some(period);
+        self.max_idle_ms = period as u64;
+        self
+    }
+
+    /// Poll [`View::update`] every `ms` milliseconds.
+    pub fn with_update_period_ms(mut self, ms: u64) -> Self {
+        self.update_period_ms = ms;
+        self
+    }
+}
+
 /// A single view of UI (one screen or modal in a navigation stack).
 ///
 /// The lifecycle is:
@@ -345,6 +411,136 @@ unsafe extern "C" fn view_event_trampoline<V: View>(e: *mut lv_event_t) {
     }
 }
 
+// ---------------------------------------------------------------------------
+// Ui — display setup, separated from the render loop
+// ---------------------------------------------------------------------------
+
+/// An initialised LVGL display, before any render loop runs.
+///
+/// [`run_app`] and friends do setup and looping in one call, which forces the
+/// loop to live wherever the setup happened. Splitting them lets an application
+/// keep this pipeline while choosing *where* the loop runs — most usefully on a
+/// dedicated RTOS thread ranked below latency-sensitive work, which is what
+/// makes a blocking [`FlushSync`](crate::flush_pipeline::FlushSync) pay off:
+///
+/// ```ignore
+/// // on the render thread, and nowhere else — every later LVGL call is here too
+/// let ui = Ui::init(W, H, bufs);
+/// ui.run(MyView::default(), RenderConfig::default().with_target_fps(60)).await
+/// ```
+///
+/// LVGL must be driven from a single task: whichever context calls [`init`](Self::init)
+/// must be the one that runs the loop and makes every other LVGL call.
+#[derive(Debug)]
+pub struct Ui {
+    driver: LvglDriver,
+}
+
+impl Ui {
+    /// Initialise LVGL, create the display, and register the flush callbacks —
+    /// without running a render loop.
+    ///
+    /// `w` and `h` are the display resolution in pixels. `bufs` must be a
+    /// `'static` caller-allocated [`LvglBuffers`] sized for the screen width;
+    /// the `'static` bound is what makes the pointers LVGL keeps valid for the
+    /// display lifetime.
+    ///
+    /// Call at most once — LVGL is initialised here and panics on a second
+    /// attempt.
+    pub fn init<const BYTES: usize>(
+        w: i32,
+        h: i32,
+        bufs: &'static mut LvglBuffers<BYTES>,
+    ) -> Self {
+        let driver = LvglDriver::init(w, h);
+        // SAFETY: lv_init() has been called inside LvglDriver::init() above;
+        // this is the only call site, and `bufs` is `'static` by the signature.
+        unsafe { lvgl_disp_init(w, h, bufs) };
+        Self { driver }
+    }
+
+    /// Wait until the display driver reports ready — on ESP32 that is the flush
+    /// task starting, on host it is immediate.
+    pub async fn wait_ready(&self) {
+        DISPLAY_READY.wait().await;
+    }
+
+    /// Drive LVGL's timers once, returning its recommended delay in ms until
+    /// the next call. For applications running their own loop instead of
+    /// [`run`](Self::run).
+    pub fn timer_handler(&self) -> u32 {
+        self.driver.timer_handler()
+    }
+
+    /// Apply a [`RenderConfig`]'s redraw period, if it sets one.
+    fn apply(&self, cfg: &RenderConfig) {
+        if let Some(ms) = cfg.refresh_period_ms
+            && !crate::display::set_refresh_period(ms)
+        {
+            warn!("could not set refresh period to {} ms", ms);
+        }
+    }
+
+    /// Run the render loop with a single [`View`] — no navigation.
+    ///
+    /// Never returns.
+    pub async fn run<V: View>(self, mut view: V, cfg: RenderConfig) -> ! {
+        self.wait_ready().await;
+        info!("Display ready");
+        self.apply(&cfg);
+
+        // Wrap the active screen in a non-owning handle (Child suppresses Drop,
+        // so the LVGL screen is never deleted by Rust).
+        let screen_handle = unsafe { lv_screen_active() };
+        assert!(!screen_handle.is_null(), "no active screen after display init");
+        let container = Obj::from_raw_non_owning(screen_handle);
+
+        if let Err(e) = view.create(&container) {
+            warn!("Could not create LVGL widgets: {:?}, disabling UI", e);
+            loop {
+                Timer::after(embassy_time::Duration::from_secs(60)).await;
+            }
+        }
+
+        register_view_events(&mut view, &container);
+
+        let update_period = embassy_time::Duration::from_millis(cfg.update_period_ms);
+        let mut next_update = embassy_time::Instant::now();
+        loop {
+            if embassy_time::Instant::now() >= next_update {
+                // Resync rather than chase a backlog if a slow frame overran.
+                next_update = embassy_time::Instant::now() + update_period;
+                let action = view.update().unwrap_or_else(|e| {
+                    warn!("Failed to update widgets: {:?}", e);
+                    NavAction::None
+                });
+                debug_assert!(
+                    action.is_none(),
+                    "NavAction ignored in run_app — use run_app_nav for navigation"
+                );
+                // Drain any pending event action (stashed by on_event trampoline).
+                // NavAction processing is the Navigator's job; see run_app_nav.
+                let _event_action = take_pending_event_action();
+            }
+            self.tick(&cfg).await;
+        }
+    }
+
+    /// Run the render loop with a [`Navigator`](crate::navigator::Navigator),
+    /// so views can push/pop/replace and raise modals. Never returns.
+    pub async fn run_nav(self, initial: impl View, cfg: RenderConfig) -> ! {
+        run_app_nav_inner(self, cfg, initial, None, None, false, no_wake).await
+    }
+
+    /// One `lv_timer_handler` call plus the sleep it recommends, bounded by
+    /// [`RenderConfig::max_idle_ms`]. Letting LVGL set the pace is what stops
+    /// the loop adding a fixed period on top of every frame.
+    async fn tick(&self, cfg: &RenderConfig) {
+        let delay = self.driver.timer_handler() as u64;
+        Timer::after(embassy_time::Duration::from_millis(delay.clamp(1, cfg.max_idle_ms))).await;
+    }
+}
+
 /// Run the LVGL render loop with a [`View`].
 ///
 /// This is an embassy async task. Spawn it alongside your other application
@@ -357,57 +553,17 @@ unsafe extern "C" fn view_event_trampoline<V: View>(e: *mut lv_event_t) {
 /// `view` is the initial view instance. Its `create` method is called once
 /// the display is ready.
 ///
-/// Never returns.
+/// Equivalent to [`Ui::init`] followed by [`Ui::run`] with a default
+/// [`RenderConfig`]; use those directly to choose the cadence or to run the
+/// loop on a thread of your own. Never returns.
 pub async fn run_app<V: View, const BYTES: usize>(
     w: i32,
     h: i32,
     bufs: &'static mut LvglBuffers<BYTES>,
-    mut view: V,
+    view: V,
 ) -> ! {
     info!("UI task started");
-    let driver = LvglDriver::init(w, h);
-    // SAFETY: lv_init() has been called inside LvglDriver::init() above.
-    unsafe { lvgl_disp_init(w, h, bufs) };
-
-    DISPLAY_READY.wait().await;
-    info!("Display ready");
-
-    // Wrap the active screen in a non-owning handle (Child suppresses Drop,
-    // so the LVGL screen is never deleted by Rust).
-    let screen_handle = unsafe { lv_screen_active() };
-    assert!(!screen_handle.is_null(), "no active screen after display init");
-    let container = Obj::from_raw_non_owning(screen_handle);
-
-    if let Err(e) = view.create(&container) {
-        warn!("Could not create LVGL widgets: {:?}, disabling UI", e);
-        loop {
-            Timer::after(embassy_time::Duration::from_secs(60)).await;
-        }
-    }
-
-    register_view_events(&mut view, &container);
-
-    loop {
-        debug!("Rendering UI loop iteration");
-        let action = view.update()
-            .unwrap_or_else(|e| { warn!("Failed to update widgets: {:?}", e); NavAction::None });
-        debug_assert!(action.is_none(), "NavAction ignored in run_app — use run_app_nav for navigation");
-
-        // Drive lv_timer_handler 4× per update cycle (once per refresh period)
-        // so LVGL animations stay smooth while update() is called at ~30fps.
-        for _ in 0..4 {
-            debug!("LVGL tick/timer handler");
-            driver.timer_handler();
-            Timer::after(embassy_time::Duration::from_millis(LVGL_TICK_MS)).await;
-        }
-
-        // Drain any pending event action (stashed by on_event trampoline).
-        let _event_action = take_pending_event_action();
-
-        // Note: NavAction processing is handled by Navigator (see
-        // run_app_nav). This simple run_app ignores actions —
-        // use run_app_nav for multi-screen applications.
-    }
+    Ui::init(w, h, bufs).run(view, RenderConfig::default()).await
 }
 
 /// Run the LVGL render loop with navigation support.
@@ -423,7 +579,8 @@ pub async fn run_app_nav<const BYTES: usize>(
     bufs: &'static mut LvglBuffers<BYTES>,
     initial: impl View,
 ) -> ! {
-    run_app_nav_inner(w, h, bufs, initial, None, None, false, no_wake).await
+    run_app_nav_inner(Ui::init(w, h, bufs), RenderConfig::default(), initial, None, None, false, no_wake)
+        .await
 }
 
 /// Like [`run_app_nav`], but also registers a **TIMER-mode** keypad input
@@ -449,7 +606,10 @@ pub async fn run_app_nav_keypad<const BYTES: usize>(
     initial: impl View,
     keypad: &'static crate::indev::KeypadState,
 ) -> ! {
-    run_app_nav_inner(w, h, bufs, initial, Some(keypad), None, false, no_wake).await
+    run_app_nav_inner(
+        Ui::init(w, h, bufs), RenderConfig::default(), initial, Some(keypad), None, false, no_wake,
+    )
+    .await
 }
 
 /// Like [`run_app_nav_keypad`], but **event-driven and poll-free**.
@@ -473,7 +633,10 @@ pub async fn run_app_nav_keypad_events<const BYTES: usize, Fut>(
 where
     Fut: core::future::Future<Output = ()>,
 {
-    run_app_nav_inner(w, h, bufs, initial, Some(keypad), None, true, wake).await
+    run_app_nav_inner(
+        Ui::init(w, h, bufs), RenderConfig::default(), initial, Some(keypad), None, true, wake,
+    )
+    .await
 }
 
 /// Like [`run_app_nav`], but also registers an encoder input device driven by
@@ -502,9 +665,8 @@ pub async fn run_app_nav_encoder<const BYTES: usize>(
     encoder: &'static crate::indev::EncoderState,
 ) -> ! {
     run_app_nav_inner(
-        w,
-        h,
-        bufs,
+        Ui::init(w, h, bufs),
+        RenderConfig::default(),
         initial,
         None,
         Some(encoder),
@@ -525,10 +687,9 @@ fn no_wake() -> core::future::Pending<()> {
 /// `event_mode` selects EVENT mode for the keypad (read only on `wake`) vs
 /// TIMER mode (LVGL polls). `wake` is raced against each inter-tick sleep; when
 /// it resolves the loop reads the keypad and runs `update()` immediately.
-async fn run_app_nav_inner<const BYTES: usize, Fut>(
-    w: i32,
-    h: i32,
-    bufs: &'static mut LvglBuffers<BYTES>,
+async fn run_app_nav_inner<Fut>(
+    ui: Ui,
+    cfg: RenderConfig,
     initial: impl View,
     keypad: Option<&'static crate::indev::KeypadState>,
     encoder: Option<&'static crate::indev::EncoderState>,
@@ -539,12 +700,9 @@ where
     Fut: core::future::Future<Output = ()>,
 {
     info!("UI task started (navigator)");
-    let driver = LvglDriver::init(w, h);
-    // SAFETY: lv_init() has been called inside LvglDriver::init() above.
-    unsafe { lvgl_disp_init(w, h, bufs) };
-
-    DISPLAY_READY.wait().await;
+    ui.wait_ready().await;
     info!("Display ready");
+    ui.apply(&cfg);
 
     // Register the keypad/encoder device (if any) BEFORE push_root, so the root
     // view's input_group binds to it. Held for the loop's lifetime; since the
@@ -582,8 +740,41 @@ where
     let mut nav = crate::navigator::Navigator::new();
     nav.push_root(initial);
 
+    let update_period = embassy_time::Duration::from_millis(cfg.update_period_ms);
+    let mut next_update = embassy_time::Instant::now();
     loop {
-        // Poll active view and modal for NavActions.
+        // Poll views on their own cadence, decoupled from the redraw rate.
+        // `wake` (input arrived) also forces a poll, so a keypress is not held
+        // for up to a full update period before the view sees it.
+        let mut poll_now = embassy_time::Instant::now() >= next_update;
+
+        // Drive LVGL at the pace it asks for, racing the sleep against `wake`.
+        // If `wake` resolves first, read the device and poll immediately.
+        let delay = ui.timer_handler() as u64;
+        match embassy_time::with_timeout(
+            embassy_time::Duration::from_millis(delay.clamp(1, cfg.max_idle_ms)),
+            wake(),
+        )
+        .await
+        {
+            Ok(()) => {
+                if let Some(kp) = &keypad_dev {
+                    kp.read();
+                }
+                if let Some(enc) = &encoder_dev {
+                    enc.read();
+                }
+                poll_now = true;
+            }
+            Err(_timeout) => {} // normal tick
+        }
+
+        if !poll_now {
+            continue;
+        }
+        // Resync rather than chase a backlog if a slow frame overran.
+        next_update = embassy_time::Instant::now() + update_period;
+
         let action = nav
             .active_view_mut()
             .map(|v| v.update())
@@ -601,30 +792,6 @@ where
                 warn!("modal update: {:?}", e);
                 NavAction::None
             });
-
-        // Drive lv_timer_handler 4× per update cycle, racing each inter-tick
-        // sleep against `wake`. If `wake` resolves first (input arrived), read
-        // the keypad now and break out early to run update() sooner.
-        for _ in 0..4 {
-            driver.timer_handler();
-            match embassy_time::with_timeout(
-                embassy_time::Duration::from_millis(LVGL_TICK_MS),
-                wake(),
-            )
-            .await
-            {
-                Ok(()) => {
-                    if let Some(kp) = &keypad_dev {
-                        kp.read();
-                    }
-                    if let Some(enc) = &encoder_dev {
-                        enc.read();
-                    }
-                    break;
-                }
-                Err(_timeout) => {} // normal tick
-            }
-        }
 
         // Event actions (from on_event trampoline) take priority.
         // Only process update/modal actions if no event action fired.
