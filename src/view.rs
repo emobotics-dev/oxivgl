@@ -73,15 +73,27 @@ impl Default for RenderConfig {
 }
 
 impl RenderConfig {
-    /// Target `fps` frames per second, by setting the LVGL redraw period to
-    /// `1000 / fps` and letting the loop idle no longer than one such period.
+    /// Target `fps` frames per second: set the LVGL redraw period to
+    /// `1000 / fps`, and cap idling at a **quarter** of it.
     ///
-    /// This raises only the *ceiling* — the achieved rate still depends on how
-    /// much drawing each frame costs. `fps` is clamped to at least 1.
+    /// Both halves matter, and the cap is the binding one. `lv_timer_handler`
+    /// runs *before* the loop sleeps, so if the cap equalled the period the
+    /// loop would sleep a whole period and only then perform the refresh —
+    /// making a cycle cost `period + render_time` rather than `period`, and
+    /// the achieved rate fall short of the target by however long drawing
+    /// takes. Capping at `period / 4` wakes the loop often enough to start each
+    /// refresh near its due time; it is the same ratio [`Default`] uses
+    /// (`LV_DEF_REFR_PERIOD / 4`), and measurement on CoreS3 shows the cap
+    /// setting the rate: 31 fps at a 10 ms cap against 19 fps at 50 ms, on
+    /// identical draw load.
+    ///
+    /// The redraw period is still only a *ceiling* — the achieved rate also
+    /// depends on how much drawing each frame costs. `fps` is clamped to at
+    /// least 1.
     pub fn with_target_fps(mut self, fps: u32) -> Self {
         let period = (1000 / fps.max(1)).max(1);
         self.refresh_period_ms = Some(period);
-        self.max_idle_ms = period as u64;
+        self.max_idle_ms = (period / 4).max(1) as u64;
         self
     }
 

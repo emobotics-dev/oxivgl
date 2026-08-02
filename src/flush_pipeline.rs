@@ -107,6 +107,18 @@ pub trait FlushSync: Sync {
 ///
 /// It is the default only because it needs no scheduler at all. Any application
 /// that links one should use [`SemaphoreFlushSync`] instead.
+///
+/// # The wakeup can be one interrupt late
+///
+/// [`signal`](FlushSync::signal) can land in the window between `wait`'s check
+/// of the flag and the `waiti 0` that follows it. The core then sleeps until the
+/// *next* interrupt rather than returning at once, and the loop only notices the
+/// completion on the following pass. It is bounded — some interrupt always
+/// arrives, so this is added latency and never a hang — and the behaviour is
+/// unchanged from before the flush wait was made injectable. Closing the window
+/// properly needs the flag tested with interrupts masked and `waiti` entered
+/// atomically from that state; [`SemaphoreFlushSync`] sidesteps it entirely by
+/// letting the scheduler do the waiting.
 #[derive(Debug)]
 pub struct WaitiFlushSync {
     /// Set by `signal`, consumed by `wait`. Carries a `signal` that arrives
@@ -371,6 +383,19 @@ pub static DRAW_OPERATION: Channel<CriticalSectionRawMutex, DrawOperation, 1> = 
 pub async fn flush_frame_buffer(mut display_driver: impl DisplayOutput) -> ! {
     debug!("Starting flush task");
     super::display::DISPLAY_READY.signal(());
+    // Say so once, here rather than in `flush_sync`, which is on the per-flush
+    // path. Falling back is legitimate but expensive enough to be worth
+    // surfacing: measured on a Fire27, parking the core costs a 10 ms-period
+    // task ~30 of every 100 wakeups. Someone who never reads a changelog should
+    // still find out.
+    if !FLUSH_SYNC.set.load(Ordering::Acquire) {
+        warn!(
+            "flush wait: no FlushSync registered — falling back to WaitiFlushSync, \
+             which parks the core for the whole panel transfer. Register a \
+             blocking one (see oxivgl::flush_pipeline::SemaphoreFlushSync) if a \
+             scheduler is linked."
+        );
+    }
     let sync = flush_sync();
     loop {
         debug!("Flushing frame buffer");
