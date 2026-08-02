@@ -66,6 +66,26 @@ cargo test to_lvgl_half
 ./run_cores3.sh getting_started1   # M5Stack CoreS3 (ESP32-S3)
 ```
 
+## CI & Hosting
+
+- **Hosted on Forgejo** (`http://forgejo:3000/emobotics/oxivgl`) — `fj`/`fj-ex`
+  for PRs, issues and Actions, not `gh`. The GitHub repo
+  (`emobotics-dev/oxivgl`) is now a **read-only mirror**, updated before each
+  crates.io release. Public-facing metadata (`repository`/`homepage`, the README
+  install snippet, and the `m5stack-core`/`esp-hal` git-dep forks) deliberately
+  points at the mirror, because Forgejo is LAN-only and external consumers must
+  be able to resolve it.
+- **CI** lives in `.forgejo/workflows/ci.yml`, on the self-hosted `rust`/`esp32`
+  runners. Host legs (unit/doc/integration/pool/leak/doc-audit/screenshots) plus
+  a firmware leg per board, behind a single `ci-passed` aggregate gate.
+- **CI image**: everything runs in `registry:3000/emobotics/oxivgl/oxivgl-ci:vN`,
+  built `FROM m5stack-core-ci` by `.forgejo/workflows/build-ci-image.yml`. It
+  bakes the host extras (nightly, SDL2, native libclang) at **image-build time** —
+  no job installs anything at runtime (`conventions/containers.md §1`). The push
+  authenticates via the `REGISTRY_TOKEN` secret as the `REGISTRY_USER` variable.
+  The `:vN` tag is immutable: bump it in the Dockerfile-change commit (Dockerfile
+  + `build-ci-image.yml` + `ci.yml` in lockstep); never move an existing tag.
+
 ## Architecture
 
 `no_std` (embedded) / `std` (host) library providing LVGL bindings for ESP32 UIs.
