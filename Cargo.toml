@@ -101,6 +101,7 @@ png = { version = "0.17", optional = true }
 [build-dependencies]
 oxivgl-build = { version = "0.1.0", path = "oxivgl-build" }
 
+
 [workspace]
 exclude = ["examples/common", "oxivgl-build", "oxivgl-sys"]
 
@@ -117,10 +118,14 @@ esp-bootloader-esp-idf = { version = "0.5.0" }
 esp-hal                = { version = "=1.1.1", features = ["unstable"] }
 esp-rtos               = { version = "0.3.0", features = ["embassy"] }
 esp-sync               = { version = "0.2.1" }
-# TEMP: main pin for the button-timing fix (immediate single-press / ButtonTiming),
-# m5stack-core#58 / PR #59, ahead of a tagged release. Revert to `tag = "v0.4.2"`
-# once cut. Dev-dependency only — never part of the published library.
-m5stack-core = { git = "https://github.com/emobotics-dev/m5stack-core", rev = "c306796603e44a7d60dac66ebe49efc61df73f90", default-features = false, features = ["display", "psram", "console-serial", "panic-handler"] }
+# v0.5.0 retires the TEMP main pin that carried the button-timing fix
+# (ButtonTiming::immediate_single_press, m5stack-core#58 / PR #59) — the tag
+# contains it. `identity` makes app_desc!()'s version field the consumer's git
+# build mark, so the HIL harness can verify which image is on a board instead of
+# reporting "did not name itself"; it requires the build.rs wiring in
+# examples/common (a missing env! is a compile error, not a silent gap).
+# Dev-dependency only — never part of the published library.
+m5stack-core = { git = "https://github.com/emobotics-dev/m5stack-core", tag = "v0.5.0", default-features = false, features = ["display", "psram", "console-serial", "panic-handler", "identity"] }
 
 # esp-hal family — stock crates.io for the published library; redirected to the
 # emobotics fork (a coherent 1.1.1 snapshot + SPI/DMA fixes the BSP's DMA flush

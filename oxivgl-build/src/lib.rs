@@ -225,3 +225,53 @@ mod tests {
         color_format_from_conf(&dir);
     }
 }
+
+/// Emit `M5STACK_CORE_BUILD_MARK`, the build identity m5stack-core's `identity`
+/// feature stamps into `app_desc!()`'s version field — so a host can read off
+/// flash which image a board is running, and the HIL harness can verify it with
+/// `--ensure-image` instead of reporting "did not name itself".
+///
+/// Emitted here rather than by depending on `m5stack-core-build`: that crate is
+/// not published to crates.io, and a git build-dependency would make `oxivgl`
+/// itself unpublishable. The mark's content is free-form — m5stack-core never
+/// inspects or validates it — so the only real contract is the length budget
+/// below.
+///
+/// The mark lands in `EspAppDesc::version`, **31 bytes** shared with the package
+/// and binary names, so the commit is abbreviated hard. `prefix` is a short
+/// consumer-meaningful tag; `hash_len` is the commit prefix length. A `+` is
+/// appended when the working tree is dirty, so a mark can never claim a clean
+/// commit that was not what got built.
+///
+/// Never fails the build: falls back to `unknown` when `git` is absent or this
+/// is not a checkout (a source tarball, say). A wrong identity would be worse
+/// than none, and "unknown" is honest.
+pub fn emit_identity_mark(prefix: &str, hash_len: usize) {
+    use std::process::Command;
+
+    let git = |args: &[&str]| -> Option<String> {
+        let out = Command::new("git").args(args).output().ok()?;
+        out.status
+            .success()
+            .then(|| String::from_utf8_lossy(&out.stdout).trim().to_string())
+    };
+
+    let mark = match git(&["rev-parse", "HEAD"]) {
+        Some(sha) if !sha.is_empty() => {
+            let short: String = sha.chars().take(hash_len).collect();
+            // `--porcelain` is empty exactly when nothing is modified or
+            // untracked, which is the condition worth flagging.
+            let dirty = git(&["status", "--porcelain"]).is_some_and(|s| !s.is_empty());
+            format!("{short}{}", if dirty { "+" } else { "" })
+        }
+        _ => "unknown".to_string(),
+    };
+    let mark = if prefix.is_empty() { mark } else { format!("{prefix}/{mark}") };
+
+    // Re-run when the commit or the checked-out ref changes. Not a blanket
+    // rerun-if-changed on .git, which would rebuild on every index touch.
+    if let Some(dir) = git(&["rev-parse", "--git-dir"]) {
+        println!("cargo:rerun-if-changed={dir}/HEAD");
+    }
+    println!("cargo:rustc-env=M5STACK_CORE_BUILD_MARK={mark}");
+}

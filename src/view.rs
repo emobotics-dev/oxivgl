@@ -421,7 +421,8 @@ unsafe extern "C" fn view_event_trampoline<V: View>(e: *mut lv_event_t) {
 /// loop to live wherever the setup happened. Splitting them lets an application
 /// keep this pipeline while choosing *where* the loop runs — most usefully on a
 /// dedicated RTOS thread ranked below latency-sensitive work, which is what
-/// makes a blocking [`FlushSync`](crate::flush_pipeline::FlushSync) pay off:
+/// makes a blocking `FlushSync` pay off (not linked: `flush_pipeline` exists
+/// only under the `esp-hal` feature, so the link would not resolve on host):
 ///
 /// ```ignore
 /// // on the render thread, and nowhere else — every later LVGL call is here too

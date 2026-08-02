@@ -134,7 +134,12 @@ macro_rules! board_body {
         use $crate::static_cell::make_static;
 
         // BSP provides the panic handler and the esp-idf app descriptor.
-        m5stack_core::app_desc!();
+        // Short explicit prefix, not the default CARGO_PKG_NAME/CARGO_BIN_NAME:
+        // the identity mark must fit EspAppDesc::version's 31 bytes, and
+        // oxivgl's example names alone can eat nearly all of it
+        // ("oxivgl/widget_buttonmatrix1/" is 28). A fixed prefix keeps every
+        // example under budget; the git mark carries the distinguishing part.
+        m5stack_core::app_desc!("oxivgl/ex");
 
         const SCREEN_W: u16 = board::SCREEN_W;
         const SCREEN_H: u16 = board::SCREEN_H;
@@ -433,10 +438,10 @@ macro_rules! board_body {
             // via psram_split below rather than into the global allocator —
             // keeping it out is what lets oxivgl route draw buffers to internal,
             // DMA-capable RAM (the ESP32 cannot DMA from PSRAM at all).
-            mem::init_heap(HeapProfile::Lvgl, None);
+            mem::init_heap(HeapProfile::Lvgl);
 
             if $psram_bytes > 0 {
-                match mem::psram_split(b.psram, Some($psram_bytes)) {
+                match mem::psram_split(b.psram, $psram_bytes) {
                     Ok(split) => match $crate::oxivgl::mem::reserve_pool(split.private) {
                         Ok(()) => $crate::log::info!(
                             "LVGL pool: {} KiB PSRAM (global heap +{} KiB)",
