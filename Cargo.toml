@@ -39,19 +39,47 @@ defmt = ["dep:defmt"]
 log-04 = ["dep:log-04"]
 png = ["dep:png"]
 
+# Ship `SemaphoreFlushSync`, so the LVGL render task blocks in the scheduler
+# instead of parking the core with `waiti 0` for the whole 15-30 ms panel
+# transfer (#1). Pulls `esp-radio-rtos-driver`, which is an *interface* crate,
+# not a scheduler: it declares the `esp_rtos_semaphore_*` symbols that a
+# scheduler registers at link time (esp-rtos is the usual one; ArielOS and
+# ESP-IDF/FreeRTOS shims implement the same interface). oxivgl therefore stays
+# RTOS-agnostic — the application's scheduler crate picks the implementation,
+# and linking none is a link error rather than a silent fallback.
+rtos-sem = ["dep:esp-radio-rtos-driver"]
+
+# Measurement apparatus for the threaded render pipeline demo: a 10 ms latency
+# probe and a once-a-second stats line (see examples/common/src/metrics.rs).
+# Declared on *this* package, not just the harness, because `#[cfg(feature)]`
+# inside an exported macro is evaluated against the crate the macro expands
+# into — the examples are built by this package, so the feature must live here.
+perf-probe = ["oxivgl-examples-common/perf-probe"]
+
 # Board selection for the examples (built with `cargo --example`). Each forwards
 # the chip to the library (esp32/esp32s3) and to the example harness crate, which
 # in turn drives the m5stack-core BSP's board feature. Exactly one may be active;
 # `fire27` is the default the run scripts and CI use when none is passed.
+#
+# `rtos-sem` + `esp-rtos/esp-radio`: the threaded harness blocks the render
+# thread on a `SemaphoreFlushSync`, whose `esp_rtos_semaphore_*` symbols are
+# registered at link time by the *application's* scheduler. For esp-rtos that
+# registration lives in an `esp-radio`-gated module, so the feature must be
+# turned on here, in the consumer — oxivgl itself must not, since depending on
+# esp-rtos is exactly the RTOS coupling the FlushSync trait exists to avoid.
+# Despite the name this pulls no radio blob: it is esp-rtos's FreeRTOS-compat
+# IPC objects (semaphores, queues, timers).
 fire27 = [
     "esp-hal", "esp32", "oxivgl-examples-common/fire27",
     "esp-rtos/esp32", "esp-bootloader-esp-idf/esp32", "esp-sync/esp32",
     "m5stack-core/fire27",
+    "rtos-sem", "esp-rtos/esp-radio", "esp-rtos/esp-alloc",
 ]
 cores3 = [
     "esp-hal", "esp32s3", "oxivgl-examples-common/cores3",
     "esp-rtos/esp32s3", "esp-bootloader-esp-idf/esp32s3", "esp-sync/esp32s3",
     "m5stack-core/cores3",
+    "rtos-sem", "esp-rtos/esp-radio", "esp-rtos/esp-alloc",
 ]
 
 [dependencies]
@@ -63,12 +91,16 @@ cfg-if = "1"
 thiserror-no-std = "2.0.2"
 critical-section = "1"
 esp-hal = { version = "1.1.0", features = ["unstable"], optional = true }
+# Scheduler *interface* only (cfg-if + esp-sync + portable-atomic — it depends on
+# neither esp-hal nor esp-rtos). See the `rtos-sem` feature comment above.
+esp-radio-rtos-driver = { version = "0.3.0", optional = true }
 defmt = { version = "1.0.1", optional = true }
 log-04 = { package = "log", version = "0.4", optional = true }
 png = { version = "0.17", optional = true }
 
 [build-dependencies]
 oxivgl-build = { version = "0.1.0", path = "oxivgl-build" }
+
 
 [workspace]
 exclude = ["examples/common", "oxivgl-build", "oxivgl-sys"]
@@ -86,10 +118,14 @@ esp-bootloader-esp-idf = { version = "0.5.0" }
 esp-hal                = { version = "=1.1.1", features = ["unstable"] }
 esp-rtos               = { version = "0.3.0", features = ["embassy"] }
 esp-sync               = { version = "0.2.1" }
-# TEMP: main pin for the button-timing fix (immediate single-press / ButtonTiming),
-# m5stack-core#58 / PR #59, ahead of a tagged release. Revert to `tag = "v0.4.2"`
-# once cut. Dev-dependency only — never part of the published library.
-m5stack-core = { git = "https://github.com/emobotics-dev/m5stack-core", rev = "c306796603e44a7d60dac66ebe49efc61df73f90", default-features = false, features = ["display", "psram", "console-serial", "panic-handler"] }
+# v0.5.0 retires the TEMP main pin that carried the button-timing fix
+# (ButtonTiming::immediate_single_press, m5stack-core#58 / PR #59) — the tag
+# contains it. `identity` makes app_desc!()'s version field the consumer's git
+# build mark, so the HIL harness can verify which image is on a board instead of
+# reporting "did not name itself"; it requires the build.rs wiring in
+# examples/common (a missing env! is a compile error, not a silent gap).
+# Dev-dependency only — never part of the published library.
+m5stack-core = { git = "https://github.com/emobotics-dev/m5stack-core", tag = "v0.5.0", default-features = false, features = ["display", "psram", "console-serial", "panic-handler", "identity"] }
 
 # esp-hal family — stock crates.io for the published library; redirected to the
 # emobotics fork (a coherent 1.1.1 snapshot + SPI/DMA fixes the BSP's DMA flush
@@ -98,6 +134,11 @@ m5stack-core = { git = "https://github.com/emobotics-dev/m5stack-core", rev = "c
 [patch.crates-io]
 esp-hal                = { git = "https://github.com/emobotics-dev/esp-hal.git", rev = "b7a4c74a024383cb9808453cf3e34296c5e870b0" }
 esp-radio              = { git = "https://github.com/emobotics-dev/esp-hal.git", rev = "b7a4c74a024383cb9808453cf3e34296c5e870b0" }
+# Must be patched alongside the rest: esp-radio depends on this by *path* inside
+# the fork, so without this line our direct crates.io dep would resolve to a
+# second, distinct copy. The `esp_rtos_semaphore_*` registration is link-time, so
+# two copies is a duplicate/undefined-symbol link failure, not a version warning.
+esp-radio-rtos-driver  = { git = "https://github.com/emobotics-dev/esp-hal.git", rev = "b7a4c74a024383cb9808453cf3e34296c5e870b0" }
 esp-sync               = { git = "https://github.com/emobotics-dev/esp-hal.git", rev = "b7a4c74a024383cb9808453cf3e34296c5e870b0" }
 esp-alloc              = { git = "https://github.com/emobotics-dev/esp-hal.git", rev = "b7a4c74a024383cb9808453cf3e34296c5e870b0" }
 esp-rom-sys            = { git = "https://github.com/emobotics-dev/esp-hal.git", rev = "b7a4c74a024383cb9808453cf3e34296c5e870b0" }

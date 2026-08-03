@@ -21,12 +21,16 @@ heapless = { version = "0.8" }
 # I2C power/reset sequence, both handled by the BSP.
 [features]
 fire27 = [
-    "oxivgl/esp32",
+    "oxivgl/esp32", "oxivgl/rtos-sem", "esp-rtos/esp-radio", "esp-rtos/esp-alloc",
     "esp-hal/esp32", "esp-rtos/esp32", "esp-bootloader-esp-idf/esp32", "esp-sync/esp32",
     "m5stack-core/fire27", "m5stack-core/buttons",
 ]
+# Measurement apparatus for the threaded pipeline: a 10 ms latency probe and a
+# once-a-second stats line. Off by default so only a build being measured pays.
+perf-probe = []
+
 cores3 = [
-    "oxivgl/esp32s3",
+    "oxivgl/esp32s3", "oxivgl/rtos-sem", "esp-rtos/esp-radio", "esp-rtos/esp-alloc",
     "esp-hal/esp32s3", "esp-rtos/esp32s3", "esp-rtos/log-04",
     "esp-bootloader-esp-idf/esp32s3", "esp-sync/esp32s3", "esp-sync/log-04",
     "embassy-executor/log", "embassy-time/log",
@@ -40,13 +44,15 @@ cores3 = [
 [target.'cfg(target_arch = "xtensa")'.dependencies]
 oxivgl = { path = "../..", default-features = false, features = ["esp-hal", "log-04"] }
 oxivgl_sys = { package = "oxivgl-sys", path = "../../oxivgl-sys", default-features = false }
-# TEMP: main pin for the button-timing fix (m5stack-core#58 / PR #59), ahead of a
-# tagged release. Revert to `tag = "v0.4.2"` once cut. Keep in sync with the root
-# Cargo.toml pin.
-m5stack-core = { git = "https://github.com/emobotics-dev/m5stack-core", rev = "c306796603e44a7d60dac66ebe49efc61df73f90", default-features = false, features = ["display", "psram", "console-serial", "panic-handler"] }
+# Keep the tag in sync with the root Cargo.toml pin. `identity` is what makes
+# the board name its own image at boot; see build.rs for the required wiring.
+m5stack-core = { git = "https://github.com/emobotics-dev/m5stack-core", tag = "v0.5.0", default-features = false, features = ["display", "psram", "console-serial", "panic-handler", "identity"] }
 esp-bootloader-esp-idf = { version = "0.5.0" }
 esp-hal              = { version = "=1.1.1", features = ["unstable"] }
 esp-rtos             = { version = "0.3.0", features = ["embassy"] }
+# Thread creation for the threaded render pipeline (see src/sched.rs). Scheduler
+# *interface* crate — the registration comes from esp-rtos, above.
+esp-radio-rtos-driver = { version = "0.3.0" }
 esp-sync             = { version = "0.2.1" }
 embassy-embedded-hal = { version = "0.6.0", features = ["time"] }
 embassy-executor     = { version = "0.10.0", features = ["nightly"] }

@@ -7,10 +7,12 @@
 //! flush pipeline from the `flush_pipeline` module.
 
 use core::ffi::c_void;
+use core::sync::atomic::{AtomicPtr, Ordering};
 
 use embassy_sync::{blocking_mutex::raw::CriticalSectionRawMutex, signal::Signal};
 use oxivgl_sys::{
-    lv_display_create, lv_display_set_buffers, lv_display_set_color_format,
+    lv_display_create, lv_display_set_buffers, lv_display_set_color_format, lv_display_t,
+    lv_display_get_refr_timer, lv_timer_set_period,
     lv_color_format_t_LV_COLOR_FORMAT_RGB565_SWAPPED,
     lv_display_render_mode_t_LV_DISPLAY_RENDER_MODE_PARTIAL,
 };
@@ -63,6 +65,50 @@ impl<const BYTES: usize> LvglBuffers<BYTES> {
 /// the render loop.
 pub static DISPLAY_READY: Signal<CriticalSectionRawMutex, ()> = Signal::new();
 
+/// The display created by [`lvgl_disp_init`], kept so the refresh period can be
+/// retuned at runtime. Null until init runs. Single-display limit, as above.
+static ACTIVE_DISPLAY: AtomicPtr<lv_display_t> = AtomicPtr::new(core::ptr::null_mut());
+
+/// Record the active display so [`set_refresh_period`] can find it.
+pub(crate) fn set_active_display(disp: *mut lv_display_t) {
+    ACTIVE_DISPLAY.store(disp, Ordering::Release);
+}
+
+/// Set LVGL's redraw period, in milliseconds, at runtime.
+///
+/// This is the frame-rate ceiling: LVGL renders at most one frame per period,
+/// so the stock `LV_DEF_REFR_PERIOD` of 32 ms caps the display at **31 fps
+/// before any drawing cost is counted** — under 30 fps once real draw load is
+/// added. Lowering the period raises the ceiling and costs proportionally more
+/// CPU; raising it is the single most effective way to buy CPU back (holding
+/// 31 fps instead of 59 roughly halves render load).
+///
+/// Setting it here rather than in `lv_conf.h` keeps the choice per-application:
+/// `lv_conf.h` is owned by the application but shared by everything it builds,
+/// whereas this is per-display and changeable while running.
+///
+/// Must be called after the display exists and from the LVGL task, like every
+/// other LVGL call. Returns `false` if no display has been initialised yet, or
+/// if the display has no refresh timer.
+pub fn set_refresh_period(ms: u32) -> bool {
+    let disp = ACTIVE_DISPLAY.load(Ordering::Acquire);
+    if disp.is_null() {
+        error!("set_refresh_period: no display initialised yet");
+        return false;
+    }
+    // SAFETY: `disp` came from `lv_display_create` and is valid for the display
+    // lifetime; called on the LVGL task, the only context that touches LVGL.
+    unsafe {
+        let timer = lv_display_get_refr_timer(disp);
+        if timer.is_null() {
+            error!("set_refresh_period: display has no refresh timer");
+            return false;
+        }
+        lv_timer_set_period(timer, ms);
+    }
+    true
+}
+
 /// Register render buffers with LVGL and wire up the flush pipeline.
 ///
 /// # Safety
@@ -93,6 +139,7 @@ pub unsafe fn lvgl_disp_init<const BYTES: usize>(
             BYTES as u32,
             lv_display_render_mode_t_LV_DISPLAY_RENDER_MODE_PARTIAL,
         );
+        set_active_display(disp);
         #[cfg(feature = "esp-hal")]
         {
             use crate::flush_pipeline::{flush_callback, wait_callback};

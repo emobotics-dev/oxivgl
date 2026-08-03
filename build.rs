@@ -43,6 +43,17 @@ fn emit_stdlib_cfgs() {
 }
 
 fn main() {
+    // The examples call m5stack-core's `app_desc!()`, which under the
+    // `identity` feature reads M5STACK_CORE_BUILD_MARK via env!(). The macro
+    // expands in THIS package, so this script must emit it; the example
+    // harness's own build script cannot reach the example's compilation unit.
+    //
+    // Guarded on CARGO_CFG_TARGET_ARCH, not cfg!(target_arch): a build script
+    // runs on the host, so cfg! would test the host's arch and never fire.
+    if std::env::var("CARGO_CFG_TARGET_ARCH").as_deref() == Ok("xtensa") {
+        oxivgl_build::emit_identity_mark("", 8);
+    }
+
     // Font gating must run on every build (including docs.rs) so the `Font`
     // consts match the symbols `oxivgl-sys` exposed.
     emit_font_cfgs();

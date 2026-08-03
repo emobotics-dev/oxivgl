@@ -103,6 +103,7 @@ impl SdlBuilder {
         // SAFETY: lv_init() was called in init_common().
         let disp = unsafe { lv_sdl_window_create(self.w, self.h) };
         assert!(!disp.is_null(), "lv_sdl_window_create returned NULL");
+        crate::display::set_active_display(disp);
         if let Some(title) = self.title {
             // SAFETY: disp is valid, title is a valid CStr.
             unsafe { lv_sdl_window_set_title(disp, title.as_ptr()) };
@@ -165,6 +166,7 @@ unsafe fn init_host_display(w: i32, h: i32) {
     // SAFETY: flush_cb is a valid extern "C" fn with the correct LVGL flush
     // callback signature.
     unsafe { lv_display_set_flush_cb(disp, Some(flush_cb)) };
+    crate::display::set_active_display(disp);
 }
 
 // ── Log callback

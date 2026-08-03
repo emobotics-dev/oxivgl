@@ -89,6 +89,22 @@ macro_rules! must_spawn {
     };
 }
 
+/// Like [`board_main!`], but runs the render loop and the flush on their own
+/// **esp-rtos threads**, with the priority ladder from [`sched`](crate::sched)
+/// (app 3 / flush 2 / render 1) and a blocking
+/// [`SemaphoreFlushSync`](oxivgl::flush_pipeline::SemaphoreFlushSync).
+///
+/// This is the pipeline oxivgl#1 is about. The stock harness parks the core in
+/// `waiti 0` for the whole 15-30 ms panel transfer, during which nothing runs
+/// but ISRs; here the render thread blocks in the scheduler instead and the
+/// core goes to whoever is ready next.
+#[macro_export]
+macro_rules! board_main_threaded {
+    ($view_expr:expr) => {
+        $crate::board_body!($view_expr, threaded, psram_bytes = 0);
+    };
+}
+
 /// Internal: the shared board harness body. Do not call directly.
 ///
 /// `$mode` is `single` (uses `run_app`) or `nav` (uses `run_app_nav`).
@@ -118,7 +134,12 @@ macro_rules! board_body {
         use $crate::static_cell::make_static;
 
         // BSP provides the panic handler and the esp-idf app descriptor.
-        m5stack_core::app_desc!();
+        // Short explicit prefix, not the default CARGO_PKG_NAME/CARGO_BIN_NAME:
+        // the identity mark must fit EspAppDesc::version's 31 bytes, and
+        // oxivgl's example names alone can eat nearly all of it
+        // ("oxivgl/widget_buttonmatrix1/" is 28). A fixed prefix keeps every
+        // example under budget; the git mark carries the distinguishing part.
+        m5stack_core::app_desc!("oxivgl/ex");
 
         const SCREEN_W: u16 = board::SCREEN_W;
         const SCREEN_H: u16 = board::SCREEN_H;
@@ -142,11 +163,17 @@ macro_rules! board_body {
             async fn show_raw_data(
                 &mut self, x: u16, y: u16, w: u16, h: u16, data: &[u8],
             ) -> Result<(), UiError> {
-                self.bus
+                let result = self
+                    .bus
                     .display
                     .show_raw_data(x, y, w, h, data)
                     .await
-                    .map_err(|_| UiError::Display)
+                    .map_err(|_| UiError::Display);
+                // Counted here rather than inside oxivgl: this is the point
+                // where bytes demonstrably reached the panel.
+                #[cfg(feature = "perf-probe")]
+                $crate::metrics::record_flush(data.len());
+                result
             }
         }
 
@@ -276,6 +303,53 @@ macro_rules! board_body {
             }
         }
 
+        /// Names the build in every stats line, so a measurement cannot be
+        /// attributed to the wrong pipeline by mistake.
+        #[allow(dead_code)]
+        const __OXIVGL_MODE: &str = $crate::board_mode_name!($mode);
+
+        /// The latency-sensitive work the UI must not disturb: wake on a fixed
+        /// period and record how late it actually ran. This is the number that
+        /// moves — the stock pipeline parks the core for the whole transfer, so
+        /// this task does not run at all for 15-30 ms at a stretch.
+        #[cfg(feature = "perf-probe")]
+        #[embassy_executor::task]
+        async fn __oxivgl_latency_probe() -> ! {
+            use $crate::embassy_time::{Duration, Instant, Timer};
+            const PROBE_MS: u64 = 10;
+            let period = Duration::from_millis(PROBE_MS);
+            let mut next = Instant::now() + period;
+            loop {
+                Timer::at(next).await;
+                let now = Instant::now();
+                $crate::metrics::LATENCY.record((now - next).as_micros() as u32);
+                next += period;
+                // Resync rather than chase a backlog if we fell a full period behind.
+                if next < now {
+                    next = now + period;
+                }
+            }
+        }
+
+        #[cfg(feature = "perf-probe")]
+        #[embassy_executor::task]
+        async fn __oxivgl_stats_task() -> ! {
+            use $crate::embassy_time::{Duration, Timer};
+            // Discard startup: the first redraws are not steady state.
+            Timer::after(Duration::from_secs(2)).await;
+            $crate::metrics::LATENCY.take();
+            let _ = $crate::metrics::take_flush();
+            loop {
+                Timer::after(Duration::from_secs(1)).await;
+                let l = $crate::metrics::LATENCY.take();
+                let (ops, kb) = $crate::metrics::take_flush();
+                $crate::log::info!(
+                    "[{}] probe n={} mean={}us max={}us >5ms={} >20ms={} | flush {}ops/s {}kB/s",
+                    __OXIVGL_MODE, l.count, l.mean_us, l.max_us, l.over_5ms, l.over_20ms, ops, kb,
+                );
+            }
+        }
+
         /// Thin wrapper that registers the board's LVGL indev on first `create`
         /// (after `lv_init`, before any widget), then delegates to the user view.
         /// Holds the indev so it lives for the program's duration.
@@ -328,6 +402,11 @@ macro_rules! board_body {
             }
         }
 
+        // Threaded mode only: the render/flush tasks and their thread entry
+        // points. Emitted per-mode so non-threaded builds allocate no task pool
+        // for them.
+        $crate::board_threaded_items!($view_expr, $mode);
+
         // ── Entry point ─────────────────────────────────────────────────────
 
         #[esp_rtos::main]
@@ -359,10 +438,10 @@ macro_rules! board_body {
             // via psram_split below rather than into the global allocator —
             // keeping it out is what lets oxivgl route draw buffers to internal,
             // DMA-capable RAM (the ESP32 cannot DMA from PSRAM at all).
-            mem::init_heap(HeapProfile::Lvgl, None);
+            mem::init_heap(HeapProfile::Lvgl);
 
             if $psram_bytes > 0 {
-                match mem::psram_split(b.psram, Some($psram_bytes)) {
+                match mem::psram_split(b.psram, $psram_bytes) {
                     Ok(split) => match $crate::oxivgl::mem::reserve_pool(split.private) {
                         Ok(()) => $crate::log::info!(
                             "LVGL pool: {} KiB PSRAM (global heap +{} KiB)",
@@ -404,12 +483,17 @@ macro_rules! board_body {
             let driver = DisplayDriver { bus: dbus };
             $crate::log::info!("Display initialized");
 
-            // Flush runs on a high-priority interrupt executor so it preempts
-            // the LVGL render loop the moment a frame is ready.
-            let int_exec =
-                make_static!(InterruptExecutor::new(b.system.sw_int.software_interrupt1));
-            let hi_spawner = int_exec.start(Priority::min());
-            $crate::must_spawn!(hi_spawner, flush_task(driver));
+            // Raise this executor above the UI *before* any UI thread exists:
+            // #[esp_rtos::main] starts at priority 0, the lowest, so a render
+            // thread would otherwise outrank the work it exists to yield to.
+            // No-op in the non-threaded modes.
+            $crate::board_raise_app!($mode);
+
+            // Flush runs on a high-priority interrupt executor (stock), or on
+            // its own thread ranked just above render (threaded).
+            $crate::board_flush_spawn!(
+                $mode, b.system.sw_int.software_interrupt1, driver
+            );
 
             // Unify the per-board input source into one local so the spawn can
             // be dispatched on `$mode` (the token must be passed, not named
@@ -420,13 +504,7 @@ macro_rules! board_body {
             let __input_src = i2c;
             $crate::board_input_spawn!($mode, spawner, __input_src);
 
-            static mut LVGL_BUFS: LvglBuffers<LVGL_BUF_BYTES> = LvglBuffers::new();
-            // SAFETY: accessed only here, before the single-threaded LVGL render
-            // loop takes exclusive ownership.
-            let bufs = unsafe { &mut *core::ptr::addr_of_mut!(LVGL_BUFS) };
-
-            let wrapper = BoardView { inner: $view_expr, _indev: None };
-            $crate::board_launch!(wrapper, bufs, $mode);
+            $crate::board_launch!($view_expr, spawner, $mode);
         }
     };
 }
@@ -435,6 +513,36 @@ macro_rules! board_body {
 #[macro_export]
 #[doc(hidden)]
 macro_rules! board_launch {
+    ($view_expr:expr, $spawner:expr, threaded) => {{
+        // The render loop lives on its own thread; this executor just parks.
+        // SAFETY: __oxivgl_render_thread runs an executor and never returns.
+        unsafe {
+            $crate::sched::spawn(
+                "ui-render",
+                __oxivgl_render_thread,
+                $crate::sched::PRIO_RENDER,
+                $crate::sched::RENDER_STACK,
+                $crate::sched::RENDER_CORE,
+            )
+        };
+        $crate::board_perf_spawn!($spawner);
+        core::future::pending::<()>().await
+    }};
+    ($view_expr:expr, $spawner:expr, $mode:ident) => {{
+        static mut LVGL_BUFS: LvglBuffers<LVGL_BUF_BYTES> = LvglBuffers::new();
+        // SAFETY: accessed only here, before the single-threaded LVGL render
+        // loop takes exclusive ownership.
+        let bufs = unsafe { &mut *core::ptr::addr_of_mut!(LVGL_BUFS) };
+        let wrapper = BoardView { inner: $view_expr, _indev: None };
+        $crate::board_perf_spawn!($spawner);
+        $crate::board_launch_inner!(wrapper, bufs, $mode)
+    }};
+}
+
+/// Internal: launch the non-threaded render loops. Do not call directly.
+#[macro_export]
+#[doc(hidden)]
+macro_rules! board_launch_inner {
     ($wrapper:ident, $bufs:ident, single) => {
         $crate::oxivgl::view::run_app::<BoardView<_>, LVGL_BUF_BYTES>(
             SCREEN_W.into(), SCREEN_H.into(), $bufs, $wrapper,
@@ -514,4 +622,130 @@ macro_rules! board_maybe_indev {
         }
         core::result::Result::<(), $crate::oxivgl::widgets::WidgetError>::Ok(())
     }};
+}
+
+/// Internal: emit the threaded mode's tasks and thread entry points. Do not
+/// call directly. Non-threaded modes expand to nothing, so they allocate no
+/// embassy task pool for a loop they never run.
+#[macro_export]
+#[doc(hidden)]
+macro_rules! board_threaded_items {
+    ($view_expr:expr, threaded) => {
+        /// Carries the display driver from `main` to the flush thread. The
+        /// thread entry is an `extern "C" fn` and cannot capture, so the
+        /// handoff goes through a static.
+        static __OXIVGL_DRIVER: $crate::embassy_sync::channel::Channel<
+            $crate::embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex,
+            DisplayDriver,
+            1,
+        > = $crate::embassy_sync::channel::Channel::new();
+
+        #[embassy_executor::task]
+        async fn __oxivgl_flush_task() -> ! {
+            let driver = __OXIVGL_DRIVER.receive().await;
+            flush_frame_buffer(driver).await
+        }
+
+        /// Flush thread entry. Never returns.
+        extern "C" fn __oxivgl_flush_thread(_: *mut core::ffi::c_void) {
+            let exec = make_static!($crate::esp_rtos::embassy::Executor::new());
+            exec.run(|s| {
+                $crate::must_spawn!(s, __oxivgl_flush_task());
+            })
+        }
+
+        #[embassy_executor::task]
+        async fn __oxivgl_render_task() -> ! {
+            static mut LVGL_BUFS: LvglBuffers<LVGL_BUF_BYTES> = LvglBuffers::new();
+            // SAFETY: touched only here, before this thread — the single LVGL
+            // context for the rest of the program — takes ownership.
+            let bufs = unsafe { &mut *core::ptr::addr_of_mut!(LVGL_BUFS) };
+            let wrapper = BoardView { inner: $view_expr, _indev: None };
+            // Ui::init must run on this thread: every later LVGL call does too.
+            let ui = $crate::oxivgl::view::Ui::init(SCREEN_W.into(), SCREEN_H.into(), bufs);
+            ui.run(wrapper, $crate::oxivgl::view::RenderConfig::default()).await
+        }
+
+        /// Render thread entry. Never returns.
+        extern "C" fn __oxivgl_render_thread(_: *mut core::ffi::c_void) {
+            let exec = make_static!($crate::esp_rtos::embassy::Executor::new());
+            exec.run(|s| {
+                $crate::must_spawn!(s, __oxivgl_render_task());
+            })
+        }
+    };
+    ($view_expr:expr, $other:ident) => {};
+}
+
+/// Internal: raise the `#[esp_rtos::main]` executor above the UI threads.
+/// Do not call directly. Only threaded mode has UI threads to outrank.
+#[macro_export]
+#[doc(hidden)]
+macro_rules! board_raise_app {
+    (threaded) => {
+        $crate::sched::raise_app_executor();
+    };
+    ($other:ident) => {};
+}
+
+/// Internal: spawn the flush side. Do not call directly.
+///
+/// Stock modes put it on a high-priority interrupt executor, so it preempts the
+/// render loop the moment a frame is ready. Threaded mode gives it a thread
+/// ranked just above render — preemptible in both directions, which an
+/// interrupt executor is not.
+#[macro_export]
+#[doc(hidden)]
+macro_rules! board_flush_spawn {
+    (threaded, $swint:expr, $driver:expr) => {{
+        // The software interrupt is unused here: the flush runs on a thread.
+        let _ = $swint;
+        // Register the blocking wait before either UI thread can reach LVGL.
+        // `leak_thread` (not `leak_isr`) because the give happens in thread
+        // context — the ISR form would be a scheduler-level error.
+        $crate::oxivgl::flush_pipeline::set_flush_sync(
+            $crate::oxivgl::flush_pipeline::SemaphoreFlushSync::leak_thread(),
+        );
+        __OXIVGL_DRIVER.try_send($driver).ok();
+        // SAFETY: __oxivgl_flush_thread runs an executor and never returns.
+        unsafe {
+            $crate::sched::spawn(
+                "ui-flush",
+                __oxivgl_flush_thread,
+                $crate::sched::PRIO_FLUSH,
+                $crate::sched::FLUSH_STACK,
+                0,
+            )
+        };
+    }};
+    ($other:ident, $swint:expr, $driver:expr) => {{
+        let int_exec = make_static!(InterruptExecutor::new($swint));
+        let hi_spawner = int_exec.start(Priority::min());
+        $crate::must_spawn!(hi_spawner, flush_task($driver));
+    }};
+}
+
+/// Internal: spawn the measurement tasks. Do not call directly. Expands to
+/// nothing without the `perf-probe` feature, so a normal build carries neither
+/// the probe nor the stats task.
+#[macro_export]
+#[doc(hidden)]
+macro_rules! board_perf_spawn {
+    ($spawner:expr) => {
+        #[cfg(feature = "perf-probe")]
+        {
+            $crate::must_spawn!($spawner, __oxivgl_latency_probe());
+            $crate::must_spawn!($spawner, __oxivgl_stats_task());
+        }
+    };
+}
+
+/// Internal: name the active mode for the stats line. Do not call directly.
+#[macro_export]
+#[doc(hidden)]
+macro_rules! board_mode_name {
+    (threaded) => { "threads+semaphore" };
+    (single) => { "shared executor" };
+    (nav) => { "shared executor (nav)" };
+    (nav_encoder) => { "shared executor (encoder)" };
 }
