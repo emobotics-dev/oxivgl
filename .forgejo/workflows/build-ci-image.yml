@@ -29,7 +29,7 @@
 #        http://forgejo:3000/emobotics/oxivgl/settings/actions/secrets
 #   3. Trigger this workflow once so v1 lands in the registry (workflow_dispatch
 #      below, or the first push to master that touches the Dockerfile). Only then
-#      can ci.yml pull registry:3000/emobotics/oxivgl/oxivgl-ci:v1.
+#      can ci.yml pull registry:3000/emobotics/oxivgl/oxivgl-ci:vN.
 # ------------------------------------------------------------------------------
 name: oxivgl CI image
 
@@ -47,7 +47,7 @@ on:
 
 env:
   IMAGE: registry:3000/emobotics/oxivgl/oxivgl-ci
-  IMAGE_VERSION: v1
+  IMAGE_VERSION: v2
 
 jobs:
   build-push:

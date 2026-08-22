@@ -4,7 +4,7 @@
 #               x86_64 (headless SDL2)
 #   firmware  — cross-compile examples for both boards (ESP32 + ESP32-S3)
 #
-# Runs inside registry:3000/emobotics/oxivgl/oxivgl-ci:v1 — oxivgl's own CI image,
+# Runs inside registry:3000/emobotics/oxivgl/oxivgl-ci:v2 — oxivgl's own CI image,
 # built ON TOP of m5stack-core-ci (the org's reference ESP-BSP image) by
 # build-ci-image.yml. Reusing that base gives the dual-board `esp` toolchain,
 # LVGL/bindgen deps, Node 22 and coverage tools, plus the exported ESP cross-build
@@ -49,7 +49,7 @@ jobs:
   host:
     name: Host tests
     runs-on: [rust, esp32]
-    container: registry:3000/emobotics/oxivgl/oxivgl-ci:v1
+    container: registry:3000/emobotics/oxivgl/oxivgl-ci:v2
 
     steps:
       - name: Checkout
@@ -151,7 +151,7 @@ jobs:
           - board: cores3
             target: xtensa-esp32s3-none-elf
     runs-on: [rust, esp32]
-    container: registry:3000/emobotics/oxivgl/oxivgl-ci:v1
+    container: registry:3000/emobotics/oxivgl/oxivgl-ci:v2
 
     steps:
       - name: Checkout
@@ -173,7 +173,7 @@ jobs:
     if: always()
     needs: [host, firmware]
     runs-on: [rust, esp32]
-    container: registry:3000/emobotics/oxivgl/oxivgl-ci:v1
+    container: registry:3000/emobotics/oxivgl/oxivgl-ci:v2
     steps:
       - name: Verify every leg succeeded
         env:

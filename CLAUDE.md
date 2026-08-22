@@ -90,7 +90,9 @@ cargo test to_lvgl_half
 
 `no_std` (embedded) / `std` (host) library providing LVGL bindings for ESP32 UIs.
 
-**Entry point**: `view::run_lvgl::<V: View>(w, h, bufs)` — async task that never returns.
+**Entry point**: `view::run_app::<V: View>(w, h, bufs, view)` — async task that never returns.
+`view::Ui` splits the same work in two (`Ui::init` then `Ui::run`/`Ui::run_nav`, paced by a
+`RenderConfig`) for applications that need the loop on a thread of their own.
 
 **Layering** (top to bottom):
 1. `view` — `View` trait (`create`/`update`) + render loop
@@ -102,7 +104,9 @@ cargo test to_lvgl_half
 **Flush pipeline** (ESP32 only, `feature = "esp-hal"`):
 - LVGL calls `flush_callback` (ISR-safe) → sends `DrawOperation` to `DRAW_OPERATION` channel
 - `flush_frame_buffer` task receives it → calls `DisplayOutput::show_raw_data` → signals `FLUSH_OPERATION`
-- `wait_callback` (on LVGL task) loops with `waiti 0` until `FLUSH_OPERATION` received, then calls `lv_display_flush_ready`
+- `wait_callback` (on LVGL task) blocks in the registered `FlushSync`, then calls `lv_display_flush_ready`.
+  The primitive is injected, not chosen: `WaitiFlushSync` (default) parks the core with `waiti 0` for the
+  whole transfer; `SemaphoreFlushSync` (`rtos-sem`) yields to the scheduler instead. See `docs/render-pipeline.md`.
 
 **Host target**: `LvglDriver::init` calls `init_host_display` (SDL2 backend via `oxivgl-sys`). Unit tests run on host without display hardware.
 

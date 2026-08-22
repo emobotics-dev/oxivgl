@@ -20,7 +20,7 @@
 # the moment any runner has pulled it once. Bump the tag in build-ci-image.yml +
 # ci.yml together, in the same commit, whenever this Dockerfile changes; never
 # move an existing tag (emobotics/forgejo-instance docs/runners.md).
-FROM registry:3000/emobotics/m5stack-core/m5stack-core-ci:v6
+FROM registry:3000/emobotics/m5stack-core/m5stack-core-ci:v8
 
 ENV DEBIAN_FRONTEND=noninteractive
 

@@ -32,18 +32,26 @@ const LVGL_TICK_MS: u64 = LV_DEF_REFR_PERIOD as u64 / 4;
 
 /// Cadence of the render loop.
 ///
-/// The defaults reproduce the historical fixed cadence exactly, so an existing
-/// [`run_app`] caller sees no change. Override them to lift the frame-rate
+/// The defaults keep `lv_conf.h`'s redraw period and poll [`View::update`] once
+/// per period, so an existing [`run_app`] caller keeps its frame-rate ceiling.
+/// The *pacing* underneath does change — see below. Override these to lift the
 /// ceiling or to decouple [`View::update`] from the redraw rate.
 ///
-/// # Why the default caps at ~31 fps
+/// # Why the default still caps at ~31 fps
 ///
-/// The loop used to run a fixed `4 × (lv_timer_handler + sleep
-/// LV_DEF_REFR_PERIOD/4)` per `update()`, so a cycle cost
-/// `LV_DEF_REFR_PERIOD + render_time` — 31 fps at the stock 32 ms *before*
-/// drawing anything, and under 30 once real draw load lands. Setting
-/// [`refresh_period_ms`](Self::refresh_period_ms) changes the ceiling;
-/// [`max_idle_ms`](Self::max_idle_ms) stops the loop oversleeping past it.
+/// The ceiling is [`refresh_period_ms`](Self::refresh_period_ms), and leaving it
+/// `None` keeps the stock `LV_DEF_REFR_PERIOD` of 32 ms — 31 fps *before* any
+/// drawing cost is counted. Raising the ceiling is what
+/// [`with_target_fps`](Self::with_target_fps) does.
+///
+/// What no longer costs a period is the loop itself. It used to run a fixed
+/// `4 × (lv_timer_handler + sleep LV_DEF_REFR_PERIOD/4)` per `update()`, so a
+/// cycle cost `LV_DEF_REFR_PERIOD + render_time` and the achieved rate fell
+/// short of the ceiling by however long drawing took. It now sleeps for the
+/// delay `lv_timer_handler` itself recommends, bounded by
+/// [`max_idle_ms`](Self::max_idle_ms) so animations and input stay responsive.
+/// Timing therefore differs from pre-0.8.0 even at the defaults; that is the
+/// fix, not a regression.
 #[derive(Debug, Clone, Copy)]
 pub struct RenderConfig {
     /// LVGL redraw period in ms, applied at runtime via
@@ -557,8 +565,9 @@ impl Ui {
 /// Run the LVGL render loop with a [`View`].
 ///
 /// This is an embassy async task. Spawn it alongside your other application
-/// tasks. It initialises LVGL, creates the view, then loops: calls
-/// `V::update` and drives `lv_timer_handler` every tick.
+/// tasks. It initialises LVGL, creates the view, then loops: drives
+/// `lv_timer_handler` at the pace LVGL asks for, calling `V::update` once per
+/// [`RenderConfig::update_period_ms`].
 ///
 /// `w` and `h` are the display resolution in pixels. `bufs` must be a
 /// `'static` caller-allocated [`LvglBuffers`] sized for the screen width.

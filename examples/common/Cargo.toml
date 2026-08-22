@@ -46,9 +46,9 @@ oxivgl = { path = "../..", default-features = false, features = ["esp-hal", "log
 oxivgl_sys = { package = "oxivgl-sys", path = "../../oxivgl-sys", default-features = false }
 # Keep the tag in sync with the root Cargo.toml pin. `identity` is what makes
 # the board name its own image at boot; see build.rs for the required wiring.
-m5stack-core = { git = "https://github.com/emobotics-dev/m5stack-core", tag = "v0.5.0", default-features = false, features = ["display", "psram", "console-serial", "panic-handler", "identity"] }
+m5stack-core = { git = "http://forgejo:3000/emobotics/m5stack-core.git", rev = "3b71c3fed030c071a834556d190b628c77de99b6", default-features = false, features = ["display", "psram", "console-serial", "panic-handler", "identity"] }
 esp-bootloader-esp-idf = { version = "0.5.0" }
-esp-hal              = { version = "=1.1.1", features = ["unstable"] }
+esp-hal              = { version = "=1.1.2", features = ["unstable"] }
 esp-rtos             = { version = "0.3.0", features = ["embassy"] }
 # Thread creation for the threaded render pipeline (see src/sched.rs). Scheduler
 # *interface* crate — the registration comes from esp-rtos, above.

@@ -746,17 +746,26 @@ async || core::future::pending().await
 
 ### 5.4 Harness macros
 
-The example harness (`examples/common`) provides three macros, each
+The example harness (`examples/common`) provides five macros, each
 taking an expression that produces the initial view:
 
 ```rust
 example_main!(MyExample::default());                    // single view → run_app
 example_main_nav!(RootView::default());                // navigation → run_app_nav
+example_main_nav_encoder!(RootView::default());        // + board buttons as an ENCODER
 example_main_psram!(MyExample::default(), 512 * 1024);  // + runtime PSRAM pool
+example_main_threaded!(MyExample::default());          // render + flush on their own threads
 ```
 
 Each expands to the matching `run_app*` call on the selected board
 (`fire27` / `cores3`), or to the host SDL loop with equivalent logic.
+
+`example_main_threaded!` is the exception: instead of running the loop on the
+embassy executor it places the render loop and the panel flush on separate
+esp-rtos threads under an application-owned priority ladder, and registers a
+`SemaphoreFlushSync` so the render thread yields during the transfer rather
+than parking the core. See `docs/render-pipeline.md` and
+`examples/common/src/sched.rs`.
 
 ---
 
