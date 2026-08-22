@@ -115,7 +115,7 @@ oxivgl_sys = { package = "oxivgl-sys", version = "0.2.4", path = "oxivgl-sys", d
 [target.'cfg(target_arch = "xtensa")'.dev-dependencies]
 embassy-executor       = { version = "0.10.0", features = ["nightly"] }
 esp-bootloader-esp-idf = { version = "0.5.0" }
-esp-hal                = { version = "=1.1.1", features = ["unstable"] }
+esp-hal                = { version = "=1.1.2", features = ["unstable"] }
 esp-rtos               = { version = "0.3.0", features = ["embassy"] }
 esp-sync               = { version = "0.2.1" }
 # v0.5.0 retires the TEMP main pin that carried the button-timing fix
@@ -125,25 +125,25 @@ esp-sync               = { version = "0.2.1" }
 # reporting "did not name itself"; it requires the build.rs wiring in
 # examples/common (a missing env! is a compile error, not a silent gap).
 # Dev-dependency only — never part of the published library.
-m5stack-core = { git = "https://github.com/emobotics-dev/m5stack-core", tag = "v0.5.0", default-features = false, features = ["display", "psram", "console-serial", "panic-handler", "identity"] }
+m5stack-core = { git = "http://forgejo:3000/emobotics/m5stack-core.git", rev = "3b71c3fed030c071a834556d190b628c77de99b6", default-features = false, features = ["display", "psram", "console-serial", "panic-handler", "identity"] }
 
 # esp-hal family — stock crates.io for the published library; redirected to the
 # emobotics fork (a coherent 1.1.1 snapshot + SPI/DMA fixes the BSP's DMA flush
 # needs) for local + CI + example builds. `cargo publish` ignores [patch], so
 # downstream consumers of the library still resolve stock crates.io. See #119.
 [patch.crates-io]
-esp-hal                = { git = "https://github.com/emobotics-dev/esp-hal.git", rev = "b7a4c74a024383cb9808453cf3e34296c5e870b0" }
-esp-radio              = { git = "https://github.com/emobotics-dev/esp-hal.git", rev = "b7a4c74a024383cb9808453cf3e34296c5e870b0" }
+esp-hal                = { git = "https://github.com/emobotics-dev/esp-hal.git", rev = "04646b65e3ef94d60f5e08cb24fed9e3cd77f9d0" }
+esp-radio              = { git = "https://github.com/emobotics-dev/esp-hal.git", rev = "04646b65e3ef94d60f5e08cb24fed9e3cd77f9d0" }
 # Must be patched alongside the rest: esp-radio depends on this by *path* inside
 # the fork, so without this line our direct crates.io dep would resolve to a
 # second, distinct copy. The `esp_rtos_semaphore_*` registration is link-time, so
 # two copies is a duplicate/undefined-symbol link failure, not a version warning.
-esp-radio-rtos-driver  = { git = "https://github.com/emobotics-dev/esp-hal.git", rev = "b7a4c74a024383cb9808453cf3e34296c5e870b0" }
-esp-sync               = { git = "https://github.com/emobotics-dev/esp-hal.git", rev = "b7a4c74a024383cb9808453cf3e34296c5e870b0" }
-esp-alloc              = { git = "https://github.com/emobotics-dev/esp-hal.git", rev = "b7a4c74a024383cb9808453cf3e34296c5e870b0" }
-esp-rom-sys            = { git = "https://github.com/emobotics-dev/esp-hal.git", rev = "b7a4c74a024383cb9808453cf3e34296c5e870b0" }
-esp-bootloader-esp-idf = { git = "https://github.com/emobotics-dev/esp-hal.git", rev = "b7a4c74a024383cb9808453cf3e34296c5e870b0" }
-esp-rtos               = { git = "https://github.com/emobotics-dev/esp-hal.git", rev = "b7a4c74a024383cb9808453cf3e34296c5e870b0" }
+esp-radio-rtos-driver  = { git = "https://github.com/emobotics-dev/esp-hal.git", rev = "04646b65e3ef94d60f5e08cb24fed9e3cd77f9d0" }
+esp-sync               = { git = "https://github.com/emobotics-dev/esp-hal.git", rev = "04646b65e3ef94d60f5e08cb24fed9e3cd77f9d0" }
+esp-alloc              = { git = "https://github.com/emobotics-dev/esp-hal.git", rev = "04646b65e3ef94d60f5e08cb24fed9e3cd77f9d0" }
+esp-rom-sys            = { git = "https://github.com/emobotics-dev/esp-hal.git", rev = "04646b65e3ef94d60f5e08cb24fed9e3cd77f9d0" }
+esp-bootloader-esp-idf = { git = "https://github.com/emobotics-dev/esp-hal.git", rev = "04646b65e3ef94d60f5e08cb24fed9e3cd77f9d0" }
+esp-rtos               = { git = "https://github.com/emobotics-dev/esp-hal.git", rev = "04646b65e3ef94d60f5e08cb24fed9e3cd77f9d0" }
 
 [profile.dev]
 opt-level = "s"

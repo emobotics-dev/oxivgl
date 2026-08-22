@@ -422,7 +422,7 @@ macro_rules! board_body {
                     serial: Some(m5stack_core::io::console::SerialResources {
                         uart: b.uart0, tx_pin: b.uart0_tx, rx_pin: b.uart0_rx,
                     }),
-                    level: $crate::log::LevelFilter::Info,
+                    filter: "info",
                 },
             );
             #[cfg(feature = "cores3")]
@@ -430,7 +430,7 @@ macro_rules! board_body {
                 spawner,
                 m5stack_core::io::console::Config {
                     serial: Some(m5stack_core::io::console::SerialResources { usb: b.usb_device }),
-                    level: $crate::log::LevelFilter::Info,
+                    filter: "info",
                 },
             );
 
