@@ -5,6 +5,87 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.8.0] — 2026-08-22
+
+### Added
+
+- **`FlushSync` — the flush wait is injected rather than hardcoded** (#1).
+  `flush_wait_cb` runs on LVGL's synchronous C stack, so the render task must
+  block rather than `.await`. Which primitive is available depends on the
+  scheduler the application links, so oxivgl takes it as a parameter.
+  `WaitiFlushSync` (default) blocks with `waiti 0`, which **parks the core** for
+  the whole 15–30 ms transfer — nothing runs but ISRs. `SemaphoreFlushSync`
+  (`rtos-sem`) blocks in the scheduler instead. On a Fire27 with a 10 ms probe
+  task, that is 65–70 wakeups/s at 5872 µs mean lateness against **100/s at
+  84 µs**, at identical flush throughput. `rtos-sem` pulls
+  `esp-radio-rtos-driver`, an interface crate rather than a scheduler, so oxivgl
+  stays RTOS-agnostic. See `docs/render-pipeline.md`.
+
+- **`Ui` — display setup separated from the render loop** (#1). `Ui::init`
+  creates the display and registers the callbacks; `Ui::run` / `Ui::run_nav`
+  drive the loop. `run_app*` did both, forcing the loop to live wherever setup
+  happened — an application wanting it on a specific thread had to bypass the
+  pipeline. Also exposes `Ui::wait_ready` and `Ui::timer_handler`.
+
+- **`RenderConfig`** (#1) — `with_target_fps(fps)` and
+  `with_update_period_ms(ms)`. `View::update` polls independently of the redraw
+  rate.
+
+- **`display::set_refresh_period(ms)`** — retune LVGL's redraw timer at runtime
+  instead of through `lv_conf.h`, which the application owns but shares across
+  everything it builds.
+
+- **`example_main_threaded!` and the `perf-probe` feature.** Render loop and
+  panel flush on separate esp-rtos threads under an application-owned priority
+  ladder (`examples/common/src/sched.rs`); `perf-probe` adds a latency probe and
+  a throughput line. `widget_scale10` is the demonstrator.
+
+- **`oxivgl-build::emit_identity_mark`** — stamps a git build mark into
+  `app_desc!()`'s version field, so a host can read off flash which image a
+  board runs.
+
+### Changed
+
+- **The render loop paces on the delay `lv_timer_handler` returns**, bounded by
+  `RenderConfig::max_idle_ms`, instead of a fixed `4 × (lv_timer_handler + sleep
+  LV_DEF_REFR_PERIOD/4)` per `update()` (#1). The old cadence cost a refresh
+  period *plus* render time per cycle. **This changes loop timing for every
+  existing `run_app` caller** — the signatures are unchanged and all 196
+  examples build untouched.
+
+- **Examples move to m5stack-core 0.6.0 and esp-hal 1.1.2.** The esp32s3 PAC
+  renamed `USB0` and `EXT_WAKEUP1`, which the previously pinned esp-hal rev
+  predates, so the cores3 example build stopped compiling inside esp-hal itself
+  (`Cargo.lock` is not committed, so CI re-resolves every run and picked the
+  rename up on its own; fire27 was unaffected). Both oxivgl and m5stack-core now
+  name the *same* esp-hal fork rev — a git source is identified by its
+  specifier, so a branch on one side and a rev on the other would resolve two
+  copies and break the link-time `esp_rtos_semaphore_*` registration.
+  Examples-only: the published library depends on neither.
+
+- **CI moved to Forgejo**; the GitHub repository is now a read-only mirror.
+
+- **`oxivgl-build` 0.1.0 → 0.1.1**, with oxivgl's requirement tightened to
+  match: `build.rs` calls `emit_identity_mark`, which 0.1.0 lacks.
+
+### Fixed
+
+- **`with_target_fps` capped idling at the whole refresh period** while the
+  default caps at a quarter. `lv_timer_handler` runs *before* the loop sleeps,
+  so a cap equal to the period makes a cycle cost `period + render_time` and the
+  achieved rate fall short by however long drawing takes. Measured on CoreS3 at
+  31 fps with a 10 ms cap against 19 fps at 50 ms.
+
+- **No `FlushSync` registered now warns once**, at flush-task start rather than
+  on the per-flush path.
+
+### Known limitations
+
+- **`--ensure-image` cannot verify a flashed image.** The board reports
+  `app_elf_sha256` as zeros while the image carries a real hash, so the guard
+  reports "flash did not take" on a flash that worked. Use `--capture` and treat
+  the mode string in each stats line as the fingerprint.
+
 ## [0.7.0] — 2026-07-23
 
 ### Added
