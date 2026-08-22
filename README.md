@@ -66,11 +66,14 @@ oxivgl is under active development. Even if it has reached some degree of maturi
 
 ### Key Types
 
-**Application framework** — implement `View` to build a screen; `run_lvgl` drives the render loop.
+**Application framework** — implement `View` to build a screen; `run_app` drives the render loop, or `Ui` when the loop needs to live on a thread of your choosing.
 
 | Type | Module | Role |
 |------|--------|------|
 | `View` | `view` | Trait: `create()` builds UI into a container, `update()` refreshes per tick (returns `NavAction`), `on_event()` handles input |
+| `Ui` | `view` | Display setup (`init()`) split from the render loop (`run()` / `run_nav()`), so an application can place the loop itself |
+| `RenderConfig` | `view` | Render cadence — `with_target_fps()`, `with_update_period_ms()` |
+| `FlushSync` | `flush_pipeline` | The render↔flush blocking handoff, supplied by the application: `WaitiFlushSync` (default) or `SemaphoreFlushSync` (`rtos-sem`) |
 | `LvglDriver` | `driver` | Zero-sized init token — proves `lv_init()` was called |
 | `SdlBuilder` | `driver` | Builder for SDL-backed driver: `.sdl(w,h).title().mouse().build()` |
 | `Event` | `event` | Safe wrapper around LVGL events, passed to `View::on_event()` |
@@ -305,6 +308,8 @@ Only widgets actually used are enabled (`LV_USE_<WIDGET> 1`) to minimize binary 
 | `defmt` | `defmt` logging (embedded) |
 | `log-04` | `log` v0.4 logging (host) |
 | `png` | PNG snapshot output on host (`Snapshot::write_png`) |
+| `rtos-sem` | Ship `SemaphoreFlushSync`, so the render task blocks in the scheduler instead of parking the core for the panel transfer |
+| `perf-probe` | Wakeup-latency probe and a once-a-second throughput line, for the threaded pipeline demo |
 
 The examples additionally use board features `fire27` (M5Stack Fire27 / ESP32)
 and `cores3` (M5Stack CoreS3 / ESP32-S3), which select the chip across esp-hal,
