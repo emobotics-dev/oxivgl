@@ -15,7 +15,7 @@ use embassy_time::Timer;
 use oxivgl_sys::*;
 
 use crate::{
-    display::{lvgl_disp_init, LvglBuffers, DISPLAY_READY},
+    display::{lvgl_disp_init, lvgl_disp_init_direct, LvglBuffers, DISPLAY_READY},
     driver::LvglDriver,
     enums::EventCode,
     event::Event,
@@ -477,6 +477,18 @@ impl Ui {
         // SAFETY: lv_init() has been called inside LvglDriver::init() above;
         // this is the only call site, and `bufs` is `'static` by the signature.
         unsafe { lvgl_disp_init(w, h, bufs) };
+        Self { driver }
+    }
+
+    /// Initialise LVGL in `DIRECT` mode against two full-screen framebuffers.
+    ///
+    /// For RGB / DSI panels that DMA-scan PSRAM. Register a
+    /// [`crate::scanout::ScanOut`] before [`run`](Self::run) so the last flush
+    /// of each frame swaps the scan pointer at vblank.
+    pub fn init_direct(w: i32, h: i32, fb1: &'static mut [u8], fb2: &'static mut [u8]) -> Self {
+        let driver = LvglDriver::init(w, h);
+        // SAFETY: lv_init() ran above; call-once; buffers are `'static`.
+        unsafe { lvgl_disp_init_direct(w, h, fb1, fb2) };
         Self { driver }
     }
 

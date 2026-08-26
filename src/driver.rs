@@ -51,7 +51,12 @@ impl LvglDriver {
     /// other code may call LVGL concurrently while this is running.
     pub fn timer_handler(&self) -> u32 {
         // SAFETY: LvglDriver is the init token — lv_init() was called.
-        unsafe { lv_timer_handler() }
+        let delay = unsafe { lv_timer_handler() };
+        if crate::scanout::wait_after_handler() {
+            0
+        } else {
+            delay
+        }
     }
 }
 

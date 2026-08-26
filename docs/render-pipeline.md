@@ -125,6 +125,16 @@ to a thread *without* raising the app executor first makes latency worse, not
 better, because the render thread then outranks the very work it exists to yield
 to. This is the single easiest thing to get wrong.
 
+### RGB / scan-out panels
+
+SPI copies dirty stripes onto a bus. An RGB panel DMA-scans a framebuffer
+already, so that copy is waste. `scanout` is the other pipeline:
+`Ui::init` with `Buffers::full` puts LVGL in `DIRECT` mode against two
+full-screen buffers,
+and on the last flush of a frame `ScanOut::present` swaps the scan pointer
+at vblank. No stripe buffers, no flush thread. The render thread remains so
+LVGL stays off the application executor.
+
 Threads, not another `InterruptExecutor`: an interrupt executor makes the UI
 preempt *everything*, which is backwards. A thread is preemptible by priority in
 both directions.

@@ -16,6 +16,8 @@ pub mod display;
 /// ESP32 flush pipeline: async DMA transfer between LVGL and the display driver.
 #[cfg(any(feature = "esp-hal", feature = "rtos-sem"))]
 pub mod flush_pipeline;
+/// Scan-out pipeline: LVGL DIRECT into a continuously scanned framebuffer.
+pub mod scanout;
 /// Animation descriptors, path functions, and timeline management.
 pub mod anim;
 /// Style system: builders, selectors, themes, gradients, and color palettes.
