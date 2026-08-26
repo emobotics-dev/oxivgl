@@ -47,7 +47,7 @@ on:
 
 env:
   IMAGE: registry:3000/emobotics/oxivgl/oxivgl-ci
-  IMAGE_VERSION: v2
+  IMAGE_VERSION: v3
 
 jobs:
   build-push:

@@ -29,22 +29,30 @@ if [ "$CHECK" -eq 1 ]; then
     # `set -e` would abort at the capture on a failed doc build, printing
     # nothing at all — so suspend it and handle the status explicitly.
     set +e
-    out=$(RUSTDOCFLAGS="-W missing-docs" \
+    # CARGO_TERM_COLOR=always (CI) prefixes every cargo line with ANSI, so
+    # grepping `^(error|warning)` matches nothing and the real rustdoc
+    # errors vanish — CI then only prints "FAIL: doc build failed".
+    out=$(CARGO_TERM_COLOR=never RUSTDOCFLAGS="-W missing-docs" \
         cargo +nightly doc \
             --target "$TARGET" \
             --no-deps \
+            --color never \
             -j1 \
             2>&1)
     status=$?
     set -e
 
-    echo "$out" | grep -E "^(error|warning)" || true
+    plain=$(printf '%s\n' "$out" | sed $'s/\033\\[[0-9;]*[mK]//g')
 
     if [ "$status" -ne 0 ]; then
+        printf '%s\n' "$plain"
         echo "FAIL: doc build failed — see errors above" >&2
         exit 1
     fi
-    if echo "$out" | grep -q "warning:"; then
+    # Cargo also prints `warning: patch … was not used` for firmware-only
+    # [patch] entries; those are not rustdoc missing-docs.
+    if printf '%s\n' "$plain" | grep -E 'warning: missing documentation' >/dev/null; then
+        printf '%s\n' "$plain" | grep -E '^(error|warning)' | grep -v 'warning: patch ' || true
         echo "FAIL: undocumented public items" >&2
         exit 1
     fi
