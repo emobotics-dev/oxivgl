@@ -148,11 +148,15 @@ impl FlushSync for WaitiFlushSync {
             if self.pending.swap(false, Ordering::Acquire) {
                 return;
             }
-            // SAFETY: `waiti 0` is a valid Xtensa instruction; it suspends the
-            // core until the next interrupt without holding a critical section.
-            #[cfg(target_os = "none")]
+            // SAFETY: parks the core until the next interrupt. Xtensa `waiti 0`;
+            // RISC-V `wfi`. No critical section is held.
+            #[cfg(all(target_os = "none", target_arch = "xtensa"))]
             unsafe {
                 core::arch::asm!("waiti 0")
+            };
+            #[cfg(all(target_os = "none", target_arch = "riscv32"))]
+            unsafe {
+                core::arch::asm!("wfi")
             };
         }
     }

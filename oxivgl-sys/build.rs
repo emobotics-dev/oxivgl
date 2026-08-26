@@ -3,11 +3,87 @@ use cc::Build;
 #[cfg(feature = "drivers")]
 use std::collections::HashSet;
 use std::{
-    env,
+    env, fs,
     path::{Path, PathBuf},
+    process::Command,
 };
 
 use sha2::{Digest, Sha256};
+
+/// Xtensa ESP *and* RISC-V ESP (`riscv32imafc-unknown-none-elf` on S31).
+fn is_esp_target(target: &str) -> bool {
+    target.starts_with("xtensa-") || (target.starts_with("riscv32") && target.contains("none-elf"))
+}
+
+/// libclang does not understand cargo's `riscv32imafc-unknown-none-elf` triple.
+/// Espressif's GCC is `riscv32-esp-elf`; use that so newlib `include_next` works.
+fn bindgen_clang_target(target: &str) -> String {
+    if target.starts_with("riscv32imafc") {
+        "riscv32-esp-elf".into()
+    } else {
+        target.into()
+    }
+}
+
+fn which(bin: &str) -> Option<PathBuf> {
+    env::var_os("PATH").and_then(|paths| {
+        env::split_paths(&paths)
+            .map(|d| d.join(bin))
+            .find(|p| p.is_file())
+    })
+}
+
+/// `riscv32-esp-elf-gcc` (newlib). Not host clang; not a crate-local stdint shim.
+fn find_riscv32_esp_elf_gcc() -> Option<PathBuf> {
+    if let Ok(p) = env::var("RISCV32_ESP_ELF_GCC") {
+        let p = PathBuf::from(p);
+        if p.is_file() {
+            return Some(p);
+        }
+    }
+    if let Some(p) = which("riscv32-esp-elf-gcc") {
+        return Some(p);
+    }
+    let mut roots = Vec::new();
+    if let Ok(p) = env::var("IDF_TOOLS_PATH") {
+        roots.push(PathBuf::from(p).join("tools/riscv32-esp-elf"));
+    }
+    if let Ok(h) = env::var("HOME") {
+        roots.push(PathBuf::from(h).join(".espressif/tools/riscv32-esp-elf"));
+    }
+    roots.push(PathBuf::from("/opt/riscv32-esp-elf"));
+    for root in roots {
+        let direct = root.join("bin/riscv32-esp-elf-gcc");
+        if direct.is_file() {
+            return Some(direct);
+        }
+        if let Ok(rd) = fs::read_dir(&root) {
+            for ent in rd.flatten() {
+                let gcc = ent.path().join("riscv32-esp-elf/bin/riscv32-esp-elf-gcc");
+                if gcc.is_file() {
+                    return Some(gcc);
+                }
+            }
+        }
+    }
+    None
+}
+
+fn gcc_print_sysroot(gcc: &Path) -> PathBuf {
+    let out = Command::new(gcc)
+        .arg("-print-sysroot")
+        .output()
+        .unwrap_or_else(|e| panic!("{} -print-sysroot: {e}", gcc.display()));
+    assert!(
+        out.status.success(),
+        "{} -print-sysroot failed: {}",
+        gcc.display(),
+        String::from_utf8_lossy(&out.stderr)
+    );
+    let s = String::from_utf8_lossy(&out.stdout).trim().to_string();
+    assert!(!s.is_empty(), "{} -print-sysroot was empty", gcc.display());
+    PathBuf::from(s)
+}
 
 const LVGL_VERSION: &str = "9.5.0";
 const LVGL_SHA256: &str = "34a955cdf3a2d005507b704e87357af669a114523b6d3f77b5344fdc68717bc6";
@@ -19,12 +95,29 @@ const LVGL_SHA256: &str = "34a955cdf3a2d005507b704e87357af669a114523b6d3f77b5344
 /// Keep in sync with the list in `oxivgl/build.rs` and the consts in
 /// `oxivgl/src/fonts.rs`.
 const GATED_FONTS: &[&str] = &[
-    "montserrat_8", "montserrat_10", "montserrat_12", "montserrat_14",
-    "montserrat_16", "montserrat_18", "montserrat_20", "montserrat_22",
-    "montserrat_24", "montserrat_26", "montserrat_28", "montserrat_30",
-    "montserrat_32", "montserrat_34", "montserrat_36", "montserrat_38",
-    "montserrat_40", "montserrat_42", "montserrat_44", "montserrat_46",
-    "montserrat_48", "dejavu_16_persian_hebrew", "source_han_sans_sc_14_cjk",
+    "montserrat_8",
+    "montserrat_10",
+    "montserrat_12",
+    "montserrat_14",
+    "montserrat_16",
+    "montserrat_18",
+    "montserrat_20",
+    "montserrat_22",
+    "montserrat_24",
+    "montserrat_26",
+    "montserrat_28",
+    "montserrat_30",
+    "montserrat_32",
+    "montserrat_34",
+    "montserrat_36",
+    "montserrat_38",
+    "montserrat_40",
+    "montserrat_42",
+    "montserrat_44",
+    "montserrat_46",
+    "montserrat_48",
+    "dejavu_16_persian_hebrew",
+    "source_han_sans_sc_14_cjk",
     "source_han_sans_sc_16_cjk",
 ];
 
@@ -242,17 +335,19 @@ fn main() {
     let drivers = project_dir.join("lv_drivers");
 
     let lv_config_dir = {
-        let conf_path = env::var(CONFIG_NAME).map(PathBuf::from).unwrap_or_else(|_| {
-            // On docs.rs the workspace .cargo/config.toml is unavailable, so
-            // fall back to the bundled default config to allow doc rendering.
-            if env::var("DOCS_RS").is_ok() {
-                return project_dir.join("default-conf");
-            }
-            panic!(
-                "The environment variable {} is required to be defined",
-                CONFIG_NAME
-            );
-        });
+        let conf_path = env::var(CONFIG_NAME)
+            .map(PathBuf::from)
+            .unwrap_or_else(|_| {
+                // On docs.rs the workspace .cargo/config.toml is unavailable, so
+                // fall back to the bundled default config to allow doc rendering.
+                if env::var("DOCS_RS").is_ok() {
+                    return project_dir.join("default-conf");
+                }
+                panic!(
+                    "The environment variable {} is required to be defined",
+                    CONFIG_NAME
+                );
+            });
 
         if !conf_path.exists() {
             panic!(
@@ -307,6 +402,25 @@ fn main() {
     if target_str.starts_with("xtensa-") {
         cfg.flag("-mlongcalls");
     }
+    let riscv_gcc = if target_str.starts_with("riscv32") {
+        find_riscv32_esp_elf_gcc()
+    } else {
+        None
+    };
+    if target_str.starts_with("riscv32") {
+        let gcc = riscv_gcc.clone().unwrap_or_else(|| {
+            panic!(
+                "riscv32-esp-elf-gcc not found (PATH, RISCV32_ESP_ELF_GCC, \
+                 ~/.espressif/tools/riscv32-esp-elf, /opt/riscv32-esp-elf). \
+                 Install Espressif's RISC-V GCC (newlib); do not use host clang."
+            )
+        });
+        println!("cargo:rerun-if-env-changed=RISCV32_ESP_ELF_GCC");
+        println!("cargo:rerun-if-env-changed=IDF_TOOLS_PATH");
+        cfg.compiler(&gcc);
+        cfg.flag("-march=rv32imafc");
+        cfg.flag("-mabi=ilp32f");
+    }
     if let Some(p) = &font_extra_src {
         add_c_files(&mut cfg, p)
     }
@@ -319,8 +433,8 @@ fn main() {
     #[cfg(feature = "drivers")]
     add_c_files(&mut cfg, &drivers);
 
-    // For host (non-xtensa) builds, add SDL2 include path so LVGL's SDL driver compiles
-    if !target_str.starts_with("xtensa-") {
+    // Host (non-ESP) builds: SDL2 include path so LVGL's SDL driver compiles.
+    if !is_esp_target(&target_str) {
         if let Ok(lib) = pkg_config::probe_library("sdl2") {
             for p in &lib.include_paths {
                 cfg.include(p);
@@ -383,14 +497,33 @@ fn main() {
 
     // Set correct target triple for bindgen when cross-compiling
     let host = env::var("HOST").expect("Cargo build scripts always have HOST");
+    let clang_target = bindgen_clang_target(&target);
+    let riscv_sysroot = riscv_gcc.as_ref().map(|g| gcc_print_sysroot(g));
+    let riscv_sysroot_s = riscv_sysroot
+        .as_ref()
+        .map(|p| p.to_string_lossy().into_owned());
+    let riscv_include_s = riscv_sysroot
+        .as_ref()
+        .map(|p| p.join("include").to_string_lossy().into_owned());
     if target != host {
         cc_args.push("-target");
-        cc_args.push(target.as_str());
+        cc_args.push(clang_target.as_str());
+        if target.starts_with("riscv32imafc") {
+            cc_args.push("-march=rv32imafc");
+            cc_args.push("-mabi=ilp32f");
+            if let (Some(sys), Some(inc)) = (riscv_sysroot_s.as_deref(), riscv_include_s.as_deref())
+            {
+                cc_args.push("--sysroot");
+                cc_args.push(sys);
+                cc_args.push("-isystem");
+                cc_args.push(inc);
+            }
+        }
     }
 
     let mut additional_args = Vec::new();
     // Add SDL2 include paths for bindgen on host builds
-    if !target.starts_with("xtensa-") {
+    if !is_esp_target(&target) {
         if let Ok(lib) = pkg_config::probe_library("sdl2") {
             for p in &lib.include_paths {
                 additional_args.push("-I".to_string());
@@ -400,25 +533,26 @@ fn main() {
     }
     if target.ends_with("emscripten") {
         match env::var("EMSDK") {
-            Ok(em_path) =>
-        {
-            additional_args.push("-I".to_string());
-            additional_args.push(format!(
-                "{}/upstream/emscripten/system/include/libc",
-                em_path
-            ));
-            additional_args.push("-I".to_string());
-            additional_args.push(format!(
-                "{}/upstream/emscripten/system/lib/libc/musl/arch/emscripten",
-                em_path
-            ));
-            additional_args.push("-I".to_string());
-            additional_args.push(format!(
-                "{}/upstream/emscripten/system/include/SDL",
-                em_path
-            ));
-        }
-        Err(_) => panic!("The EMSDK environment variable is not set. Has emscripten been properly initialized?")
+            Ok(em_path) => {
+                additional_args.push("-I".to_string());
+                additional_args.push(format!(
+                    "{}/upstream/emscripten/system/include/libc",
+                    em_path
+                ));
+                additional_args.push("-I".to_string());
+                additional_args.push(format!(
+                    "{}/upstream/emscripten/system/lib/libc/musl/arch/emscripten",
+                    em_path
+                ));
+                additional_args.push("-I".to_string());
+                additional_args.push(format!(
+                    "{}/upstream/emscripten/system/include/SDL",
+                    em_path
+                ));
+            }
+            Err(_) => panic!(
+                "The EMSDK environment variable is not set. Has emscripten been properly initialized?"
+            ),
         }
     }
 
@@ -653,19 +787,23 @@ fn route_scratch_exhaustive(
     // counts are independent. A mismatch means the file changed — fail loudly
     // rather than silently half-route or miss a site.
     assert_eq!(
-        code.matches("lv_realloc(").count(), 0,
+        code.matches("lv_realloc(").count(),
+        0,
         "{rel}: unexpected lv_realloc — re-verify scratch routing (#124)"
     );
     assert_eq!(
-        code.matches("lv_malloc_zeroed(").count(), n_zeroed,
+        code.matches("lv_malloc_zeroed(").count(),
+        n_zeroed,
         "{rel}: lv_malloc_zeroed site count changed vs pinned LVGL v{LVGL_VERSION} — re-verify scratch routing (#124)"
     );
     assert_eq!(
-        code.matches("lv_malloc(").count(), n_malloc,
+        code.matches("lv_malloc(").count(),
+        n_malloc,
         "{rel}: lv_malloc site count changed vs pinned LVGL v{LVGL_VERSION} — re-verify scratch routing (#124)"
     );
     assert_eq!(
-        code.matches("lv_free(").count(), n_free,
+        code.matches("lv_free(").count(),
+        n_free,
         "{rel}: lv_free site count changed vs pinned LVGL v{LVGL_VERSION} — re-verify scratch routing (#124)"
     );
 
@@ -678,25 +816,39 @@ fn route_scratch_exhaustive(
         .replace("lv_free(", "oxivgl_render_scratch_free(");
     let patched = with_scratch_protos(&patched);
     assert_eq!(
-        patched.matches("lv_malloc(").count(), 0,
+        patched.matches("lv_malloc(").count(),
+        0,
         "{rel}: unrouted lv_malloc remains after patch"
     );
     assert_eq!(
-        patched.matches("lv_malloc_zeroed(").count(), 0,
+        patched.matches("lv_malloc_zeroed(").count(),
+        0,
         "{rel}: unrouted lv_malloc_zeroed remains after patch"
     );
     assert_eq!(
-        patched.matches("lv_free(").count(), 0,
+        patched.matches("lv_free(").count(),
+        0,
         "{rel}: unrouted lv_free remains after patch"
     );
     std::fs::write(&file, patched).unwrap();
 }
 
 fn add_c_files(build: &mut cc::Build, path: impl AsRef<Path>) {
+    let skip_host = is_esp_target(&env::var("TARGET").unwrap_or_default());
     for e in path.as_ref().read_dir().unwrap() {
         let e = e.unwrap();
         let path = e.path();
         if e.file_type().unwrap().is_dir() {
+            let name = path.file_name().and_then(|s| s.to_str()).unwrap_or("");
+            // Host-only LVGL backends — not for bare-metal ESP.
+            if skip_host
+                && matches!(
+                    name,
+                    "sdl" | "wayland" | "x11" | "windows" | "nuttx" | "evdev" | "libinput" | "glfw"
+                )
+            {
+                continue;
+            }
             add_c_files(build, e.path());
         } else if path.extension().and_then(|s| s.to_str()) == Some("c") {
             build.file(&path);
@@ -714,10 +866,7 @@ fn fix_bindgen_transmutes(path: &Path) {
     // Uses paren-matching to handle multi-line expressions.
     // Support both spaced (`:: core :: mem :: transmute (`) and compact
     // (`::core::mem::transmute(`) formats emitted by different bindgen versions.
-    let needles = [
-        ":: core :: mem :: transmute (",
-        "::core::mem::transmute(",
-    ];
+    let needles = [":: core :: mem :: transmute (", "::core::mem::transmute("];
     while let Some((start, needle_len)) = needles
         .iter()
         .filter_map(|n| code.find(n).map(|pos| (pos, n.len())))
@@ -754,7 +903,7 @@ fn fix_bindgen_transmutes(path: &Path) {
         if let Some(rel) = code[pos..].find(unsafe_kw) {
             let block_start = pos + rel;
             let brace_start = block_start + unsafe_kw.len() - 1; // position of '{'
-                                                                 // Find matching '}'
+            // Find matching '}'
             let mut depth: u32 = 1;
             let mut end = brace_start + 1;
             while end < code.len() && depth > 0 {
@@ -766,8 +915,8 @@ fn fix_bindgen_transmutes(path: &Path) {
                 end += 1;
             }
             let body = &code[brace_start + 1..end - 1]; // between { and }
-                                                        // Only strip unsafe from blocks whose body is purely safe after
-                                                        // transmute removal: bitfield get/set and simple casts.
+            // Only strip unsafe from blocks whose body is purely safe after
+            // transmute removal: bitfield get/set and simple casts.
             let is_safe_body = !body.contains("unsafe")
                 && !body.contains("raw_get")
                 && !body.contains("raw_set")

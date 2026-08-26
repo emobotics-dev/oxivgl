@@ -16,7 +16,7 @@ use oxivgl_sys::{
     lv_color_format_t_LV_COLOR_FORMAT_RGB565_SWAPPED,
     lv_display_render_mode_t_LV_DISPLAY_RENDER_MODE_PARTIAL,
 };
-#[cfg(feature = "esp-hal")]
+#[cfg(any(feature = "esp-hal", feature = "rtos-sem"))]
 use oxivgl_sys::{lv_display_set_flush_cb, lv_display_set_flush_wait_cb};
 
 /// Number of pixel rows per render stripe. Large value trades stack RAM for fewer flush calls.
@@ -140,14 +140,14 @@ pub unsafe fn lvgl_disp_init<const BYTES: usize>(
             lv_display_render_mode_t_LV_DISPLAY_RENDER_MODE_PARTIAL,
         );
         set_active_display(disp);
-        #[cfg(feature = "esp-hal")]
+        #[cfg(any(feature = "esp-hal", feature = "rtos-sem"))]
         {
             use crate::flush_pipeline::{flush_callback, wait_callback};
             lv_display_set_flush_cb(disp, Some(flush_callback));
             lv_display_set_flush_wait_cb(disp, Some(wait_callback));
         }
-        // On non-esp-hal targets the flush task never runs; signal ready immediately.
-        #[cfg(not(feature = "esp-hal"))]
+        // Without a flush pipeline the flush task never runs; signal ready immediately.
+        #[cfg(not(any(feature = "esp-hal", feature = "rtos-sem")))]
         DISPLAY_READY.signal(());
     }
 }

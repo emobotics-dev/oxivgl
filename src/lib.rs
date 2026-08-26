@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT OR Apache-2.0
 //! Safe Rust bindings for LVGL on embedded and host targets.
 #![cfg_attr(target_os = "none", no_std)]
-#![cfg_attr(target_os = "none", feature(asm_experimental_arch))]
+#![cfg_attr(all(target_os = "none", target_arch = "xtensa"), feature(asm_experimental_arch))]
 
 extern crate alloc;
 
@@ -14,7 +14,7 @@ pub mod driver;
 /// Display output: DMA-aligned render buffers and display initialisation.
 pub mod display;
 /// ESP32 flush pipeline: async DMA transfer between LVGL and the display driver.
-#[cfg(feature = "esp-hal")]
+#[cfg(any(feature = "esp-hal", feature = "rtos-sem"))]
 pub mod flush_pipeline;
 /// Animation descriptors, path functions, and timeline management.
 pub mod anim;
