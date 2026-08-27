@@ -10,7 +10,6 @@
 
 use core::cell::RefCell;
 use core::ptr::NonNull;
-use core::sync::atomic::{AtomicBool, Ordering};
 
 use embassy_sync::blocking_mutex::{Mutex, raw::CriticalSectionRawMutex};
 use oxivgl_sys::{lv_area_t, lv_display_flush_is_last, lv_display_flush_ready, lv_display_t};
@@ -29,7 +28,6 @@ pub trait ScanOut: Sync {
 
 static SCAN_OUT: Mutex<CriticalSectionRawMutex, RefCell<Option<&'static dyn ScanOut>>> =
     Mutex::new(RefCell::new(None));
-static PRESENTED: AtomicBool = AtomicBool::new(false);
 
 /// Register the scan-out panel. Call before [`crate::view::Ui::init`].
 ///
@@ -49,8 +47,17 @@ fn scan_out() -> Option<&'static dyn ScanOut> {
     SCAN_OUT.lock(|slot| *slot.borrow())
 }
 
+/// Block until the last [`ScanOut::present`] is on the pins. Render thread,
+/// after `lv_timer_handler` — never inside flush (that wait was counted as
+/// LVGL flush time).
+pub fn wait_presented() {
+    if let Some(scan) = scan_out() {
+        scan.wait_presented();
+    }
+}
+
 /// LVGL DIRECT flush: pixels are already in `px_map`. Last area of a frame:
-/// queue the swap only. Vblank wait is [`wait_after_handler`].
+/// queue the swap only. The render thread waits vblank after the handler.
 pub(crate) unsafe extern "C" fn flush_callback(
     disp: *mut lv_display_t,
     _area: *const lv_area_t,
@@ -63,20 +70,6 @@ pub(crate) unsafe extern "C" fn flush_callback(
     let last = unsafe { lv_display_flush_is_last(disp) };
     if last && let (Some(scan), Some(fb)) = (scan_out(), NonNull::new(px_map)) {
         scan.present(fb);
-        PRESENTED.store(true, Ordering::Release);
     }
     unsafe { lv_display_flush_ready(disp) };
-}
-
-/// If this tick presented a frame, park on that vblank. Returns whether it waited.
-pub(crate) fn wait_after_handler() -> bool {
-    if !PRESENTED.swap(false, Ordering::AcqRel) {
-        return false;
-    }
-    if let Some(scan) = scan_out() {
-        scan.wait_presented();
-        true
-    } else {
-        false
-    }
 }
