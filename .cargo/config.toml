@@ -15,3 +15,5 @@ rustflags = [
 [env]
 DEP_LV_CONFIG_PATH = { value = "examples/conf", relative = true }
 ESP_LOG            = "info"
+# oxivgl-build image assets use cc-rs, which looks up $triple-gcc unless CC is set.
+CC_riscv32imafc-unknown-none-elf = "riscv32-esp-elf-gcc"

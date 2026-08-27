@@ -87,13 +87,18 @@ impl ImageConfig {
             c_file.display()
         );
 
-        cc::Build::new()
+        let mut build = cc::Build::new();
+        build
             .file(&c_file)
             .define("LV_LVGL_H_INCLUDE_SIMPLE", None)
             .include(&self.lvgl_include_dir)
             .include(&self.lv_conf_dir)
-            .opt_level(2)
-            .compile(&format!("lvgl_img_{name}"));
+            .opt_level(2);
+        // Freestanding RISC-V ESP has no stdint; oxivgl-sys ships the ILP32 shim.
+        if let Ok(shim) = std::env::var("DEP_LV_RISCV_SHIM") {
+            build.include(shim);
+        }
+        build.compile(&format!("lvgl_img_{name}"));
 
         println!("cargo:rerun-if-changed={png_path}");
     }

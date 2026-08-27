@@ -2,22 +2,25 @@
 // Formerly `lvgl_buffers` — renamed for clarity.
 //! DMA-aligned render buffers and embedded display initialisation.
 //!
-//! Buffer types (`LvglBuf`, `LvglBuffers`) are target-independent.
-//! `lvgl_disp_init` registers them with LVGL and (on ESP32) wires up the
-//! flush pipeline from the `flush_pipeline` module.
+//! Buffer types (`LvglBuf`, `LvglBuffers`, [`Buffers`](crate::display::Buffers))
+//! are target-independent. [`lvgl_disp_init`](crate::display::lvgl_disp_init)
+//! registers those buffers with LVGL and wires PARTIAL (flush pipeline) or
+//! DIRECT (scan-out) from the buffer kind.
 
 use core::ffi::c_void;
+use core::ptr::NonNull;
 use core::sync::atomic::{AtomicPtr, Ordering};
 
 use embassy_sync::{blocking_mutex::raw::CriticalSectionRawMutex, signal::Signal};
+#[cfg(any(feature = "esp-hal", feature = "rtos-sem"))]
+use oxivgl_sys::lv_display_set_flush_wait_cb;
 use oxivgl_sys::{
-    lv_display_create, lv_display_set_buffers, lv_display_set_color_format, lv_display_t,
-    lv_display_get_refr_timer, lv_timer_set_period,
-    lv_color_format_t_LV_COLOR_FORMAT_RGB565_SWAPPED,
-    lv_display_render_mode_t_LV_DISPLAY_RENDER_MODE_PARTIAL,
+    lv_color_format_t_LV_COLOR_FORMAT_RGB565, lv_color_format_t_LV_COLOR_FORMAT_RGB565_SWAPPED,
+    lv_display_create, lv_display_get_refr_timer,
+    lv_display_render_mode_t_LV_DISPLAY_RENDER_MODE_DIRECT,
+    lv_display_render_mode_t_LV_DISPLAY_RENDER_MODE_PARTIAL, lv_display_set_buffers,
+    lv_display_set_color_format, lv_display_set_flush_cb, lv_display_t, lv_timer_set_period,
 };
-#[cfg(feature = "esp-hal")]
-use oxivgl_sys::{lv_display_set_flush_cb, lv_display_set_flush_wait_cb};
 
 /// Number of pixel rows per render stripe. Large value trades stack RAM for fewer flush calls.
 // NOTE: this is a lot of buffer — reduces available stack RAM intentionally; easy to shrink later.
@@ -36,7 +39,9 @@ impl<const BYTES: usize> core::fmt::Debug for LvglBuf<BYTES> {
 
 impl<const BYTES: usize> LvglBuf<BYTES> {
     /// Create a zeroed render buffer.
-    pub const fn new() -> Self { Self([0; BYTES]) }
+    pub const fn new() -> Self {
+        Self([0; BYTES])
+    }
 }
 
 /// Pair of DMA-aligned render buffers. Parameterised by byte size so the caller
@@ -57,7 +62,65 @@ impl<const BYTES: usize> core::fmt::Debug for LvglBuffers<BYTES> {
 
 impl<const BYTES: usize> LvglBuffers<BYTES> {
     /// Create zeroed double-buffered render buffers.
-    pub const fn new() -> Self { Self { buf1: LvglBuf::new(), buf2: LvglBuf::new() } }
+    pub const fn new() -> Self {
+        Self {
+            buf1: LvglBuf::new(),
+            buf2: LvglBuf::new(),
+        }
+    }
+}
+
+/// How LVGL should treat the two draw buffers.
+///
+/// This is a property of the memory, not of [`crate::view::Ui`]: stripe
+/// buffers are PARTIAL (SPI copy), full frames are DIRECT (scan-out).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum BufferKind {
+    Partial,
+    Direct,
+}
+
+/// Two LVGL draw buffers. Built by [`Buffers::partial`] or [`Buffers::full`];
+/// [`crate::view::Ui::init`] does not care which.
+///
+/// Pointers must stay valid for the display lifetime (LVGL keeps them). The
+/// type does not encode `'static` — that is the caller's job (`make_static!`,
+/// PSRAM carve, leak).
+#[derive(Clone, Copy, Debug)]
+pub struct Buffers {
+    buf1: NonNull<u8>,
+    buf2: NonNull<u8>,
+    bytes: u32,
+    kind: BufferKind,
+}
+
+impl Buffers {
+    /// PARTIAL stripes: typically `LvglBuffers<{w × COLOR_BUF_LINES × 2}>` in
+    /// DRAM. Registers the flush-pipeline callbacks.
+    pub fn partial<const BYTES: usize>(bufs: &mut LvglBuffers<BYTES>) -> Self {
+        Self {
+            buf1: NonNull::new(bufs.buf1.0.as_mut_ptr()).expect("array pointer is never null"),
+            buf2: NonNull::new(bufs.buf2.0.as_mut_ptr()).expect("array pointer is never null"),
+            bytes: BYTES as u32,
+            kind: BufferKind::Partial,
+        }
+    }
+
+    /// DIRECT full frames: two equal-length RGB565 buffers (usually PSRAM).
+    /// Registers the scan-out flush callback. Caller keeps the memory alive.
+    pub fn full(a: NonNull<u8>, b: NonNull<u8>, bytes: usize) -> Self {
+        Self {
+            buf1: a,
+            buf2: b,
+            bytes: bytes as u32,
+            kind: BufferKind::Direct,
+        }
+    }
+
+    /// DIRECT scan-out: `timer_handler` already blocks on vblank. No extra idle.
+    pub(crate) fn present_blocks(self) -> bool {
+        matches!(self.kind, BufferKind::Direct)
+    }
 }
 
 /// Signalled by the flush task (ESP32) or immediately (host) once the display
@@ -109,45 +172,54 @@ pub fn set_refresh_period(ms: u32) -> bool {
     true
 }
 
-/// Register render buffers with LVGL and wire up the flush pipeline.
+/// Register draw buffers with LVGL and wire the matching flush path.
 ///
 /// # Safety
-/// `lv_init()` must have been called. Call at most once. `bufs` must be
-/// `'static` so the pointers remain valid for the LVGL display lifetime.
-/// `w` and `h` are the display resolution in pixels.
-pub unsafe fn lvgl_disp_init<const BYTES: usize>(
-    w: i32,
-    h: i32,
-    bufs: &'static mut LvglBuffers<BYTES>,
-) {
-    // SAFETY: addr_of_mut! obtains raw pointers without creating &mut references.
-    // Caller guarantees single-call, lv_init() precondition, and 'static lifetime.
+/// `lv_init()` must have been called. Call at most once. `bufs` pointers must
+/// remain valid for the display lifetime.
+pub unsafe fn lvgl_disp_init(w: i32, h: i32, bufs: Buffers) {
+    let buf1_ptr = bufs.buf1.as_ptr().cast::<c_void>();
+    let buf2_ptr = bufs.buf2.as_ptr().cast::<c_void>();
+    assert_eq!(
+        buf1_ptr as usize % 4,
+        0,
+        "draw buffer must be 4-byte aligned"
+    );
+
+    let mode = match bufs.kind {
+        BufferKind::Partial => lv_display_render_mode_t_LV_DISPLAY_RENDER_MODE_PARTIAL,
+        BufferKind::Direct => lv_display_render_mode_t_LV_DISPLAY_RENDER_MODE_DIRECT,
+    };
+
+    // SAFETY: caller ran `lv_init()`; pointers live as long as the display.
     unsafe {
-        let buf1_ptr = core::ptr::addr_of_mut!(bufs.buf1) as *mut c_void;
-        let buf2_ptr = core::ptr::addr_of_mut!(bufs.buf2) as *mut c_void;
-
-        assert_eq!(buf1_ptr as usize % 4, 0, "DMA buffer must be 4-byte aligned");
-
         let disp = lv_display_create(w, h);
         assert!(!disp.is_null(), "lv_display_create returned NULL");
 
-        lv_display_set_color_format(disp, lv_color_format_t_LV_COLOR_FORMAT_RGB565_SWAPPED);
-        lv_display_set_buffers(
-            disp,
-            buf1_ptr,
-            buf2_ptr,
-            BYTES as u32,
-            lv_display_render_mode_t_LV_DISPLAY_RENDER_MODE_PARTIAL,
-        );
+        // PARTIAL/SPI: byte-swapped 565 on the wire. DIRECT/RGB: DMA scans
+        // native little-endian 565 from the framebuffer.
+        let cf = match bufs.kind {
+            BufferKind::Partial => lv_color_format_t_LV_COLOR_FORMAT_RGB565_SWAPPED,
+            BufferKind::Direct => lv_color_format_t_LV_COLOR_FORMAT_RGB565,
+        };
+        lv_display_set_color_format(disp, cf);
+        lv_display_set_buffers(disp, buf1_ptr, buf2_ptr, bufs.bytes, mode);
         set_active_display(disp);
-        #[cfg(feature = "esp-hal")]
-        {
-            use crate::flush_pipeline::{flush_callback, wait_callback};
-            lv_display_set_flush_cb(disp, Some(flush_callback));
-            lv_display_set_flush_wait_cb(disp, Some(wait_callback));
+        match bufs.kind {
+            BufferKind::Partial => {
+                #[cfg(any(feature = "esp-hal", feature = "rtos-sem"))]
+                {
+                    use crate::flush_pipeline::{flush_callback, wait_callback};
+                    lv_display_set_flush_cb(disp, Some(flush_callback));
+                    lv_display_set_flush_wait_cb(disp, Some(wait_callback));
+                }
+                #[cfg(not(any(feature = "esp-hal", feature = "rtos-sem")))]
+                DISPLAY_READY.signal(());
+            }
+            BufferKind::Direct => {
+                lv_display_set_flush_cb(disp, Some(crate::scanout::flush_callback));
+                DISPLAY_READY.signal(());
+            }
         }
-        // On non-esp-hal targets the flush task never runs; signal ready immediately.
-        #[cfg(not(feature = "esp-hal"))]
-        DISPLAY_READY.signal(());
     }
 }

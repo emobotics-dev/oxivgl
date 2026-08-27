@@ -5,6 +5,23 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Changed
+
+- **`Ui::init` no longer knows PARTIAL vs DIRECT.** One constructor takes
+  [`display::Buffers`]: `Buffers::partial` (SPI stripes) or `Buffers::full`
+  (scan-out frames). `init_direct` and `lvgl_disp_init_direct` are gone.
+  Pointers are `NonNull<u8>`, not `&'static mut [u8]`.
+
+- **ESP32-S31 C compile uses `riscv32-esp-elf-gcc` (newlib).** The crate-local
+  `riscv-shim` headers are gone. Bindgen uses that GCC's sysroot.
+
+- **Scan-out refresh is a thread loop, not a parked embassy task.** `Ui::bind`
+  then `loop { timer_handler() }`. A lone `run_events`/`pending()` on esp-rtos
+  sleeps after the first poll (`flags.wait`) and freezes LVGL anims.
+  `run` / `run_app_nav` still poll `View::update`.
+
 ## [0.8.0] — 2026-08-22
 
 ### Added

@@ -86,6 +86,7 @@ cores3 = [
 oxivgl_sys = { package = "oxivgl-sys", version = "0.2.4", path = "oxivgl-sys", default-features = false }
 embassy-sync = "0.8"
 embassy-time = "0.5.0"
+embassy-futures = "0.1"
 heapless = { version = "0.9.1", features = ["nightly"] }
 cfg-if = "1"
 thiserror-no-std = "2.0.2"
@@ -128,22 +129,40 @@ esp-sync               = { version = "0.2.1" }
 m5stack-core = { git = "http://forgejo:3000/emobotics/m5stack-core.git", rev = "3b71c3fed030c071a834556d190b628c77de99b6", default-features = false, features = ["display", "psram", "console-serial", "panic-handler", "identity"] }
 
 # esp-hal family — stock crates.io for the published library; redirected to the
-# emobotics fork (a coherent 1.1.1 snapshot + SPI/DMA fixes the BSP's DMA flush
-# needs) for local + CI + example builds. `cargo publish` ignores [patch], so
-# downstream consumers of the library still resolve stock crates.io. See #119.
+# emobotics `local-1.1.2` fork (SPI/DMA flush fixes + PAC 0.36 after crates.io
+# yanked 0.35.3) for local + CI + example builds. `cargo publish` ignores
+# [patch], so downstream consumers of the library still resolve stock crates.io.
+# See #119.
+#
+# m5stack-core still git-pins 04646b65 (yanked PAC). Cargo refuses a same-URL
+# rev override, so the replacement URL is `www.github.com` (distinct source).
+# Both tables must use that same URL or cargo sees two esp-sync copies.
+# Temporary until m5stack-core follows local-1.1.2.
 [patch.crates-io]
-esp-hal                = { git = "https://github.com/emobotics-dev/esp-hal.git", rev = "04646b65e3ef94d60f5e08cb24fed9e3cd77f9d0" }
-esp-radio              = { git = "https://github.com/emobotics-dev/esp-hal.git", rev = "04646b65e3ef94d60f5e08cb24fed9e3cd77f9d0" }
+esp-hal                = { git = "https://www.github.com/emobotics-dev/esp-hal.git", rev = "5b6af0843022d56f871c471b0edb41edd2435a58" }
+esp-radio              = { git = "https://www.github.com/emobotics-dev/esp-hal.git", rev = "5b6af0843022d56f871c471b0edb41edd2435a58" }
 # Must be patched alongside the rest: esp-radio depends on this by *path* inside
 # the fork, so without this line our direct crates.io dep would resolve to a
 # second, distinct copy. The `esp_rtos_semaphore_*` registration is link-time, so
 # two copies is a duplicate/undefined-symbol link failure, not a version warning.
-esp-radio-rtos-driver  = { git = "https://github.com/emobotics-dev/esp-hal.git", rev = "04646b65e3ef94d60f5e08cb24fed9e3cd77f9d0" }
-esp-sync               = { git = "https://github.com/emobotics-dev/esp-hal.git", rev = "04646b65e3ef94d60f5e08cb24fed9e3cd77f9d0" }
-esp-alloc              = { git = "https://github.com/emobotics-dev/esp-hal.git", rev = "04646b65e3ef94d60f5e08cb24fed9e3cd77f9d0" }
-esp-rom-sys            = { git = "https://github.com/emobotics-dev/esp-hal.git", rev = "04646b65e3ef94d60f5e08cb24fed9e3cd77f9d0" }
-esp-bootloader-esp-idf = { git = "https://github.com/emobotics-dev/esp-hal.git", rev = "04646b65e3ef94d60f5e08cb24fed9e3cd77f9d0" }
-esp-rtos               = { git = "https://github.com/emobotics-dev/esp-hal.git", rev = "04646b65e3ef94d60f5e08cb24fed9e3cd77f9d0" }
+esp-radio-rtos-driver  = { git = "https://www.github.com/emobotics-dev/esp-hal.git", rev = "5b6af0843022d56f871c471b0edb41edd2435a58" }
+esp-sync               = { git = "https://www.github.com/emobotics-dev/esp-hal.git", rev = "5b6af0843022d56f871c471b0edb41edd2435a58" }
+esp-alloc              = { git = "https://www.github.com/emobotics-dev/esp-hal.git", rev = "5b6af0843022d56f871c471b0edb41edd2435a58" }
+esp-rom-sys            = { git = "https://www.github.com/emobotics-dev/esp-hal.git", rev = "5b6af0843022d56f871c471b0edb41edd2435a58" }
+esp-bootloader-esp-idf = { git = "https://www.github.com/emobotics-dev/esp-hal.git", rev = "5b6af0843022d56f871c471b0edb41edd2435a58" }
+esp-rtos               = { git = "https://www.github.com/emobotics-dev/esp-hal.git", rev = "5b6af0843022d56f871c471b0edb41edd2435a58" }
+
+[patch."https://github.com/emobotics-dev/esp-hal.git"]
+esp-hal                = { git = "https://www.github.com/emobotics-dev/esp-hal.git", rev = "5b6af0843022d56f871c471b0edb41edd2435a58" }
+esp-radio              = { git = "https://www.github.com/emobotics-dev/esp-hal.git", rev = "5b6af0843022d56f871c471b0edb41edd2435a58" }
+esp-radio-rtos-driver  = { git = "https://www.github.com/emobotics-dev/esp-hal.git", rev = "5b6af0843022d56f871c471b0edb41edd2435a58" }
+esp-sync               = { git = "https://www.github.com/emobotics-dev/esp-hal.git", rev = "5b6af0843022d56f871c471b0edb41edd2435a58" }
+esp-alloc              = { git = "https://www.github.com/emobotics-dev/esp-hal.git", rev = "5b6af0843022d56f871c471b0edb41edd2435a58" }
+esp-rom-sys            = { git = "https://www.github.com/emobotics-dev/esp-hal.git", rev = "5b6af0843022d56f871c471b0edb41edd2435a58" }
+esp-bootloader-esp-idf = { git = "https://www.github.com/emobotics-dev/esp-hal.git", rev = "5b6af0843022d56f871c471b0edb41edd2435a58" }
+esp-rtos               = { git = "https://www.github.com/emobotics-dev/esp-hal.git", rev = "5b6af0843022d56f871c471b0edb41edd2435a58" }
+esp-backtrace          = { git = "https://www.github.com/emobotics-dev/esp-hal.git", rev = "5b6af0843022d56f871c471b0edb41edd2435a58" }
+esp-println            = { git = "https://www.github.com/emobotics-dev/esp-hal.git", rev = "5b6af0843022d56f871c471b0edb41edd2435a58" }
 
 [profile.dev]
 opt-level = "s"

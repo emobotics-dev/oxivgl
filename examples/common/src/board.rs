@@ -402,9 +402,8 @@ macro_rules! board_body {
             }
         }
 
-        // Threaded mode only: the render/flush tasks and their thread entry
-        // points. Emitted per-mode so non-threaded builds allocate no task pool
-        // for them.
+        // Native render thread (every mode). `threaded` also emits the flush
+        // thread. LVGL does not run on an embassy task.
         $crate::board_threaded_items!($view_expr, $mode);
 
         // ── Entry point ─────────────────────────────────────────────────────
@@ -486,7 +485,6 @@ macro_rules! board_body {
             // Raise this executor above the UI *before* any UI thread exists:
             // #[esp_rtos::main] starts at priority 0, the lowest, so a render
             // thread would otherwise outrank the work it exists to yield to.
-            // No-op in the non-threaded modes.
             $crate::board_raise_app!($mode);
 
             // Flush runs on a high-priority interrupt executor (stock), or on
@@ -509,13 +507,17 @@ macro_rules! board_body {
     };
 }
 
-/// Internal: launch the render loop for the selected mode. Do not call directly.
+/// Internal: spawn the render thread and park this executor. Do not call directly.
+///
+/// LVGL (`timer_handler`, widget create/update) runs on that native thread,
+/// never on an embassy task.
 #[macro_export]
 #[doc(hidden)]
 macro_rules! board_launch {
-    ($view_expr:expr, $spawner:expr, threaded) => {{
-        // The render loop lives on its own thread; this executor just parks.
-        // SAFETY: __oxivgl_render_thread runs an executor and never returns.
+    ($view_expr:expr, $spawner:expr, $mode:ident) => {{
+        let _ = stringify!($view_expr);
+        let _ = stringify!($mode);
+        // SAFETY: __oxivgl_render_thread never returns.
         unsafe {
             $crate::sched::spawn(
                 "ui-render",
@@ -528,35 +530,26 @@ macro_rules! board_launch {
         $crate::board_perf_spawn!($spawner);
         core::future::pending::<()>().await
     }};
-    ($view_expr:expr, $spawner:expr, $mode:ident) => {{
-        static mut LVGL_BUFS: LvglBuffers<LVGL_BUF_BYTES> = LvglBuffers::new();
-        // SAFETY: accessed only here, before the single-threaded LVGL render
-        // loop takes exclusive ownership.
-        let bufs = unsafe { &mut *core::ptr::addr_of_mut!(LVGL_BUFS) };
-        let wrapper = BoardView { inner: $view_expr, _indev: None };
-        $crate::board_perf_spawn!($spawner);
-        $crate::board_launch_inner!(wrapper, bufs, $mode)
-    }};
 }
 
-/// Internal: launch the non-threaded render loops. Do not call directly.
+/// Internal: blocking render-thread body. Do not call directly.
 #[macro_export]
 #[doc(hidden)]
-macro_rules! board_launch_inner {
-    ($wrapper:ident, $bufs:ident, single) => {
-        $crate::oxivgl::view::run_app::<BoardView<_>, LVGL_BUF_BYTES>(
-            SCREEN_W.into(), SCREEN_H.into(), $bufs, $wrapper,
-        ).await
-    };
+macro_rules! board_render_loop {
     ($wrapper:ident, $bufs:ident, nav) => {
         $crate::oxivgl::view::run_app_nav::<LVGL_BUF_BYTES>(
             SCREEN_W.into(), SCREEN_H.into(), $bufs, $wrapper,
-        ).await
+        )
     };
     ($wrapper:ident, $bufs:ident, nav_encoder) => {
         $crate::oxivgl::view::run_app_nav_encoder::<LVGL_BUF_BYTES>(
             SCREEN_W.into(), SCREEN_H.into(), $bufs, $wrapper, &__OXIVGL_HARNESS_ENCODER,
-        ).await
+        )
+    };
+    ($wrapper:ident, $bufs:ident, $other:ident) => {
+        $crate::oxivgl::view::run_app::<BoardView<_>, LVGL_BUF_BYTES>(
+            SCREEN_W.into(), SCREEN_H.into(), $bufs, $wrapper,
+        )
     };
 }
 
@@ -624,9 +617,8 @@ macro_rules! board_maybe_indev {
     }};
 }
 
-/// Internal: emit the threaded mode's tasks and thread entry points. Do not
-/// call directly. Non-threaded modes expand to nothing, so they allocate no
-/// embassy task pool for a loop they never run.
+/// Internal: emit the render-thread entry (every mode) and, in `threaded`
+/// mode, the flush-thread extras. Do not call directly.
 #[macro_export]
 #[doc(hidden)]
 macro_rules! board_threaded_items {
@@ -646,7 +638,7 @@ macro_rules! board_threaded_items {
             flush_frame_buffer(driver).await
         }
 
-        /// Flush thread entry. Never returns.
+        /// Flush thread entry. Never returns. Flush is DMA, not LVGL.
         extern "C" fn __oxivgl_flush_thread(_: *mut core::ffi::c_void) {
             let exec = make_static!($crate::esp_rtos::embassy::Executor::new());
             exec.run(|s| {
@@ -654,38 +646,40 @@ macro_rules! board_threaded_items {
             })
         }
 
-        #[embassy_executor::task]
-        async fn __oxivgl_render_task() -> ! {
+        $crate::board_render_thread!($view_expr, threaded);
+    };
+    ($view_expr:expr, $mode:ident) => {
+        $crate::board_render_thread!($view_expr, $mode);
+    };
+}
+
+/// Internal: native render thread — no nested embassy executor. Do not call directly.
+#[macro_export]
+#[doc(hidden)]
+macro_rules! board_render_thread {
+    ($view_expr:expr, $mode:ident) => {
+        /// Render thread entry. Never returns. `Ui::init` and every later LVGL
+        /// call (including `timer_handler`) run here, not in an async task.
+        extern "C" fn __oxivgl_render_thread(_: *mut core::ffi::c_void) {
             static mut LVGL_BUFS: LvglBuffers<LVGL_BUF_BYTES> = LvglBuffers::new();
             // SAFETY: touched only here, before this thread — the single LVGL
             // context for the rest of the program — takes ownership.
             let bufs = unsafe { &mut *core::ptr::addr_of_mut!(LVGL_BUFS) };
             let wrapper = BoardView { inner: $view_expr, _indev: None };
-            // Ui::init must run on this thread: every later LVGL call does too.
-            let ui = $crate::oxivgl::view::Ui::init(SCREEN_W.into(), SCREEN_H.into(), bufs);
-            ui.run(wrapper, $crate::oxivgl::view::RenderConfig::default()).await
-        }
-
-        /// Render thread entry. Never returns.
-        extern "C" fn __oxivgl_render_thread(_: *mut core::ffi::c_void) {
-            let exec = make_static!($crate::esp_rtos::embassy::Executor::new());
-            exec.run(|s| {
-                $crate::must_spawn!(s, __oxivgl_render_task());
-            })
+            $crate::board_render_loop!(wrapper, bufs, $mode);
         }
     };
-    ($view_expr:expr, $other:ident) => {};
 }
 
 /// Internal: raise the `#[esp_rtos::main]` executor above the UI threads.
-/// Do not call directly. Only threaded mode has UI threads to outrank.
+/// Do not call directly.
 #[macro_export]
 #[doc(hidden)]
 macro_rules! board_raise_app {
-    (threaded) => {
+    ($mode:ident) => {
+        let _ = stringify!($mode);
         $crate::sched::raise_app_executor();
     };
-    ($other:ident) => {};
 }
 
 /// Internal: spawn the flush side. Do not call directly.

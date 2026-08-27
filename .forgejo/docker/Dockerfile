@@ -40,6 +40,17 @@ RUN apt-get update -q && \
 RUN rustup toolchain install nightly --profile minimal && \
     rustup component add --toolchain nightly llvm-tools-preview rust-src
 
+# Espressif RISC-V GCC + newlib: oxivgl-sys compiles LVGL C / bindgen for S31
+# against this sysroot (not a crate-local stdint shim, not host clang).
+# Pin: IDF tools.json linux-amd64 esp-14.2.0_20241119.
+RUN curl -fsSL -o /tmp/riscv32-esp-elf.tar.xz \
+        https://github.com/espressif/crosstool-NG/releases/download/esp-14.2.0_20241119/riscv32-esp-elf-14.2.0_20241119-x86_64-linux-gnu.tar.xz && \
+    echo "7faaa86d272f3e43c233f8a5ffeba327673224a752c2eb72394655d5e7950000  /tmp/riscv32-esp-elf.tar.xz" | sha256sum -c && \
+    tar -C /opt -xJf /tmp/riscv32-esp-elf.tar.xz && \
+    rm /tmp/riscv32-esp-elf.tar.xz && \
+    test -x /opt/riscv32-esp-elf/bin/riscv32-esp-elf-gcc
+ENV PATH="/opt/riscv32-esp-elf/bin:${PATH}"
+
 # Native libclang at the Fedora-style path run_docs.sh / run_host.sh default to
 # (LIBCLANG_PATH=${LIBCLANG_PATH:-/usr/lib64}). The base image's exported
 # LIBCLANG_PATH is the Xtensa-only ESP clang (no x86_64 headers); the host job

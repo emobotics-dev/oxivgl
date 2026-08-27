@@ -2,16 +2,18 @@
 # CI for oxivgl on the self-hosted Forgejo instance. Two kinds of leg:
 #   host      — unit, doc, integration, pool, leak, doc-audit, screenshots on
 #               x86_64 (headless SDL2)
-#   firmware  — cross-compile examples for both boards (ESP32 + ESP32-S3)
+#   firmware     — cross-compile examples for both m5stack boards (ESP32 + ESP32-S3)
+#   firmware-s31 — lib build for RISC-V ESP32-S31 (Korvo-1); no m5stack BSP here
 #
-# Runs inside registry:3000/emobotics/oxivgl/oxivgl-ci:v2 — oxivgl's own CI image,
+# Runs inside registry:3000/emobotics/oxivgl/oxivgl-ci:v3 — oxivgl's own CI image,
 # built ON TOP of m5stack-core-ci (the org's reference ESP-BSP image) by
 # build-ci-image.yml. Reusing that base gives the dual-board `esp` toolchain,
 # LVGL/bindgen deps, Node 22 and coverage tools, plus the exported ESP cross-build
 # env so the firmware legs need no plumbing; oxivgl-ci bakes on the three host
-# extras (nightly, SDL2, a native libclang). Everything is baked at image-build
-# time — no job installs anything at runtime (conventions/containers.md §1). Bump
-# the `:v1` tag here and in build-ci-image.yml together when the Dockerfile changes.
+# extras (nightly, SDL2, a native libclang, riscv32-esp-elf). Everything is
+# baked at image-build time — no job installs anything at runtime
+# (conventions/containers.md §1). Bump the `:vN` tag here and in
+# build-ci-image.yml together when the Dockerfile changes.
 #
 # Self-hosted `rust`/`esp32` runners: the image is pulled anonymously from the
 # Forgejo registry (no credentials block), and the m5stack-core / esp-hal git
@@ -49,7 +51,7 @@ jobs:
   host:
     name: Host tests
     runs-on: [rust, esp32]
-    container: registry:3000/emobotics/oxivgl/oxivgl-ci:v2
+    container: registry:3000/emobotics/oxivgl/oxivgl-ci:v3
 
     steps:
       - name: Checkout
@@ -151,7 +153,7 @@ jobs:
           - board: cores3
             target: xtensa-esp32s3-none-elf
     runs-on: [rust, esp32]
-    container: registry:3000/emobotics/oxivgl/oxivgl-ci:v2
+    container: registry:3000/emobotics/oxivgl/oxivgl-ci:v3
 
     steps:
       - name: Checkout
@@ -165,24 +167,47 @@ jobs:
         # with_repeat) and the example's no_std path on Xtensa.
         run: cargo +esp -Zbuild-std=alloc,core build --target ${{ matrix.target }} --release --features ${{ matrix.board }} --example touch_setpoint
 
+  # RISC-V ESP32-S31. Stock nightly + build-std (rust-src is baked); not
+  # `cargo +esp` (Xtensa). C compile: riscv32-esp-elf-gcc (newlib, baked).
+  # Bindgen: native libclang + that GCC's sysroot. Clear the image's Xtensa
+  # BINDGEN_EXTRA_CLANG_ARGS. Library only.
+  firmware-s31:
+    name: Build (s31)
+    runs-on: [rust, esp32]
+    container: registry:3000/emobotics/oxivgl/oxivgl-ci:v3
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Point RISC-V bindgen at native libclang, drop Xtensa sysroot
+        run: |
+          echo "LIBCLANG_PATH=/usr/lib64" >> "$GITHUB_ENV"
+          echo "BINDGEN_EXTRA_CLANG_ARGS=" >> "$GITHUB_ENV"
+          echo "CC_riscv32imafc-unknown-none-elf=riscv32-esp-elf-gcc" >> "$GITHUB_ENV"
+          command -v riscv32-esp-elf-gcc
+
+      - name: Build oxivgl for esp32s31
+        run: cargo +nightly -Zbuild-std=core,alloc build --target riscv32imafc-unknown-none-elf --release --no-default-features --features log-04,rtos-sem
+
   # Aggregate gate: one context that summarises every leg. `if: always()` so a
   # skipped/failed leg is judged here rather than reporting nothing. Point any
   # future branch protection at this single "CI passed" context.
   ci-passed:
     name: CI passed
     if: always()
-    needs: [host, firmware]
+    needs: [host, firmware, firmware-s31]
     runs-on: [rust, esp32]
-    container: registry:3000/emobotics/oxivgl/oxivgl-ci:v2
+    container: registry:3000/emobotics/oxivgl/oxivgl-ci:v3
     steps:
       - name: Verify every leg succeeded
         env:
           HOST_RESULT: ${{ needs.host.result }}
           FIRMWARE_RESULT: ${{ needs.firmware.result }}
+          FIRMWARE_S31_RESULT: ${{ needs.firmware-s31.result }}
         run: |
           set -eu
           rc=0
-          for entry in "host=$HOST_RESULT" "firmware=$FIRMWARE_RESULT"; do
+          for entry in "host=$HOST_RESULT" "firmware=$FIRMWARE_RESULT" "firmware-s31=$FIRMWARE_S31_RESULT"; do
             leg=${entry%%=*}
             result=${entry#*=}
             printf '%-10s %s\n' "$leg" "$result"
