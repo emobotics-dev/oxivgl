@@ -98,6 +98,17 @@ impl ImageConfig {
         if let Ok(shim) = std::env::var("DEP_LV_RISCV_SHIM") {
             build.include(shim);
         }
+        // The RISC-V ESP targets are hard-float (`riscv32imafc` / `ilp32f`).
+        // Without these the asset compiles soft-float and rust-lld refuses the
+        // final link -- "cannot link object files with different floating-point
+        // ABI" -- so the failure lands on the consumer, far from its cause.
+        // `oxivgl-sys` already passes the same pair for LVGL's own sources;
+        // an image asset is linked into the same binary and must match.
+        //
+        // Guarded on TARGET, not `cfg!`, because a build script runs on the host.
+        if std::env::var("TARGET").unwrap_or_default().starts_with("riscv32") {
+            build.flag("-march=rv32imafc").flag("-mabi=ilp32f");
+        }
         build.compile(&format!("lvgl_img_{name}"));
 
         println!("cargo:rerun-if-changed={png_path}");
