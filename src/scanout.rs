@@ -9,7 +9,9 @@
 //! buffer and waits for vblank. No stripe copy, no flush thread.
 
 use core::cell::RefCell;
+use core::ffi::c_void;
 use core::ptr::NonNull;
+use core::sync::atomic::{AtomicPtr, Ordering};
 
 use embassy_sync::blocking_mutex::{Mutex, raw::CriticalSectionRawMutex};
 use oxivgl_sys::{lv_area_t, lv_display_flush_is_last, lv_display_flush_ready, lv_display_t};
@@ -28,6 +30,22 @@ pub trait ScanOut: Sync {
 
 static SCAN_OUT: Mutex<CriticalSectionRawMutex, RefCell<Option<&'static dyn ScanOut>>> =
     Mutex::new(RefCell::new(None));
+
+/// Display whose last flush is queued but not yet on the panel.
+static AWAITING: AtomicPtr<c_void> = AtomicPtr::new(core::ptr::null_mut());
+
+/// Report the queued frame as flushed. Call when the swap has landed - from
+/// the panel's vblank handler, interrupt context included.
+///
+/// Until this is called LVGL considers the flush outstanding, which is what
+/// makes its own `wait_for_flushing` mean something.
+pub fn notify_presented() {
+    let disp = AWAITING.swap(core::ptr::null_mut(), Ordering::AcqRel);
+    if !disp.is_null() {
+        // SAFETY: the pointer LVGL passed to the flush callback; still valid.
+        unsafe { lv_display_flush_ready(disp.cast()) };
+    }
+}
 
 /// Register the scan-out panel. Call before [`crate::view::Ui::init`].
 ///
@@ -70,6 +88,16 @@ pub(crate) unsafe extern "C" fn flush_callback(
     let last = unsafe { lv_display_flush_is_last(disp) };
     if last && let (Some(scan), Some(fb)) = (scan_out(), NonNull::new(px_map)) {
         scan.present(fb);
+        // Do not report the flush yet. LVGL calls `wait_for_flushing` before
+        // synchronising the two buffers in DIRECT double-buffered mode, and
+        // reporting at queue time makes that a no-op - LVGL then treats a
+        // buffer the panel is still scanning as free. The board calls
+        // `notify_presented` when the swap has actually landed.
+        //
+        // Waiting here instead would be simpler and is wrong: the wait counts
+        // as LVGL flush time and the render thread sleeps on it a second time.
+        AWAITING.store(disp.cast(), Ordering::Release);
+        return;
     }
     unsafe { lv_display_flush_ready(disp) };
 }
