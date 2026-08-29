@@ -118,7 +118,7 @@ macro_rules! board_body {
 
         use embassy_executor::Spawner;
         use esp_hal::{
-            dma::{DmaRxBuf, DmaTxBuf},
+            dma::{DmaRxBuf, DmaTxBuf, aligned::DmaAlignedMut},
             dma_buffers,
             interrupt::Priority,
         };
@@ -187,8 +187,20 @@ macro_rules! board_body {
         /// 64 B (the panel is write-only); TX holds one flush region.
         fn dma_bufs() -> (DmaRxBuf, DmaTxBuf) {
             let (rx_buffer, rx_desc, tx_buffer, tx_desc) = dma_buffers!(64, LVGL_BUF_BYTES);
-            let rx = DmaRxBuf::new(rx_desc, rx_buffer).expect("DMA rx buf");
-            let tx = DmaTxBuf::new(tx_desc, tx_buffer).expect("DMA tx buf");
+            // esp-hal 1.2 takes the alignment proof in the type; `dma_buffers!`
+            // still hands back plain slices, so re-wrap them here. The macro
+            // aligns what it allocates, so these cannot fail.
+            const ALIGNED: &str = "dma_buffers! is DMA-aligned";
+            let rx = DmaRxBuf::new(
+                DmaAlignedMut::new(rx_desc).expect(ALIGNED),
+                DmaAlignedMut::new(rx_buffer).expect(ALIGNED),
+            )
+            .expect("DMA rx buf");
+            let tx = DmaTxBuf::new(
+                DmaAlignedMut::new(tx_desc).expect(ALIGNED),
+                DmaAlignedMut::new(tx_buffer).expect(ALIGNED),
+            )
+            .expect("DMA tx buf");
             (rx, tx)
         }
 
@@ -452,7 +464,7 @@ macro_rules! board_body {
                 }
             }
 
-            esp_rtos::start(b.system.timer0_0, b.system.sw_int.software_interrupt0);
+            esp_rtos::start(b.system.timer0_0, b.system.sw_int.intr0);
             $crate::log::info!("Embassy initialized");
 
             let (dma_rx, dma_tx) = dma_bufs();
@@ -490,7 +502,7 @@ macro_rules! board_body {
             // Flush runs on a high-priority interrupt executor (stock), or on
             // its own thread ranked just above render (threaded).
             $crate::board_flush_spawn!(
-                $mode, b.system.sw_int.software_interrupt1, driver
+                $mode, b.system.sw_int.intr1, driver
             );
 
             // Unify the per-board input source into one local so the spawn can

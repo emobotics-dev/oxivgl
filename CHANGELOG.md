@@ -9,6 +9,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **Moved to the esp-hal 1.2 stack.** `esp-hal` `1.2.0-rc.0` (the optional
+  library dep, and `=1.2.0-rc.0` for the xtensa example harness),
+  `esp-radio-rtos-driver` 0.4, `esp-rtos` 0.4, `esp-sync` 0.3,
+  `esp-bootloader-esp-idf` 0.6, and the fork patch moves to `local-main`.
+
+  The **library** needed no source change — its whole esp-hal surface is the
+  `#[esp_hal::ram]` attribute, which 1.2 keeps. Note the requirement now names
+  a **pre-release**, so a consumer must opt into one too: a plain `^1.1`/`^1.2`
+  requirement will not select `1.2.0-rc.0`.
+
+  The xtensa example harness did need two: `DmaRxBuf::new`/`DmaTxBuf::new` take
+  `DmaAlignedMut` now (the alignment is proven in the type, and `dma_buffers!`
+  still yields plain slices), and m5stack-core's `sw_int` exposes the
+  `FROM_CPU_INTRn` singletons as `intr0`/`intr1`.
+
+  The two `[patch]` tables collapse back to one. The second existed only to
+  override m5stack-core's own esp-hal pin from a distinct `www.github.com`
+  URL, because cargo refuses a same-URL rev override; m5stack-core now pins
+  this same rev, so there is nothing left to route around.
+
 - **`Ui::init` no longer knows PARTIAL vs DIRECT.** One constructor takes
   [`display::Buffers`]: `Buffers::partial` (SPI stripes) or `Buffers::full`
   (scan-out frames). `init_direct` and `lvgl_disp_init_direct` are gone.
