@@ -57,8 +57,26 @@ impl<'p> Label<'p> {
 
     /// Set label text. Accepts any `&str` (no length cap, no NUL terminator
     /// required); LVGL copies the string internally.
+    ///
+    /// **Setting the text it already has is a no-op.** `lv_label_set_text`
+    /// does not compare: it reallocates the string and invalidates the label's
+    /// area on every call. A view that republishes its values each tick — the
+    /// normal shape of a `View::update` — therefore repaints every label it
+    /// owns at the tick rate, whether or not anything changed, and LVGL merges
+    /// those areas into one large redraw. `lv_arc_set_value` and friends
+    /// already guard this way (`if(arc->value == value) return;`); labels were
+    /// the gap.
     pub fn text(&self, s: &str) -> &Self {
         assert_ne!(self.obj.handle(), null_mut(), "Label handle cannot be null");
+        // SAFETY: handle non-null (asserted above). `lv_label_get_text` returns
+        // the label's internal NUL-terminated buffer, borrowed only for this
+        // comparison and never held across the set below.
+        unsafe {
+            let cur = lv_label_get_text(self.obj.handle());
+            if !cur.is_null() && core::ffi::CStr::from_ptr(cur).to_bytes() == s.as_bytes() {
+                return self;
+            }
+        }
         // SAFETY: handle non-null (asserted above); with_cstr supplies a
         // NUL-terminated buffer valid for the call. LVGL copies internally.
         with_cstr(s, |p| unsafe { lv_label_set_text(self.obj.handle(), p) });
