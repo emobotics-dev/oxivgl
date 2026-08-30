@@ -56,6 +56,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **`Ui::bind` returns `Result<(), WidgetError>`**, not `Result<(), ()>` —
   propagates the real error from `view.create()` instead of discarding it.
 
+- **Examples: m5stack-core bumped to `aea4cba`** (head of its `feat/esp-hal-1.2`,
+  PR #101). Brings the CoreS3 black-panel fix -- the bus arbiter was overriding
+  DC on GPIO35 in the display-only path, so the panel never left reset: black
+  screen, clean transcript, flush ops still counting. Also brings that crate's
+  own migration off `WaitiFlushSync`. Dev-dependency only; re-pin to a `master`
+  sha once PR #101 merges.
+
 ### Deprecated
 
 - **`WaitiFlushSync`.** It parks the core with `waiti 0` for the whole 15-30 ms
