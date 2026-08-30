@@ -22,7 +22,8 @@
 //! Fire's physical buttons or the CoreS3's touch-strip zones — mapped by the
 //! harness to the encoder: outer buttons `turn(∓count)`, center short = `click`
 //! (enter edit), center long = `long_press` (leave edit). The producer stays
-//! context-free; [`run_app_nav_encoder`](oxivgl::view::run_app_nav_encoder)
+//! context-free;
+//! [`Ui::run_events_nav_encoder`](oxivgl::view::Ui::run_events_nav_encoder)
 //! reads it with no polling latency.
 //!
 //! **On host** (no hardware buttons) the four on-screen buttons stand in for the
@@ -290,7 +291,7 @@ impl MenuView {
         }
 
         // The encoder device, fed by ENC. On target this role is filled by the
-        // harness + run_app_nav_encoder instead.
+        // harness + Ui::run_events_nav_encoder instead.
         self.encoder = Some(EncoderIndev::new(&ENC)?);
         self._nav_row = Some(nav_row);
         Ok(())

@@ -9,7 +9,7 @@ Context: oxivgl#1, and the cost model in m5stack-core's
 
 ## The problem
 
-LVGL calls `flush_wait_cb` on its synchronous C stack, so the render task cannot
+LVGL calls `flush_wait_cb` on its synchronous C stack, so the render thread cannot
 `.await` there — it has to *block*. oxivgl's original wait blocked with the
 Xtensa `waiti 0` instruction:
 
@@ -46,6 +46,11 @@ work; it should see **100 wakeups per second**.
 | `waiti` + shared executor | 83–95 | 1124–2317 µs | 13 214–22 390 µs | 9–13 | 0–1 | 33 ops/s, 397 kB/s |
 | threads + semaphore | **100** | **69 µs** | **329 µs** | **0** | **0** | 33 ops/s, 403 kB/s |
 
+> The `waiti` + shared executor row is a **historical baseline**: it measured the
+> blocking wait running inside an async task on a shared executor. The shipped design
+> never does that (see "The split loop" below), so this row's configuration is no
+> longer reachable — it stays here unmodified for the before/after comparison.
+
 Two things to read off these numbers.
 
 **Throughput is unchanged.** Flush ops/s and kB/s are the same either way, so the
@@ -63,7 +68,7 @@ The blocking primitive is **injected**, not chosen by oxivgl:
 
 ```rust
 pub trait FlushSync: Sync {
-    fn wait(&self);    // render task, LVGL's synchronous C stack
+    fn wait(&self);    // render thread, LVGL's synchronous C stack
     fn signal(&self);  // flush context — may be interrupt context
 }
 ```
@@ -71,7 +76,7 @@ pub trait FlushSync: Sync {
 | implementation | blocks by | while waiting |
 |---|---|---|
 | `WaitiFlushSync` (default) | `waiti 0` | the core is parked |
-| `SemaphoreFlushSync` (`rtos-sem`) | RTOS semaphore | the render task leaves the run queue |
+| `SemaphoreFlushSync` (`rtos-sem`) | RTOS semaphore | the render thread leaves the run queue |
 
 The default is unchanged behaviour, so existing applications are unaffected
 until they opt in.
@@ -96,15 +101,37 @@ behind its `esp-radio` feature, so the *consumer* must enable it. Despite the
 name it pulls no radio blob — it is esp-rtos's FreeRTOS-compat IPC objects:
 
 ```toml
-esp-rtos = { version = "0.3", features = ["embassy", "esp-radio", "esp-alloc"] }
+esp-rtos = { version = "0.4", features = ["embassy", "esp-radio", "esp-alloc"] }
 ```
 
 ### LVGL stays single-threaded
 
 The flush side only moves bytes. `lv_display_flush_ready` is still called from
-the render task, inside `FlushSync::wait`'s caller — never from the flush
+the render thread, inside `FlushSync::wait`'s caller — never from the flush
 context. That is what keeps `LV_USE_OS LV_OS_NONE` correct even with the flush on
 its own thread.
+
+## The split loop: async events, blocking refresh
+
+`FlushSync::wait` runs on LVGL's synchronous C stack — a genuine block, not
+something an async task can `.await`. A task that calls `lv_timer_handler` directly
+stalls its whole executor for the transfer, taking every other task sharing that
+executor down with it (that is the `waiti` + shared executor row above, at executor
+scope rather than core scope).
+
+So the render thread splits in two. `Ui::refresh()` is the *only* place
+`lv_timer_handler` (and, in DIRECT mode, `scanout::wait_presented()`) runs — a plain
+blocking call made directly on the render thread, never from inside an async task.
+`Ui::run_events` / `run_events_nav` are the async side: widget setup, `View::update`,
+input waits — no call that can block.
+
+The two meet at the executor's idle hook: `esp_rtos::embassy::Executor::run_with_callbacks`
+invokes `Callbacks::on_idle` exactly when the executor is about to sleep, and the
+application wires `on_idle` to call `Ui::refresh()` there. The executor still parks
+between refreshes — no busy-poll — and the blocking refresh never runs while an async
+task is mid-poll. `run_app`/`Ui::run`-family loops skip this split; they call
+`lv_timer_handler` inline and so are only correct where the flush wait doesn't block
+(host, or a non-blocking pipeline).
 
 ## Placement is the application's job
 
@@ -186,5 +213,6 @@ Two limitations of this setup, stated so results are not over-read:
   rather than through the application-wide `lv_conf.h`. The stock 32 ms caps the
   display at 31 fps before any drawing cost is counted.
 * `view::RenderConfig` sets the loop cadence, and `view::Ui` separates display
-  setup from the render loop — which is what lets an application put the loop on
-  a thread of its own while keeping this pipeline.
+  setup (`init`) from the blocking step (`refresh`) and the async event loop
+  (`run_events`/`run_events_nav`) — which is what lets an application put the
+  blocking half on a thread of its own while keeping this pipeline.

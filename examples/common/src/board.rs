@@ -27,7 +27,7 @@ compile_error!(
 );
 
 /// Generate a complete board `main` for the given [`View`](oxivgl::view::View),
-/// using [`run_app`](oxivgl::view::run_app) (single-screen).
+/// using [`Ui::run_events`](oxivgl::view::Ui::run_events) (single-screen).
 #[macro_export]
 macro_rules! board_main {
     ($view_expr:expr) => {
@@ -35,8 +35,9 @@ macro_rules! board_main {
     };
 }
 
-/// Like [`board_main!`] but uses [`run_app_nav`](oxivgl::view::run_app_nav) for
-/// multi-screen navigation.
+/// Like [`board_main!`] but uses
+/// [`Ui::run_events_nav`](oxivgl::view::Ui::run_events_nav) for multi-screen
+/// navigation.
 #[macro_export]
 macro_rules! board_main_nav {
     ($view_expr:expr) => {
@@ -61,8 +62,9 @@ macro_rules! board_main_psram {
 /// keypad/pointer: the board's three inputs (Fire27 physical buttons, CoreS3
 /// touch-strip zones — both via the BSP's unified `ButtonEvent`) feed an
 /// [`EncoderState`](oxivgl::indev::EncoderState), and the loop runs via
-/// [`run_app_nav_encoder`](oxivgl::view::run_app_nav_encoder) (event mode +
-/// integrated wake, so input reaches LVGL with no read-timer latency).
+/// [`Ui::run_events_nav_encoder`](oxivgl::view::Ui::run_events_nav_encoder)
+/// (event mode + integrated wake, so input reaches LVGL with no read-timer
+/// latency).
 ///
 /// `Short(n)` on the outer buttons is `turn(∓n)`, a center `Short` is `click`,
 /// and a center `Long` is `long_press` (toggle edit mode).
@@ -107,7 +109,9 @@ macro_rules! board_main_threaded {
 
 /// Internal: the shared board harness body. Do not call directly.
 ///
-/// `$mode` is `single` (uses `run_app`) or `nav` (uses `run_app_nav`).
+/// `$mode` is `single`, `nav`, `nav_encoder` or `threaded`; it selects the
+/// `Ui::run_events*` loop (see `board_render_loop!`), the input task and the
+/// flush pipeline.
 #[macro_export]
 #[doc(hidden)]
 macro_rules! board_body {
@@ -224,7 +228,7 @@ macro_rules! board_body {
             $crate::oxivgl::indev::PointerState::new();
         /// Encoder state for the `nav_encoder` mode, fed by the board's unified
         /// `ButtonEvent`. Every producer call fires its integrated wake, so
-        /// `run_app_nav_encoder` reads with no read-timer latency.
+        /// `Ui::run_events_nav_encoder` reads with no read-timer latency.
         #[allow(dead_code)]
         static __OXIVGL_HARNESS_ENCODER: $crate::oxivgl::indev::EncoderState =
             $crate::oxivgl::indev::EncoderState::new();
@@ -368,7 +372,7 @@ macro_rules! board_body {
         struct BoardView<V: $crate::oxivgl::view::View> {
             inner: V,
             // In `nav_encoder` mode the encoder indev is owned by
-            // `run_app_nav_encoder`, so this stays `None` — hence the allow.
+            // `Ui::run_events_nav_encoder`, so this stays `None` — hence the allow.
             #[cfg(feature = "fire27")]
             #[allow(dead_code)]
             _indev: Option<$crate::oxivgl::indev::KeypadIndev>,
@@ -384,7 +388,7 @@ macro_rules! board_body {
             ) -> Result<(), $crate::oxivgl::widgets::WidgetError> {
                 // Register the keypad/pointer indev (nav, single). In
                 // nav_encoder mode this is a no-op; the encoder indev is created
-                // and bound by run_app_nav_encoder.
+                // and bound by Ui::run_events_nav_encoder.
                 $crate::board_maybe_indev!($mode, self)?;
                 self.inner.create(container)
             }
@@ -544,24 +548,28 @@ macro_rules! board_launch {
     }};
 }
 
-/// Internal: blocking render-thread body. Do not call directly.
+/// Internal: the async UI/event loop for the selected mode. Do not call
+/// directly.
+///
+/// Every arm is a *split* loop (`Ui::run_events*`): it polls the view and
+/// sleeps, and never draws. The drawing is the blocking `Ui::refresh` the
+/// render thread runs from its executor's idle hook — see
+/// [`board_render_thread!`].
 #[macro_export]
 #[doc(hidden)]
 macro_rules! board_render_loop {
-    ($wrapper:ident, $bufs:ident, nav) => {
-        $crate::oxivgl::view::run_app_nav::<LVGL_BUF_BYTES>(
-            SCREEN_W.into(), SCREEN_H.into(), $bufs, $wrapper,
-        )
+    ($ui:ident, $wrapper:ident, nav) => {
+        $ui.run_events_nav($wrapper, $crate::oxivgl::view::RenderConfig::default()).await
     };
-    ($wrapper:ident, $bufs:ident, nav_encoder) => {
-        $crate::oxivgl::view::run_app_nav_encoder::<LVGL_BUF_BYTES>(
-            SCREEN_W.into(), SCREEN_H.into(), $bufs, $wrapper, &__OXIVGL_HARNESS_ENCODER,
-        )
+    ($ui:ident, $wrapper:ident, nav_encoder) => {
+        $ui.run_events_nav_encoder(
+            $wrapper,
+            &__OXIVGL_HARNESS_ENCODER,
+            $crate::oxivgl::view::RenderConfig::default(),
+        ).await
     };
-    ($wrapper:ident, $bufs:ident, $other:ident) => {
-        $crate::oxivgl::view::run_app::<BoardView<_>, LVGL_BUF_BYTES>(
-            SCREEN_W.into(), SCREEN_H.into(), $bufs, $wrapper,
-        )
+    ($ui:ident, $wrapper:ident, $other:ident) => {
+        $ui.run_events($wrapper, $crate::oxivgl::view::RenderConfig::default()).await
     };
 }
 
@@ -605,7 +613,7 @@ macro_rules! board_input_spawn {
 
 /// Internal: register the keypad/pointer indev for the selected mode. Do not
 /// call directly. A no-op in `nav_encoder` mode (the encoder indev is owned by
-/// `run_app_nav_encoder`). Evaluates to `Result<(), WidgetError>`.
+/// `Ui::run_events_nav_encoder`). Evaluates to `Result<(), WidgetError>`.
 #[macro_export]
 #[doc(hidden)]
 macro_rules! board_maybe_indev {
@@ -665,20 +673,66 @@ macro_rules! board_threaded_items {
     };
 }
 
-/// Internal: native render thread — no nested embassy executor. Do not call directly.
+/// Internal: the render thread — an esp-rtos thread running its own embassy
+/// executor, with the blocking LVGL refresh in the executor's idle hook. Do not
+/// call directly.
+///
+/// The split exists because the redraw blocks the thread for the whole panel
+/// transfer (`waiti 0` in the stock pipeline, a scheduler semaphore in
+/// `threaded`). Inside an async task that would stall every other task on this
+/// executor; `esp_rtos::embassy::Callbacks::on_idle` runs it exactly where the
+/// executor was about to sleep anyway. The UI/event task supplies the wakeups
+/// that make the executor idle on a cadence — LVGL's own recommended delay.
 #[macro_export]
 #[doc(hidden)]
 macro_rules! board_render_thread {
     ($view_expr:expr, $mode:ident) => {
+        /// Executor callbacks for the render thread: the only place LVGL draws.
+        struct __OxivglUiHooks(&'static $crate::oxivgl::view::Ui);
+
+        impl $crate::esp_rtos::embassy::Callbacks for __OxivglUiHooks {
+            fn before_poll(&mut self) {}
+
+            fn on_idle(&mut self) {
+                // Blocking, by design: esp-rtos only calls this when the
+                // executor would otherwise sleep.
+                self.0.refresh();
+            }
+        }
+
+        /// UI/event task: binds the view, then polls it and sleeps. The sleep
+        /// is what makes the executor idle, which is what runs the refresh.
+        #[embassy_executor::task]
+        async fn __oxivgl_render_task(ui: &'static $crate::oxivgl::view::Ui) -> ! {
+            let wrapper = BoardView { inner: $view_expr, _indev: None };
+            $crate::board_render_loop!(ui, wrapper, $mode)
+        }
+
         /// Render thread entry. Never returns. `Ui::init` and every later LVGL
-        /// call (including `timer_handler`) run here, not in an async task.
+        /// call run on this thread — both the task above (this thread's
+        /// executor polls it) and the refresh in the idle hook.
         extern "C" fn __oxivgl_render_thread(_: *mut core::ffi::c_void) {
             static mut LVGL_BUFS: LvglBuffers<LVGL_BUF_BYTES> = LvglBuffers::new();
             // SAFETY: touched only here, before this thread — the single LVGL
             // context for the rest of the program — takes ownership.
             let bufs = unsafe { &mut *core::ptr::addr_of_mut!(LVGL_BUFS) };
-            let wrapper = BoardView { inner: $view_expr, _indev: None };
-            $crate::board_render_loop!(wrapper, bufs, $mode);
+            // Shared, not owned: the UI task and the idle hook both hold it,
+            // so the `&'static mut` from the cell is narrowed to `&'static`.
+            static __OXIVGL_UI: $crate::static_cell::StaticCell<$crate::oxivgl::view::Ui> =
+                $crate::static_cell::StaticCell::new();
+            let ui: &'static $crate::oxivgl::view::Ui =
+                __OXIVGL_UI.init($crate::oxivgl::view::Ui::init(
+                    SCREEN_W.into(),
+                    SCREEN_H.into(),
+                    $crate::oxivgl::display::Buffers::partial(bufs),
+                ));
+            let exec = make_static!($crate::esp_rtos::embassy::Executor::new());
+            exec.run_with_callbacks(
+                |s| {
+                    $crate::must_spawn!(s, __oxivgl_render_task(ui));
+                },
+                __OxivglUiHooks(ui),
+            )
         }
     };
 }

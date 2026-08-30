@@ -185,7 +185,7 @@ impl FlushSync for WaitiFlushSync {
 /// # the app's Cargo.toml — esp-rtos registers the semaphore symbols from a
 /// # module gated behind this feature. It pulls no radio blob; the feature name
 /// # refers to esp-rtos's FreeRTOS-compat IPC objects.
-/// esp-rtos = { version = "0.3", features = ["embassy", "esp-radio", "esp-alloc"] }
+/// esp-rtos = { version = "0.4", features = ["embassy", "esp-radio", "esp-alloc"] }
 /// ```
 ///
 /// The interface is scheduler-neutral by construction — ArielOS and

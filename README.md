@@ -66,12 +66,12 @@ oxivgl is under active development. Even if it has reached some degree of maturi
 
 ### Key Types
 
-**Application framework** — implement `View` to build a screen; `run_app` drives the render loop, or `Ui` when the loop needs to live on a thread of your choosing.
+**Application framework** — implement `View` to build a screen; `run_app` (and its nav/keypad/encoder siblings) is an async combined loop for pipelines whose flush wait doesn't block, or `Ui` when it does — splitting the blocking refresh from the async event loop so the blocking half can run on its own thread.
 
 | Type | Module | Role |
 |------|--------|------|
 | `View` | `view` | Trait: `create()` builds UI into a container, `update()` refreshes per tick (returns `NavAction`), `on_event()` handles input |
-| `Ui` | `view` | Display setup (`init()`) split from the render loop (`run()` / `run_nav()`), so an application can place the loop itself |
+| `Ui` | `view` | Display setup (`init()`) split from the blocking `refresh()` step and the async `run_events()` / `run_events_nav()` event loop |
 | `RenderConfig` | `view` | Render cadence — `with_target_fps()`, `with_update_period_ms()` |
 | `FlushSync` | `flush_pipeline` | The render↔flush blocking handoff, supplied by the application: `WaitiFlushSync` (default) or `SemaphoreFlushSync` (`rtos-sem`) |
 | `LvglDriver` | `driver` | Zero-sized init token — proves `lv_init()` was called |
@@ -179,7 +179,7 @@ oxivgl is under active development. Even if it has reached some degree of maturi
 | Type | Module | Role |
 |------|--------|------|
 | `LvglBuffers<BYTES>` | `display` | Pair of DMA-aligned render buffers (`'static`) |
-| `DisplayOutput` | `flush_pipeline` | Trait for async display write (ESP32 only) |
+| `DisplayOutput` | `flush_pipeline` | Trait for the panel DMA write, called from the flush side (ESP32 only) |
 | `Snapshot` | `snapshot` | Widget or screen capture; `take_widget()`, `take()`, `write_png()` (host-only, `png` feature) |
 
 **Memory** — hand LVGL's heap a region discovered at run time, e.g. PSRAM.
@@ -308,7 +308,7 @@ Only widgets actually used are enabled (`LV_USE_<WIDGET> 1`) to minimize binary 
 | `defmt` | `defmt` logging (embedded) |
 | `log-04` | `log` v0.4 logging (host) |
 | `png` | PNG snapshot output on host (`Snapshot::write_png`) |
-| `rtos-sem` | Ship `SemaphoreFlushSync`, so the render task blocks in the scheduler instead of parking the core for the panel transfer |
+| `rtos-sem` | Ship `SemaphoreFlushSync`, so the render thread blocks in the scheduler instead of parking the core for the panel transfer |
 | `perf-probe` | Wakeup-latency probe and a once-a-second throughput line, for the threaded pipeline demo |
 
 The examples additionally use board features `fire27` (M5Stack Fire27 / ESP32)

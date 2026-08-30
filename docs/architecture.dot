@@ -20,7 +20,7 @@ digraph architecture {
         label="oxivgl" labeljust=l fontsize=12 fontcolor="#4a86c8"
         style="rounded,filled" fillcolor="#f8f9fa" color="#4a86c8"
 
-        view [label="view\nView trait · run_lvgl\nevent dispatch"
+        view [label="view\nView trait · Ui · run_app*\nevent dispatch"
               fillcolor="#d4e6fc" color="#4a86c8"]
 
         driver [label="driver\nLvglDriver\ntick · log"

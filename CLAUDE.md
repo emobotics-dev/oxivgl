@@ -90,9 +90,12 @@ cargo test to_lvgl_half
 
 `no_std` (embedded) / `std` (host) library providing LVGL bindings for ESP32 UIs.
 
-**Entry point**: `view::run_app::<V: View>(w, h, bufs, view)` — async task that never returns.
-`view::Ui` splits the same work in two (`Ui::init` then `Ui::run`/`Ui::run_nav`, paced by a
-`RenderConfig`) for applications that need the loop on a thread of their own.
+**Entry point**: `view::run_app::<V: View>(w, h, bufs, view)` and its nav/keypad/encoder
+siblings are async combined refresh+event loops, for pipelines whose flush wait doesn't
+block. For a blocking `FlushSync` or scan-out, split the work: `Ui::init`, then the async
+`Ui::run_events`/`run_events_nav` event loop alongside the blocking `Ui::refresh()` step
+(the only place `lv_timer_handler` runs), driven from the render thread's executor idle
+hook (`Callbacks::on_idle`).
 
 **Layering** (top to bottom):
 1. `view` — `View` trait (`create`/`update`) + render loop

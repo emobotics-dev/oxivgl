@@ -37,10 +37,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **ESP32-S31 C compile uses `riscv32-esp-elf-gcc` (newlib).** The crate-local
   `riscv-shim` headers are gone. Bindgen uses that GCC's sysroot.
 
-- **Scan-out refresh is a thread loop, not a parked embassy task.** `Ui::bind`
-  then `loop { timer_handler() }`. A lone `run_events`/`pending()` on esp-rtos
-  sleeps after the first poll (`flags.wait`) and freezes LVGL anims.
-  `run` / `run_app_nav` still poll `View::update`.
+- **`run_app*` and `Ui::run`-family are async again.** PR #8 made them blocking
+  `fn -> !`, driven by `embassy_futures::block_on` — a documented 100%-CPU
+  busy-poll. Reverted: `run_app`, `run_app_nav`, `run_app_nav_keypad`,
+  `run_app_nav_keypad_events`, and `run_app_nav_encoder` are `pub async fn -> !`
+  again, for pipelines whose flush wait doesn't block (host, non-blocking
+  pipelines).
+
+- **New split for a blocking flush wait or scan-out.** `Ui::refresh()` is the
+  sole blocking step — `lv_timer_handler`, plus `scanout::wait_presented()` in
+  DIRECT mode — called directly from the render thread, never from an async
+  task. `Ui::run_events` / `run_events_nav` are the matching async event loops
+  (widget setup, `View::update`, input waits), with no blocking LVGL call
+  inside. On ESP the render thread runs an `esp_rtos::embassy::Executor` via
+  `run_with_callbacks`, whose `Callbacks::on_idle` calls `Ui::refresh()` — so
+  the blocking step and the async loop coexist without busy-waiting.
+
+- **`Ui::bind` returns `Result<(), WidgetError>`**, not `Result<(), ()>` —
+  propagates the real error from `view.create()` instead of discarding it.
+
+### Fixed
+
+- **`scanout::wait_presented()` is now actually called.** It was dead code
+  (zero callers), leaving DIRECT mode's refresh unthrottled; it is now wired
+  into `Ui::refresh()`.
 
 ## [0.8.0] — 2026-08-22
 

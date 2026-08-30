@@ -88,7 +88,7 @@ macro_rules! example_main_nav {
 /// On target, the board's three inputs feed an
 /// [`EncoderState`](oxivgl::indev::EncoderState) via
 /// [`board_main_nav_encoder!`], launched with
-/// [`run_app_nav_encoder`](oxivgl::view::run_app_nav_encoder). On host (no
+/// [`Ui::run_events_nav_encoder`](oxivgl::view::Ui::run_events_nav_encoder). On host (no
 /// hardware buttons) it falls back to [`host_main_nav!`]; the example supplies
 /// its own on-screen controls there.
 #[macro_export]

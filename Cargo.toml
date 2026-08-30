@@ -86,7 +86,6 @@ cores3 = [
 oxivgl_sys = { package = "oxivgl-sys", version = "0.2.4", path = "oxivgl-sys", default-features = false }
 embassy-sync = "0.8"
 embassy-time = "0.5.0"
-embassy-futures = "0.1"
 heapless = { version = "0.9.1", features = ["nightly"] }
 cfg-if = "1"
 thiserror-no-std = "2.0.2"

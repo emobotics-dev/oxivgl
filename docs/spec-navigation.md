@@ -574,6 +574,16 @@ point agnostic to how data arrives. oxivgl provides `run_app`,
 `View`, and `Navigator`; the application provides the event
 infrastructure and the tasks that feed it.
 
+**This task-sharing model assumes a non-blocking flush wait.** `run_app` (and its
+nav/keypad/encoder siblings) call `lv_timer_handler` inline inside their own async
+loop; on a blocking `FlushSync` (the ESP32 default) or scan-out, that stalls the whole
+executor — including the BLE/button tasks sharing it above — for the length of the
+panel transfer. Use this family only where the flush wait doesn't block (host, or a
+non-blocking pipeline). For hardware with a blocking wait, give the render loop its
+own thread instead: `Ui::init`, an async `Ui::run_events`/`run_events_nav` task, and
+the blocking `Ui::refresh()` step driven from that thread's executor idle hook — see
+`CLAUDE.md` and `docs/render-pipeline.md`.
+
 To reduce latency when events arrive between render ticks, the
 event-driven entry point `run_app_nav_keypad_events` accepts an **async
 wake closure** (see §5.2) that is raced against the inter-tick timer,
@@ -598,13 +608,14 @@ pub async fn run_app_nav<const BYTES: usize>(
 /// Navigation + keypad input (timer-paced).
 pub async fn run_app_nav_keypad<const BYTES: usize>(
     w: i32, h: i32, bufs: &'static mut LvglBuffers<BYTES>,
-    initial: impl View, keypad: KeypadIndev) -> !;
+    initial: impl View, keypad: &'static crate::indev::KeypadState) -> !;
 
 /// Navigation + keypad input, event-driven: `wake` is raced against the
 /// inter-tick timer to run the loop sooner when input arrives.
 pub async fn run_app_nav_keypad_events<const BYTES: usize, Fut: Future<Output = ()>>(
     w: i32, h: i32, bufs: &'static mut LvglBuffers<BYTES>,
-    initial: impl View, keypad: KeypadIndev, wake: impl Fn() -> Fut) -> !;
+    initial: impl View, keypad: &'static crate::indev::KeypadState,
+    wake: impl Fn() -> Fut) -> !;
 
 /// Navigation + encoder input (three inputs: turn−, turn+, press), driving
 /// both focus navigation and in-place edit. Always event-driven with an
@@ -632,7 +643,10 @@ The `wake` closure is called fresh each tick and only needs
 
 ### 5.3 Real Application Example
 
-A typical multi-task application using channel events with wake signal:
+A typical multi-task application using channel events with wake signal — this shares
+one executor across `ui_task`, `button_task`, etc., so it assumes a non-blocking flush
+wait (see the caveat in §5.1); on hardware with a blocking `FlushSync` use the
+`Ui::run_events`/`Ui::refresh` split instead:
 
 ```rust
 // Wake signal — shared between producer tasks and run_app
@@ -688,7 +702,10 @@ async fn button_task(back_pin: Input<'static>) {
 
 // Entry point — async closure wakes on signal
 #[embassy_executor::task]
-async fn ui_task(bufs: &'static mut LvglBuffers<BUF_BYTES>, keypad: KeypadIndev) -> ! {
+async fn ui_task(
+    bufs: &'static mut LvglBuffers<BUF_BYTES>,
+    keypad: &'static crate::indev::KeypadState,
+) -> ! {
     // The event-driven entry point is where the wake closure lives.
     run_app_nav_keypad_events(320, 240, bufs, DashboardView::default(), keypad,
         async || WAKE.wait().await,
@@ -757,15 +774,16 @@ example_main_psram!(MyExample::default(), 512 * 1024);  // + runtime PSRAM pool
 example_main_threaded!(MyExample::default());          // render + flush on their own threads
 ```
 
-Each expands to the matching `run_app*` call on the selected board
-(`fire27` / `cores3`), or to the host SDL loop with equivalent logic.
+On host, each expands to the matching `run_app*` call directly. On ESP boards the
+flush wait blocks (`FlushSync`, or scan-out's vblank wait), so the harness instead
+wires the render-thread split: an `Ui::run_events`/`run_events_nav` task polled by an
+`esp_rtos::embassy::Executor`, with `Ui::refresh()` called from that executor's
+`Callbacks::on_idle` (see §5.1 and `CLAUDE.md`).
 
-`example_main_threaded!` is the exception: instead of running the loop on the
-embassy executor it places the render loop and the panel flush on separate
-esp-rtos threads under an application-owned priority ladder, and registers a
-`SemaphoreFlushSync` so the render thread yields during the transfer rather
-than parking the core. See `docs/render-pipeline.md` and
-`examples/common/src/sched.rs`.
+`example_main_threaded!` additionally places the panel flush on its own esp-rtos
+thread under an application-owned priority ladder, with a `SemaphoreFlushSync` so
+that thread yields during the transfer rather than parking the core. See
+`docs/render-pipeline.md` and `examples/common/src/sched.rs`.
 
 ---
 
