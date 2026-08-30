@@ -46,7 +46,14 @@ oxivgl = { path = "../..", default-features = false, features = ["esp-hal", "log
 oxivgl_sys = { package = "oxivgl-sys", path = "../../oxivgl-sys", default-features = false }
 # Keep the tag in sync with the root Cargo.toml pin. `identity` is what makes
 # the board name its own image at boot; see build.rs for the required wiring.
-m5stack-core = { git = "http://forgejo:3000/emobotics/m5stack-core.git", rev = "65d76c09313f4fb941ba7a405f58557316964838", default-features = false, features = ["display", "psram", "console-serial", "panic-handler", "identity"] }
+# MUST be byte-identical to the `rev` in the root Cargo.toml. This package is
+# `exclude`d from the workspace, so it cannot inherit a `[workspace.dependencies]`
+# entry and the pin is duplicated by necessity. Two different revs resolve to two
+# separate `m5stack_core` crates, which fails as `error[E0659]: m5stack_core is
+# ambiguous` — and, worse, would be two BSPs with divergent layouts in one image
+# if the name never collided. CI asserts the two revs match; see the
+# "Verify the m5stack-core pin is not forked" step in .forgejo/workflows/ci.yml.
+m5stack-core = { git = "http://forgejo:3000/emobotics/m5stack-core.git", rev = "aea4cba5576146a52772f7864e5e09e9138929aa", default-features = false, features = ["display", "psram", "console-serial", "panic-handler", "identity"] }
 esp-bootloader-esp-idf = { version = "0.6.0" }
 esp-hal              = { version = "=1.2.0-rc.0", features = ["unstable"] }
 esp-rtos             = { version = "0.4.0", features = ["embassy"] }

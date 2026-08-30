@@ -68,6 +68,30 @@ jobs:
           echo "LIBCLANG_PATH=/usr/lib64" >> "$GITHUB_ENV"
           echo "BINDGEN_EXTRA_CLANG_ARGS=" >> "$GITHUB_ENV"
 
+      - name: Verify the m5stack-core pin is not forked
+        run: |
+          # examples/common is `exclude`d from the workspace, so it cannot
+          # inherit a [workspace.dependencies] entry and must repeat the pin.
+          # Two different revs resolve to two separate m5stack_core crates:
+          # one BSP compiled twice, with divergent layouts in a single image.
+          # It surfaced once as `error[E0659]: m5stack_core is ambiguous`, but
+          # a drift that does not collide by name would pass silently.
+          root=$(grep -oP '^m5stack-core = .*rev = "\K[0-9a-f]{40}' Cargo.toml)
+          common=$(grep -oP '^m5stack-core = .*rev = "\K[0-9a-f]{40}' examples/common/Cargo.toml)
+          if [ -z "$root" ] || [ -z "$common" ]; then
+            echo "Could not read both m5stack-core revs (root='$root' common='$common')."
+            echo "The grep, not the pin, is probably what broke — fix this check."
+            exit 1
+          fi
+          if [ "$root" != "$common" ]; then
+            echo "m5stack-core pin is forked:"
+            echo "  Cargo.toml                $root"
+            echo "  examples/common/Cargo.toml $common"
+            echo "Both must name the same rev."
+            exit 1
+          fi
+          echo "m5stack-core pin matches in both manifests: $root"
+
       - name: Enforce example safety (no unsafe, no oxivgl_sys)
         run: |
           # Pre-existing exceptions (to be fixed incrementally):
