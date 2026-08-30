@@ -60,9 +60,15 @@ impl Default for RenderConfig {
 }
 
 impl RenderConfig {
-    /// Target `fps`. Period `1000/fps`; idle cap a quarter of that — refresh
-    /// runs *before* the sleep, so a cap equal to the period would make a
-    /// cycle `period + draw`.
+    /// Target `fps`: LVGL redraw period `1000/fps`, and
+    /// [`max_idle_ms`](Self::max_idle_ms) a quarter of it.
+    ///
+    /// The quarter-period cap matters only to the *combined* loops
+    /// ([`Ui::run`], [`run_app`]), which redraw and then sleep: a cap equal to
+    /// the period would make a cycle cost `period + draw`. The split loops
+    /// ([`Ui::run_events`] and friends) redraw from the executor's idle hook
+    /// and wait on LVGL's absolute due time instead, so the cap does not apply
+    /// to them and does not bound their frame rate.
     pub fn with_target_fps(mut self, fps: u32) -> Self {
         let period = (1000 / fps.max(1)).max(1);
         self.refresh_period_ms = Some(period);
@@ -425,6 +431,20 @@ pub struct Ui {
     /// An atomic rather than a `Cell` because the executor's idle hook and the
     /// async task hold separate borrows of the same `&Ui`.
     next_delay_ms: AtomicU32,
+    /// Absolute time LVGL asked to be called again, as milliseconds since boot
+    /// truncated to 32 bits.
+    ///
+    /// This, not [`Self::next_delay_ms`], is what the split loops sleep on. The
+    /// idle hook runs *after* the async task has already armed its timer, so a
+    /// duration published there is always one cycle stale — and a stale
+    /// duration re-times the sleep from the wrong origin, quantising LVGL's
+    /// redraw onto the wake grid. A stale *deadline* is still the right one.
+    ///
+    /// 32-bit because ESP32 is a 32-bit target with no `AtomicU64`. It wraps
+    /// every ~49.7 days; [`Self::next_wake`] compares with wrapping arithmetic,
+    /// which is exact for any interval under ~24.8 days and so cannot be
+    /// reached by a frame deadline.
+    next_due_ms: AtomicU32,
     /// Set once [`Ui::wait_ready`] has observed the display driver coming up.
     /// [`Ui::refresh`] is inert until then, so an idle hook installed before
     /// the flush path exists cannot drive LVGL into it.
@@ -448,6 +468,7 @@ impl Ui {
             // Before the first redraw there is no LVGL-supplied pace; 1 ms
             // makes the first async sleep short so the UI comes up promptly.
             next_delay_ms: AtomicU32::new(1),
+            next_due_ms: AtomicU32::new(0),
             ready: AtomicBool::new(false),
         }
     }
@@ -471,6 +492,8 @@ impl Ui {
     pub fn timer_handler(&self) -> u32 {
         let delay = self.driver.timer_handler();
         self.next_delay_ms.store(delay, Ordering::Relaxed);
+        let due_ms = (embassy_time::Instant::now().as_millis() as u32).wrapping_add(delay);
+        self.next_due_ms.store(due_ms, Ordering::Relaxed);
         delay
     }
 
@@ -562,10 +585,11 @@ impl Ui {
     /// returns and never draws — the render thread's executor must call
     /// [`refresh`](Self::refresh) from its idle hook.
     ///
-    /// The sleep is LVGL's own recommended delay (published by `refresh`),
-    /// capped by [`RenderConfig::max_idle_ms`], so LVGL keeps setting the pace.
-    /// Sleeping is what makes the executor idle, which is what runs the hook —
-    /// so an implementation that never awaits here would stop the display.
+    /// It sleeps until the earlier of LVGL's own next due time and the next
+    /// [`View::update`] — both absolute instants, so LVGL keeps setting the
+    /// pace — a duration would be a cycle stale. Sleeping is what makes the
+    /// executor idle, which is what runs the hook — so an implementation that
+    /// never awaits here would stop the display.
     pub async fn run_events<V: View>(&'static self, mut view: V, cfg: RenderConfig) -> ! {
         self.wait_ready().await;
         info!("Display ready");
@@ -582,7 +606,7 @@ impl Ui {
                 update_period,
                 &mut next_update,
             );
-            Timer::after(embassy_time::Duration::from_millis(self.idle_ms(&cfg))).await;
+            Timer::at(self.next_wake(next_update)).await;
         }
     }
 
@@ -633,13 +657,34 @@ impl Ui {
         }
     }
 
-    /// Sleep for the split loop: LVGL's published delay, capped by
-    /// [`RenderConfig::max_idle_ms`] and never zero (a zero sleep would keep
-    /// the executor busy, so the idle hook — the redraw — would never run).
-    fn idle_ms(&self, cfg: &RenderConfig) -> u64 {
-        (self.next_delay_ms.load(Ordering::Relaxed) as u64)
-            .min(cfg.max_idle_ms)
-            .max(1)
+    /// When the split loop should wake next: the earlier of LVGL's own due
+    /// time and the next [`View::update`] poll.
+    ///
+    /// Both are absolute, which is the point. The idle hook redraws *after* the
+    /// task has armed its timer, so any duration it publishes is a cycle stale;
+    /// sleeping on a stale duration re-times from the wrong origin and pins the
+    /// redraw to the wake grid instead of to LVGL's schedule — 32 ms of work
+    /// landing on an 8 ms grid costs ~4 ms a frame on average and up to 8 ms.
+    /// An instant does not decay, so a cycle-old value is still correct.
+    ///
+    /// [`RenderConfig::max_idle_ms`] is deliberately *not* applied here. It
+    /// exists to stop the combined loop sleeping a whole period before a redraw
+    /// it has not run yet; the split loop redraws from the idle hook and needs
+    /// no such floor, and imposing one only adds wakeups that find nothing due.
+    fn next_wake(&self, next_update: embassy_time::Instant) -> embassy_time::Instant {
+        let now = embassy_time::Instant::now();
+        // Wrapping difference, read as signed: <= 0 means the deadline passed.
+        // Exact across the 32-bit wrap for any interval under ~24.8 days.
+        let remaining = self
+            .next_due_ms
+            .load(Ordering::Relaxed)
+            .wrapping_sub(now.as_millis() as u32) as i32;
+        let due = if remaining <= 0 {
+            now
+        } else {
+            now + embassy_time::Duration::from_millis(remaining as u64)
+        };
+        earliest_wake(due, next_update, now)
     }
 
     /// Inter-frame wait for the combined loop.
@@ -699,6 +744,24 @@ async fn wait_wake(budget_ms: u64, wake: impl Future<Output = ()>) -> bool {
             .await
             .is_ok()
     }
+}
+
+/// The earlier of LVGL's due time and the next [`View::update`], floored one
+/// millisecond ahead of `now`.
+///
+/// Split out from [`Ui::next_wake`] so the arithmetic is a pure function of the
+/// clock and can be tested on host without an initialised display.
+///
+/// The floor is load-bearing: a deadline already in the past makes `Timer::at`
+/// return immediately, the executor never parks, and the idle hook — which is
+/// where the redraw lives — never runs.
+fn earliest_wake(
+    due: embassy_time::Instant,
+    next_update: embassy_time::Instant,
+    now: embassy_time::Instant,
+) -> embassy_time::Instant {
+    due.min(next_update)
+        .max(now + embassy_time::Duration::from_millis(1))
 }
 
 /// Poll `view` if `now` has reached `next_update`, and rearm `next_update`.
@@ -979,19 +1042,26 @@ where
         // for up to a full update period before the view sees it.
         let mut poll_now = embassy_time::Instant::now() >= next_update;
 
-        // Frame pacing. The combined loop redraws here; the split loop leaves
-        // that to the idle hook and only reads the delay LVGL asked for.
-        let (delay, paced_by_present) = if drive_refresh {
-            (ui.refresh() as u64, ui.present_blocks)
+        // Frame pacing. The combined loop redraws here and then sleeps, so its
+        // wait is capped by `max_idle_ms` to stop a whole period elapsing
+        // before the next redraw. The split loop redraws from the idle hook
+        // and instead waits until LVGL's own absolute due time — see
+        // [`Ui::next_wake`] for why a duration would be a cycle stale.
+        let budget = if drive_refresh {
+            let delay = ui.refresh() as u64;
+            // A scan-out redraw already waited for the panel, so a sleep on top
+            // would only cost frame rate — poll input without one (budget 0).
+            if ui.present_blocks {
+                0
+            } else {
+                delay.min(cfg.max_idle_ms).max(1)
+            }
         } else {
-            (ui.next_delay_ms.load(Ordering::Relaxed) as u64, false)
-        };
-        // A scan-out redraw already waited for the panel, so a sleep on top
-        // would only cost frame rate — poll input without one (budget 0).
-        let budget = if paced_by_present {
-            0
-        } else {
-            delay.min(cfg.max_idle_ms).max(1)
+            let wake_at = ui.next_wake(next_update);
+            wake_at
+                .saturating_duration_since(embassy_time::Instant::now())
+                .as_millis()
+                .max(1)
         };
 
         // Input is read on every buffer kind: whether the present blocks is a
@@ -1075,6 +1145,46 @@ mod tests {
     }
 
     // -- RenderConfig::with_target_fps -------------------------------------
+
+    #[test]
+    fn wake_lands_on_lvgl_due_time_not_a_grid() {
+        // The regression this guards: pacing used to sleep a *duration*
+        // published by the previous redraw and capped at `max_idle_ms`
+        // (LV_DEF_REFR_PERIOD / 4 = 8 ms), so a 32 ms LVGL period could only
+        // land on an 8 ms grid — up to 8 ms late every frame, which showed up
+        // as 24-26 fps against a 31 fps ceiling. An absolute deadline must be
+        // returned exactly, never rounded up to a cap.
+        let now = Instant::from_millis(1_000);
+        let due = now + TimeDuration::from_millis(32);
+        let next_update = now + TimeDuration::from_millis(32);
+        assert_eq!(earliest_wake(due, next_update, now), due);
+
+        // And a due time inside the old cap is honoured exactly, not floored
+        // to it.
+        let soon = now + TimeDuration::from_millis(3);
+        assert_eq!(earliest_wake(soon, next_update, now), soon);
+    }
+
+    #[test]
+    fn wake_takes_the_earlier_of_redraw_and_update() {
+        let now = Instant::from_millis(5_000);
+        let due = now + TimeDuration::from_millis(30);
+        let next_update = now + TimeDuration::from_millis(10);
+        assert_eq!(earliest_wake(due, next_update, now), next_update);
+        assert_eq!(earliest_wake(next_update, due, now), next_update);
+    }
+
+    #[test]
+    fn wake_never_returns_the_past() {
+        // A deadline in the past would make `Timer::at` return at once, so the
+        // executor would never park and the idle hook — the redraw — would
+        // never run. That is a stopped display, not a fast one.
+        let now = Instant::from_millis(9_000);
+        let stale = Instant::from_millis(1);
+        let got = earliest_wake(stale, stale, now);
+        assert!(got > now, "wake {got:?} must be strictly after now {now:?}");
+        assert_eq!(got, now + TimeDuration::from_millis(1));
+    }
 
     #[test]
     fn target_fps_sets_period_and_quarter_cap() {
