@@ -46,14 +46,14 @@ oxivgl = { path = "../..", default-features = false, features = ["esp-hal", "log
 oxivgl_sys = { package = "oxivgl-sys", path = "../../oxivgl-sys", default-features = false }
 # Keep the tag in sync with the root Cargo.toml pin. `identity` is what makes
 # the board name its own image at boot; see build.rs for the required wiring.
-m5stack-core = { git = "http://forgejo:3000/emobotics/m5stack-core.git", rev = "3b71c3fed030c071a834556d190b628c77de99b6", default-features = false, features = ["display", "psram", "console-serial", "panic-handler", "identity"] }
-esp-bootloader-esp-idf = { version = "0.5.0" }
-esp-hal              = { version = "=1.1.2", features = ["unstable"] }
-esp-rtos             = { version = "0.3.0", features = ["embassy"] }
+m5stack-core = { git = "http://forgejo:3000/emobotics/m5stack-core.git", rev = "65d76c09313f4fb941ba7a405f58557316964838", default-features = false, features = ["display", "psram", "console-serial", "panic-handler", "identity"] }
+esp-bootloader-esp-idf = { version = "0.6.0" }
+esp-hal              = { version = "=1.2.0-rc.0", features = ["unstable"] }
+esp-rtos             = { version = "0.4.0", features = ["embassy"] }
 # Thread creation for the threaded render pipeline (see src/sched.rs). Scheduler
 # *interface* crate — the registration comes from esp-rtos, above.
-esp-radio-rtos-driver = { version = "0.3.0" }
-esp-sync             = { version = "0.2.1" }
+esp-radio-rtos-driver = { version = "0.4.0" }
+esp-sync             = { version = "0.3.0" }
 embassy-embedded-hal = { version = "0.6.0", features = ["time"] }
 embassy-executor     = { version = "0.10.0", features = ["nightly"] }
 embassy-sync         = "0.8"
