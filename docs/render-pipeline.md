@@ -75,11 +75,21 @@ pub trait FlushSync: Sync {
 
 | implementation | blocks by | while waiting |
 |---|---|---|
-| `WaitiFlushSync` (default) | `waiti 0` | the core is parked |
 | `SemaphoreFlushSync` (`rtos-sem`) | RTOS semaphore | the render thread leaves the run queue |
+| `WaitiFlushSync` (**deprecated**) | `waiti 0` | the core is parked |
 
-The default is unchanged behaviour, so existing applications are unaffected
-until they opt in.
+`SemaphoreFlushSync` is what an application should register. `WaitiFlushSync` is
+deprecated and remains only as the fallback when nothing is registered, for an
+application that links no scheduler at all.
+
+Under the split loop it is not merely slower, it is the wrong shape: the refresh
+blocks from the executor's idle hook, so parking the core there halts the whole
+scheduler rather than only the render thread — the opposite of what the split
+buys. The board harness now registers `SemaphoreFlushSync` in **every** mode:
+`leak_isr()` in the stock pipeline, whose flush runs on an `InterruptExecutor`,
+and `leak_thread()` in `threaded`, whose flush has its own thread. Previously
+only `threaded` registered one, so the stock modes silently fell back to
+`waiti`.
 
 ### Why this stays RTOS-agnostic
 

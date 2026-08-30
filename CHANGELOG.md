@@ -56,6 +56,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **`Ui::bind` returns `Result<(), WidgetError>`**, not `Result<(), ()>` —
   propagates the real error from `view.create()` instead of discarding it.
 
+### Deprecated
+
+- **`WaitiFlushSync`.** It parks the core with `waiti 0` for the whole 15-30 ms
+  panel transfer, and under the split render loop that is the wrong shape
+  entirely: the refresh blocks from the executor's idle hook, so parking there
+  halts the whole scheduler rather than only the render thread. It also has a
+  lost-wakeup window that `SemaphoreFlushSync` does not. Register
+  `SemaphoreFlushSync` (feature `rtos-sem`) instead; `WaitiFlushSync` remains
+  only as the fallback for an application that links no scheduler.
+
+- **The stock board harness now registers a `FlushSync`.** Only `threaded` did,
+  so every other mode silently fell back to `WaitiFlushSync` and parked the
+  core -- the harness logged `no FlushSync registered` and nobody was
+  listening. Stock now registers `SemaphoreFlushSync::leak_isr()` (its flush
+  runs on an `InterruptExecutor`, so the give is in interrupt context);
+  `threaded` keeps `leak_thread()`.
+
 ### Fixed
 
 - **`scanout::wait_presented()` is now actually called.** It was dead code

@@ -779,6 +779,17 @@ macro_rules! board_flush_spawn {
         };
     }};
     ($other:ident, $swint:expr, $driver:expr) => {{
+        // Register the blocking wait before the flush task or LVGL can run.
+        // `leak_isr` (not `leak_thread`) because the flush runs on an
+        // `InterruptExecutor`, so the give happens in interrupt context.
+        //
+        // Without this the pipeline fell back to `WaitiFlushSync`, which parks
+        // the core for the whole transfer — and under the split render loop the
+        // refresh blocks from the executor's idle hook, so that would halt the
+        // whole scheduler, not just the render thread.
+        $crate::oxivgl::flush_pipeline::set_flush_sync(
+            $crate::oxivgl::flush_pipeline::SemaphoreFlushSync::leak_isr(),
+        );
         let int_exec = make_static!(InterruptExecutor::new($swint));
         let hi_spawner = int_exec.start(Priority::min());
         $crate::must_spawn!(hi_spawner, flush_task($driver));
