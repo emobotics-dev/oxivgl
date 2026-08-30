@@ -492,7 +492,7 @@ impl Ui {
     pub fn timer_handler(&self) -> u32 {
         let delay = self.driver.timer_handler();
         self.next_delay_ms.store(delay, Ordering::Relaxed);
-        let due_ms = (embassy_time::Instant::now().as_millis() as u32).wrapping_add(delay);
+        let due_ms = due_after(embassy_time::Instant::now().as_millis() as u32, delay);
         self.next_due_ms.store(due_ms, Ordering::Relaxed);
         delay
     }
@@ -762,6 +762,38 @@ fn earliest_wake(
 ) -> embassy_time::Instant {
     due.min(next_update)
         .max(now + embassy_time::Duration::from_millis(1))
+}
+
+/// `lv_timer_handler`'s "no timer is ready" sentinel — not a delay.
+///
+/// LVGL returns `LV_NO_TIMER_READY` (`0xFFFFFFFF`) when it has nothing pending
+/// at all, which is a common steady state for a UI whose widgets only change
+/// when the application writes to them.
+const LV_NO_TIMER_READY: u32 = u32::MAX;
+
+/// Longest we will let the split loop sleep when LVGL has nothing pending.
+///
+/// A cap rather than "sleep forever": the deadline is only ever one half of
+/// [`earliest_wake`], so `next_update` and an input wake still cut it short,
+/// and a bounded value keeps a missed invalidation costing one period rather
+/// than a stopped display.
+const NO_TIMER_SLEEP_MS: u32 = LV_DEF_REFR_PERIOD;
+
+/// Absolute due time (ms, wrapping) from LVGL's reported delay.
+///
+/// Pure function of the clock so it is testable on host without an initialised
+/// display, like [`earliest_wake`].
+///
+/// The sentinel is why this is not a bare `wrapping_add`. `now + 0xFFFFFFFF`
+/// wraps to `now - 1`: a deadline in the PAST. [`earliest_wake`] then floors it
+/// to `now + 1 ms`, so the split loop treats "LVGL has nothing to do" as "due
+/// immediately" and re-enters `lv_timer_handler` about a thousand times a
+/// second instead of sleeping — the exact opposite of what the sentinel means.
+/// The combined loop never saw this because it clamps with
+/// `delay.min(cfg.max_idle_ms)`.
+fn due_after(now_ms: u32, delay: u32) -> u32 {
+    let delay = if delay == LV_NO_TIMER_READY { NO_TIMER_SLEEP_MS } else { delay };
+    now_ms.wrapping_add(delay)
 }
 
 /// Poll `view` if `now` has reached `next_update`, and rearm `next_update`.
@@ -1172,6 +1204,41 @@ mod tests {
         let next_update = now + TimeDuration::from_millis(10);
         assert_eq!(earliest_wake(due, next_update, now), next_update);
         assert_eq!(earliest_wake(next_update, due, now), next_update);
+    }
+
+    #[test]
+    fn no_timer_ready_is_a_sentinel_not_a_delay() {
+        // The regression this guards. `lv_timer_handler` returns
+        // LV_NO_TIMER_READY (0xFFFFFFFF) when nothing is pending. Adding that
+        // to `now` wraps to `now - 1` — a deadline in the PAST — and
+        // `earliest_wake` floors a past deadline to `now + 1 ms`. The split
+        // loop would then wake, find nothing due, and call `lv_timer_handler`
+        // again ~1000x/s: a busy loop produced by LVGL saying "idle".
+        let now_ms: u32 = 100_000;
+
+        // What a bare wrapping_add would have produced.
+        assert_eq!(now_ms.wrapping_add(LV_NO_TIMER_READY), now_ms - 1);
+
+        // What we produce instead: a real, future deadline.
+        let due = due_after(now_ms, LV_NO_TIMER_READY);
+        assert_eq!(due, now_ms + NO_TIMER_SLEEP_MS);
+        assert!(
+            (due.wrapping_sub(now_ms) as i32) > 0,
+            "deadline {due} must be in the future relative to {now_ms}"
+        );
+    }
+
+    #[test]
+    fn ordinary_delays_are_passed_through_and_wrap_exactly() {
+        // A real delay must not be perturbed by the sentinel handling...
+        assert_eq!(due_after(1_000, 32), 1_032);
+        assert_eq!(due_after(1_000, 0), 1_000);
+
+        // ...and the 32-bit wrap stays exact across the boundary, which is the
+        // property the signed-difference comparison in `next_wake` relies on.
+        let near_wrap = u32::MAX - 10;
+        assert_eq!(due_after(near_wrap, 32), 21);
+        assert_eq!(due_after(near_wrap, 32).wrapping_sub(near_wrap), 32);
     }
 
     #[test]

@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **Split render loop spun instead of sleeping whenever LVGL was idle.**
+  `lv_timer_handler` returns `LV_NO_TIMER_READY` (`0xFFFFFFFF`) when no timer is
+  pending — a sentinel, not a delay. `Ui::timer_handler` added it straight to
+  the clock, which wraps to `now - 1`: a deadline in the *past*.
+  `earliest_wake` then floors that to `now + 1 ms`, so the split loops treated
+  "LVGL has nothing to do" as "due immediately" and re-entered
+  `lv_timer_handler` roughly a thousand times a second. Only the split loops
+  were affected; the combined loops clamp with `delay.min(cfg.max_idle_ms)` and
+  never saw it. The delay is now clamped to `LV_DEF_REFR_PERIOD` before it
+  becomes a deadline, in a `due_after` pure function covered by two tests.
+
 ### Changed
 
 - **Moved to the esp-hal 1.2 stack.** `esp-hal` `1.2.0-rc.0` (the optional
