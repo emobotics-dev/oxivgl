@@ -95,7 +95,7 @@ heapless = { version = "0.9.1", features = ["nightly"] }
 cfg-if = "1"
 thiserror-no-std = "2.0.2"
 critical-section = "1"
-esp-hal = { version = "1.2.0-rc.0", features = ["unstable"], optional = true }
+esp-hal = { version = "1.2", features = ["unstable"], optional = true }
 # Scheduler *interface* only (cfg-if + esp-sync + portable-atomic — it depends on
 # neither esp-hal nor esp-rtos). See the `rtos-sem` feature comment above.
 esp-radio-rtos-driver = { version = "0.4.0", optional = true }
@@ -120,7 +120,7 @@ oxivgl_sys = { package = "oxivgl-sys", version = "0.2.4", path = "oxivgl-sys", d
 [target.'cfg(target_arch = "xtensa")'.dev-dependencies]
 embassy-executor       = { version = "0.10.0", features = ["nightly"] }
 esp-bootloader-esp-idf = { version = "0.6.0" }
-esp-hal                = { version = "=1.2.0-rc.0", features = ["unstable"] }
+esp-hal                = { version = "1.2", features = ["unstable"] }
 esp-rtos               = { version = "0.4.0", features = ["embassy"] }
 esp-sync               = { version = "0.3.0" }
 # v0.5.0 retires the TEMP main pin that carried the button-timing fix
@@ -131,10 +131,9 @@ esp-sync               = { version = "0.3.0" }
 # examples/common (a missing env! is a compile error, not a silent gap).
 # Dev-dependency only — never part of the published library.
 #
-# Pinned to the head of m5stack-core's `feat/esp-hal-1.2` (its PR #101), which
-# is where the esp-hal 1.2 stack lives — `master` does not contain this lineage
-# at all, so moving there would drop the 1.2 support this branch needs. The
-# previous pin was already on that branch; this only moves it forward.
+# Pinned to the head of m5stack-core's PR #110, which relaxes its own exact
+# esp-hal pin. Its master still says `=1.2.0-rc.0`, which cannot resolve beside
+# a patch supplying 1.2.1 — two copies, and the error names `esp-riscv-rt`.
 #
 # What the bump buys, beyond staying current:
 #   * `1c89193` — the CoreS3 black-panel fix. The bus arbiter was overriding DC
@@ -144,42 +143,41 @@ esp-sync               = { version = "0.3.0" }
 #   * the migration off the deprecated `WaitiFlushSync` to `SemaphoreFlushSync`
 #     (`leak_isr` for the interrupt-executor flush, `leak_thread` for the flush
 #     thread), matching this crate's own harness.
-#   * `aea4cba` — follows oxivgl back to the async render loop, i.e. the API
-#     this branch restores.
+#   * follows oxivgl back to the async render loop, i.e. the API this branch
+#     restores.
 #
-# The pin is currently **mutual**: m5stack-core `aea4cba` points its own oxivgl
-# dev-dependency at this branch's head. That builds — oxivgl is a dev-dep there,
-# and a git dependency's dev-deps are not fetched — but neither anchor is stable
-# until both merge. Closing it takes three steps, in order:
-#   1. this PR merges, giving oxivgl master a stable sha;
-#   2. m5stack-core #101 re-pins oxivgl to it and merges;
-#   3. a follow-up here re-pins m5stack-core to *its* master sha.
-# Until step 3, expect this rev to go unreachable if #101 is rebased or squashed
-# — the sha the bench first tested (`01c6a4d`) had already moved by the time
-# this was written.
-m5stack-core = { git = "http://forgejo:3000/emobotics/m5stack-core.git", rev = "aea4cba5576146a52772f7864e5e09e9138929aa", default-features = false, features = ["display", "psram", "console-serial", "panic-handler", "identity"] }
+# The pin is **mutual**: m5stack-core points its own oxivgl dev-dependency back
+# here. That builds — a git dependency's dev-deps are not fetched. Re-pin to an
+# m5stack-core master sha once its side merges; until then expect this rev to go
+# unreachable if that branch is rebased or squashed.
+m5stack-core = { git = "http://forgejo:3000/emobotics/m5stack-core.git", rev = "14c9f8a7d9d55d3fbd5359782c26836eac8e6fad", default-features = false, features = ["display", "psram", "console-serial", "panic-handler", "identity"] }
 
 # esp-hal family — stock crates.io for the published library; redirected to the
-# emobotics `local-main` fork (SPI/DMA flush fixes on top of esp-hal 1.2) for
-# local + CI + example builds. `cargo publish` ignores [patch], so downstream
-# consumers of the library still resolve stock crates.io. See #119.
+# emobotics `local-1.2` fork (SPI/DMA flush fixes, rebased onto upstream 1.2.1)
+# for local + CI + example builds. `cargo publish` ignores [patch], so consumers
+# resolve stock crates.io. See #119.
+#
+# The requirement above must stay a plain caret, matching the fork's version: a
+# caret naming a pre-release would still resolve, but one that does NOT name a
+# pre-release cannot accept a fork at `-rc.0` — cargo drops the patch silently
+# and builds stock, without these fixes.
 #
 # One table is enough again: m5stack-core now pins this same rev, so there is no
 # conflicting override to route around. That is what the second patch table and
 # the `www.github.com` distinct-source trick existed for; both are gone.
 [patch.crates-io]
-esp-hal                = { git = "https://github.com/emobotics-dev/esp-hal.git", rev = "7e8b0b9c6462761084b9ee4057f412cb397e4837" }
-esp-radio              = { git = "https://github.com/emobotics-dev/esp-hal.git", rev = "7e8b0b9c6462761084b9ee4057f412cb397e4837" }
+esp-hal                = { git = "https://github.com/emobotics-dev/esp-hal.git", rev = "8ef359e956950c1ff53f604309b5c682cd1c8c33" }
+esp-radio              = { git = "https://github.com/emobotics-dev/esp-hal.git", rev = "8ef359e956950c1ff53f604309b5c682cd1c8c33" }
 # Must be patched alongside the rest: esp-radio depends on this by *path* inside
 # the fork, so without this line our direct crates.io dep would resolve to a
 # second, distinct copy. The `esp_rtos_semaphore_*` registration is link-time, so
 # two copies is a duplicate/undefined-symbol link failure, not a version warning.
-esp-radio-rtos-driver  = { git = "https://github.com/emobotics-dev/esp-hal.git", rev = "7e8b0b9c6462761084b9ee4057f412cb397e4837" }
-esp-sync               = { git = "https://github.com/emobotics-dev/esp-hal.git", rev = "7e8b0b9c6462761084b9ee4057f412cb397e4837" }
-esp-alloc              = { git = "https://github.com/emobotics-dev/esp-hal.git", rev = "7e8b0b9c6462761084b9ee4057f412cb397e4837" }
-esp-rom-sys            = { git = "https://github.com/emobotics-dev/esp-hal.git", rev = "7e8b0b9c6462761084b9ee4057f412cb397e4837" }
-esp-bootloader-esp-idf = { git = "https://github.com/emobotics-dev/esp-hal.git", rev = "7e8b0b9c6462761084b9ee4057f412cb397e4837" }
-esp-rtos               = { git = "https://github.com/emobotics-dev/esp-hal.git", rev = "7e8b0b9c6462761084b9ee4057f412cb397e4837" }
+esp-radio-rtos-driver  = { git = "https://github.com/emobotics-dev/esp-hal.git", rev = "8ef359e956950c1ff53f604309b5c682cd1c8c33" }
+esp-sync               = { git = "https://github.com/emobotics-dev/esp-hal.git", rev = "8ef359e956950c1ff53f604309b5c682cd1c8c33" }
+esp-alloc              = { git = "https://github.com/emobotics-dev/esp-hal.git", rev = "8ef359e956950c1ff53f604309b5c682cd1c8c33" }
+esp-rom-sys            = { git = "https://github.com/emobotics-dev/esp-hal.git", rev = "8ef359e956950c1ff53f604309b5c682cd1c8c33" }
+esp-bootloader-esp-idf = { git = "https://github.com/emobotics-dev/esp-hal.git", rev = "8ef359e956950c1ff53f604309b5c682cd1c8c33" }
+esp-rtos               = { git = "https://github.com/emobotics-dev/esp-hal.git", rev = "8ef359e956950c1ff53f604309b5c682cd1c8c33" }
 
 # The benchmark example only compiles against a configuration directory that
 # enables LVGL's benchmark demo; see the `demo-benchmark` feature above.

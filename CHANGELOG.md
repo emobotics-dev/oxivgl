@@ -22,15 +22,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- **Moved to the esp-hal 1.2 stack.** `esp-hal` `1.2.0-rc.0` (the optional
-  library dep, and `=1.2.0-rc.0` for the xtensa example harness),
-  `esp-radio-rtos-driver` 0.4, `esp-rtos` 0.4, `esp-sync` 0.3,
-  `esp-bootloader-esp-idf` 0.6, and the fork patch moves to `local-main`.
+- **Moved to the esp-hal 1.2 stack.** `esp-hal` `1.2` (the optional library dep
+  and the xtensa example harness), `esp-radio-rtos-driver` 0.4, `esp-rtos` 0.4,
+  `esp-sync` 0.3, `esp-bootloader-esp-idf` 0.6, and the fork patch moves to
+  `local-1.2` — our SPI/DMA fixes rebased onto upstream **1.2.1**.
 
   The **library** needed no source change — its whole esp-hal surface is the
-  `#[esp_hal::ram]` attribute, which 1.2 keeps. Note the requirement now names
-  a **pre-release**, so a consumer must opt into one too: a plain `^1.1`/`^1.2`
-  requirement will not select `1.2.0-rc.0`.
+  `#[esp_hal::ram]` attribute, which 1.2 keeps. Nothing here names a
+  pre-release, so a consumer's plain `^1.2` unifies with it.
+
+  Requirement and patch move together, and the requirement must stay a plain
+  caret. One that does *not* name a pre-release cannot accept a fork at
+  `-rc.0`, and cargo drops an unmatched patch **silently** rather than
+  erroring — a stock build, missing every fork fix, that looks perfectly
+  healthy.
 
   The xtensa example harness did need two: `DmaRxBuf::new`/`DmaTxBuf::new` take
   `DmaAlignedMut` now (the alignment is proven in the type, and `dma_buffers!`
@@ -69,12 +74,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **`Ui::bind` returns `Result<(), WidgetError>`**, not `Result<(), ()>` —
   propagates the real error from `view.create()` instead of discarding it.
 
-- **Examples: m5stack-core bumped to `aea4cba`** (head of its `feat/esp-hal-1.2`,
-  PR #101). Brings the CoreS3 black-panel fix -- the bus arbiter was overriding
-  DC on GPIO35 in the display-only path, so the panel never left reset: black
-  screen, clean transcript, flush ops still counting. Also brings that crate's
-  own migration off `WaitiFlushSync`. Dev-dependency only; re-pin to a `master`
-  sha once PR #101 merges.
+- **Examples: m5stack-core bumped to `14c9f8a7`** (head of its PR #110). Brings
+  the CoreS3 black-panel fix -- the bus arbiter was overriding DC on GPIO35 in
+  the display-only path, so the panel never left reset: black screen, clean
+  transcript, flush ops still counting. Also brings that crate's own migration
+  off `WaitiFlushSync`, a panel-side SPI bus-wedge fix, and the relaxation of
+  its exact esp-hal pin, which cannot resolve beside a patch supplying 1.2.1 —
+  cargo keeps a second copy and the error names `esp-riscv-rt`, a crate nobody
+  in the chain touched. Dev-dependency only; re-pin to a `master` sha once
+  #110 merges.
 
 ### Deprecated
 
