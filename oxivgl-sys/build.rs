@@ -427,6 +427,7 @@ fn main() {
     patch_btnmatrix_text_length(&lvgl_src);
     patch_render_scratch(&lvgl_src);
     patch_ppa_draw_unit(&lvgl_src);
+    patch_demo_mem_guards(&lvgl_dir);
     println!("cargo:SRC_DIR={}", lvgl_dir.display());
     add_c_files(&mut cfg, &lvgl_src);
     add_c_files(&mut cfg, &lv_config_dir);
@@ -1305,4 +1306,40 @@ fn canonicalize(path: impl AsRef<Path>) -> PathBuf {
     let canonicalized = &*canonicalized.to_string_lossy();
 
     PathBuf::from(canonicalized.strip_prefix(r"\\?\").unwrap_or(canonicalized))
+}
+
+/// Make the demos' memory guards see a runtime-registered second pool.
+///
+/// Both demos gate on `LV_MEM_SIZE`, which stopped meaning "the whole heap"
+/// when `lv_mem_add_pool` arrived: `oxivgl::mem::reserve_pool` registers an
+/// overflow pool right after `lv_init`, and `LV_MEM_POOL_EXPAND_SIZE` is the
+/// compile-time ceiling on it. So a board that keeps a small primary and spills
+/// the bulk elsewhere is refused while in fact having the memory -- and on
+/// ESP32 the primary MUST stay small, because moving `lv_init`'s objects into
+/// uncached PSRAM costs 13.7 ms per page flip, measured.
+///
+/// Widening to `LV_MEM_SIZE + LV_MEM_POOL_EXPAND_SIZE` leaves single-pool builds
+/// judged exactly as before: `LV_MEM_POOL_EXPAND_SIZE` defaults to 0.
+fn patch_demo_mem_guards(lvgl_dir: &Path) {
+    const GUARDS: [(&str, &str); 2] = [
+        (
+            "demos/widgets/lv_demo_widgets.c",
+            "LV_MEM_SIZE < (38ul * 1024ul)",
+        ),
+        (
+            "demos/benchmark/lv_demo_benchmark.c",
+            "LV_MEM_SIZE < 128 * 1024",
+        ),
+    ];
+    for (rel, guard) in GUARDS {
+        let file = lvgl_dir.join(rel);
+        let Ok(code) = fs::read_to_string(&file) else {
+            continue;
+        };
+        if !code.contains(guard) {
+            continue;
+        }
+        let widened = guard.replacen("LV_MEM_SIZE", "(LV_MEM_SIZE + LV_MEM_POOL_EXPAND_SIZE)", 1);
+        fs::write(&file, code.replace(guard, &widened)).unwrap();
+    }
 }
