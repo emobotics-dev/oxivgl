@@ -176,6 +176,29 @@ Threads, not another `InterruptExecutor`: an interrupt executor makes the UI
 preempt *everything*, which is backwards. A thread is preemptible by priority in
 both directions.
 
+## The broadest measurement: `oxivgl::demo::benchmark`
+
+Everything below measures one example under one configuration. LVGL's benchmark
+demo measures the whole pipeline across ~30 scenes — fills, borders, shadows,
+images, text, arcs, masking, blending, scrolling — and reports averaged FPS,
+CPU, render time and flush time per scene, so a regression can be attributed to
+a drawing primitive rather than to "the UI feels slow". It is the first thing to
+run when render performance is in question, and the last word on whether a
+pipeline change helped.
+
+```sh
+./run_benchmark.sh host       # SDL window
+./run_benchmark.sh fire27     # flash + monitor (ESP32)
+./run_benchmark.sh cores3     # flash + monitor (ESP32-S3)
+```
+
+It is not in the default build: the demo is enabled by `LV_USE_DEMO_BENCHMARK`
+in the application's `lv_conf.h`, so it needs the separate configuration
+directory `examples/conf-benchmark`, which the script selects through
+`DEP_LV_CONFIG_PATH`. It costs about 900 KB of flash and must never ship in a
+production image. See `oxivgl::demo` for the API, the two preconditions it
+enforces, and why the demo cannot be called directly.
+
 ## Reproducing
 
 ```sh

@@ -64,6 +64,13 @@ cargo test to_lvgl_half
 # Flash an example (requires Xtensa toolchain + connected board):
 ./run_fire27.sh getting_started1   # M5Stack Fire27 (ESP32)
 ./run_cores3.sh getting_started1   # M5Stack CoreS3 (ESP32-S3)
+
+# Run LVGL's benchmark demo — the broadest render-pipeline diagnostic available
+# (see docs/render-pipeline.md). Uses examples/conf-benchmark, a second lv_conf.h
+# with LV_USE_DEMO_BENCHMARK on, selected via DEP_LV_CONFIG_PATH. ~900 KB of
+# flash; never in a production image.
+./run_benchmark.sh host            # SDL window
+./run_benchmark.sh fire27          # flash + monitor
 ```
 
 ## CI & Hosting
@@ -117,7 +124,7 @@ hook (`Callbacks::on_idle`).
 
 - **Defaults should just work.** `cargo check`, `cargo test`, and `cargo doc` should work without explicit env vars, toolchain overrides, or target flags. Host-specific config (`LIBCLANG_PATH`, nightly toolchain) is handled by `.cargo/config.toml` and `rust-toolchain.toml`. ESP32-specific config (ESP clang path) is auto-detected in `oxivgl-sys/build.rs`. When adding build infrastructure, prefer declarative config over manual flags.
 - **All targets**: `oxivgl-sys/build.rs` (cc crate) downloads LVGL v9.5.0 and compiles it from source. For Xtensa, `source ~/.clco-env` puts the ESP toolchain in PATH.
-- `lv_conf.h` is **owned by the application**, not the library. The examples ship their config in `examples/conf/lv_conf.h`. Applications using oxivgl as a dependency must supply their own `lv_conf.h` and set `DEP_LV_CONFIG_PATH` to a directory containing it. The workspace default (`examples/conf`) is set in `.cargo/config.toml` and is only authoritative for the examples and tests in this repo.
+- `lv_conf.h` is **owned by the application**, not the library. The examples ship their config in `examples/conf/lv_conf.h`; `examples/conf-benchmark/` is a second one that additionally enables LVGL's benchmark demo (see its README). Every `.c` file next to an `lv_conf.h` is compiled too — that is how sources outside `lvgl/src`, such as the demos, enter the build without a second LVGL compilation. Applications using oxivgl as a dependency must supply their own `lv_conf.h` and set `DEP_LV_CONFIG_PATH` to a directory containing it. The workspace default (`examples/conf`) is set in `.cargo/config.toml` and is only authoritative for the examples and tests in this repo.
 - **CRITICAL — single LVGL source**: LVGL must only be compiled once, by `oxivgl-sys`. Never add a second compilation (e.g. cmake) from a different LVGL source tree — struct layouts change between versions, causing silent memory corruption on ESP32 (see issue #55).
 
 ## Specifications

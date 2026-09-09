@@ -7,7 +7,81 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **`oxivgl::demo::benchmark` — LVGL's benchmark demo as a safe call (#11).**
+  `lv_demo_benchmark` is the broadest end-to-end diagnostic LVGL ships (~30
+  scenes covering rectangles, borders, shadows, images, text, arcs, masking,
+  blending and scrolling), but it cannot be called directly from an oxivgl
+  application: it builds every scene on the *active* screen and starts each one
+  with `lv_obj_clean(lv_screen_active())` (`lv_demo_benchmark.c:638`). That
+  deletes every widget the running `View` holds a pointer to — a use-after-free
+  on the next `View::update` and a double free when the `View` drops. Saving and
+  restoring `lv_screen_active()` does not help; the pointers are already
+  dangling. `benchmark()` runs the demo on a throwaway screen instead, restores
+  the application's screen when the run ends, and deletes the throwaway together
+  with the header label the demo leaves behind on the top layer (which also owns
+  the sysmon observer). Results arrive as an owned `Summary` — per-scene and
+  overall FPS, CPU, render time and flush time, already divided by their sample
+  counts the way LVGL's own summary table divides them.
+
+  Preconditions are enforced rather than left to produce plausible-looking
+  numbers. `LV_USE_PERF_MONITOR` must be on -- the demo samples the sysmon
+  performance subject, and without it every scene records nothing and the run
+  reports `0 FPS over 0 scenes`. The heap must actually hold the 128 KB LVGL's
+  own guards ask for, checked against `lv_mem_monitor` at the call rather than
+  against a compile-time constant, so a configuration that reserves the space
+  but never registers the pool is refused with both figures instead of failing
+  mid-run. Repeat runs are supported: LVGL's per-scene accumulators are
+  file-static and `lv_demo_benchmark()` resets only `scene_act`, so they are
+  zeroed at the start of each run -- without that a second run divides blended
+  samples by a doubled count and reads plausibly wrong. Overlapping runs are
+  still refused.
+
+  Enabling the demo is the application's decision, taken in its `lv_conf.h`
+  (`LV_USE_DEMO_BENCHMARK 1`, which also requires `LV_USE_DEMO_WIDGETS 1` for
+  the final scene) — not a cargo feature, which could not work because the demo
+  sources are wrapped in that `#if`. `oxivgl-sys` compiles LVGL's `demos/` tree
+  whenever `lv_conf.h` sets `LV_BUILD_DEMOS 1`, so an application needs no
+  `#include` shims of its own; `examples/conf-benchmark` is a ready-made
+  configuration directory, and `./run_benchmark.sh` selects it. `oxivgl::demo`
+  exists only when those symbols do: `oxivgl-sys` reports the demo's presence in
+  the generated bindings as `cargo:demo_benchmark`, which becomes the
+  `demo_benchmark` cfg. **The demo costs roughly 900 KB of flash, nearly all of
+  it image assets — it must never be in a production image.**
+
 ### Fixed
+
+- **The demos' memory guards could not see a runtime pool.** Both LVGL demos
+  gate on `LV_MEM_SIZE` (`lv_demo_widgets.c` at 38 KB, `lv_demo_benchmark.c` at
+  128 KB), and the benchmark `#error`s without the widgets demo, so both gate
+  the benchmark. That test was right when `LV_MEM_SIZE` was the whole heap; with
+  `lv_mem_add_pool` it is the primary plus whatever is registered later, capped
+  by `LV_MEM_POOL_EXPAND_SIZE`. A board with a small internal primary and a
+  PSRAM overflow -- the shape `mem::reserve_pool` exists to create, and the only
+  one that fits beside ESP32's link-asserted main-stack floor -- was refused
+  while having the memory. Both guards are now widened to
+  `LV_MEM_SIZE + LV_MEM_POOL_EXPAND_SIZE`, which judges single-pool builds
+  exactly as before, since that define is 0 there. On ESP32 the primary must
+  stay small regardless: moving `lv_init`'s objects into uncached PSRAM costs
+  13.7 ms per page flip, measured.
+
+- **The demo sources could go silently missing.** `LV_BUILD_DEMOS` was read by
+  scanning `lv_conf.h` as text, so a value arriving through an `#include` was
+  invisible and the demos were simply not compiled -- surfacing as an undefined
+  reference at link, nowhere near the configuration that caused it. The value
+  now comes from the generated bindings, where the preprocessor has already
+  resolved every `#include` and `#if`. Relatedly, `rerun-if-changed` covered
+  only the configuration directory, so an `lv_conf.h` that includes a shared
+  fragment was not rebuilt when that fragment changed; bindgen's
+  `CargoCallbacks` now registers every header it opens.
+
+- **Config directories only rebuilt when `lv_conf.h` changed.**
+  `oxivgl-sys` compiles every `.c` file next to the application's `lv_conf.h` —
+  the mechanism that lets an application add sources outside `lvgl/src` — but
+  only `lv_conf.h` itself was declared with `cargo:rerun-if-changed`. Adding or
+  editing one of those sources therefore changed nothing until an unrelated
+  edit forced the build script to rerun. The whole directory is now watched.
 
 - **Split render loop spun instead of sleeping whenever LVGL was idle.**
   `lv_timer_handler` returns `LV_NO_TIMER_READY` (`0xFFFFFFFF`) when no timer is

@@ -53,6 +53,7 @@ select host SDL2 or an ESP32 board backend — `fire27` (ESP32) or `cores3`
 - [Gradients](#gradients)
 - [Snapshot](#snapshot)
 - [Memory](#memory)
+- [Diagnostics](#diagnostics)
 - [Implementation Coverage](#implementation-coverage)
 - [Running](#running)
 
@@ -1380,6 +1381,27 @@ pool unchanged.
 
 ![psram_pool](screenshots/psram_pool.png)
 
+## Diagnostics
+
+Not a port of an LVGL example, and not part of the default screenshot pass — it
+needs a different `lv_conf.h`, so it is not counted in the coverage table below
+and is not listed in `run_host.sh`.
+
+### demo_benchmark — LVGL's benchmark demo, run safely
+
+Runs LVGL's own benchmark (~30 scenes, roughly two minutes) through
+`oxivgl::demo::benchmark` and reports the per-scene and overall FPS, CPU, render
+and flush figures to the log and to a label on the view's own screen. The demo
+destroys every widget on the screen it runs on, so the wrapper gives it a
+throwaway screen and restores this view's afterwards — that the label is still
+alive and updatable at the end is the point of the example.
+
+Build and run it with `./run_benchmark.sh`, which selects
+`examples/conf-benchmark` (`LV_USE_DEMO_BENCHMARK 1`) through
+`DEP_LV_CONFIG_PATH` and enables the `demo-benchmark` feature that selects the
+example target. That configuration costs about 900 KB of flash and must never
+ship in a production image.
+
 ## Implementation Coverage
 
 Status of all [LVGL 9.5 examples](https://docs.lvgl.io/9.5/examples.html) in oxivgl.
@@ -1474,4 +1496,8 @@ Status of all [LVGL 9.5 examples](https://docs.lvgl.io/9.5/examples.html) in oxi
 
 # Flash to ESP32:
 ./run_fire27.sh getting_started1
+
+# LVGL's benchmark demo (separate lv_conf.h — see Diagnostics above):
+./run_benchmark.sh host
+./run_benchmark.sh fire27
 ```
