@@ -2,7 +2,7 @@
 [package]
 name = "oxivgl-build"
 edition = "2021"
-version = "0.1.1"
+version = "0.1.2"
 license = "MIT OR Apache-2.0"
 description = "Build-time helpers for oxivgl (LVGL image asset conversion, build identity)"
 repository = "https://github.com/emobotics-dev/oxivgl"

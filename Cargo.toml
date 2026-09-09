@@ -2,7 +2,7 @@
 [package]
 name = "oxivgl"
 edition = "2024"
-version = "0.9.0"
+version = "0.9.1"
 license = "MIT OR Apache-2.0"
 description = "Safe no_std Rust bindings for LVGL — embedded GUI on ESP32 and host SDL2"
 repository = "https://github.com/emobotics-dev/oxivgl"
@@ -104,7 +104,7 @@ log-04 = { package = "log", version = "0.4", optional = true }
 png = { version = "0.17", optional = true }
 
 [build-dependencies]
-oxivgl-build = { version = "0.1.1", path = "oxivgl-build" }
+oxivgl-build = { version = "0.1.2", path = "oxivgl-build" }
 
 
 [workspace]

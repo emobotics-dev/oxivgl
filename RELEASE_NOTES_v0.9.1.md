@@ -143,6 +143,21 @@ only the render thread. It also has a lost-wakeup window `SemaphoreFlushSync`
 does not. Register `SemaphoreFlushSync` (feature `rtos-sem`); the stock board
 harness now does.
 
+## Image assets did not link on RISC-V
+
+`oxivgl-build` compiled the C it generates for an image asset without
+`-march=rv32imafc -mabi=ilp32f`, so on the ESP RISC-V targets the asset came out
+soft-float and rust-lld refused the final link: "cannot link object files with
+different floating-point ABI". `oxivgl-sys` already passes the pair for LVGL's
+own sources, and the asset is linked into the same binary.
+
+The fix reached the helper without a version bump, and 0.1.1 was already on
+crates.io without it — so this release also bumps `oxivgl-build` to **0.1.2**
+and tightens oxivgl's requirement to match. The workspace and CI resolve that
+helper by path and compiled the fixed source all along; the break was reachable
+only by resolving it from the registry, which is exactly what a consumer does
+and neither of those two ever did.
+
 ## Breaking
 
 - **`Ui::init` no longer knows PARTIAL vs DIRECT.** One constructor takes

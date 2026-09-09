@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [0.9.1] — 2026-09-09
+## [0.9.1] — 2026-09-10
 
 ### Added
 
@@ -146,6 +146,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `threaded` keeps `leak_thread()`.
 
 ### Fixed
+
+- **Image assets get the RISC-V hard-float ABI — `oxivgl-build` 0.1.1 → 0.1.2,
+  with oxivgl's requirement tightened to match.** `ImageConfig` compiled the
+  generated C without `-march=rv32imafc -mabi=ilp32f`, so on the ESP RISC-V
+  targets the asset came out soft-float and rust-lld refused the final link:
+  "cannot link object files with different floating-point ABI". `oxivgl-sys`
+  already passes the pair for LVGL's own sources, and an image asset lands in
+  the same binary, so it has to match. The flags key off `TARGET`, not `cfg!`,
+  because a build script runs on the host.
+
+  The fix reached the helper without a version bump, and 0.1.1 was already on
+  crates.io without it. Workspace and CI builds resolve `oxivgl-build` by path,
+  so they compiled the fixed source and stayed green — the failure was
+  reachable only by a consumer resolving from the registry, which is the one
+  configuration neither the workspace nor CI builds. A path dependency cannot
+  verify what the registry will serve.
 
 - **The benchmark heap gate judges contiguity, not just a total.** It compared
   `lv_mem_monitor`'s `free_size` — a *sum* — against 64 KiB, so a heap holding
