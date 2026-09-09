@@ -7,33 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Fixed
-
-- **A failed draw-buffer allocation no longer stalls the render thread.**
-  `lv_draw_layer_alloc_buf` treats a failure as transient — it logs and returns
-  NULL — and `draw_buf_flush` then retries forever, before `disp->flushing` is
-  set, so no flush is ever issued: one refusal hangs rendering with no assert and
-  no panic. `mem::declare_pool_internal()` opts an application into retrying from
-  LVGL's own heap. On an ESP32 running the benchmark that heap held a 33,568 B
-  block, unused for the whole stall, while the Rust heap had 35,080 B free and no
-  contiguous 23,760 B. Opt-in, because declaring it with a PSRAM pool would
-  re-open the DMA hazard the guard exists to prevent.
-
-- **LVGL's log channel is no longer silent on release builds.** The embedded
-  `lv_log_register_print_cb` bridge discarded LVGL's level and emitted every
-  message as `debug!`, so `log`'s `release_max_level_info` deleted the whole
-  channel — `LV_LOG_ERROR` and `LV_LOG_WARN` included — from the image. It now
-  maps the level. This matters because LVGL reports some failures by warning and
-  retrying rather than asserting: "Allocating layer buffer failed. Try later" was
-  unobservable, turning a diagnosable stall into a silent hang.
-
-- `demo::benchmark` no longer refuses boards that have the memory. The runtime
-  gate used the 128 KB figure from LVGL's `#warning`, which is a recommendation
-  and not a requirement, so every ESP32-class board was locked out — an ESP32 at
-  71,884 B free and an ESP32-S3 at 88,312 B, both of which complete every scene.
-  The gate is 64 KiB now, against a measured peak of 44-48 KiB.
-
-## [0.9.0] — 2026-09-09
+## [0.9.1] — 2026-09-09
 
 ### Added
 
@@ -81,7 +55,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - **Upgrading from 0.8.x needs carets, and both crates patched.** `oxivgl-sys`
-  declares `links = "lv"`, so an exact pin (`=0.8.0`) cannot take 0.9.0 by
+  declares `links = "lv"`, so an exact pin (`=0.8.0`) cannot take 0.9.1 by
   `[patch]`: the requirement is unsatisfiable, the registry copy is kept
   alongside, and the failure is a `links` collision or split
   `oxivgl_render_scratch_*` symbols, naming neither version. Requirements take
@@ -170,6 +144,47 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `threaded` keeps `leak_thread()`.
 
 ### Fixed
+
+- **A failed draw-buffer allocation no longer stalls the render thread.**
+  `lv_draw_layer_alloc_buf` treats a failure as transient — it logs and returns
+  NULL — and `draw_buf_flush` then retries forever, before `disp->flushing` is
+  set, so no flush is ever issued: one refusal hangs rendering with no assert and
+  no panic. `mem::declare_pool_internal()` opts an application into retrying from
+  LVGL's own heap. On an ESP32 running the benchmark that heap held a 33,568 B
+  block, unused for the whole stall, while the Rust heap had 35,080 B free and no
+  contiguous 23,760 B. Opt-in, because declaring it with a PSRAM pool would
+  re-open the DMA hazard the guard exists to prevent.
+
+- **LVGL's log channel is no longer silent on release builds.** The embedded
+  `lv_log_register_print_cb` bridge discarded LVGL's level and emitted every
+  message as `debug!`, so `log`'s `release_max_level_info` deleted the whole
+  channel — `LV_LOG_ERROR` and `LV_LOG_WARN` included — from the image. It now
+  maps the level. This matters because LVGL reports some failures by warning and
+  retrying rather than asserting: "Allocating layer buffer failed. Try later" was
+  unobservable, turning a diagnosable stall into a silent hang.
+
+- `demo::benchmark` no longer refuses boards that have the memory. The runtime
+  gate used the 128 KB figure from LVGL's `#warning`, which is a recommendation
+  and not a requirement, so every ESP32-class board was locked out — an ESP32 at
+  71,884 B free and an ESP32-S3 at 88,312 B, both of which complete every scene.
+  The gate is 64 KiB now, against a measured peak of 44-48 KiB.
+
+- **`demo::benchmark` no longer refuses boards that have the memory.** The
+  runtime gate required 128 KiB free, a figure taken from LVGL's
+  `lv_demo_benchmark.c` — where it is a `#warning` recommendation about
+  `LV_MEM_SIZE`, not a requirement, and not about free heap. Applied as a hard
+  precondition it locked out every ESP32-class board, including the one #11 was
+  opened for: an ESP32 with 71,884 B free and an ESP32-S3 with 88,312 B were
+  both refused while completing every scene. Measured peak is 44,404 B and
+  48,292 B; the gate is 64 KiB now, ~1.3x the larger.
+
+- **LVGL's log channel is no longer silent on release builds.** The embedded
+  `lv_log_register_print_cb` bridge discarded LVGL's level and emitted every
+  message as `debug!`, so `log`'s `release_max_level_info` deleted the whole
+  channel — `LV_LOG_ERROR` and `LV_LOG_WARN` included — from the image. It now
+  maps the level. This matters because LVGL reports some failures by warning and
+  retrying rather than asserting: "Allocating layer buffer failed. Try later" was
+  unobservable, turning a diagnosable stall into a silent hang.
 
 - **`SemaphoreFlushSync` waited for a flush completion forever.** `wait()`
   passed `None` to `take()`, so a completion that never arrived hung the UI
