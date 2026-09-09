@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- `demo::benchmark` no longer refuses boards that have the memory. The runtime
+  gate used the 128 KB figure from LVGL's `#warning`, which is a recommendation
+  and not a requirement, so every ESP32-class board was locked out — an ESP32 at
+  71,884 B free and an ESP32-S3 at 88,312 B, both of which complete every scene.
+  The gate is 64 KiB now, against a measured peak of 44-48 KiB.
+
 ## [0.9.0] — 2026-09-09
 
 ### Added

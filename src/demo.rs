@@ -22,9 +22,10 @@
 //!
 //! # Memory
 //!
-//! The demo needs 128 KiB of LVGL heap — the stricter of LVGL's own two guards
-//! (`lv_demo_benchmark.c` asks 128 KB, `lv_demo_widgets.c` 38 KB, and the
-//! benchmark runs the widgets scene). That budget may come from a runtime pool
+//! The demo needs ~48 KiB of LVGL heap at peak, measured;
+//! [`benchmark()`](crate::demo::benchmark) asks for 64 KiB. LVGL's own guards
+//! name 128 KB (`lv_demo_benchmark.c`, a `#warning`) and 38 KB
+//! (`lv_demo_widgets.c`, an `#error`). That budget may come from a runtime pool
 //! — [`crate::mem::reserve_pool`] — and does not have to sit in `LV_MEM_SIZE`,
 //! which on ESP32 comes out of internal DRAM and cannot be raised far beside
 //! the link-asserted main-stack floor.
@@ -512,11 +513,10 @@ fn peak_heap_bytes() -> Option<usize> {
     None
 }
 
-/// The stricter of LVGL's own two demo guards: `lv_demo_benchmark.c` asks for
-/// 128 KB, `lv_demo_widgets.c` for 38 KB, and the benchmark runs the widgets
-/// scene. `patch_demo_mem_guards` widens both to count a runtime pool; this is
-/// the same question asked of the heap that actually exists.
-const BENCHMARK_HEAP_BYTES: usize = 128 * 1024;
+/// ~1.3x the measured peak — 44,404 B on ESP32, 48,292 B on ESP32-S3. LVGL's
+/// own 128 KB is a `#warning` recommendation, not a requirement; used as one it
+/// refused boards that complete every scene.
+const BENCHMARK_HEAP_BYTES: usize = 64 * 1024;
 
 /// Free heap across every registered pool, or `None` when LVGL is not using its
 /// own allocator and there is nothing to measure.
