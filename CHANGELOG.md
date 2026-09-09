@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **LVGL's log channel is no longer silent on release builds.** The embedded
+  `lv_log_register_print_cb` bridge discarded LVGL's level and emitted every
+  message as `debug!`, so `log`'s `release_max_level_info` deleted the whole
+  channel — `LV_LOG_ERROR` and `LV_LOG_WARN` included — from the image. It now
+  maps the level. This matters because LVGL reports some failures by warning and
+  retrying rather than asserting: "Allocating layer buffer failed. Try later" was
+  unobservable, turning a diagnosable stall into a silent hang.
+
 - `demo::benchmark` no longer refuses boards that have the memory. The runtime
   gate used the 128 KB figure from LVGL's `#warning`, which is a recommendation
   and not a requirement, so every ESP32-class board was locked out — an ESP32 at

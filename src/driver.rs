@@ -182,17 +182,26 @@ pub unsafe extern "C" fn lvgl_log_print(_level: i8, c_str: *const c_char) {
     }
 }
 
-/// LVGL log callback for embedded targets. Forwards log messages via defmt/log
-/// debug macro.
+/// LVGL log callback for embedded targets, at the level LVGL asked for.
+///
+/// Emitting everything as `debug!` dropped errors and warnings from release
+/// images entirely: `release_max_level_info` deletes those bodies at compile
+/// time.
 #[cfg(target_os = "none")]
 #[cfg_attr(feature = "esp-hal", esp_hal::ram)]
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn lvgl_log_print(_level: i8, c_str: *const c_char) {
+pub unsafe extern "C" fn lvgl_log_print(level: i8, c_str: *const c_char) {
     if c_str.is_null() {
         return;
     }
     let text = unsafe { core::ffi::CStr::from_ptr(c_str) };
-    debug!("LVGL: {}", text.to_str().unwrap_or("").trim());
+    let text = text.to_str().unwrap_or("").trim();
+    match level as u32 {
+        LV_LOG_LEVEL_ERROR => error!("LVGL: {}", text),
+        LV_LOG_LEVEL_WARN => warn!("LVGL: {}", text),
+        LV_LOG_LEVEL_INFO | LV_LOG_LEVEL_USER => info!("LVGL: {}", text),
+        _ => trace!("LVGL: {}", text),
+    }
 }
 
 // ── Assertion handler
