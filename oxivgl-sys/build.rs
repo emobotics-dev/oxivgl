@@ -428,6 +428,7 @@ fn main() {
     patch_render_scratch(&lvgl_src);
     patch_ppa_draw_unit(&lvgl_src);
     patch_demo_mem_guards(&lvgl_dir);
+    patch_demo_repeatable(&lvgl_dir);
     println!("cargo:SRC_DIR={}", lvgl_dir.display());
     add_c_files(&mut cfg, &lvgl_src);
     add_c_files(&mut cfg, &lv_config_dir);
@@ -1342,4 +1343,46 @@ fn patch_demo_mem_guards(lvgl_dir: &Path) {
         let widened = guard.replacen("LV_MEM_SIZE", "(LV_MEM_SIZE + LV_MEM_POOL_EXPAND_SIZE)", 1);
         fs::write(&file, code.replace(guard, &widened)).unwrap();
     }
+}
+
+/// Let the benchmark run more than once per boot.
+///
+/// `lv_demo_benchmark` accumulates each scene's results into the `scenes[]`
+/// table itself -- `cpu_avg_usage`, `fps_avg`, `render_avg_time`,
+/// `flush_avg_time`, `measurement_cnt` -- while `lv_demo_benchmark()` resets
+/// only `scene_act`. So a second run adds its samples to the first run's, and
+/// the averages, which divide by `measurement_cnt`, silently describe both.
+///
+/// That is a real constraint rather than an oversight to ignore, which is why
+/// this crate refused a second run outright. But a benchmark you can take once
+/// per boot cannot be compared against itself, and for a consumer running it as
+/// a display-path soak -- the case #11 exists for -- one shot proves the least
+/// interesting thing. Zeroing the accumulators at the top of a run makes each
+/// run independent, and the refusal becomes unnecessary.
+///
+/// Injected after the function's own `scene_act = 0;` so the two read together.
+/// The loop stops on the table's `create_cb == NULL` sentinel, the same
+/// terminator the summary walk uses.
+fn patch_demo_repeatable(lvgl_dir: &Path) {
+    const ANCHOR: &str = "void lv_demo_benchmark(void)\n{\n    scene_act = 0;\n";
+    const RESET: &str = r#"
+    /*oxivgl-sys: without this a second run blends the first run's samples
+     *into its own averages.*/
+    for(uint32_t i = 0; scenes[i].create_cb; i++) {
+        scenes[i].cpu_avg_usage = 0;
+        scenes[i].fps_avg = 0;
+        scenes[i].render_avg_time = 0;
+        scenes[i].flush_avg_time = 0;
+        scenes[i].measurement_cnt = 0;
+    }
+"#;
+    let file = lvgl_dir.join("demos/benchmark/lv_demo_benchmark.c");
+    let Ok(code) = fs::read_to_string(&file) else {
+        return;
+    };
+    if !code.contains(ANCHOR) || code.contains("scenes[i].measurement_cnt = 0;") {
+        return;
+    }
+    let patched = code.replacen(ANCHOR, &format!("{ANCHOR}{RESET}"), 1);
+    fs::write(&file, patched).unwrap();
 }
