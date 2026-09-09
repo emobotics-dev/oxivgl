@@ -9,6 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **A failed draw-buffer allocation no longer stalls the render thread.**
+  `lv_draw_layer_alloc_buf` treats a failure as transient — it logs and returns
+  NULL — and `draw_buf_flush` then retries forever, before `disp->flushing` is
+  set, so no flush is ever issued: one refusal hangs rendering with no assert and
+  no panic. `mem::declare_pool_internal()` opts an application into retrying from
+  LVGL's own heap. On an ESP32 running the benchmark that heap held a 33,568 B
+  block, unused for the whole stall, while the Rust heap had 35,080 B free and no
+  contiguous 23,760 B. Opt-in, because declaring it with a PSRAM pool would
+  re-open the DMA hazard the guard exists to prevent.
+
 - **LVGL's log channel is no longer silent on release builds.** The embedded
   `lv_log_register_print_cb` bridge discarded LVGL's level and emitted every
   message as `debug!`, so `log`'s `release_max_level_info` deleted the whole
