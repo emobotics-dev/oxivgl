@@ -16,11 +16,11 @@
 # — and adds oxivgl's host extras (nightly, SDL2, a native libclang). See
 # .forgejo/docker/Dockerfile.
 #
-# Keep the `:v1` tag in lockstep with .forgejo/workflows/{ci,build-ci-image}.yml.
+# Keep this tag in lockstep with .forgejo/workflows/{ci,build-ci-image}.yml.
 # The tag is immutable: when the CI image changes, bump it in all three files in
 # the same commit and never move an existing tag (the runner fleet shares one
 # podman store with forcePull=false, so a moved tag silently goes stale).
-FROM registry:3000/emobotics/oxivgl/oxivgl-ci:v1 AS esp-toolchain
+FROM registry:3000/emobotics/oxivgl/oxivgl-ci:v3 AS esp-toolchain
 
 # Stage 2: the clco base container.
 # Despite the image name this is NOT a Claude Code redistribution — it is the

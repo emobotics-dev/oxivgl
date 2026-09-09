@@ -68,6 +68,28 @@ jobs:
           echo "LIBCLANG_PATH=/usr/lib64" >> "$GITHUB_ENV"
           echo "BINDGEN_EXTRA_CLANG_ARGS=" >> "$GITHUB_ENV"
 
+      - name: Verify the devcontainer uses CI's toolchain image
+        run: |
+          # The devcontainer copies its Xtensa toolchain from this image so a
+          # green local build means something about CI. A stale tag silently
+          # gives the developer a different rustc than CI runs.
+          ci=$(grep -oP 'oxivgl-ci:\Kv[0-9]+' .forgejo/workflows/ci.yml | sort -u)
+          dev=$(grep -oP 'oxivgl-ci:\Kv[0-9]+' .devcontainer/Dockerfile | sort -u)
+          if [ -z "$ci" ] || [ -z "$dev" ]; then
+            echo "Could not read both image tags (ci='$ci' dev='$dev') — fix this check."
+            exit 1
+          fi
+          if [ "$(echo "$ci" | wc -l)" -ne 1 ]; then
+            echo "ci.yml names more than one oxivgl-ci tag:"; echo "$ci"; exit 1
+          fi
+          if [ "$ci" != "$dev" ]; then
+            echo "devcontainer toolchain image is stale:"
+            echo "  .forgejo/workflows/ci.yml  $ci"
+            echo "  .devcontainer/Dockerfile   $dev"
+            exit 1
+          fi
+          echo "devcontainer and CI share oxivgl-ci:$ci"
+
       - name: Verify the m5stack-core pin is not forked
         run: |
           # examples/common is `exclude`d from the workspace, so it cannot
