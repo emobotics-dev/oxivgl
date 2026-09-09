@@ -29,6 +29,14 @@ case "$mode" in
     echo "=== Leak check tests ==="
     SDL_VIDEODRIVER=dummy cargo test --test leak_check --target "$TARGET" -- --test-threads=1 "$@"
     ;;
+  bench)
+    echo "=== Benchmark-demo unit tests (examples/conf-benchmark) ==="
+    # Absolute path: oxivgl-sys resolves a relative one against its own
+    # package dir. Separate target dir to keep the default build's cache.
+    DEP_LV_CONFIG_PATH="$PWD/examples/conf-benchmark" \
+    CARGO_TARGET_DIR="${CARGO_TARGET_DIR:-$PWD/target}/benchmark" \
+      cargo test --lib --target "$TARGET" demo:: "$@"
+    ;;
   all)
     echo "=== Unit tests ==="
     cargo test --lib --target "$TARGET" "$@"
@@ -44,13 +52,19 @@ case "$mode" in
     echo ""
     echo "=== Leak check tests ==="
     SDL_VIDEODRIVER=dummy cargo test --test leak_check --target "$TARGET" -- --test-threads=1 "$@"
+    echo ""
+    echo "=== Benchmark-demo unit tests (examples/conf-benchmark) ==="
+    DEP_LV_CONFIG_PATH="$PWD/examples/conf-benchmark" \
+    CARGO_TARGET_DIR="${CARGO_TARGET_DIR:-$PWD/target}/benchmark" \
+      cargo test --lib --target "$TARGET" demo:: "$@"
     ;;
   *)
-    echo "Usage: $0 [unit|int|pool|leak|all] [-- extra cargo args]"
+    echo "Usage: $0 [unit|int|pool|leak|bench|all] [-- extra cargo args]"
     echo "  unit  — unit tests + doctests"
     echo "  int   — integration tests (headless LVGL)"
     echo "  pool  — LVGL runtime memory pool registration"
     echo "  leak  — memory leak detection tests"
+    echo "  bench — oxivgl::demo tests (needs examples/conf-benchmark)"
     echo "  all   — all of the above (default)"
     exit 1
     ;;
