@@ -8,8 +8,10 @@
 use alloc::boxed::Box;
 use core::cell::UnsafeCell;
 use core::ffi::c_void;
+use core::future::Future;
+use core::sync::atomic::{AtomicBool, AtomicU32, Ordering};
+use core::task::Poll;
 use core::time::Duration;
-use embassy_futures::block_on;
 use embassy_time::{Timer, with_timeout};
 
 use oxivgl_sys::*;
@@ -58,9 +60,15 @@ impl Default for RenderConfig {
 }
 
 impl RenderConfig {
-    /// Target `fps`. Period `1000/fps`; idle cap a quarter of that — refresh
-    /// runs *before* the sleep, so a cap equal to the period would make a
-    /// cycle `period + draw`.
+    /// Target `fps`: LVGL redraw period `1000/fps`, and
+    /// [`max_idle_ms`](Self::max_idle_ms) a quarter of it.
+    ///
+    /// The quarter-period cap matters only to the *combined* loops
+    /// ([`Ui::run`], [`run_app`]), which redraw and then sleep: a cap equal to
+    /// the period would make a cycle cost `period + draw`. The split loops
+    /// ([`Ui::run_events`] and friends) redraw from the executor's idle hook
+    /// and wait on LVGL's absolute due time instead, so the cap does not apply
+    /// to them and does not bound their frame rate.
     pub fn with_target_fps(mut self, fps: u32) -> Self {
         let period = (1000 / fps.max(1)).max(1);
         self.refresh_period_ms = Some(period);
@@ -385,19 +393,62 @@ unsafe extern "C" fn view_event_trampoline<V: View>(e: *mut lv_event_t) {
 // ---------------------------------------------------------------------------
 
 /// Initialised LVGL display. Every LVGL call belongs on the thread that
-/// called [`Self::init`] — not an embassy task.
+/// called [`Self::init`] — the async loops below must be driven by that same
+/// thread's executor, never spawned onto another one.
+///
+/// The type supports two loop shapes:
+///
+/// * **Combined** — [`run`](Self::run) / [`run_nav`](Self::run_nav) (and the
+///   free `run_app*` functions) do the redraw *and* the view polling in one
+///   async task. Correct wherever the flush wait does not block the thread:
+///   the host SDL backend, or a non-blocking `FlushSync` (not linked:
+///   `flush_pipeline` exists only under the `esp-hal` / `rtos-sem` features, so
+///   the link would not resolve on host).
+/// * **Split** — [`run_events`](Self::run_events) and friends only poll views
+///   and sleep; the blocking redraw is [`refresh`](Self::refresh), which the
+///   render thread calls from its executor's idle hook. Use this whenever the
+///   redraw blocks the thread — a blocking `FlushSync`, `waiti`-parking, or a
+///   scan-out panel whose frame wait is a vblank — because a blocking step
+///   inside an async task stalls every other task on that executor.
 ///
 /// ```ignore
+/// // Split loop: the executor's idle hook owns the blocking redraw.
 /// let ui = make_static!(Ui::init(W, H, Buffers::full(a, b, FRAME_BYTES)));
-/// let view = make_static!(MyView::default());
-/// ui.bind(view, &RenderConfig::default().with_target_fps(60)).unwrap();
-/// loop { let _ = ui.timer_handler(); }
+/// let exec = make_static!(Executor::new());
+/// exec.run_with_callbacks(
+///     |s| s.must_spawn(render_task(ui)),   // awaits `ui.run_events(view, cfg)`
+///     UiHooks(ui),                         // `on_idle` calls `ui.refresh()`
+/// )
 /// ```
 #[derive(Debug)]
 pub struct Ui {
     driver: LvglDriver,
-    /// DIRECT: refresh already blocked on vblank; skip the extra park.
+    /// DIRECT scan-out: [`Ui::refresh`] waits for the frame to reach the panel,
+    /// so that wait — not a timer — paces the combined loop.
     present_blocks: bool,
+    /// Delay (ms) LVGL asked for after the last redraw. Written by
+    /// [`Ui::timer_handler`] on the render thread, read by the async loops.
+    /// An atomic rather than a `Cell` because the executor's idle hook and the
+    /// async task hold separate borrows of the same `&Ui`.
+    next_delay_ms: AtomicU32,
+    /// Absolute time LVGL asked to be called again, as milliseconds since boot
+    /// truncated to 32 bits.
+    ///
+    /// This, not [`Self::next_delay_ms`], is what the split loops sleep on. The
+    /// idle hook runs *after* the async task has already armed its timer, so a
+    /// duration published there is always one cycle stale — and a stale
+    /// duration re-times the sleep from the wrong origin, quantising LVGL's
+    /// redraw onto the wake grid. A stale *deadline* is still the right one.
+    ///
+    /// 32-bit because ESP32 is a 32-bit target with no `AtomicU64`. It wraps
+    /// every ~49.7 days; [`Self::next_wake`] compares with wrapping arithmetic,
+    /// which is exact for any interval under ~24.8 days and so cannot be
+    /// reached by a frame deadline.
+    next_due_ms: AtomicU32,
+    /// Set once [`Ui::wait_ready`] has observed the display driver coming up.
+    /// [`Ui::refresh`] is inert until then, so an idle hook installed before
+    /// the flush path exists cannot drive LVGL into it.
+    ready: AtomicBool,
 }
 
 impl Ui {
@@ -414,25 +465,77 @@ impl Ui {
         Self {
             driver,
             present_blocks,
+            // Before the first redraw there is no LVGL-supplied pace; 1 ms
+            // makes the first async sleep short so the UI comes up promptly.
+            next_delay_ms: AtomicU32::new(1),
+            next_due_ms: AtomicU32::new(0),
+            ready: AtomicBool::new(false),
         }
     }
 
     /// Wait until the display driver reports ready — on ESP32 that is the flush
     /// task starting, on host it is immediate.
+    ///
+    /// Arms [`refresh`](Self::refresh): before this resolves, `refresh` does
+    /// nothing, so an idle hook cannot run LVGL before the flush path exists.
     pub async fn wait_ready(&self) {
         DISPLAY_READY.wait().await;
+        self.ready.store(true, Ordering::Release);
     }
 
-    /// One LVGL tick. Returns recommended delay until the next call (ms).
-    /// Blocks on scan-out (vblank). Render thread only.
+    /// One LVGL tick, without the scan-out frame wait. Returns the delay (ms)
+    /// LVGL recommends before the next call and publishes it for the async
+    /// loops. Render thread only.
+    ///
+    /// [`refresh`](Self::refresh) is what a render loop should call — it adds
+    /// the scan-out wait and honours the display-ready gate.
     pub fn timer_handler(&self) -> u32 {
-        self.driver.timer_handler()
+        let delay = self.driver.timer_handler();
+        self.next_delay_ms.store(delay, Ordering::Relaxed);
+        let due_ms = due_after(embassy_time::Instant::now().as_millis() as u32, delay);
+        self.next_due_ms.store(due_ms, Ordering::Relaxed);
+        delay
     }
 
-    /// Create the view. [`DISPLAY_READY`] must already have been signalled
-    /// (`Buffers::full` does that in [`init`](Self::init)).
-    pub fn bind<V: View>(&self, view: &mut V, cfg: &RenderConfig) -> Result<(), ()> {
-        self.bind_view(view, cfg)
+    /// The blocking LVGL refresh step: one [`timer_handler`](Self::timer_handler)
+    /// tick plus, on a scan-out display, the wait for that frame to reach the
+    /// panel. Returns the delay (ms) LVGL recommends before the next call.
+    ///
+    /// **Render thread only, and never from an async task** — it blocks for the
+    /// whole draw and flush. In a split loop this belongs in the executor's
+    /// idle hook, which runs exactly when the executor would otherwise sleep;
+    /// see the [type documentation](Self).
+    ///
+    /// Does nothing and reports the previous delay until
+    /// [`wait_ready`](Self::wait_ready) has resolved.
+    pub fn refresh(&self) -> u32 {
+        if !self.ready.load(Ordering::Acquire) {
+            return self.next_delay_ms.load(Ordering::Relaxed);
+        }
+        let delay = self.timer_handler();
+        if self.present_blocks {
+            crate::scanout::wait_presented();
+        }
+        delay
+    }
+
+    /// Apply `cfg`'s redraw period and create `view` on the active screen.
+    ///
+    /// [`DISPLAY_READY`] must already have been signalled — await
+    /// [`wait_ready`](Self::wait_ready) first (`Buffers::full` signals it in
+    /// [`init`](Self::init)). Returns the error from [`View::create`] verbatim
+    /// so the caller can report it.
+    pub fn bind<V: View>(&self, view: &mut V, cfg: &RenderConfig) -> Result<(), WidgetError> {
+        self.apply(cfg);
+        let screen_handle = unsafe { lv_screen_active() };
+        assert!(
+            !screen_handle.is_null(),
+            "no active screen after display init"
+        );
+        let container = Obj::from_raw_non_owning(screen_handle);
+        view.create(&container)?;
+        register_view_events(view, &container);
+        Ok(())
     }
 
     /// Apply a [`RenderConfig`]'s redraw period, if it sets one.
@@ -444,64 +547,269 @@ impl Ui {
         }
     }
 
-    /// [`bind`](Self::bind), then loop refresh. Render thread; never returns.
-    /// DIRECT skips the post-refresh park (vblank was the wait).
-    pub fn run<V: View>(self, mut view: V, cfg: RenderConfig) -> ! {
-        block_on(self.wait_ready());
+    /// Combined loop: [`bind`](Self::bind), then redraw and poll `view` in one
+    /// async task. Never returns.
+    ///
+    /// Drives [`refresh`](Self::refresh) itself, so use it only where that does
+    /// not block the thread — the host backend or a non-blocking flush. On a
+    /// blocking flush or a scan-out panel use [`run_events`](Self::run_events)
+    /// plus an idle-hook `refresh` instead.
+    pub async fn run<V: View>(self, mut view: V, cfg: RenderConfig) -> ! {
+        self.wait_ready().await;
         info!("Display ready");
-        if self.bind_view(&mut view, &cfg).is_err() {
-            loop {
-                block_on(Timer::after(embassy_time::Duration::from_secs(60)));
-            }
+        if self.bind_failed(&mut view, &cfg) {
+            park().await
         }
 
         let update_period = embassy_time::Duration::from_millis(cfg.update_period_ms);
         let mut next_update = embassy_time::Instant::now();
         loop {
-            poll_update(&mut view, update_period, &mut next_update);
-            self.idle(&cfg);
+            poll_update(
+                &mut view,
+                embassy_time::Instant::now(),
+                update_period,
+                &mut next_update,
+            );
+            let delay = self.refresh();
+            self.pace(delay, &cfg).await;
         }
     }
 
-    /// [`Navigator`](crate::navigator::Navigator) loop. Render thread; never returns.
-    pub fn run_nav(self, initial: impl View, cfg: RenderConfig) -> ! {
-        run_app_nav_inner(self, cfg, initial, None, None, false, no_wake)
+    /// Combined [`Navigator`](crate::navigator::Navigator) loop — [`run`](Self::run)
+    /// with push/pop/replace/modal transitions. Never returns.
+    pub async fn run_nav(self, initial: impl View, cfg: RenderConfig) -> ! {
+        run_app_nav_inner(&self, cfg, initial, None, None, false, true, no_wake).await
     }
 
-    /// Create the view on the active screen. `Err` if widget create failed
-    /// (caller parks).
-    fn bind_view<V: View>(&self, view: &mut V, cfg: &RenderConfig) -> Result<(), ()> {
-        self.apply(cfg);
-        let screen_handle = unsafe { lv_screen_active() };
-        assert!(
-            !screen_handle.is_null(),
-            "no active screen after display init"
-        );
-        let container = Obj::from_raw_non_owning(screen_handle);
-        if let Err(e) = view.create(&container) {
-            warn!("Could not create LVGL widgets: {:?}, disabling UI", e);
-            return Err(());
+    /// Split loop: [`bind`](Self::bind), then poll `view` and sleep. Never
+    /// returns and never draws — the render thread's executor must call
+    /// [`refresh`](Self::refresh) from its idle hook.
+    ///
+    /// It sleeps until the earlier of LVGL's own next due time and the next
+    /// [`View::update`] — both absolute instants, so LVGL keeps setting the
+    /// pace — a duration would be a cycle stale. Sleeping is what makes the
+    /// executor idle, which is what runs the hook — so an implementation that
+    /// never awaits here would stop the display.
+    pub async fn run_events<V: View>(&'static self, mut view: V, cfg: RenderConfig) -> ! {
+        self.wait_ready().await;
+        info!("Display ready");
+        if self.bind_failed(&mut view, &cfg) {
+            park().await
         }
-        register_view_events(view, &container);
-        Ok(())
+
+        let update_period = embassy_time::Duration::from_millis(cfg.update_period_ms);
+        let mut next_update = embassy_time::Instant::now();
+        loop {
+            poll_update(
+                &mut view,
+                embassy_time::Instant::now(),
+                update_period,
+                &mut next_update,
+            );
+            Timer::at(self.next_wake(next_update)).await;
+        }
     }
 
-    fn idle(&self, cfg: &RenderConfig) {
-        let delay = (self.driver.timer_handler() as u64).clamp(1, cfg.max_idle_ms);
-        if !self.present_blocks {
-            block_on(Timer::after(embassy_time::Duration::from_millis(delay)));
+    /// Split [`Navigator`](crate::navigator::Navigator) loop — [`run_events`](Self::run_events)
+    /// with push/pop/replace/modal transitions. Never returns and never draws;
+    /// pair it with an idle-hook [`refresh`](Self::refresh).
+    pub async fn run_events_nav(&'static self, initial: impl View, cfg: RenderConfig) -> ! {
+        run_app_nav_inner(self, cfg, initial, None, None, false, false, no_wake).await
+    }
+
+    /// [`run_events_nav`](Self::run_events_nav) with an **encoder** input
+    /// device, event-driven and poll-free.
+    ///
+    /// The device is created in EVENT mode and each sleep is raced against
+    /// [`EncoderState::wait`](crate::indev::EncoderState::wait), so a decoded
+    /// turn/click reaches LVGL as soon as the render thread is scheduled — no
+    /// read-timer latency. `encoder` must be `'static`. Never returns and never
+    /// draws; pair it with an idle-hook [`refresh`](Self::refresh).
+    pub async fn run_events_nav_encoder(
+        &'static self,
+        initial: impl View,
+        encoder: &'static crate::indev::EncoderState,
+        cfg: RenderConfig,
+    ) -> ! {
+        run_app_nav_inner(
+            self,
+            cfg,
+            initial,
+            None,
+            Some(encoder),
+            true,
+            false,
+            || encoder.wait(),
+        )
+        .await
+    }
+
+    /// [`bind`](Self::bind), reporting failure as a `bool` and disarming
+    /// [`refresh`](Self::refresh) so a half-built screen is not drawn forever.
+    fn bind_failed<V: View>(&self, view: &mut V, cfg: &RenderConfig) -> bool {
+        match self.bind(view, cfg) {
+            Ok(()) => false,
+            Err(e) => {
+                warn!("Could not create LVGL widgets: {:?}, disabling UI", e);
+                self.ready.store(false, Ordering::Release);
+                true
+            }
+        }
+    }
+
+    /// When the split loop should wake next: the earlier of LVGL's own due
+    /// time and the next [`View::update`] poll.
+    ///
+    /// Both are absolute, which is the point. The idle hook redraws *after* the
+    /// task has armed its timer, so any duration it publishes is a cycle stale;
+    /// sleeping on a stale duration re-times from the wrong origin and pins the
+    /// redraw to the wake grid instead of to LVGL's schedule — 32 ms of work
+    /// landing on an 8 ms grid costs ~4 ms a frame on average and up to 8 ms.
+    /// An instant does not decay, so a cycle-old value is still correct.
+    ///
+    /// [`RenderConfig::max_idle_ms`] is deliberately *not* applied here. It
+    /// exists to stop the combined loop sleeping a whole period before a redraw
+    /// it has not run yet; the split loop redraws from the idle hook and needs
+    /// no such floor, and imposing one only adds wakeups that find nothing due.
+    fn next_wake(&self, next_update: embassy_time::Instant) -> embassy_time::Instant {
+        let now = embassy_time::Instant::now();
+        // Wrapping difference, read as signed: <= 0 means the deadline passed.
+        // Exact across the 32-bit wrap for any interval under ~24.8 days.
+        let remaining = self
+            .next_due_ms
+            .load(Ordering::Relaxed)
+            .wrapping_sub(now.as_millis() as u32) as i32;
+        let due = if remaining <= 0 {
+            now
+        } else {
+            now + embassy_time::Duration::from_millis(remaining as u64)
+        };
+        earliest_wake(due, next_update, now)
+    }
+
+    /// Inter-frame wait for the combined loop.
+    ///
+    /// On a scan-out display [`refresh`](Self::refresh) already blocked until
+    /// the frame reached the panel, so the frame is paced and a sleep on top
+    /// would only cost frame rate; yield instead, so co-tasks still run.
+    async fn pace(&self, delay_ms: u32, cfg: &RenderConfig) {
+        if self.present_blocks {
+            yield_now().await;
+        } else {
+            let ms = (delay_ms as u64).min(cfg.max_idle_ms).max(1);
+            Timer::after(embassy_time::Duration::from_millis(ms)).await;
         }
     }
 }
 
+/// Stop driving the UI without returning: the caller's contract is `-> !`, and
+/// a tight loop would starve every other task on the executor.
+async fn park() -> ! {
+    loop {
+        Timer::after(embassy_time::Duration::from_secs(60)).await;
+    }
+}
+
+/// Hand the executor one turn, then continue. Used where the frame is already
+/// paced by something other than a timer, so the loop must add no delay but
+/// still must not monopolise the executor.
+async fn yield_now() {
+    let mut yielded = false;
+    core::future::poll_fn(|cx| {
+        if yielded {
+            Poll::Ready(())
+        } else {
+            yielded = true;
+            cx.waker().wake_by_ref();
+            Poll::Pending
+        }
+    })
+    .await
+}
+
+/// Wait up to `budget_ms` for `wake`, reporting whether it fired.
+///
+/// `budget_ms == 0` polls `wake` exactly once and yields — the scan-out case,
+/// where the frame is already paced by the panel and any sleep would cost
+/// frame rate, but input must still be picked up.
+async fn wait_wake(budget_ms: u64, wake: impl Future<Output = ()>) -> bool {
+    if budget_ms == 0 {
+        let mut wake = core::pin::pin!(wake);
+        let fired =
+            core::future::poll_fn(|cx| Poll::Ready(wake.as_mut().poll(cx).is_ready())).await;
+        yield_now().await;
+        fired
+    } else {
+        with_timeout(embassy_time::Duration::from_millis(budget_ms), wake)
+            .await
+            .is_ok()
+    }
+}
+
+/// The earlier of LVGL's due time and the next [`View::update`], floored one
+/// millisecond ahead of `now`.
+///
+/// Split out from [`Ui::next_wake`] so the arithmetic is a pure function of the
+/// clock and can be tested on host without an initialised display.
+///
+/// The floor is load-bearing: a deadline already in the past makes `Timer::at`
+/// return immediately, the executor never parks, and the idle hook — which is
+/// where the redraw lives — never runs.
+fn earliest_wake(
+    due: embassy_time::Instant,
+    next_update: embassy_time::Instant,
+    now: embassy_time::Instant,
+) -> embassy_time::Instant {
+    due.min(next_update)
+        .max(now + embassy_time::Duration::from_millis(1))
+}
+
+/// `lv_timer_handler`'s "no timer is ready" sentinel — not a delay.
+///
+/// LVGL returns `LV_NO_TIMER_READY` (`0xFFFFFFFF`) when it has nothing pending
+/// at all, which is a common steady state for a UI whose widgets only change
+/// when the application writes to them.
+const LV_NO_TIMER_READY: u32 = u32::MAX;
+
+/// Longest we will let the split loop sleep when LVGL has nothing pending.
+///
+/// A cap rather than "sleep forever": the deadline is only ever one half of
+/// [`earliest_wake`], so `next_update` and an input wake still cut it short,
+/// and a bounded value keeps a missed invalidation costing one period rather
+/// than a stopped display.
+const NO_TIMER_SLEEP_MS: u32 = LV_DEF_REFR_PERIOD;
+
+/// Absolute due time (ms, wrapping) from LVGL's reported delay.
+///
+/// Pure function of the clock so it is testable on host without an initialised
+/// display, like [`earliest_wake`].
+///
+/// The sentinel is why this is not a bare `wrapping_add`. `now + 0xFFFFFFFF`
+/// wraps to `now - 1`: a deadline in the PAST. [`earliest_wake`] then floors it
+/// to `now + 1 ms`, so the split loop treats "LVGL has nothing to do" as "due
+/// immediately" and re-enters `lv_timer_handler` about a thousand times a
+/// second instead of sleeping — the exact opposite of what the sentinel means.
+/// The combined loop never saw this because it clamps with
+/// `delay.min(cfg.max_idle_ms)`.
+fn due_after(now_ms: u32, delay: u32) -> u32 {
+    let delay = if delay == LV_NO_TIMER_READY { NO_TIMER_SLEEP_MS } else { delay };
+    now_ms.wrapping_add(delay)
+}
+
+/// Poll `view` if `now` has reached `next_update`, and rearm `next_update`.
+///
+/// `now` is passed in rather than read here so the cadence logic is a pure
+/// function of the clock — that is what the unit tests exercise.
 fn poll_update<V: View>(
     view: &mut V,
+    now: embassy_time::Instant,
     update_period: embassy_time::Duration,
     next_update: &mut embassy_time::Instant,
 ) {
-    if embassy_time::Instant::now() >= *next_update {
-        // Resync rather than chase a backlog if a slow frame overran.
-        *next_update = embassy_time::Instant::now() + update_period;
+    if now >= *next_update {
+        // Resync rather than chase a backlog if a slow frame overran: the next
+        // deadline is one period from *now*, not from the deadline just missed.
+        *next_update = now + update_period;
         let action = view.update().unwrap_or_else(|e| {
             warn!("Failed to update widgets: {:?}", e);
             NavAction::None
@@ -516,15 +824,26 @@ fn poll_update<V: View>(
     }
 }
 
-/// [`Ui::init`] + [`Ui::run`] with default [`RenderConfig`]. Render thread.
-pub fn run_app<V: View, const BYTES: usize>(
+/// [`Ui::init`] + [`Ui::run`] with the default [`RenderConfig`] — the combined
+/// loop, redraw and view polling in one async task. Never returns.
+///
+/// Await this on the render thread's own executor. It drives
+/// [`Ui::refresh`] inline, so it is right where the flush wait does not block
+/// the thread (host, non-blocking pipelines) and wrong where it does: on a
+/// blocking `FlushSync` (not linked: `flush_pipeline` exists only under the
+/// `esp-hal` / `rtos-sem` features, so the link would not resolve on host) or a
+/// scan-out panel, use [`Ui::run_events`] and call [`Ui::refresh`] from the
+/// executor's idle hook instead.
+pub async fn run_app<V: View, const BYTES: usize>(
     w: i32,
     h: i32,
     bufs: &'static mut LvglBuffers<BYTES>,
     view: V,
 ) -> ! {
-    info!("UI render thread started");
-    Ui::init(w, h, Buffers::partial(bufs)).run(view, RenderConfig::default())
+    info!("UI render loop started");
+    Ui::init(w, h, Buffers::partial(bufs))
+        .run(view, RenderConfig::default())
+        .await
 }
 
 /// Run the LVGL render loop with navigation support.
@@ -534,21 +853,27 @@ pub fn run_app<V: View, const BYTES: usize>(
 /// Use this for multi-screen applications that need push/pop/replace/modal.
 ///
 /// `initial` is the root view. Never returns.
-pub fn run_app_nav<const BYTES: usize>(
+///
+/// Combined loop, like [`run_app`] — see there for when to use [`Ui::run_events_nav`]
+/// instead.
+pub async fn run_app_nav<const BYTES: usize>(
     w: i32,
     h: i32,
     bufs: &'static mut LvglBuffers<BYTES>,
     initial: impl View,
 ) -> ! {
+    let ui = Ui::init(w, h, Buffers::partial(bufs));
     run_app_nav_inner(
-        Ui::init(w, h, Buffers::partial(bufs)),
+        &ui,
         RenderConfig::default(),
         initial,
         None,
         None,
         false,
+        true,
         no_wake,
     )
+    .await
 }
 
 /// Like [`run_app_nav`], but also registers a **TIMER-mode** keypad input
@@ -567,22 +892,28 @@ pub fn run_app_nav<const BYTES: usize>(
 /// use [`run_app_nav_keypad_events`] instead.
 ///
 /// `keypad` must be `'static` (typically a `static KeypadState`). Never returns.
-pub fn run_app_nav_keypad<const BYTES: usize>(
+///
+/// Combined loop, like [`run_app`] — see there for when to use [`Ui::run_events_nav`]
+/// instead.
+pub async fn run_app_nav_keypad<const BYTES: usize>(
     w: i32,
     h: i32,
     bufs: &'static mut LvglBuffers<BYTES>,
     initial: impl View,
     keypad: &'static crate::indev::KeypadState,
 ) -> ! {
+    let ui = Ui::init(w, h, Buffers::partial(bufs));
     run_app_nav_inner(
-        Ui::init(w, h, Buffers::partial(bufs)),
+        &ui,
         RenderConfig::default(),
         initial,
         Some(keypad),
         None,
         false,
+        true,
         no_wake,
     )
+    .await
 }
 
 /// Like [`run_app_nav_keypad`], but **event-driven and poll-free**.
@@ -595,7 +926,10 @@ pub fn run_app_nav_keypad<const BYTES: usize>(
 ///
 /// `wake` is called fresh each tick to produce a future to race; supply your
 /// input signal, e.g. `|| async { WAKE.wait().await }`. Never returns.
-pub fn run_app_nav_keypad_events<const BYTES: usize, Fut>(
+///
+/// Combined loop, like [`run_app`] — see there for when to use [`Ui::run_events_nav`]
+/// instead.
+pub async fn run_app_nav_keypad_events<const BYTES: usize, Fut>(
     w: i32,
     h: i32,
     bufs: &'static mut LvglBuffers<BYTES>,
@@ -604,17 +938,20 @@ pub fn run_app_nav_keypad_events<const BYTES: usize, Fut>(
     wake: impl Fn() -> Fut,
 ) -> !
 where
-    Fut: core::future::Future<Output = ()>,
+    Fut: Future<Output = ()>,
 {
+    let ui = Ui::init(w, h, Buffers::partial(bufs));
     run_app_nav_inner(
-        Ui::init(w, h, Buffers::partial(bufs)),
+        &ui,
         RenderConfig::default(),
         initial,
         Some(keypad),
         None,
         true,
+        true,
         wake,
     )
+    .await
 }
 
 /// Like [`run_app_nav`], but also registers an encoder input device driven by
@@ -636,22 +973,28 @@ where
 /// signal to wire.
 ///
 /// `encoder` must be `'static` (typically a `static EncoderState`). Never returns.
-pub fn run_app_nav_encoder<const BYTES: usize>(
+///
+/// Combined loop, like [`run_app`] — see there for when to use
+/// [`Ui::run_events_nav_encoder`] instead.
+pub async fn run_app_nav_encoder<const BYTES: usize>(
     w: i32,
     h: i32,
     bufs: &'static mut LvglBuffers<BYTES>,
     initial: impl View,
     encoder: &'static crate::indev::EncoderState,
 ) -> ! {
+    let ui = Ui::init(w, h, Buffers::partial(bufs));
     run_app_nav_inner(
-        Ui::init(w, h, Buffers::partial(bufs)),
+        &ui,
         RenderConfig::default(),
         initial,
         None,
         Some(encoder),
         true,
+        true,
         || encoder.wait(),
     )
+    .await
 }
 
 /// No-wake closure for the timer-only loops: a future that never resolves, so
@@ -665,20 +1008,25 @@ fn no_wake() -> core::future::Pending<()> {
 /// `event_mode` selects EVENT mode for the keypad (read only on `wake`) vs
 /// TIMER mode (LVGL polls). `wake` is raced against each inter-tick sleep; when
 /// it resolves the loop reads the keypad and runs `update()` immediately.
-fn run_app_nav_inner<Fut>(
-    ui: Ui,
+///
+/// `drive_refresh` picks the loop shape: `true` is the combined loop, which
+/// calls [`Ui::refresh`] itself; `false` is the split loop, which only reads
+/// the delay `refresh` published from the render thread's idle hook.
+async fn run_app_nav_inner<Fut>(
+    ui: &Ui,
     cfg: RenderConfig,
     initial: impl View,
     keypad: Option<&'static crate::indev::KeypadState>,
     encoder: Option<&'static crate::indev::EncoderState>,
     event_mode: bool,
+    drive_refresh: bool,
     wake: impl Fn() -> Fut,
 ) -> !
 where
-    Fut: core::future::Future<Output = ()>,
+    Fut: Future<Output = ()>,
 {
-    info!("UI render thread started (navigator)");
-    block_on(ui.wait_ready());
+    info!("UI render loop started (navigator)");
+    ui.wait_ready().await;
     info!("Display ready");
     ui.apply(&cfg);
 
@@ -726,23 +1074,39 @@ where
         // for up to a full update period before the view sees it.
         let mut poll_now = embassy_time::Instant::now() >= next_update;
 
-        let delay = ui.timer_handler() as u64;
-        if !ui.present_blocks {
-            match block_on(with_timeout(
-                embassy_time::Duration::from_millis(delay.clamp(1, cfg.max_idle_ms)),
-                wake(),
-            )) {
-                Ok(()) => {
-                    if let Some(kp) = &keypad_dev {
-                        kp.read();
-                    }
-                    if let Some(enc) = &encoder_dev {
-                        enc.read();
-                    }
-                    poll_now = true;
-                }
-                Err(_timeout) => {} // normal tick
+        // Frame pacing. The combined loop redraws here and then sleeps, so its
+        // wait is capped by `max_idle_ms` to stop a whole period elapsing
+        // before the next redraw. The split loop redraws from the idle hook
+        // and instead waits until LVGL's own absolute due time — see
+        // [`Ui::next_wake`] for why a duration would be a cycle stale.
+        let budget = if drive_refresh {
+            let delay = ui.refresh() as u64;
+            // A scan-out redraw already waited for the panel, so a sleep on top
+            // would only cost frame rate — poll input without one (budget 0).
+            if ui.present_blocks {
+                0
+            } else {
+                delay.min(cfg.max_idle_ms).max(1)
             }
+        } else {
+            let wake_at = ui.next_wake(next_update);
+            wake_at
+                .saturating_duration_since(embassy_time::Instant::now())
+                .as_millis()
+                .max(1)
+        };
+
+        // Input is read on every buffer kind: whether the present blocks is a
+        // property of the *frame wait*, and must not decide whether a keypress
+        // is ever seen.
+        if wait_wake(budget, wake()).await {
+            if let Some(kp) = &keypad_dev {
+                kp.read();
+            }
+            if let Some(enc) = &encoder_dev {
+                enc.read();
+            }
+            poll_now = true;
         }
 
         if !poll_now {
@@ -787,5 +1151,219 @@ where
 
         // Auto-dismiss expired toasts; self-heal if the slot was orphaned.
         nav.tick_toast();
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use embassy_time::{Duration as TimeDuration, Instant};
+
+    /// Counts `update()` calls so the cadence logic can be observed directly.
+    /// `create` is never reached — these tests drive `poll_update`, not LVGL.
+    struct CountingView {
+        updates: u32,
+    }
+
+    impl View for CountingView {
+        fn create(&mut self, _container: &Obj<'static>) -> Result<(), WidgetError> {
+            Ok(())
+        }
+
+        fn update(&mut self) -> Result<NavAction, WidgetError> {
+            self.updates += 1;
+            Ok(NavAction::None)
+        }
+    }
+
+    // -- RenderConfig::with_target_fps -------------------------------------
+
+    #[test]
+    fn wake_lands_on_lvgl_due_time_not_a_grid() {
+        // The regression this guards: pacing used to sleep a *duration*
+        // published by the previous redraw and capped at `max_idle_ms`
+        // (LV_DEF_REFR_PERIOD / 4 = 8 ms), so a 32 ms LVGL period could only
+        // land on an 8 ms grid — up to 8 ms late every frame, which showed up
+        // as 24-26 fps against a 31 fps ceiling. An absolute deadline must be
+        // returned exactly, never rounded up to a cap.
+        let now = Instant::from_millis(1_000);
+        let due = now + TimeDuration::from_millis(32);
+        let next_update = now + TimeDuration::from_millis(32);
+        assert_eq!(earliest_wake(due, next_update, now), due);
+
+        // And a due time inside the old cap is honoured exactly, not floored
+        // to it.
+        let soon = now + TimeDuration::from_millis(3);
+        assert_eq!(earliest_wake(soon, next_update, now), soon);
+    }
+
+    #[test]
+    fn wake_takes_the_earlier_of_redraw_and_update() {
+        let now = Instant::from_millis(5_000);
+        let due = now + TimeDuration::from_millis(30);
+        let next_update = now + TimeDuration::from_millis(10);
+        assert_eq!(earliest_wake(due, next_update, now), next_update);
+        assert_eq!(earliest_wake(next_update, due, now), next_update);
+    }
+
+    #[test]
+    fn no_timer_ready_is_a_sentinel_not_a_delay() {
+        // The regression this guards. `lv_timer_handler` returns
+        // LV_NO_TIMER_READY (0xFFFFFFFF) when nothing is pending. Adding that
+        // to `now` wraps to `now - 1` — a deadline in the PAST — and
+        // `earliest_wake` floors a past deadline to `now + 1 ms`. The split
+        // loop would then wake, find nothing due, and call `lv_timer_handler`
+        // again ~1000x/s: a busy loop produced by LVGL saying "idle".
+        let now_ms: u32 = 100_000;
+
+        // What a bare wrapping_add would have produced.
+        assert_eq!(now_ms.wrapping_add(LV_NO_TIMER_READY), now_ms - 1);
+
+        // What we produce instead: a real, future deadline.
+        let due = due_after(now_ms, LV_NO_TIMER_READY);
+        assert_eq!(due, now_ms + NO_TIMER_SLEEP_MS);
+        assert!(
+            (due.wrapping_sub(now_ms) as i32) > 0,
+            "deadline {due} must be in the future relative to {now_ms}"
+        );
+    }
+
+    #[test]
+    fn ordinary_delays_are_passed_through_and_wrap_exactly() {
+        // A real delay must not be perturbed by the sentinel handling...
+        assert_eq!(due_after(1_000, 32), 1_032);
+        assert_eq!(due_after(1_000, 0), 1_000);
+
+        // ...and the 32-bit wrap stays exact across the boundary, which is the
+        // property the signed-difference comparison in `next_wake` relies on.
+        let near_wrap = u32::MAX - 10;
+        assert_eq!(due_after(near_wrap, 32), 21);
+        assert_eq!(due_after(near_wrap, 32).wrapping_sub(near_wrap), 32);
+    }
+
+    #[test]
+    fn wake_never_returns_the_past() {
+        // A deadline in the past would make `Timer::at` return at once, so the
+        // executor would never park and the idle hook — the redraw — would
+        // never run. That is a stopped display, not a fast one.
+        let now = Instant::from_millis(9_000);
+        let stale = Instant::from_millis(1);
+        let got = earliest_wake(stale, stale, now);
+        assert!(got > now, "wake {got:?} must be strictly after now {now:?}");
+        assert_eq!(got, now + TimeDuration::from_millis(1));
+    }
+
+    #[test]
+    fn target_fps_sets_period_and_quarter_cap() {
+        let cfg = RenderConfig::default().with_target_fps(60);
+        assert_eq!(cfg.refresh_period_ms, Some(16));
+        assert_eq!(cfg.max_idle_ms, 4);
+
+        let cfg = RenderConfig::default().with_target_fps(30);
+        assert_eq!(cfg.refresh_period_ms, Some(33));
+        assert_eq!(cfg.max_idle_ms, 8);
+    }
+
+    #[test]
+    fn target_fps_leaves_the_update_period_alone() {
+        // The view poll rate is deliberately independent of the draw rate.
+        let default_update = RenderConfig::default().update_period_ms;
+        let cfg = RenderConfig::default().with_target_fps(120);
+        assert_eq!(cfg.update_period_ms, default_update);
+    }
+
+    #[test]
+    fn target_fps_zero_does_not_divide_by_zero() {
+        let cfg = RenderConfig::default().with_target_fps(0);
+        // fps is floored at 1, so this is the one-frame-per-second period.
+        assert_eq!(cfg.refresh_period_ms, Some(1000));
+        assert_eq!(cfg.max_idle_ms, 250);
+    }
+
+    #[test]
+    fn target_fps_above_1000_clamps_period_and_cap_to_one() {
+        // 1000/2000 truncates to 0; a zero period would make LVGL's refresh
+        // timer fire without bound and a zero cap would busy-spin the loop.
+        let cfg = RenderConfig::default().with_target_fps(2000);
+        assert_eq!(cfg.refresh_period_ms, Some(1));
+        assert_eq!(cfg.max_idle_ms, 1);
+    }
+
+    #[test]
+    fn target_fps_cap_never_exceeds_the_period() {
+        // The cap bounds a sleep that happens *after* the refresh, so a cap
+        // larger than the period would stretch every cycle past its budget.
+        for fps in [1u32, 15, 24, 30, 50, 60, 90, 120, 144, 240, 1000, 5000] {
+            let cfg = RenderConfig::default().with_target_fps(fps);
+            let period = cfg
+                .refresh_period_ms
+                .expect("with_target_fps always sets a period");
+            assert!(period >= 1, "fps {fps}: period {period} must be positive");
+            assert!(
+                cfg.max_idle_ms >= 1,
+                "fps {fps}: cap {} must be positive",
+                cfg.max_idle_ms
+            );
+            assert!(
+                cfg.max_idle_ms <= period as u64,
+                "fps {fps}: cap {} exceeds period {period}",
+                cfg.max_idle_ms
+            );
+        }
+    }
+
+    // -- poll_update -------------------------------------------------------
+
+    #[test]
+    fn poll_update_skips_before_the_deadline() {
+        let mut view = CountingView { updates: 0 };
+        let period = TimeDuration::from_millis(10);
+        let start = Instant::from_millis(1_000);
+        let mut next = start + period;
+
+        poll_update(&mut view, start, period, &mut next);
+
+        assert_eq!(view.updates, 0);
+        assert_eq!(next, start + period, "deadline must not move early");
+    }
+
+    #[test]
+    fn poll_update_runs_on_the_deadline_and_rearms() {
+        let mut view = CountingView { updates: 0 };
+        let period = TimeDuration::from_millis(10);
+        let due = Instant::from_millis(1_000);
+        let mut next = due;
+
+        poll_update(&mut view, due, period, &mut next);
+
+        assert_eq!(view.updates, 1);
+        assert_eq!(next, due + period);
+    }
+
+    #[test]
+    fn poll_update_resyncs_instead_of_chasing_a_backlog() {
+        let mut view = CountingView { updates: 0 };
+        let period = TimeDuration::from_millis(10);
+        let due = Instant::from_millis(1_000);
+        let mut next = due;
+
+        // A slow frame overran by ten periods.
+        let late = due + TimeDuration::from_millis(100);
+        poll_update(&mut view, late, period, &mut next);
+
+        // One update, not one per missed period, and the next deadline is a
+        // period from *now* — `next += period` would have left it in the past.
+        assert_eq!(view.updates, 1);
+        assert_eq!(next, late + period);
+
+        // Proof that no backlog was queued: a poll half a period later is a
+        // no-op. With a chasing deadline it would fire again immediately.
+        let soon = late + TimeDuration::from_millis(5);
+        poll_update(&mut view, soon, period, &mut next);
+        assert_eq!(view.updates, 1);
+
+        // ...and the poll after the new deadline does fire.
+        poll_update(&mut view, late + period, period, &mut next);
+        assert_eq!(view.updates, 2);
     }
 }

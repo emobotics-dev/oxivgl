@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **Split render loop spun instead of sleeping whenever LVGL was idle.**
+  `lv_timer_handler` returns `LV_NO_TIMER_READY` (`0xFFFFFFFF`) when no timer is
+  pending — a sentinel, not a delay. `Ui::timer_handler` added it straight to
+  the clock, which wraps to `now - 1`: a deadline in the *past*.
+  `earliest_wake` then floors that to `now + 1 ms`, so the split loops treated
+  "LVGL has nothing to do" as "due immediately" and re-entered
+  `lv_timer_handler` roughly a thousand times a second. Only the split loops
+  were affected; the combined loops clamp with `delay.min(cfg.max_idle_ms)` and
+  never saw it. The delay is now clamped to `LV_DEF_REFR_PERIOD` before it
+  becomes a deadline, in a `due_after` pure function covered by two tests.
+
 ### Changed
 
 - **Moved to the esp-hal 1.2 stack.** `esp-hal` `1.2.0-rc.0` (the optional
@@ -37,10 +50,54 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **ESP32-S31 C compile uses `riscv32-esp-elf-gcc` (newlib).** The crate-local
   `riscv-shim` headers are gone. Bindgen uses that GCC's sysroot.
 
-- **Scan-out refresh is a thread loop, not a parked embassy task.** `Ui::bind`
-  then `loop { timer_handler() }`. A lone `run_events`/`pending()` on esp-rtos
-  sleeps after the first poll (`flags.wait`) and freezes LVGL anims.
-  `run` / `run_app_nav` still poll `View::update`.
+- **`run_app*` and `Ui::run`-family are async again.** PR #8 made them blocking
+  `fn -> !`, driven by `embassy_futures::block_on` — a documented 100%-CPU
+  busy-poll. Reverted: `run_app`, `run_app_nav`, `run_app_nav_keypad`,
+  `run_app_nav_keypad_events`, and `run_app_nav_encoder` are `pub async fn -> !`
+  again, for pipelines whose flush wait doesn't block (host, non-blocking
+  pipelines).
+
+- **New split for a blocking flush wait or scan-out.** `Ui::refresh()` is the
+  sole blocking step — `lv_timer_handler`, plus `scanout::wait_presented()` in
+  DIRECT mode — called directly from the render thread, never from an async
+  task. `Ui::run_events` / `run_events_nav` are the matching async event loops
+  (widget setup, `View::update`, input waits), with no blocking LVGL call
+  inside. On ESP the render thread runs an `esp_rtos::embassy::Executor` via
+  `run_with_callbacks`, whose `Callbacks::on_idle` calls `Ui::refresh()` — so
+  the blocking step and the async loop coexist without busy-waiting.
+
+- **`Ui::bind` returns `Result<(), WidgetError>`**, not `Result<(), ()>` —
+  propagates the real error from `view.create()` instead of discarding it.
+
+- **Examples: m5stack-core bumped to `aea4cba`** (head of its `feat/esp-hal-1.2`,
+  PR #101). Brings the CoreS3 black-panel fix -- the bus arbiter was overriding
+  DC on GPIO35 in the display-only path, so the panel never left reset: black
+  screen, clean transcript, flush ops still counting. Also brings that crate's
+  own migration off `WaitiFlushSync`. Dev-dependency only; re-pin to a `master`
+  sha once PR #101 merges.
+
+### Deprecated
+
+- **`WaitiFlushSync`.** It parks the core with `waiti 0` for the whole 15-30 ms
+  panel transfer, and under the split render loop that is the wrong shape
+  entirely: the refresh blocks from the executor's idle hook, so parking there
+  halts the whole scheduler rather than only the render thread. It also has a
+  lost-wakeup window that `SemaphoreFlushSync` does not. Register
+  `SemaphoreFlushSync` (feature `rtos-sem`) instead; `WaitiFlushSync` remains
+  only as the fallback for an application that links no scheduler.
+
+- **The stock board harness now registers a `FlushSync`.** Only `threaded` did,
+  so every other mode silently fell back to `WaitiFlushSync` and parked the
+  core -- the harness logged `no FlushSync registered` and nobody was
+  listening. Stock now registers `SemaphoreFlushSync::leak_isr()` (its flush
+  runs on an `InterruptExecutor`, so the give is in interrupt context);
+  `threaded` keeps `leak_thread()`.
+
+### Fixed
+
+- **`scanout::wait_presented()` is now actually called.** It was dead code
+  (zero callers), leaving DIRECT mode's refresh unthrottled; it is now wired
+  into `Ui::refresh()`.
 
 ## [0.8.0] — 2026-08-22
 

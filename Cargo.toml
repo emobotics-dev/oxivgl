@@ -86,7 +86,6 @@ cores3 = [
 oxivgl_sys = { package = "oxivgl-sys", version = "0.2.4", path = "oxivgl-sys", default-features = false }
 embassy-sync = "0.8"
 embassy-time = "0.5.0"
-embassy-futures = "0.1"
 heapless = { version = "0.9.1", features = ["nightly"] }
 cfg-if = "1"
 thiserror-no-std = "2.0.2"
@@ -126,7 +125,34 @@ esp-sync               = { version = "0.3.0" }
 # reporting "did not name itself"; it requires the build.rs wiring in
 # examples/common (a missing env! is a compile error, not a silent gap).
 # Dev-dependency only — never part of the published library.
-m5stack-core = { git = "http://forgejo:3000/emobotics/m5stack-core.git", rev = "65d76c09313f4fb941ba7a405f58557316964838", default-features = false, features = ["display", "psram", "console-serial", "panic-handler", "identity"] }
+#
+# Pinned to the head of m5stack-core's `feat/esp-hal-1.2` (its PR #101), which
+# is where the esp-hal 1.2 stack lives — `master` does not contain this lineage
+# at all, so moving there would drop the 1.2 support this branch needs. The
+# previous pin was already on that branch; this only moves it forward.
+#
+# What the bump buys, beyond staying current:
+#   * `1c89193` — the CoreS3 black-panel fix. The bus arbiter was overriding DC
+#     on GPIO35 in the display-only path, so the panel never left reset: black
+#     screen, clean transcript, flush ops still counting. Below this commit
+#     every CoreS3 run is a false failure.
+#   * the migration off the deprecated `WaitiFlushSync` to `SemaphoreFlushSync`
+#     (`leak_isr` for the interrupt-executor flush, `leak_thread` for the flush
+#     thread), matching this crate's own harness.
+#   * `aea4cba` — follows oxivgl back to the async render loop, i.e. the API
+#     this branch restores.
+#
+# The pin is currently **mutual**: m5stack-core `aea4cba` points its own oxivgl
+# dev-dependency at this branch's head. That builds — oxivgl is a dev-dep there,
+# and a git dependency's dev-deps are not fetched — but neither anchor is stable
+# until both merge. Closing it takes three steps, in order:
+#   1. this PR merges, giving oxivgl master a stable sha;
+#   2. m5stack-core #101 re-pins oxivgl to it and merges;
+#   3. a follow-up here re-pins m5stack-core to *its* master sha.
+# Until step 3, expect this rev to go unreachable if #101 is rebased or squashed
+# — the sha the bench first tested (`01c6a4d`) had already moved by the time
+# this was written.
+m5stack-core = { git = "http://forgejo:3000/emobotics/m5stack-core.git", rev = "aea4cba5576146a52772f7864e5e09e9138929aa", default-features = false, features = ["display", "psram", "console-serial", "panic-handler", "identity"] }
 
 # esp-hal family — stock crates.io for the published library; redirected to the
 # emobotics `local-main` fork (SPI/DMA flush fixes on top of esp-hal 1.2) for

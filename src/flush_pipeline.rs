@@ -13,8 +13,10 @@
 //! — it needs a real blocking primitive. Which primitive is available depends on
 //! the scheduler the application links, so oxivgl takes it as a parameter rather
 //! than picking one. See [`FlushSync`] for the trade-off between the two shipped
-//! implementations; the short version is that the default [`WaitiFlushSync`]
-//! *parks the core* for the whole transfer, and [`SemaphoreFlushSync`] does not.
+//! implementations; the short version is that [`SemaphoreFlushSync`] blocks in
+//! the scheduler and the deprecated [`WaitiFlushSync`] *parks the core* for the
+//! whole transfer. Register the former — the latter survives only as the
+//! fallback for an application that links no scheduler.
 //!
 //! # What keeps LVGL single-threaded
 //!
@@ -67,12 +69,14 @@ pub trait DisplayOutput {
 ///
 /// | | blocks by | while waiting |
 /// |---|---|---|
-/// | [`WaitiFlushSync`] (default) | `waiti 0` | **the core is parked** — the scheduler is never entered, so nothing runs but ISRs |
-/// | [`SemaphoreFlushSync`] (`rtos-sem`) | an RTOS semaphore | the render task leaves the run queue; every other thread runs normally |
+/// | [`SemaphoreFlushSync`] (`rtos-sem`) | an RTOS semaphore | the render thread leaves the run queue; every other thread runs normally |
+/// | [`WaitiFlushSync`] (**deprecated**, no-scheduler fallback) | `waiti 0` | **the core is parked** — the scheduler is never entered, so nothing runs but ISRs |
 ///
 /// A panel transfer is 15–30 ms, so the difference is not subtle: with
 /// `waiti 0` that is 15–30 ms in which no application work happens at all.
-/// Prefer [`SemaphoreFlushSync`] whenever a scheduler is linked.
+/// **Register [`SemaphoreFlushSync`].** Under a split render loop the refresh
+/// blocks from the executor's idle hook, so parking the core there halts the
+/// whole scheduler rather than only the render thread.
 ///
 /// # Implementing this trait
 ///
@@ -98,15 +102,25 @@ pub trait FlushSync: Sync {
     fn signal(&self);
 }
 
-/// The default [`FlushSync`]: blocks with the Xtensa `waiti 0` instruction.
+/// The last-resort [`FlushSync`]: blocks with the Xtensa `waiti 0` instruction.
 ///
-/// **This parks the core.** `waiti 0` halts the CPU until the next interrupt
+/// **Deprecated — do not register this.** It survives only as the fallback for
+/// an application that links no scheduler at all, and that fallback is itself
+/// on the way out.
+///
+/// **It parks the core.** `waiti 0` halts the CPU until the next interrupt
 /// rather than yielding, so the scheduler is never entered and for the entire
 /// 15–30 ms panel transfer nothing runs except ISRs. It is invisible in CPU
-/// load measurements because the core is not busy — it is stopped.
+/// load measurements because the core is not busy — it is stopped. Measured on
+/// a Fire27 against a 10 ms probe: 65–70 wakeups/s at 5872 µs mean lateness,
+/// against 100/s at 84 µs for [`SemaphoreFlushSync`], at identical throughput.
 ///
-/// It is the default only because it needs no scheduler at all. Any application
-/// that links one should use [`SemaphoreFlushSync`] instead.
+/// It is worse under a split render loop. The blocking refresh runs from the
+/// executor's idle hook, so parking the core there stops the whole scheduler,
+/// not merely the render thread — the opposite of what the split exists to buy.
+///
+/// It also has the lost-wakeup window described below, which
+/// [`SemaphoreFlushSync`] does not.
 ///
 /// # The wakeup can be one interrupt late
 ///
@@ -120,12 +134,20 @@ pub trait FlushSync: Sync {
 /// atomically from that state; [`SemaphoreFlushSync`] sidesteps it entirely by
 /// letting the scheduler do the waiting.
 #[derive(Debug)]
+#[deprecated(
+    since = "0.9.0",
+    note = "parks the core for the whole panel transfer, and under a split render loop that \
+            stops the entire scheduler rather than just the render thread. Register \
+            `SemaphoreFlushSync` instead (feature `rtos-sem`), which blocks in the scheduler. \
+            This type remains only as the no-scheduler fallback."
+)]
 pub struct WaitiFlushSync {
     /// Set by `signal`, consumed by `wait`. Carries a `signal` that arrives
     /// before its `wait`, so the handoff cannot be missed.
     pending: AtomicBool,
 }
 
+#[allow(deprecated)] // the type is deprecated; its own inherent impl is not a use site
 impl WaitiFlushSync {
     /// Create the `waiti`-based sync.
     pub const fn new() -> Self {
@@ -133,12 +155,14 @@ impl WaitiFlushSync {
     }
 }
 
+#[allow(deprecated)] // ditto
 impl Default for WaitiFlushSync {
     fn default() -> Self {
         Self::new()
     }
 }
 
+#[allow(deprecated)] // ditto
 impl FlushSync for WaitiFlushSync {
     #[cfg_attr(feature = "esp-hal", esp_hal::ram)]
     fn wait(&self) {
@@ -185,7 +209,7 @@ impl FlushSync for WaitiFlushSync {
 /// # the app's Cargo.toml — esp-rtos registers the semaphore symbols from a
 /// # module gated behind this feature. It pulls no radio blob; the feature name
 /// # refers to esp-rtos's FreeRTOS-compat IPC objects.
-/// esp-rtos = { version = "0.3", features = ["embassy", "esp-radio", "esp-alloc"] }
+/// esp-rtos = { version = "0.4", features = ["embassy", "esp-radio", "esp-alloc"] }
 /// ```
 ///
 /// The interface is scheduler-neutral by construction — ArielOS and
@@ -283,6 +307,11 @@ impl FlushSync for SemaphoreFlushSync {
 // ---------------------------------------------------------------------------
 
 /// Fallback used when the application registers nothing.
+///
+/// Deliberately the deprecated [`WaitiFlushSync`]: with no scheduler linked
+/// there is nothing else to block on. Registering a `FlushSync` is what every
+/// application should do — see [`set_flush_sync`].
+#[allow(deprecated)]
 static DEFAULT_SYNC: WaitiFlushSync = WaitiFlushSync::new();
 
 /// Holds the registered [`FlushSync`]. A `&dyn` is a fat pointer, so it cannot
