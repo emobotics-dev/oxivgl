@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.9.0] — 2026-09-09
+
 ### Added
 
 - **`oxivgl::demo::benchmark` — LVGL's benchmark demo as a safe call (#11).**
@@ -50,51 +52,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `demo_benchmark` cfg. **The demo costs roughly 900 KB of flash, nearly all of
   it image assets — it must never be in a production image.**
 
-### Fixed
-
-- **The demos' memory guards could not see a runtime pool.** Both LVGL demos
-  gate on `LV_MEM_SIZE` (`lv_demo_widgets.c` at 38 KB, `lv_demo_benchmark.c` at
-  128 KB), and the benchmark `#error`s without the widgets demo, so both gate
-  the benchmark. That test was right when `LV_MEM_SIZE` was the whole heap; with
-  `lv_mem_add_pool` it is the primary plus whatever is registered later, capped
-  by `LV_MEM_POOL_EXPAND_SIZE`. A board with a small internal primary and a
-  PSRAM overflow -- the shape `mem::reserve_pool` exists to create, and the only
-  one that fits beside ESP32's link-asserted main-stack floor -- was refused
-  while having the memory. Both guards are now widened to
-  `LV_MEM_SIZE + LV_MEM_POOL_EXPAND_SIZE`, which judges single-pool builds
-  exactly as before, since that define is 0 there. On ESP32 the primary must
-  stay small regardless: moving `lv_init`'s objects into uncached PSRAM costs
-  13.7 ms per page flip, measured.
-
-- **The demo sources could go silently missing.** `LV_BUILD_DEMOS` was read by
-  scanning `lv_conf.h` as text, so a value arriving through an `#include` was
-  invisible and the demos were simply not compiled -- surfacing as an undefined
-  reference at link, nowhere near the configuration that caused it. The value
-  now comes from the generated bindings, where the preprocessor has already
-  resolved every `#include` and `#if`. Relatedly, `rerun-if-changed` covered
-  only the configuration directory, so an `lv_conf.h` that includes a shared
-  fragment was not rebuilt when that fragment changed; bindgen's
-  `CargoCallbacks` now registers every header it opens.
-
-- **Config directories only rebuilt when `lv_conf.h` changed.**
-  `oxivgl-sys` compiles every `.c` file next to the application's `lv_conf.h` —
-  the mechanism that lets an application add sources outside `lvgl/src` — but
-  only `lv_conf.h` itself was declared with `cargo:rerun-if-changed`. Adding or
-  editing one of those sources therefore changed nothing until an unrelated
-  edit forced the build script to rerun. The whole directory is now watched.
-
-- **Split render loop spun instead of sleeping whenever LVGL was idle.**
-  `lv_timer_handler` returns `LV_NO_TIMER_READY` (`0xFFFFFFFF`) when no timer is
-  pending — a sentinel, not a delay. `Ui::timer_handler` added it straight to
-  the clock, which wraps to `now - 1`: a deadline in the *past*.
-  `earliest_wake` then floors that to `now + 1 ms`, so the split loops treated
-  "LVGL has nothing to do" as "due immediately" and re-entered
-  `lv_timer_handler` roughly a thousand times a second. Only the split loops
-  were affected; the combined loops clamp with `delay.min(cfg.max_idle_ms)` and
-  never saw it. The delay is now clamped to `LV_DEF_REFR_PERIOD` before it
-  becomes a deadline, in a `due_after` pure function covered by two tests.
-
 ### Changed
+
+- **Upgrading from 0.8.x needs carets, and both crates patched.** `oxivgl-sys`
+  declares `links = "lv"`, so an exact pin (`=0.8.0`) cannot take 0.9.0 by
+  `[patch]`: the requirement is unsatisfiable, the registry copy is kept
+  alongside, and the failure is a `links` collision or split
+  `oxivgl_render_scratch_*` symbols, naming neither version. Requirements take
+  carets — `oxivgl-sys` need only be declared by consumers that call it
+  directly — but `[patch.crates-io]` must list **both** crates at the **same
+  rev**, since the hooks are emitted by the sys crate with their Rust half in
+  `oxivgl`.
 
 - **Moved to the esp-hal 1.2 stack.** `esp-hal` `1.2` (the optional library dep
   and the xtensa example harness), `esp-radio-rtos-driver` 0.4, `esp-rtos` 0.4,
@@ -176,6 +144,58 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `threaded` keeps `leak_thread()`.
 
 ### Fixed
+
+- **`SemaphoreFlushSync` waited for a flush completion forever.** `wait()`
+  passed `None` to `take()`, so a completion that never arrived hung the UI
+  permanently — observed on an ESP32 under sustained load, the panel frozen
+  mid-frame for 100+ s while every other task kept running. It is bounded at
+  three times the transfer's own 300 ms ceiling now, and the expiry is logged,
+  so a lost completion costs one frame and announces itself instead of stopping
+  the display. This bounds the symptom; it does not explain it. With the bound
+  compiled in, a board wedged again without the bound ever firing, so the render
+  thread was not in that wait at all.
+
+- **The demos' memory guards could not see a runtime pool.** Both LVGL demos
+  gate on `LV_MEM_SIZE` (`lv_demo_widgets.c` at 38 KB, `lv_demo_benchmark.c` at
+  128 KB), and the benchmark `#error`s without the widgets demo, so both gate
+  the benchmark. That test was right when `LV_MEM_SIZE` was the whole heap; with
+  `lv_mem_add_pool` it is the primary plus whatever is registered later, capped
+  by `LV_MEM_POOL_EXPAND_SIZE`. A board with a small internal primary and a
+  PSRAM overflow -- the shape `mem::reserve_pool` exists to create, and the only
+  one that fits beside ESP32's link-asserted main-stack floor -- was refused
+  while having the memory. Both guards are now widened to
+  `LV_MEM_SIZE + LV_MEM_POOL_EXPAND_SIZE`, which judges single-pool builds
+  exactly as before, since that define is 0 there. On ESP32 the primary must
+  stay small regardless: moving `lv_init`'s objects into uncached PSRAM costs
+  13.7 ms per page flip, measured.
+
+- **The demo sources could go silently missing.** `LV_BUILD_DEMOS` was read by
+  scanning `lv_conf.h` as text, so a value arriving through an `#include` was
+  invisible and the demos were simply not compiled -- surfacing as an undefined
+  reference at link, nowhere near the configuration that caused it. The value
+  now comes from the generated bindings, where the preprocessor has already
+  resolved every `#include` and `#if`. Relatedly, `rerun-if-changed` covered
+  only the configuration directory, so an `lv_conf.h` that includes a shared
+  fragment was not rebuilt when that fragment changed; bindgen's
+  `CargoCallbacks` now registers every header it opens.
+
+- **Config directories only rebuilt when `lv_conf.h` changed.**
+  `oxivgl-sys` compiles every `.c` file next to the application's `lv_conf.h` —
+  the mechanism that lets an application add sources outside `lvgl/src` — but
+  only `lv_conf.h` itself was declared with `cargo:rerun-if-changed`. Adding or
+  editing one of those sources therefore changed nothing until an unrelated
+  edit forced the build script to rerun. The whole directory is now watched.
+
+- **Split render loop spun instead of sleeping whenever LVGL was idle.**
+  `lv_timer_handler` returns `LV_NO_TIMER_READY` (`0xFFFFFFFF`) when no timer is
+  pending — a sentinel, not a delay. `Ui::timer_handler` added it straight to
+  the clock, which wraps to `now - 1`: a deadline in the *past*.
+  `earliest_wake` then floors that to `now + 1 ms`, so the split loops treated
+  "LVGL has nothing to do" as "due immediately" and re-entered
+  `lv_timer_handler` roughly a thousand times a second. Only the split loops
+  were affected; the combined loops clamp with `delay.min(cfg.max_idle_ms)` and
+  never saw it. The delay is now clamped to `LV_DEF_REFR_PERIOD` before it
+  becomes a deadline, in a `due_after` pure function covered by two tests.
 
 - **`scanout::wait_presented()` is now actually called.** It was dead code
   (zero callers), leaving DIRECT mode's refresh unthrottled; it is now wired
