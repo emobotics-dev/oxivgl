@@ -116,7 +116,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **`Ui::bind` returns `Result<(), WidgetError>`**, not `Result<(), ()>` —
   propagates the real error from `view.create()` instead of discarding it.
 
-- **Examples: m5stack-core bumped to `14c9f8a7`** (head of its PR #110). Brings
+- **esp-hal fork patch pinned to `418b74ac`**, which carries the lost-SPI-
+  completion fix on esp32/esp32s2, and **m5stack-core to `cdf301b`** — the head
+  of its PR #110 and the rev the full-stack HIL suite tested. Brings
   the CoreS3 black-panel fix -- the bus arbiter was overriding DC on GPIO35 in
   the display-only path, so the panel never left reset: black screen, clean
   transcript, flush ops still counting. Also brings that crate's own migration
