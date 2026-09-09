@@ -53,9 +53,9 @@ oxivgl_sys = { package = "oxivgl-sys", path = "../../oxivgl-sys", default-featur
 # ambiguous` — and, worse, would be two BSPs with divergent layouts in one image
 # if the name never collided. CI asserts the two revs match; see the
 # "Verify the m5stack-core pin is not forked" step in .forgejo/workflows/ci.yml.
-m5stack-core = { git = "http://forgejo:3000/emobotics/m5stack-core.git", rev = "aea4cba5576146a52772f7864e5e09e9138929aa", default-features = false, features = ["display", "psram", "console-serial", "panic-handler", "identity"] }
+m5stack-core = { git = "http://forgejo:3000/emobotics/m5stack-core.git", rev = "14c9f8a7d9d55d3fbd5359782c26836eac8e6fad", default-features = false, features = ["display", "psram", "console-serial", "panic-handler", "identity"] }
 esp-bootloader-esp-idf = { version = "0.6.0" }
-esp-hal              = { version = "=1.2.0-rc.0", features = ["unstable"] }
+esp-hal              = { version = "1.2", features = ["unstable"] }
 esp-rtos             = { version = "0.4.0", features = ["embassy"] }
 # Thread creation for the threaded render pipeline (see src/sched.rs). Scheduler
 # *interface* crate — the registration comes from esp-rtos, above.

@@ -68,6 +68,28 @@ jobs:
           echo "LIBCLANG_PATH=/usr/lib64" >> "$GITHUB_ENV"
           echo "BINDGEN_EXTRA_CLANG_ARGS=" >> "$GITHUB_ENV"
 
+      - name: Verify the devcontainer uses CI's toolchain image
+        run: |
+          # The devcontainer copies its Xtensa toolchain from this image so a
+          # green local build means something about CI. A stale tag silently
+          # gives the developer a different rustc than CI runs.
+          ci=$(grep -oP 'oxivgl-ci:\Kv[0-9]+' .forgejo/workflows/ci.yml | sort -u)
+          dev=$(grep -oP 'oxivgl-ci:\Kv[0-9]+' .devcontainer/Dockerfile | sort -u)
+          if [ -z "$ci" ] || [ -z "$dev" ]; then
+            echo "Could not read both image tags (ci='$ci' dev='$dev') — fix this check."
+            exit 1
+          fi
+          if [ "$(echo "$ci" | wc -l)" -ne 1 ]; then
+            echo "ci.yml names more than one oxivgl-ci tag:"; echo "$ci"; exit 1
+          fi
+          if [ "$ci" != "$dev" ]; then
+            echo "devcontainer toolchain image is stale:"
+            echo "  .forgejo/workflows/ci.yml  $ci"
+            echo "  .devcontainer/Dockerfile   $dev"
+            exit 1
+          fi
+          echo "devcontainer and CI share oxivgl-ci:$ci"
+
       - name: Verify the m5stack-core pin is not forked
         run: |
           # examples/common is `exclude`d from the workspace, so it cannot
@@ -133,6 +155,20 @@ jobs:
           SDL_VIDEODRIVER=dummy cargo +nightly test --test leak_check \
             --target x86_64-unknown-linux-gnu -- --test-threads=1
 
+      # The default legs never compile `oxivgl::demo`. Linking the example is
+      # the point: an unreferenced undefined symbol does not fail `cargo check`.
+      - name: Benchmark demo (alternate lv_conf.h)
+        run: |
+          export DEP_LV_CONFIG_PATH="$PWD/examples/conf-benchmark"
+          export CARGO_TARGET_DIR="$PWD/target/benchmark"
+          cargo +nightly test --target x86_64-unknown-linux-gnu --lib demo::
+          cargo +nightly build --target x86_64-unknown-linux-gnu \
+            --features demo-benchmark --example demo_benchmark
+          # The doc audit below runs under the default configuration, where
+          # oxivgl::demo does not exist — so its docs are audited here or
+          # nowhere. run_docs.sh reads DEP_LV_CONFIG_PATH from the environment.
+          ./run_docs.sh --check
+
       # Catches undocumented public items *and* doc-build failures. A broken
       # intra-doc link produces no HTML at all, which previously shipped a
       # module missing from docs.rs without failing anything.
@@ -190,6 +226,17 @@ jobs:
         # Cross-checks the input-device code paths (KeypadIndev/PointerIndev,
         # with_repeat) and the example's no_std path on Xtensa.
         run: cargo +esp -Zbuild-std=alloc,core build --target ${{ matrix.target }} --release --features ${{ matrix.board }} --example touch_setpoint
+
+      - name: Build example demo_benchmark (${{ matrix.board }})
+        # The only leg compiling LVGL's demos for a target. Every other builds
+        # the host config, whose primary satisfies the demos' LV_MEM_SIZE
+        # guards alone — so a guard defect passes them all.
+        run: |
+          DEP_LV_CONFIG_PATH="$PWD/examples/conf-benchmark" \
+          CARGO_TARGET_DIR="$PWD/target/benchmark" \
+          cargo +esp -Zbuild-std=alloc,core build --target ${{ matrix.target }} \
+            --release --features ${{ matrix.board }},demo-benchmark \
+            --example demo_benchmark
 
   # RISC-V ESP32-S31. Stock nightly + build-std (rust-src is baked); not
   # `cargo +esp` (Xtensa). C compile: riscv32-esp-elf-gcc (newlib, baked).

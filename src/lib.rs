@@ -67,6 +67,15 @@ pub mod diag;
 #[cfg(lvgl_builtin_malloc)]
 pub mod mem;
 
+/// LVGL's benchmark demo, run on a throwaway screen so it cannot destroy the
+/// application's widgets.
+///
+/// Only available when the application's `lv_conf.h` sets
+/// `LV_USE_DEMO_BENCHMARK` and compiles the demo's C sources; see the module
+/// docs and `examples/conf-benchmark`.
+#[cfg(demo_benchmark)]
+pub mod demo;
+
 // Internal: keeps LVGL's transient per-frame render scratch (draw-task
 // descriptors + SW draw masks/buffers) in internal DRAM via symbols the
 // `oxivgl-sys` build-time patch of the SW draw sources calls by name. Always

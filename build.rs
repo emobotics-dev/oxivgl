@@ -42,6 +42,22 @@ fn emit_stdlib_cfgs() {
     }
 }
 
+/// Turn the `demo_benchmark` metadata emitted by `oxivgl-sys` (which knows
+/// whether `LV_USE_DEMO_BENCHMARK` reached the bindings) into the
+/// `demo_benchmark` cfg that gates `oxivgl::demo`.
+///
+/// The demo is switched on by an `lv_conf.h` define owned by the application,
+/// not by a cargo feature — a feature could not work, because the demo's C
+/// sources are wrapped in `#if LV_USE_DEMO_BENCHMARK` and would compile to
+/// nothing. Gating on the metadata instead means `oxivgl::demo` exists exactly
+/// when the symbols it calls do, rather than failing at link time.
+fn emit_demo_cfgs() {
+    println!("cargo::rustc-check-cfg=cfg(demo_benchmark)");
+    if std::env::var_os("DEP_LV_DEMO_BENCHMARK").is_some() {
+        println!("cargo::rustc-cfg=demo_benchmark");
+    }
+}
+
 fn main() {
     // The examples call m5stack-core's `app_desc!()`, which under the
     // `identity` feature reads M5STACK_CORE_BUILD_MARK via env!(). The macro
@@ -60,6 +76,9 @@ fn main() {
 
     // Allocator-backend gating, likewise on every build.
     emit_stdlib_cfgs();
+
+    // Benchmark-demo gating, likewise on every build.
+    emit_demo_cfgs();
 
     // docs.rs has no lv_conf.h and oxivgl-sys skips C compilation under DOCS_RS,
     // so skip image asset generation here too — only Rust docs need to render.

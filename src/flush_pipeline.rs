@@ -282,12 +282,24 @@ impl SemaphoreFlushSync {
     }
 }
 
+/// How long a flush may legitimately take before its completion is presumed
+/// lost. Three times the 300 ms ceiling the panel transfer itself enforces.
+#[cfg(feature = "rtos-sem")]
+const FLUSH_WAIT_TIMEOUT_US: u32 = 900_000;
+
 #[cfg(feature = "rtos-sem")]
 impl FlushSync for SemaphoreFlushSync {
     fn wait(&self) {
-        // `None` = wait forever. A lost completion would hang the UI rather
-        // than corrupt it; the flush side always signals, including on error.
-        self.handle().take(None);
+        // The transfer has its own 300 ms ceiling, so a wait outlasting it 3x
+        // cannot be one still in flight. Returning costs a frame, against a
+        // display that would otherwise stay dead; the expiry is logged.
+        if !self.handle().take(Some(FLUSH_WAIT_TIMEOUT_US)) {
+            error!(
+                "flush completion lost after {} us — frame dropped; \
+                 the display would otherwise be stuck here forever",
+                FLUSH_WAIT_TIMEOUT_US
+            );
+        }
     }
 
     fn signal(&self) {

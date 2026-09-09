@@ -156,6 +156,24 @@ fn emit_stdlib_flags(bindings_path: &Path) {
     }
 }
 
+/// Emit `cargo:demo_benchmark=1` when the application's `lv_conf.h` enabled
+/// `LV_USE_DEMO_BENCHMARK` and the demo's declarations therefore reached the
+/// bindings. Via `links = "lv"` this arrives at `oxivgl`'s build script as
+/// `DEP_LV_DEMO_BENCHMARK`, which turns it into the `demo_benchmark` cfg that
+/// gates `oxivgl::demo`.
+///
+/// The generated bindings are the source of truth for the same reason the font
+/// flags use them: the demo is enabled by an `lv_conf.h` define owned by the
+/// application, not by a cargo feature, so nothing in the build script's own
+/// inputs can predict it. `lv_demo_benchmark_set_end_cb` is the probe because
+/// it is the one symbol the wrapper cannot work without.
+fn emit_demo_flags(bindings_path: &Path) {
+    let src = std::fs::read_to_string(bindings_path).unwrap_or_default();
+    if contains_ident(&src, "lv_demo_benchmark_set_end_cb") {
+        println!("cargo:demo_benchmark=1");
+    }
+}
+
 /// Value of a bindgen-emitted object-like macro. Returns `None` if the constant
 /// is absent or is not a plain integer.
 ///
@@ -286,6 +304,7 @@ fn main() {
             .expect("failed to install bundled bindings_docsrs.rs");
         emit_font_flags(&bindings_path);
         emit_stdlib_flags(&bindings_path);
+        emit_demo_flags(&bindings_path);
         return;
     }
 
@@ -334,6 +353,10 @@ fn main() {
     #[cfg(feature = "drivers")]
     let drivers = project_dir.join("lv_drivers");
 
+    // Without this, switching config reuses the previous one's artifacts and
+    // reports success — a stale pass.
+    println!("cargo:rerun-if-env-changed={CONFIG_NAME}");
+
     let lv_config_dir = {
         let conf_path = env::var(CONFIG_NAME)
             .map(PathBuf::from)
@@ -350,10 +373,26 @@ fn main() {
             });
 
         if !conf_path.exists() {
+            // A build script's cwd is its own package dir, so a
+            // workspace-relative value resolves one level too deep.
+            let hint = if conf_path.is_relative() {
+                format!(
+                    " (resolved to {}: a relative value is taken from this build \
+                     script's package directory, not the workspace root — pass an \
+                     absolute path)",
+                    conf_path
+                        .canonicalize()
+                        .unwrap_or_else(|_| project_dir.join(&conf_path))
+                        .display()
+                )
+            } else {
+                String::new()
+            };
             panic!(
-                "Directory {} referenced by {} needs to exist",
+                "Directory {} referenced by {} needs to exist{}",
                 conf_path.to_string_lossy(),
-                CONFIG_NAME
+                CONFIG_NAME,
+                hint
             );
         }
         if !conf_path.is_dir() {
@@ -383,6 +422,9 @@ fn main() {
             "cargo:rerun-if-changed={}",
             conf_path.join("lv_conf.h").to_str().unwrap()
         );
+        // The directory, not just lv_conf.h: `add_c_files` compiles every `.c`
+        // in here, and those were not being watched.
+        println!("cargo:rerun-if-changed={}", conf_path.to_str().unwrap());
         #[cfg(feature = "drivers")]
         println!(
             "cargo:rerun-if-changed={}",
@@ -427,6 +469,8 @@ fn main() {
     patch_btnmatrix_text_length(&lvgl_src);
     patch_render_scratch(&lvgl_src);
     patch_ppa_draw_unit(&lvgl_src);
+    patch_demo_mem_guards(&lvgl_dir);
+    patch_demo_repeatable(&lvgl_dir);
     println!("cargo:SRC_DIR={}", lvgl_dir.display());
     add_c_files(&mut cfg, &lvgl_src);
     add_c_files(&mut cfg, &lv_config_dir);
@@ -577,7 +621,11 @@ fn main() {
     #[cfg(feature = "drivers")]
     let bindings = bindings
         .header(shims_dir.join("lvgl_drv.h").to_str().unwrap())
-        .parse_callbacks(Box::new(ignored_macros));
+        .parse_callbacks(Box::new(ignored_macros))
+        // Watches every header bindgen opens, so an `lv_conf.h` that pulls in a
+        // shared fragment is rebuilt when that fragment changes. The explicit
+        // `rerun-if-changed` above covers only the config directory itself.
+        .parse_callbacks(Box::new(bindgen::CargoCallbacks::new()));
     #[cfg(feature = "rust_timer")]
     let bindings = bindings.header(shims_dir.join("rs_timer.h").to_str().unwrap());
 
@@ -623,6 +671,19 @@ fn main() {
     // Likewise for the allocator backend, which decides whether runtime memory
     // pools are usable at all.
     emit_stdlib_flags(&bindings_path);
+
+    // Likewise for the benchmark demo, which only exists when the application
+    // asked for it in its lv_conf.h.
+    emit_demo_flags(&bindings_path);
+
+    // From the bindings, not a scan of lv_conf.h: the value may arrive via an
+    // #include. Getting it wrong is quiet — the sources are absent and the
+    // first sign is an undefined reference at link.
+    if bindgen_const(&fs::read_to_string(&bindings_path).unwrap_or_default(), "LV_BUILD_DEMOS")
+        == Some(1)
+    {
+        add_c_files(&mut cfg, &lvgl_dir.join("demos"));
+    }
 
     cfg.file(out_path.join("static_fns.c"));
     cfg.compile("lvgl");
@@ -1305,4 +1366,82 @@ fn canonicalize(path: impl AsRef<Path>) -> PathBuf {
     let canonicalized = &*canonicalized.to_string_lossy();
 
     PathBuf::from(canonicalized.strip_prefix(r"\\?\").unwrap_or(canonicalized))
+}
+
+/// Make the demos' memory guards see a runtime-registered second pool.
+///
+/// Both demos gate on `LV_MEM_SIZE`, which stopped meaning "the whole heap"
+/// when `lv_mem_add_pool` arrived: `oxivgl::mem::reserve_pool` registers an
+/// overflow pool right after `lv_init`, and `LV_MEM_POOL_EXPAND_SIZE` is the
+/// compile-time ceiling on it. So a board that keeps a small primary and spills
+/// the bulk elsewhere is refused while in fact having the memory -- and on
+/// ESP32 the primary MUST stay small, because moving `lv_init`'s objects into
+/// uncached PSRAM costs 13.7 ms per page flip, measured.
+///
+/// Widening to `LV_MEM_SIZE + LV_MEM_POOL_EXPAND_SIZE` leaves single-pool builds
+/// judged exactly as before: `LV_MEM_POOL_EXPAND_SIZE` defaults to 0.
+fn patch_demo_mem_guards(lvgl_dir: &Path) {
+    const GUARDS: [(&str, &str); 2] = [
+        (
+            "demos/widgets/lv_demo_widgets.c",
+            "LV_MEM_SIZE < (38ul * 1024ul)",
+        ),
+        (
+            "demos/benchmark/lv_demo_benchmark.c",
+            "LV_MEM_SIZE < 128 * 1024",
+        ),
+    ];
+    for (rel, guard) in GUARDS {
+        let file = lvgl_dir.join(rel);
+        let Ok(code) = fs::read_to_string(&file) else {
+            continue;
+        };
+        if !code.contains(guard) {
+            continue;
+        }
+        let widened = guard.replacen("LV_MEM_SIZE", "(LV_MEM_SIZE + LV_MEM_POOL_EXPAND_SIZE)", 1);
+        fs::write(&file, code.replace(guard, &widened)).unwrap();
+    }
+}
+
+/// Let the benchmark run more than once per boot.
+///
+/// `lv_demo_benchmark` accumulates each scene's results into the `scenes[]`
+/// table itself -- `cpu_avg_usage`, `fps_avg`, `render_avg_time`,
+/// `flush_avg_time`, `measurement_cnt` -- while `lv_demo_benchmark()` resets
+/// only `scene_act`. So a second run adds its samples to the first run's, and
+/// the averages, which divide by `measurement_cnt`, silently describe both.
+///
+/// That is a real constraint rather than an oversight to ignore, which is why
+/// this crate refused a second run outright. But a benchmark you can take once
+/// per boot cannot be compared against itself, and for a consumer running it as
+/// a display-path soak -- the case #11 exists for -- one shot proves the least
+/// interesting thing. Zeroing the accumulators at the top of a run makes each
+/// run independent, and the refusal becomes unnecessary.
+///
+/// Injected after the function's own `scene_act = 0;` so the two read together.
+/// The loop stops on the table's `create_cb == NULL` sentinel, the same
+/// terminator the summary walk uses.
+fn patch_demo_repeatable(lvgl_dir: &Path) {
+    const ANCHOR: &str = "void lv_demo_benchmark(void)\n{\n    scene_act = 0;\n";
+    const RESET: &str = r#"
+    /*oxivgl-sys: without this a second run blends the first run's samples
+     *into its own averages.*/
+    for(uint32_t i = 0; scenes[i].create_cb; i++) {
+        scenes[i].cpu_avg_usage = 0;
+        scenes[i].fps_avg = 0;
+        scenes[i].render_avg_time = 0;
+        scenes[i].flush_avg_time = 0;
+        scenes[i].measurement_cnt = 0;
+    }
+"#;
+    let file = lvgl_dir.join("demos/benchmark/lv_demo_benchmark.c");
+    let Ok(code) = fs::read_to_string(&file) else {
+        return;
+    };
+    if !code.contains(ANCHOR) || code.contains("scenes[i].measurement_cnt = 0;") {
+        return;
+    }
+    let patched = code.replacen(ANCHOR, &format!("{ANCHOR}{RESET}"), 1);
+    fs::write(&file, patched).unwrap();
 }
