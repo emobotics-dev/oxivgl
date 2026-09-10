@@ -22,12 +22,25 @@
 //!
 //! # Memory
 //!
-//! The demo needs 128 KiB of LVGL heap — the stricter of LVGL's own two guards
-//! (`lv_demo_benchmark.c` asks 128 KB, `lv_demo_widgets.c` 38 KB, and the
-//! benchmark runs the widgets scene). That budget may come from a runtime pool
+//! The demo needs ~48 KiB of LVGL heap at peak, measured;
+//! [`benchmark()`](crate::demo::benchmark) asks for 64 KiB. LVGL's own guards
+//! name 128 KB (`lv_demo_benchmark.c`, a `#warning`) and 38 KB
+//! (`lv_demo_widgets.c`, an `#error`). That budget may come from a runtime pool
 //! — [`crate::mem::reserve_pool`] — and does not have to sit in `LV_MEM_SIZE`,
 //! which on ESP32 comes out of internal DRAM and cannot be raised far beside
 //! the link-asserted main-stack floor.
+//!
+//! Bytes are not the only question. LVGL slices a layer into chunks of
+//! `LV_DRAW_LAYER_SIMPLE_BUF_SIZE` (`lv_refr.c` derives the row count from it),
+//! so a run also needs one *contiguous* block that big — and a heap can hold
+//! plenty in total while holding it nowhere in one piece. `benchmark()` checks
+//! both, but by different means: the total from `lv_mem_monitor`, and the chunk
+//! by **asking the registered draw-buffer allocator for one**. Which allocator
+//! that is depends on configuration — [`crate::mem::reserve_pool`] routes draw
+//! buffers to the Rust heap — so a figure read from LVGL's pool would pass in
+//! exactly the case that fails. [`FragmentedHeap`](crate::demo::BenchmarkError::FragmentedHeap)
+//! reports the second. Adding memory does not fix fragmentation; a smaller
+//! chunk does.
 //!
 //! Those guards test `LV_MEM_SIZE` alone, which stopped meaning "the whole
 //! heap" once `lv_mem_add_pool` existed, so they refused a small primary with a
@@ -177,8 +190,31 @@ pub enum BenchmarkError {
     InsufficientHeap {
         /// Free heap at the time of the call, across every registered pool.
         free: usize,
-        /// What LVGL's own guards document the benchmark as needing.
+        /// What the demo measurably needs; see `BENCHMARK_HEAP_BYTES`.
         required: usize,
+        /// Largest single free block, for comparison with `free`: a large gap
+        /// between them means the heap is fragmented rather than exhausted.
+        largest: usize,
+    },
+    /// The draw-buffer allocator cannot place one layer chunk.
+    ///
+    /// Established by asking it for one, not by inspecting a heap: which
+    /// allocator serves layer buffers depends on configuration, so a figure
+    /// read from the wrong one would pass in exactly the failing case.
+    ///
+    /// A different problem from [`InsufficientHeap`](Self::InsufficientHeap)
+    /// and it needs a different fix: adding memory may not help, whereas
+    /// lowering `LV_DRAW_LAYER_SIMPLE_BUF_SIZE` asks the renderer for smaller
+    /// slices that a fragmented heap can still place.
+    FragmentedHeap {
+        /// `LV_DRAW_LAYER_SIMPLE_BUF_SIZE` — the chunk LVGL slices a layer
+        /// into, so an upper bound on any one layer-buffer request.
+        required: usize,
+        /// Largest free block in LVGL's own pool, as context. Comfortably
+        /// above `required` means the shortage is in whatever backs
+        /// `draw_buf_malloc` instead — the Rust heap, once a runtime pool is
+        /// registered and the draw-buffer guard is installed.
+        lvgl_largest: usize,
     },
 }
 
@@ -189,9 +225,22 @@ impl core::fmt::Display for BenchmarkError {
                 write!(f, "LV_USE_PERF_MONITOR is disabled in lv_conf.h")
             }
             Self::AlreadyRunning => write!(f, "a benchmark run is already in progress"),
-            Self::InsufficientHeap { free, required } => write!(
+            Self::InsufficientHeap {
+                free,
+                required,
+                largest,
+            } => write!(
                 f,
-                "LVGL heap has {free} B free, the benchmark needs {required} B"
+                "LVGL heap has {free} B free (largest block {largest} B), \
+                 the benchmark needs {required} B"
+            ),
+            Self::FragmentedHeap {
+                required,
+                lvgl_largest,
+            } => write!(
+                f,
+                "the draw-buffer allocator cannot place {required} B contiguous \
+                 (LVGL's own pool has {lvgl_largest} B)"
             ),
             Self::NoActiveScreen => write!(f, "no active screen — initialise the display first"),
         }
@@ -305,13 +354,22 @@ where
     }
 
     // Only meaningful once `lv_init` has run, which the check above established.
-    if let Some(free) = free_heap_bytes()
-        && free < BENCHMARK_HEAP_BYTES
-    {
-        return Err(BenchmarkError::InsufficientHeap {
-            free,
-            required: BENCHMARK_HEAP_BYTES,
-        });
+    // Two questions, not one: enough bytes, and enough of them in a row.
+    if let Some((free, largest)) = free_heap() {
+        if free < BENCHMARK_HEAP_BYTES {
+            return Err(BenchmarkError::InsufficientHeap {
+                free,
+                required: BENCHMARK_HEAP_BYTES,
+                largest,
+            });
+        }
+        let chunk = LV_DRAW_LAYER_SIMPLE_BUF_SIZE as usize;
+        if !layer_chunk_available(chunk) {
+            return Err(BenchmarkError::FragmentedHeap {
+                required: chunk,
+                lvgl_largest: largest,
+            });
+        }
     }
 
     let top_children = layer_top().map_or(0, |top| top.get_child_count());
@@ -512,11 +570,11 @@ fn peak_heap_bytes() -> Option<usize> {
     None
 }
 
-/// The stricter of LVGL's own two demo guards: `lv_demo_benchmark.c` asks for
-/// 128 KB, `lv_demo_widgets.c` for 38 KB, and the benchmark runs the widgets
-/// scene. `patch_demo_mem_guards` widens both to count a runtime pool; this is
-/// the same question asked of the heap that actually exists.
-const BENCHMARK_HEAP_BYTES: usize = 128 * 1024;
+/// ~1.3x the measured peak — 44,404 B on ESP32, 48,292 B on ESP32-S3. LVGL's
+/// own 128 KB is a `#warning` recommendation, not a requirement; used as one it
+/// refused boards that complete every scene. A total, so it cannot see
+/// fragmentation — the contiguity check beside it covers that.
+const BENCHMARK_HEAP_BYTES: usize = 64 * 1024;
 
 /// Free heap across every registered pool, or `None` when LVGL is not using its
 /// own allocator and there is nothing to measure.
@@ -525,7 +583,38 @@ const BENCHMARK_HEAP_BYTES: usize = 128 * 1024;
 /// that one read `LV_MEM_SIZE`, which cannot see a pool added by
 /// `lv_mem_add_pool`; this reads what is actually free right now.
 #[cfg(lvgl_builtin_malloc)]
-fn free_heap_bytes() -> Option<usize> {
+/// Ask the allocator that will actually serve a layer buffer for one chunk.
+///
+/// Which allocator that is depends on configuration: `install_draw_buf_guard`
+/// routes draw buffers to the Rust allocator once a runtime pool is registered,
+/// so `lv_mem_monitor` can report a healthy pool while the allocator that
+/// matters cannot place a chunk. Probing the registered callback tests the
+/// configured path instead of describing a different one.
+fn layer_chunk_available(chunk: usize) -> bool {
+    // SAFETY: valid after `lv_init`, which the caller established.
+    let handlers = unsafe { lv_draw_buf_get_handlers() };
+    if handlers.is_null() {
+        return true;
+    }
+    // SAFETY: non-null, and LVGL populated both callbacks during `lv_init`.
+    let (malloc_cb, free_cb) = unsafe { ((*handlers).buf_malloc_cb, (*handlers).buf_free_cb) };
+    let (Some(malloc_cb), Some(free_cb)) = (malloc_cb, free_cb) else {
+        return true;
+    };
+    // ARGB8888 is the widest format a layer is allocated in, so it is the
+    // request the renderer will struggle with.
+    // SAFETY: the pair LVGL itself calls, with a size it would ask for.
+    unsafe {
+        let p = malloc_cb(chunk, lv_color_format_t_LV_COLOR_FORMAT_ARGB8888);
+        if p.is_null() {
+            return false;
+        }
+        free_cb(p);
+    }
+    true
+}
+
+fn free_heap() -> Option<(usize, usize)> {
     let mut mon = core::mem::MaybeUninit::<lv_mem_monitor_t>::uninit();
     // SAFETY: `lv_mem_monitor` fills the struct it is given; valid after
     // `lv_init`, which the non-null `lv_screen_active` check established.
@@ -533,11 +622,11 @@ fn free_heap_bytes() -> Option<usize> {
         lv_mem_monitor(mon.as_mut_ptr());
         mon.assume_init()
     };
-    Some(mon.free_size)
+    Some((mon.free_size, mon.free_biggest_size))
 }
 
 #[cfg(not(lvgl_builtin_malloc))]
-fn free_heap_bytes() -> Option<usize> {
+fn free_heap() -> Option<(usize, usize)> {
     None
 }
 

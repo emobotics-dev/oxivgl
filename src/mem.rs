@@ -53,7 +53,8 @@ use thiserror_no_std::Error;
 
 use oxivgl_sys::{
     lv_draw_buf_get_font_handlers, lv_draw_buf_get_handlers, lv_draw_buf_get_image_handlers,
-    lv_mem_add_pool, LV_DRAW_BUF_ALIGN, LV_MEM_POOL_EXPAND_SIZE, LV_MEM_SIZE,
+    lv_free, lv_malloc, lv_mem_add_pool, LV_DRAW_BUF_ALIGN, LV_MEM_POOL_EXPAND_SIZE,
+    LV_MEM_SIZE,
 };
 
 /// TLSF aligns every allocation and pool base to this many bytes
@@ -239,13 +240,26 @@ pub(crate) fn apply_pending() {
 
 // ── Draw-buffer guard ────────────────────────────────────────────────────────
 
-/// Bytes reserved ahead of each draw buffer to record its allocation size.
+/// Size and owning allocator, stashed below each buffer: LVGL's free callback
+/// passes only the pointer, and it is exactly the one `draw_buf_malloc`
+/// returned, so a header below it round-trips.
+const HDR_WORDS: usize = 2;
+const SIZE_HEADER: usize = HDR_WORDS * core::mem::size_of::<usize>();
+const TAG_RUST: usize = 0;
+const TAG_LVGL: usize = 1;
+
+/// Set when the application has declared LVGL's heap internal-only, which is
+/// what makes the fallback in [`draw_buf_malloc`] safe.
+static POOL_IS_INTERNAL: AtomicBool = AtomicBool::new(false);
+
+/// Declare every LVGL pool INTERNAL, letting a failed draw-buffer allocation
+/// retry from `lv_malloc`.
 ///
-/// LVGL's free callback receives only a pointer, but Rust's deallocator needs
-/// the original `Layout`. LVGL frees `draw_buf->unaligned_data` — precisely the
-/// pointer [`draw_buf_malloc`] returned, never the aligned one — so stashing the
-/// size immediately before it round-trips reliably.
-const SIZE_HEADER: usize = core::mem::size_of::<usize>();
+/// Opt-in: declaring it with an external pool re-opens the PSRAM-DMA hazard the
+/// guard exists to prevent.
+pub fn declare_pool_internal() {
+    POOL_IS_INTERNAL.store(true, Ordering::Relaxed);
+}
 
 /// Route LVGL's draw-buffer allocations through the Rust global allocator
 /// instead of its own heap.
@@ -309,13 +323,28 @@ unsafe extern "C" fn draw_buf_malloc(
 
     // SAFETY: `layout` has non-zero size (SIZE_HEADER > 0).
     let base = unsafe { alloc::alloc::alloc(layout) };
-    if base.is_null() {
-        return core::ptr::null_mut();
-    }
+    let (base, tag) = if base.is_null() {
+        // LVGL treats a NULL here as transient and retries forever, so one
+        // refusal stalls the render thread outright.
+        if !POOL_IS_INTERNAL.load(Ordering::Relaxed) {
+            return core::ptr::null_mut();
+        }
+        // SAFETY: `lv_malloc` is the allocator LVGL itself uses for draw
+        // buffers when no guard is installed; `total` is non-zero.
+        let p = unsafe { lv_malloc(total) }.cast::<u8>();
+        if p.is_null() {
+            return core::ptr::null_mut();
+        }
+        (p, TAG_LVGL)
+    } else {
+        (base, TAG_RUST)
+    };
     // SAFETY: `base` is a fresh allocation of at least SIZE_HEADER bytes, and is
-    // `usize`-aligned by the layout above.
+    // `usize`-aligned by the layout above (or by `lv_malloc`, which returns
+    // memory aligned for any LVGL object).
     unsafe {
         base.cast::<usize>().write(total);
+        base.cast::<usize>().add(1).write(tag);
         base.add(SIZE_HEADER).cast()
     }
 }
@@ -327,10 +356,15 @@ unsafe extern "C" fn draw_buf_free(buf: *mut core::ffi::c_void) {
     }
     // SAFETY: LVGL frees `unaligned_data`, i.e. exactly the pointer
     // `draw_buf_malloc` returned, so the header sits SIZE_HEADER bytes below it
-    // and holds the total size passed to `alloc`.
+    // and holds the total size and the allocator that produced it.
     unsafe {
         let base = buf.cast::<u8>().sub(SIZE_HEADER);
         let total = base.cast::<usize>().read();
+        let tag = base.cast::<usize>().add(1).read();
+        if tag == TAG_LVGL {
+            lv_free(base.cast());
+            return;
+        }
         let layout = alloc::alloc::Layout::from_size_align_unchecked(
             total,
             core::mem::align_of::<usize>(),

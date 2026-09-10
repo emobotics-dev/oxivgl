@@ -135,7 +135,7 @@ pub trait FlushSync: Sync {
 /// letting the scheduler do the waiting.
 #[derive(Debug)]
 #[deprecated(
-    since = "0.9.0",
+    since = "0.9.1",
     note = "parks the core for the whole panel transfer, and under a split render loop that \
             stops the entire scheduler rather than just the render thread. Register \
             `SemaphoreFlushSync` instead (feature `rtos-sem`), which blocks in the scheduler. \

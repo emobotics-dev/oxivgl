@@ -98,18 +98,22 @@ jobs:
           # one BSP compiled twice, with divergent layouts in a single image.
           # It surfaced once as `error[E0659]: m5stack_core is ambiguous`, but
           # a drift that does not collide by name would pass silently.
-          root=$(grep -oP '^m5stack-core = .*rev = "\K[0-9a-f]{40}' Cargo.toml)
-          common=$(grep -oP '^m5stack-core = .*rev = "\K[0-9a-f]{40}' examples/common/Cargo.toml)
+          # Matches either form: `rev` for a release, `branch` while tracking a
+          # release candidate. A branch pin is not reproducible and must become
+          # a rev before release; this check only enforces that the two agree.
+          pin() { grep -oP '^m5stack-core = .*?\b(rev|branch) = "\K[^"]+' "$1"; }
+          root=$(pin Cargo.toml)
+          common=$(pin examples/common/Cargo.toml)
           if [ -z "$root" ] || [ -z "$common" ]; then
-            echo "Could not read both m5stack-core revs (root='$root' common='$common')."
+            echo "Could not read both m5stack-core pins (root='$root' common='$common')."
             echo "The grep, not the pin, is probably what broke — fix this check."
             exit 1
           fi
           if [ "$root" != "$common" ]; then
             echo "m5stack-core pin is forked:"
-            echo "  Cargo.toml                $root"
+            echo "  Cargo.toml                 $root"
             echo "  examples/common/Cargo.toml $common"
-            echo "Both must name the same rev."
+            echo "Both must name the same rev or branch."
             exit 1
           fi
           echo "m5stack-core pin matches in both manifests: $root"

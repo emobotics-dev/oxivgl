@@ -1,4 +1,4 @@
-# oxivgl v0.9.0
+# oxivgl v0.9.1
 
 LVGL's benchmark demo becomes something an application can call, and the two
 defects that stood in the way turn out to be worth more than the feature.
@@ -28,7 +28,8 @@ dropped.
 
 Preconditions are refused rather than allowed to produce plausible numbers.
 Without `LV_USE_PERF_MONITOR` every scene records nothing and the run reports
-`0 FPS over 0 scenes`. Without enough heap it would die mid-run.
+`0 FPS over 0 scenes`. Without enough heap it would die mid-run — 64 KiB free,
+against a measured peak of 44,404 B on ESP32 and 48,292 B on ESP32-S3.
 
 ## The demos' memory guards tested the wrong quantity
 
@@ -61,6 +62,78 @@ This bounds the symptom and does not explain it. With the bound compiled in a
 board wedged again without the bound ever firing, so the render thread was not
 in that wait at all.
 
+## The heap gate was very nearly the same defect again
+
+The first cut of that gate asked for 128 KiB, taken from `lv_demo_benchmark.c`.
+That number is a `#warning` — "It's recommended to have at least 128kB RAM" —
+and it tests `LV_MEM_SIZE`, the configured primary pool. Used as a hard runtime
+precondition on *free* heap it refused every ESP32-class board, including the
+one this feature was written for: an ESP32 with 71,884 B free and an ESP32-S3
+with 88,312 B, both of which complete every scene.
+
+Which is the defect described immediately above, moved from compile time to run
+time: a documented figure treated as a requirement, refusing a configuration
+that demonstrably has the memory. It was caught on hardware before release.
+
+## LVGL's log channel was silent on release builds
+
+The embedded `lv_log_register_print_cb` bridge discarded LVGL's level and
+emitted every message as `debug!`, which `release_max_level_info` deletes at
+compile time — so `LV_LOG_ERROR` and `LV_LOG_WARN` left the image along with the
+traces. It maps the level now.
+
+LVGL reports some failures by warning and retrying rather than asserting, so
+"Allocating layer buffer failed. Try later" was unobservable: a diagnosable
+stall presenting as a silent hang.
+
+## The heap gate could not see fragmentation
+
+The gate compared `lv_mem_monitor`'s `free_size` against 64 KiB. That is a
+*sum*, and the thing it was protecting is a *single* allocation — so a heap
+holding plenty of memory in small pieces passed the check and the run then died
+on one request. Measured on an ESP32: 39,172 B free, no 23,760 B block, and the
+renderer retrying that allocation 73,679 times.
+
+The bound was already available and belongs to the caller, not to us. LVGL
+slices a layer into chunks of `LV_DRAW_LAYER_SIMPLE_BUF_SIZE` — `lv_refr.c`
+derives the row count from it — so no single layer-buffer request can exceed it,
+and it is per-board because every application sets it in its own `lv_conf.h`.
+
+The check **asks the registered draw-buffer allocator for one such chunk** and
+frees it again, rather than reading a free-block figure. That distinction is the
+whole fix: which allocator serves layer buffers depends on configuration —
+`mem::reserve_pool` routes them to the Rust heap — so a number taken from LVGL's
+pool describes memory the renderer will not be using, and would have passed in
+exactly the case that wedges.
+
+`BenchmarkError::FragmentedHeap` reports that case separately, because the fix
+differs: adding memory does not help a fragmented heap, while a smaller chunk
+lets the renderer ask for slices it can still place. `InsufficientHeap` carries
+the largest block too, so a refused caller can tell the two apart at a glance.
+
+This is not confined to the benchmark. The same shortage was seen wedging
+ordinary page navigation on a board whose free memory was split across two
+regions, neither big enough for the configured chunk.
+
+## A failed draw-buffer allocation stalled the render thread forever
+
+`lv_draw_layer_alloc_buf` treats a failed allocation as transient: it logs and
+returns NULL. The software draw unit then declines the task and
+`draw_buf_flush` loops until it succeeds — *before* `disp->flushing` is set, so
+no flush is ever issued. One transient refusal is a permanent stall, with no
+assert and no panic, and until the log fix above, no output either.
+
+It is not a shortage of memory but of *contiguity*. On an ESP32 running the
+benchmark the Rust heap had 35,080 B free and no 23,760 B block, while LVGL's
+own pool held a 33,568 B block that went unused for the entire stall — because
+the draw-buffer guard routes every such allocation to the Rust allocator.
+
+`mem::declare_pool_internal()` lets a failed allocation retry from `lv_malloc`.
+It is opt-in because the guard exists for a real hazard: a runtime pool may be
+PSRAM, which the ESP32 cannot DMA from. An application that knows its pools are
+internal has no such hazard; one that declares it with an external pool
+re-opens it.
+
 ## `WaitiFlushSync` is deprecated
 
 It parks the core with `waiti 0` for the whole transfer, and under a split
@@ -69,6 +142,21 @@ executor's idle hook, so parking there halts the whole scheduler rather than
 only the render thread. It also has a lost-wakeup window `SemaphoreFlushSync`
 does not. Register `SemaphoreFlushSync` (feature `rtos-sem`); the stock board
 harness now does.
+
+## Image assets did not link on RISC-V
+
+`oxivgl-build` compiled the C it generates for an image asset without
+`-march=rv32imafc -mabi=ilp32f`, so on the ESP RISC-V targets the asset came out
+soft-float and rust-lld refused the final link: "cannot link object files with
+different floating-point ABI". `oxivgl-sys` already passes the pair for LVGL's
+own sources, and the asset is linked into the same binary.
+
+The fix reached the helper without a version bump, and 0.1.1 was already on
+crates.io without it — so this release also bumps `oxivgl-build` to **0.1.2**
+and tightens oxivgl's requirement to match. The workspace and CI resolve that
+helper by path and compiled the fixed source all along; the break was reachable
+only by resolving it from the registry, which is exactly what a consumer does
+and neither of those two ever did.
 
 ## Breaking
 
@@ -85,7 +173,7 @@ harness now does.
 ## Upgrading from 0.8.x
 
 `oxivgl-sys` declares `links = "lv"`, so only one copy may exist in a build.
-An **exact** pin (`oxivgl = "=0.8.0"`) cannot take 0.9.0 by `[patch]`: the
+An **exact** pin (`oxivgl = "=0.8.0"`) cannot take 0.9.1 by `[patch]`: the
 requirement is unsatisfiable by the patched crate, cargo keeps the registry copy
 as well, and the failure is a `links` collision or a split of the
 `oxivgl_render_scratch_*` symbols — neither of which names the version that
