@@ -1,0 +1,185 @@
+lv_event: take event-list memory off LVGL's heap
+
+A display's event list churns continuously while anything is drawing -- every
+label marked for a text refresh registers a callback and removes it on the next
+layout pass. The pointer array reallocates, and TLSF may place the new buffer in
+a pool the application has lent LVGL, where it cannot be recovered:
+lv_mem_remove_pool requires the pool empty, and block_can_split needs 16 + size
+while block_size_min is 12. The per-callback descriptors have the same problem,
+living on LVGL's heap for as long as the callback is registered.
+
+Both ends are routed to oxivgl_event_*. lv_array_init/push_back/resize/deinit
+allocate through lv_realloc/lv_free internally, so this cannot be done by
+swapping call sites -- event lists get their own array helpers, and lv_array.c
+stays untouched because it is shared with lv_scale, the vector path ops and
+lv_circle_buf.
+
+--- a/src/misc/lv_event.c
++++ b/src/misc/lv_event.c
+@@ -9,9 +9,30 @@
+ #include "lv_event_private.h"
+ #include "../core/lv_global.h"
+ #include "../stdlib/lv_mem.h"
++#include "lv_array.h"
+ #include "lv_assert.h"
++#include "../stdlib/lv_string.h"
+ #include "lv_types.h"
+ 
++#include <stddef.h>
++
++/* Event-list memory does NOT come from LVGL's heap.
++ *
++ * A descriptor and the pointer array that holds it live for exactly as long as
++ * the callback is registered, which is arbitrary: `lv_label_mark_need_refr_text`
++ * registers one on the DISPLAY and removes it on the next layout pass, so any
++ * drawing churns these allocations continuously. A consumer that lends LVGL a
++ * pool for the duration of some operation therefore finds event memory in it,
++ * and cannot take the pool back -- `lv_tlsf_remove_pool` requires the pool
++ * empty, and the block cannot be trimmed away because `block_can_split` needs
++ * `16 + size` while `block_size_min` is 12.
++ *
++ * Routing is unconditional on purpose. A conditional route would leave the
++ * default build with the original defect and nothing to observe it. */
++extern void * oxivgl_event_malloc(size_t size);
++extern void * oxivgl_event_realloc(void * ptr, size_t size);
++extern void oxivgl_event_free(void * ptr);
++
+ /*********************
+  *      DEFINES
+  *********************/
+@@ -36,6 +57,17 @@
+ static uint32_t event_array_size(lv_event_list_t * list);
+ static lv_event_dsc_t ** event_array_at(lv_event_list_t * list, uint32_t index);
+ 
++/* `lv_array_init/push_back/resize/deinit` allocate and free through
++ * `lv_realloc`/`lv_free` internally, so the routing cannot be done by swapping
++ * call sites -- `lv_array_deinit` would hand an event-allocator buffer to
++ * `lv_free`. These mirror those four on the event allocator instead.
++ * `lv_array.c` itself is shared with the scale widget, the vector path ops and
++ * `lv_circle_buf`, so it must stay on LVGL's heap. */
++static void event_array_init(lv_array_t * array, uint32_t capacity, uint32_t element_size);
++static bool event_array_resize(lv_array_t * array, uint32_t new_capacity);
++static lv_result_t event_array_push_back(lv_array_t * array, const void * element);
++static void event_array_deinit(lv_array_t * array);
++
+ /**********************
+  *  STATIC VARIABLES
+  **********************/
+@@ -159,7 +191,7 @@
+ lv_event_dsc_t * lv_event_add(lv_event_list_t * list, lv_event_cb_t cb, lv_event_code_t filter,
+                               void * user_data)
+ {
+-    lv_event_dsc_t * dsc = lv_malloc(sizeof(lv_event_dsc_t));
++    lv_event_dsc_t * dsc = oxivgl_event_malloc(sizeof(lv_event_dsc_t));
+     LV_ASSERT_NULL(dsc);
+ 
+     dsc->cb = cb;
+@@ -172,10 +204,10 @@
+ 
+     if(event_array_size(list) == 0) {
+         /*event list hasn't been initialized.*/
+-        lv_array_init(&list->array, 1, sizeof(lv_event_dsc_t *));
++        event_array_init(&list->array, 1, sizeof(lv_event_dsc_t *));
+     }
+ 
+-    lv_array_push_back(&list->array, &dsc);
++    event_array_push_back(&list->array, &dsc);
+     return dsc;
+ }
+ 
+@@ -438,6 +470,76 @@
+  *   STATIC FUNCTIONS
+  **********************/
+ 
++/* `inner_alloc` stays false so that an `lv_array_*` call reaching one of these
++ * arrays -- a path added by a future LVGL, or one missed here -- cannot free or
++ * reallocate an event-allocator buffer through `lv_free`/`lv_realloc`. It
++ * degrades to a leak instead of a cross-allocator free. */
++static void event_array_init(lv_array_t * array, uint32_t capacity, uint32_t element_size)
++{
++    array->size = 0;
++    array->capacity = capacity;
++    array->element_size = element_size;
++    array->inner_alloc = false;
++    array->data = oxivgl_event_malloc((size_t)capacity * element_size);
++    LV_ASSERT_MALLOC(array->data);
++    if(array->data == NULL) array->capacity = 0;
++}
++
++static bool event_array_resize(lv_array_t * array, uint32_t new_capacity)
++{
++    /* Upstream's zero case lands on `&zero_mem` rather than NULL, so it can
++     * never leave a dangling pointer; without this the realloc below would free
++     * the block and the NULL return would leave `array->data` pointing at it.
++     * The array is emptied instead of parked on a sentinel -- the same state the
++     * `kept_count == 0` path produces -- and `lv_event_add` re-initialises it on
++     * the next add, guarded by its `event_array_size(list) == 0` check, so the
++     * NULL is never dereferenced. */
++    if(new_capacity == 0) {
++        event_array_deinit(array);
++        return true;
++    }
++
++    uint8_t * data = oxivgl_event_realloc(array->data, (size_t)new_capacity * array->element_size);
++    LV_ASSERT_MALLOC(data);
++    if(data == NULL) return false;
++
++    array->data = data;
++    array->capacity = new_capacity;
++    if(array->size > new_capacity) array->size = new_capacity;
++    return true;
++}
++
++static lv_result_t event_array_push_back(lv_array_t * array, const void * element)
++{
++    LV_ASSERT_NULL(array->data);
++
++    if(array->size == array->capacity) {
++        /* Same linear growth as `lv_array_push_back`; the point of routing is
++         * WHERE the memory comes from, not how often it grows. */
++        if(event_array_resize(array, array->capacity + LV_ARRAY_DEFAULT_CAPACITY) == false) {
++            return LV_RESULT_INVALID;
++        }
++    }
++
++    uint8_t * data = array->data + array->size * array->element_size;
++    if(element) lv_memcpy(data, element, array->element_size);
++    else lv_memzero(data, array->element_size);
++
++    array->size++;
++    return LV_RESULT_OK;
++}
++
++static void event_array_deinit(lv_array_t * array)
++{
++    if(array->data) {
++        oxivgl_event_free(array->data);
++        array->data = NULL;
++    }
++
++    array->size = 0;
++    array->capacity = 0;
++}
++
+ static void cleanup_event_list_core(lv_array_t * array)
+ {
+     const uint32_t size = lv_array_size(array);
+@@ -445,15 +547,15 @@
+     for(uint32_t i = 0; i < size; i++) {
+         lv_event_dsc_t ** dsc_i = lv_array_at(array, i);
+         lv_event_dsc_t ** dsc_kept = lv_array_at(array, kept_count);
+-        if(event_is_marked_deleting(*dsc_i)) lv_free(*dsc_i);
++        if(event_is_marked_deleting(*dsc_i)) oxivgl_event_free(*dsc_i);
+         else {
+             *dsc_kept = *dsc_i;
+             kept_count++;
+         }
+     }
+ 
+-    if(kept_count == 0) lv_array_deinit(array);
+-    else lv_array_resize(array, kept_count);
++    if(kept_count == 0) event_array_deinit(array);
++    else event_array_resize(array, kept_count);
+ }
+ 
+ static void cleanup_event_list(lv_event_list_t * list)

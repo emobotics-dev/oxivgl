@@ -80,6 +80,7 @@ pub mod demo;
 // descriptors + SW draw masks/buffers) in internal DRAM via symbols the
 // `oxivgl-sys` build-time patch of the SW draw sources calls by name. Always
 // compiled so those symbols exist under every allocator backend.
+mod event_alloc;
 mod render_scratch;
 
 /// Declare an LVGL image asset compiled by `oxivgl-build`.

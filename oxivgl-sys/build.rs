@@ -886,6 +886,7 @@ const LVGL_PATCHES: &[(&str, &str)] = &[
     ("0003-ppa-argb8888-images-and-glyphs.patch", include_str!("patches/0003-ppa-argb8888-images-and-glyphs.patch")),
     ("0004-demo-guards-see-a-second-pool.patch", include_str!("patches/0004-demo-guards-see-a-second-pool.patch")),
     ("0005-benchmark-reset-scene-accumulators.patch", include_str!("patches/0005-benchmark-reset-scene-accumulators.patch")),
+    ("0006-event-list-allocator-routing.patch", include_str!("patches/0006-event-list-allocator-routing.patch")),
 ];
 
 /// Hash of the whole patch set, stamped into an extracted tree so a later build
