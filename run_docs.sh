@@ -6,7 +6,14 @@
 #   --check     warn-on-missing-docs only, no output (for CI)
 set -e
 
-export LIBCLANG_PATH="${LIBCLANG_PATH:-/usr/lib64}"
+# Host bindgen needs the system libclang and no ESP --sysroot: a devcontainer
+# pre-exports both for cross builds, and either makes bindgen read host headers
+# as 32-bit and abort on pointer width. llvm-config, as /usr/lib64 is Fedora-only.
+if command -v llvm-config >/dev/null 2>&1; then
+    export LIBCLANG_PATH="$(llvm-config --libdir)"
+fi
+unset BINDGEN_EXTRA_CLANG_ARGS
+
 TARGET="x86_64-unknown-linux-gnu"
 
 OPEN=1
