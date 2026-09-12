@@ -286,17 +286,23 @@ fn pump_child() {
 /// The cost is therefore the screen's, not the body-under-test's, and it is
 /// paid once per process rather than once per iteration.
 ///
-/// The second call flushes LVGL's deferred init cleanup. One 40-byte block
-/// allocated during `LvglDriver::init` is *released* on the first
-/// timer-handler pass — `lv_refr_now` drives that pass, which is why a render
-/// triggers it. Note the direction: it is a release, so it could never hide a
-/// leak, only manufacture a spurious `-40` failure.
+/// The second call flushes a one-shot deferred release. `LvglDriver::init`
+/// allocates a block that the first timer-handler pass frees, and `lv_refr_now`
+/// drives that pass, which is why a render triggers it. The direction is the
+/// safety-relevant part: it is a *release*, so it can only ever manufacture a
+/// spurious failure, never mask a leak.
+///
+/// That block is an event list — the pointer array and its descriptors. It used
+/// to sit on LVGL's heap and show up as -40 there; since event-list memory was
+/// routed off that heap it lands on the Rust heap as -48 instead. The effect did
+/// not go away, it changed heaps, and removing this render makes 54 of the tests
+/// below fail on the Rust side rather than the C side.
 ///
 /// Neither step is a warm-up. There is no waiting, no repetition and no
-/// convergence check — two named, understood, one-shot effects, each pinned by
-/// a test ([`spec_attr_is_the_only_one_shot_cost`],
-/// [`init_scratch_is_released_once`]) so the harness fails loudly with the
-/// exact number if LVGL's behaviour ever changes.
+/// convergence check — two named, understood, one-shot effects, each pinned by a
+/// test ([`spec_attr_is_the_only_one_shot_cost`],
+/// [`timer_handler_passes_are_heap_neutral`]) so the harness fails loudly if
+/// LVGL's behaviour ever changes.
 fn prime_parent(parent: &oxivgl::widgets::Screen) {
     let probe = oxivgl::widgets::Obj::new(parent).expect("probe child");
     drop(probe);
@@ -428,26 +434,28 @@ fn spec_attr_is_the_only_one_shot_cost() {
     );
 }
 
-/// Bytes released by LVGL's deferred init cleanup on the first timer pass.
+/// Neither timer-handler pass moves LVGL's heap.
 ///
-/// One 40-byte block, allocated somewhere in `LvglDriver::init` and freed when
-/// the timer handler first runs. The block has not been attributed to a
-/// specific LVGL structure — it is not a `lv_timer_t` (the timer count is
-/// unchanged across the pass), and `used_cnt` drops by exactly one. Pinned as a
-/// constant rather than absorbed, so a change trips a test instead of quietly
-/// shifting every leak measurement.
-#[cfg(lvgl_builtin_malloc)]
-const INIT_CLEANUP_BYTES: isize = -40;
-
-/// Pins the second one-shot effect [`prime_parent`] excludes.
+/// This test used to carry a named allowance, `INIT_CLEANUP_BYTES = -40`, for a
+/// block allocated in `LvglDriver::init` and released on the first pass that
+/// nobody could attribute to an LVGL structure. Routing event-list memory off
+/// LVGL's heap took that release off *this* heap, which identified the block:
+/// it was an event list — the pointer array and its descriptors, freed when the
+/// first pass cleaned up the callbacks registered during init.
 ///
-/// The safety-relevant half is the **sign**: this is a release, so it can only
-/// ever produce a spurious failure, never mask a real leak. The magnitude is
-/// pinned too, so that if LVGL starts deferring something larger — or something
-/// that recurs — this test says so precisely instead of the harness absorbing it.
+/// The release itself still happens; it moved to the Rust heap, where
+/// [`prime_parent`] flushes it. What this test now asserts is narrower and
+/// exact: LVGL's own heap sees nothing deferred at all.
+///
+/// The allowance is gone rather than set to zero. A named constant subtracted
+/// from a measurement is a hole sized to whatever was there when someone last
+/// looked, and this file refuses one on the same grounds it refuses a noise
+/// floor: it is a place for a small leak to hide. Both passes assert plain
+/// zero, so a deferred release of any size on LVGL's heap fails here instead of
+/// being spent against an allowance.
 #[cfg(lvgl_builtin_malloc)]
 #[test]
-fn init_scratch_is_released_once() {
+fn timer_handler_passes_are_heap_neutral() {
     let (first, second) = measure_isolated("deferred init cleanup", || {
         let before = lv_used_bytes();
         pump_child();
@@ -458,15 +466,71 @@ fn init_scratch_is_released_once() {
     });
 
     assert_eq!(
-        first, INIT_CLEANUP_BYTES,
-        "the first timer-handler pass should release exactly \
-         {INIT_CLEANUP_BYTES} bytes of init scratch, not {first}"
+        first, 0,
+        "the first timer-handler pass should leave LVGL's heap unchanged, not \
+         move it by {first} bytes — a one-shot release here means something is \
+         still allocated on it during init and freed on the first pass"
     );
     assert_eq!(
         second, 0,
         "the second pass should be neutral, not {second} bytes — a recurring \
          per-render delta is a leak, not deferred initialisation"
     );
+}
+
+// ── Event-list allocator routing ────────────────────────────────────────────
+
+/// Exercises the event-list array through growth, partial removal and teardown.
+///
+/// Event-list memory comes from `oxivgl_event_*` rather than LVGL's heap, which
+/// replaced the array lifecycle for *every* object. Nothing else in this file
+/// reaches most of it: a widget body registers at most one or two callbacks, and
+/// the array starts at capacity 1 and grows by `LV_ARRAY_DEFAULT_CAPACITY`, so
+/// the resize path never runs and the compaction path never runs with survivors.
+///
+/// Twelve callbacks force three growths; removing every second one drives
+/// `cleanup_event_list_core` with `kept_count > 0`, which is the branch that
+/// keeps capacity while shrinking size; dropping the object takes the
+/// deinit-on-empty path. A leak in any of the three shows on the Rust heap,
+/// because that is where this memory now lives — under the old allocator this
+/// test would have measured the C side instead, which is the point.
+#[test]
+fn leak_event_list_growth_removal_teardown() {
+    run_isolated("event-list growth/removal/teardown", || {
+        let screen_ptr = unsafe { oxivgl_sys::lv_screen_active() };
+        unsafe extern "C" fn noop(_e: *mut oxivgl_sys::lv_event_t) {}
+
+        let cycle = || unsafe {
+            let obj = oxivgl_sys::lv_obj_create(screen_ptr);
+            let mut dscs = [core::ptr::null_mut(); 12];
+            for slot in &mut dscs {
+                *slot = oxivgl_sys::lv_obj_add_event_cb(
+                    obj,
+                    Some(noop),
+                    oxivgl_sys::lv_event_code_t_LV_EVENT_CLICKED,
+                    core::ptr::null_mut(),
+                );
+            }
+            // Every second one, so the array compacts with survivors rather
+            // than emptying — `lv_array_deinit` would otherwise hide the
+            // shrink path behind a free.
+            for slot in dscs.iter().step_by(2) {
+                oxivgl_sys::lv_obj_remove_event_dsc(obj, *slot);
+            }
+            oxivgl_sys::lv_obj_delete(obj);
+            oxivgl_sys::lv_refr_now(core::ptr::null_mut());
+        };
+
+        prime_parent(&screen());
+        start_tracking();
+        let (rust_before, c_before) = (total_alloc_bytes(), lv_used_bytes());
+        for _ in 0..MEASURE {
+            cycle();
+        }
+        let (rust_after, c_after) = (total_alloc_bytes(), lv_used_bytes());
+        stop_tracking();
+        (rust_after - rust_before, c_after - c_before)
+    });
 }
 
 // ── Negative control ────────────────────────────────────────────────────────

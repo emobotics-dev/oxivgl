@@ -7,7 +7,60 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [0.9.1] — 2026-09-10
+## [0.9.2] — 2026-09-12
+
+### Fixed
+
+- **A lent LVGL pool could not be taken back.** A consumer that lends LVGL a
+  pool for the duration of an operation — `lv_mem_add_pool` before,
+  `lv_mem_remove_pool` after — could find it permanently held. Every label
+  marked for a text refresh registers a callback on the display and removes it
+  on the next layout pass, so a display's event list churns continuously while
+  anything is drawing; the pointer array reallocates and TLSF is free to place
+  the new buffer in the lent pool. Removal requires the pool empty, and the
+  block cannot be trimmed away because `block_can_split` needs `16 + size`
+  while `block_size_min` is 12, so a 12-byte block pins a 32 KiB window. The
+  per-callback descriptors had the same problem, living on LVGL's heap for as
+  long as the callback is registered.
+
+  Event-list memory — both the array and the descriptors — now comes from an
+  allocator that is not LVGL's, so it cannot enter a lent pool at all. This is
+  unconditional: a conditional route would leave the default build carrying the
+  defect with nothing to observe it.
+
+  **Visible effect:** `lv_mem_monitor` totals drop by roughly 1.4 KB on a
+  running UI, and event-list memory now counts against the Rust heap instead.
+  Applications that budget the two heaps separately should re-check both.
+
+- **The host test and doc scripts inherited the ESP bindgen environment.**
+  `run_tests.sh`, `run_host.sh` and `run_docs.sh` took whatever
+  `LIBCLANG_PATH` and `BINDGEN_EXTRA_CLANG_ARGS` a devcontainer pre-exports for
+  cross builds, so in a container set up to build for ESP the host suite could
+  not run at all — bindgen read the host headers through a 32-bit target and
+  died on `'bits/libc-header-start.h'`. `run_docs.sh` had a guard for this and
+  it was inert: `${LIBCLANG_PATH:-/usr/lib64}` substitutes only when the
+  variable is *unset*, never when it is set wrong, which is the only case it
+  existed for.
+
+- **bindgen was never told the target on host builds.** `-target` was passed
+  only when cross-compiling, so a host build parsed with whatever the loaded
+  libclang defaults to. With an esp-clang `LIBCLANG_PATH` that default is
+  Xtensa and the build aborts on pointer width (`left: 4, right: 8`). The two
+  script fixes and this one address independent faults: a container with only
+  one of them still fails, differently.
+
+### Changed
+
+- **LVGL modifications are unified diffs, not string replacement in
+  `build.rs`.** `oxivgl-sys/patches/` holds a quilt-style numbered series
+  applied in filename order, one patch per change rather than per file, each
+  carrying the reasoning of the commit it came from. The previous helpers
+  searched for
+  literal source fragments and returned *quietly* when an anchor was missing,
+  so an LVGL bump would have silently stopped applying them — a green build
+  with the fixes gone. A hunk that no longer applies is now a hard build error
+  naming the patch and the file. No behaviour change: the tree the new
+  mechanism produces is byte-identical to the one the old code produced.
 
 ### Added
 

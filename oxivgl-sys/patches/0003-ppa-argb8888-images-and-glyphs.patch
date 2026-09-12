@@ -1,0 +1,323 @@
+ppa: composite argb8888 images, and offer glyphs to the engine
+
+The image path did not composite. It passed the source as the blend background
+and the destination as a fully transparent foreground, spending the foreground
+slot on a no-op to turn a blend into an opaque blit -- which is why
+ppa_evaluate demanded an opaque RGB565/RGB888 image. Widening the format test
+alone would have discarded the alpha, so the roles are swapped for a source
+that carries one; opaque sources keep the blit.
+
+Also fixes in_fg taking its picture dimensions from the source header while its
+buffer was the destination (harmless only while that foreground stayed
+transparent), drops a stray extern for a benchmark asset, and adds the glyph
+draw unit in lv_draw_ppa_label.c -- a new file, created here by the diff.
+
+Origin: b572be5 ("ppa: composite argb8888 images, and offer glyphs to the
+engine").
+
+--- a/src/draw/espressif/ppa/lv_draw_ppa.c
++++ b/src/draw/espressif/ppa/lv_draw_ppa.c
+@@ -123,7 +123,8 @@
+                      && dsc->rotation == 0
+                      && lv_image_src_get_type(dsc->src) == LV_IMAGE_SRC_VARIABLE
+                      && (dsc->header.cf == LV_COLOR_FORMAT_RGB888
+-                         || dsc->header.cf == LV_COLOR_FORMAT_RGB565)
++                         || dsc->header.cf == LV_COLOR_FORMAT_RGB565
++                         || dsc->header.cf == LV_COLOR_FORMAT_ARGB8888)
+                      && (dsc->base.layer->color_format == LV_COLOR_FORMAT_RGB888
+                          || dsc->base.layer->color_format == LV_COLOR_FORMAT_RGB565))) {
+                     return 0;
+@@ -136,6 +137,26 @@
+                 return 1;
+             }
+ #endif
++        /* OXIVGL_PPA_LABEL: a glyph is an A8 coverage mask with the colour
++         * from a register, which is the engine's own foreground mode. */
++ #if defined(LV_USE_PPA_LABEL) && LV_USE_PPA_LABEL
++        case LV_DRAW_TASK_TYPE_LABEL: {
++                const lv_draw_label_dsc_t * dsc = (lv_draw_label_dsc_t *)t->draw_dsc;
++                if(dsc->opa <= (lv_opa_t)LV_OPA_MIN) return 0;
++                if(dsc->sel_start != dsc->sel_end) return 0;
++                if(dsc->outline_stroke_width > 0
++                   && dsc->outline_stroke_opa > (lv_opa_t)LV_OPA_MIN) return 0;
++                if(dsc->rotation != 0) return 0;
++                if(!lv_draw_ppa_label_supported(dsc)) return 0;
++ 
++                if(t->preference_score > DRAW_UNIT_PPA_PREF_SCORE) {
++                    t->preference_score = DRAW_UNIT_PPA_PREF_SCORE;
++                    t->preferred_draw_unit_id = DRAW_UNIT_ID_PPA;
++                }
++                return 1;
++            }
++ #endif
++ 
+         default:
+             return 0;
+     }
+@@ -193,6 +214,12 @@
+             lv_draw_ppa_img(t, (lv_draw_image_dsc_t *)t->draw_dsc, &area);
+             lv_draw_buf_invalidate_cache(buf, &area);
+             break;
++ #if defined(LV_USE_PPA_LABEL) && LV_USE_PPA_LABEL
++        case LV_DRAW_TASK_TYPE_LABEL:
++            lv_draw_ppa_label(t, (lv_draw_label_dsc_t *)t->draw_dsc, &area);
++            lv_draw_buf_invalidate_cache(buf, &area);
++            break;
++ #endif
+         default:
+             break;
+     }
+--- a/src/draw/espressif/ppa/lv_draw_ppa.h
++++ b/src/draw/espressif/ppa/lv_draw_ppa.h
+@@ -41,6 +41,11 @@
+ void lv_draw_ppa_fill(lv_draw_task_t * t, const lv_draw_fill_dsc_t * dsc,
+                       const lv_area_t * coords);
+ 
++void lv_draw_ppa_label(lv_draw_task_t * t, const lv_draw_label_dsc_t * dsc,
++                      const lv_area_t * coords);
++
++bool lv_draw_ppa_label_supported(const lv_draw_label_dsc_t * dsc);
++
+ void lv_draw_ppa_img(lv_draw_task_t * t, const lv_draw_image_dsc_t * dsc,
+                      const lv_area_t * coords);
+ 
+--- a/src/draw/espressif/ppa/lv_draw_ppa_img.c
++++ b/src/draw/espressif/ppa/lv_draw_ppa_img.c
+@@ -54,18 +54,20 @@
+     lv_color_format_t dest_cf = draw_buf->header.cf;
+     uint8_t * dest_buf = draw_buf->data;
+ 
+-    extern const lv_image_dsc_t img_benchmark_lvgl_logo_rgb;
+ 
++    /* OXIVGL_PPA_ARGB8888: a source carrying its own alpha must be the
++     * blend foreground, not the background, or the alpha is discarded. */
++    const bool src_has_alpha = (src_cf == LV_COLOR_FORMAT_ARGB8888);
+     ppa_blend_oper_config_t cfg = {
+         .in_bg = {
+-            .buffer          = (void *)src_buf,
+-            .pic_w           = draw_dsc->header.w,
+-            .pic_h           = draw_dsc->header.h,
++            .buffer          = src_has_alpha ? (void *)dest_buf : (void *)src_buf,
++            .pic_w           = src_has_alpha ? draw_buf->header.w : draw_dsc->header.w,
++            .pic_h           = src_has_alpha ? draw_buf->header.h : draw_dsc->header.h,
+             .block_w         = lv_area_get_width(clipped_img_area),
+             .block_h         = lv_area_get_height(clipped_img_area),
+-            .block_offset_x  = src_area.x1,
+-            .block_offset_y  = src_area.y1,
+-            .blend_cm        = lv_color_format_to_ppa_blend(src_cf),
++            .block_offset_x  = src_has_alpha ? dest_area.x1 : src_area.x1,
++            .block_offset_y  = src_has_alpha ? dest_area.y1 : src_area.y1,
++            .blend_cm        = lv_color_format_to_ppa_blend(src_has_alpha ? dest_cf : src_cf),
+         },
+         .bg_rgb_swap           = false,
+         .bg_byte_swap          = false,
+@@ -73,14 +75,14 @@
+         .bg_alpha_fix_val      = 0xFF,
+         .bg_ck_en              = false,
+         .in_fg = {
+-            .buffer          = (void *)dest_buf,
+-            .pic_w           = draw_dsc->header.w,
+-            .pic_h           = draw_dsc->header.h,
++            .buffer          = src_has_alpha ? (void *)src_buf : (void *)dest_buf,
++            .pic_w           = src_has_alpha ? draw_dsc->header.w : draw_buf->header.w,
++            .pic_h           = src_has_alpha ? draw_dsc->header.h : draw_buf->header.h,
+             .block_w         = lv_area_get_width(clipped_img_area),
+             .block_h         = lv_area_get_height(clipped_img_area),
+             .block_offset_x  = src_area.x1,
+             .block_offset_y  = src_area.y1,
+-            .blend_cm        = PPA_BLEND_COLOR_MODE_A8,
++            .blend_cm        = src_has_alpha ? PPA_BLEND_COLOR_MODE_ARGB8888 : PPA_BLEND_COLOR_MODE_A8,
+         },
+         .fg_fix_rgb_val = {
+             .r = 0,
+@@ -89,7 +91,7 @@
+         },
+         .fg_rgb_swap           = false,
+         .fg_byte_swap          = false,
+-        .fg_alpha_update_mode  = PPA_ALPHA_FIX_VALUE,
++        .fg_alpha_update_mode  = src_has_alpha ? PPA_ALPHA_NO_CHANGE : PPA_ALPHA_FIX_VALUE,
+         .fg_alpha_fix_val      = 0,
+         .fg_ck_en              = false,
+         .out = {
+--- /dev/null
++++ b/src/draw/espressif/ppa/lv_draw_ppa_label.c
+@@ -0,0 +1,179 @@
++
++/**
++ * @file lv_draw_ppa_label.c
++ *
++ * Draw text through the PPA blend engine.
++ *
++ * A glyph is an A8 coverage mask plus one pen colour, which is precisely the
++ * engine's A8 foreground mode: the mask supplies per-pixel alpha and
++ * `fg_fix_rgb_val` supplies the colour. Layout, kerning, wrapping and
++ * decorations stay in LVGL - this hooks `lv_draw_label_iterate_characters`
++ * and replaces only the per-glyph blend.
++ *
++ * The task is all-or-nothing. A first pass probes every glyph without drawing;
++ * if any of them cannot go to the engine, the whole task is handed to
++ * `lv_draw_sw_label`. Drawing some glyphs on the engine and then discovering an
++ * unsupported one would leave half-rendered text on screen, so the probe pays
++ * for itself in correctness. It costs a second layout pass over the string.
++ *
++ * Added by oxivgl; not part of upstream LVGL 9.5.
++ */
++
++#include "lv_draw_ppa.h"
++
++#if LV_USE_PPA
++
++#include "lv_draw_ppa_private.h"
++#include "../../lv_draw_label.h"
++#include "../../lv_draw_label_private.h"
++#include "../../lv_draw_buf.h"
++#include "../../../font/lv_font.h"
++#include "../../sw/lv_draw_sw.h"
++
++/**
++ * Glyphs below this many pixels go to software, and with them the whole task.
++ *
++ * A blend costs register programming, a DMA start and an interrupt, which a
++ * small letter does not repay - and body text is mostly small letters. Large
++ * text is where the engine wins. The threshold is deliberately conservative:
++ * guessing high costs an opportunity, guessing low costs a regression.
++ */
++#define PPA_GLYPH_MIN_PX 1
++
++/**
++ * Probe result for the task being drawn.
++ *
++ * A file static because `lv_draw_glyph_cb_t` carries no user pointer. Safe
++ * here: the PPA unit is a single draw unit and LVGL dispatches one task to it
++ * at a time.
++ */
++static bool ppa_label_probe_ok;
++
++static void ppa_probe_cb(lv_draw_task_t * t, lv_draw_glyph_dsc_t * glyph_dsc,
++                         lv_draw_fill_dsc_t * fill_dsc, const lv_area_t * fill_area);
++static void ppa_letter_cb(lv_draw_task_t * t, lv_draw_glyph_dsc_t * glyph_dsc,
++                          lv_draw_fill_dsc_t * fill_dsc, const lv_area_t * fill_area);
++
++bool lv_draw_ppa_label_supported(const lv_draw_label_dsc_t * dsc)
++{
++    /* Only the plain case; anything else is left to the software unit. */
++    if(dsc->decor != LV_TEXT_DECOR_NONE) return false;
++    if(dsc->opa < (lv_opa_t)LV_OPA_MAX) return false;
++    if(dsc->font == NULL) return false;
++    return true;
++}
++
++void lv_draw_ppa_label(lv_draw_task_t * t, const lv_draw_label_dsc_t * dsc, const lv_area_t * coords)
++{
++    if(dsc->opa <= (lv_opa_t)LV_OPA_MIN) return;
++
++    ppa_label_probe_ok = true;
++    lv_draw_label_iterate_characters(t, dsc, coords, ppa_probe_cb);
++
++    if(!ppa_label_probe_ok) {
++        lv_draw_sw_label(t, dsc, coords);
++        return;
++    }
++    lv_draw_label_iterate_characters(t, dsc, coords, ppa_letter_cb);
++}
++
++static void ppa_probe_cb(lv_draw_task_t * t, lv_draw_glyph_dsc_t * glyph_dsc,
++                         lv_draw_fill_dsc_t * fill_dsc, const lv_area_t * fill_area)
++{
++    LV_UNUSED(fill_dsc);
++    LV_UNUSED(fill_area);
++    if(!ppa_label_probe_ok || glyph_dsc == NULL) return;
++
++    if(glyph_dsc->format != LV_FONT_GLYPH_FORMAT_A8 || glyph_dsc->rotation % 3600 != 0) {
++        ppa_label_probe_ok = false;
++        return;
++    }
++
++    lv_area_t clipped;
++    if(!lv_area_intersect(&clipped, glyph_dsc->letter_coords, &t->clip_area)) return;
++    if(lv_area_get_width(&clipped) * lv_area_get_height(&clipped) < PPA_GLYPH_MIN_PX) {
++        ppa_label_probe_ok = false;
++    }
++}
++
++static void ppa_letter_cb(lv_draw_task_t * t, lv_draw_glyph_dsc_t * glyph_dsc,
++                          lv_draw_fill_dsc_t * fill_dsc, const lv_area_t * fill_area)
++{
++    /* Glyph backgrounds, underline and strike-through are plain fills. */
++    if(fill_dsc && fill_area) {
++        lv_draw_ppa_fill(t, fill_dsc, fill_area);
++        return;
++    }
++    if(glyph_dsc == NULL) return;
++
++    lv_layer_t * layer = t->target_layer;
++    lv_draw_buf_t * draw_buf = layer->draw_buf;
++    lv_color_format_t dest_cf = draw_buf->header.cf;
++
++    lv_area_t dest_area;
++    if(!lv_area_intersect(&dest_area, glyph_dsc->letter_coords, &t->clip_area)) return;
++
++    glyph_dsc->glyph_data = lv_font_get_glyph_bitmap(glyph_dsc->g, glyph_dsc->_draw_buf);
++    if(glyph_dsc->glyph_data == NULL) {
++        LV_LOG_WARN("PPA label: no glyph bitmap");
++        return;
++    }
++    const lv_draw_buf_t * mask = glyph_dsc->glyph_data;
++
++    /* Where the clip cut into the glyph, the mask must be read from the same
++     * offset or the coverage slides against the destination. */
++    int32_t mask_off_x = dest_area.x1 - glyph_dsc->letter_coords->x1;
++    int32_t mask_off_y = dest_area.y1 - glyph_dsc->letter_coords->y1;
++
++    lv_area_t rel_dest = dest_area;
++    lv_area_move(&rel_dest, -layer->buf_area.x1, -layer->buf_area.y1);
++
++    lv_draw_ppa_unit_t * u = (lv_draw_ppa_unit_t *)t->draw_unit;
++    uint8_t * dest_buf = draw_buf->data;
++    lv_color32_t c32 = lv_color_to_32(glyph_dsc->color, LV_OPA_COVER);
++
++    ppa_blend_oper_config_t cfg = {
++        .in_bg = {
++            .buffer          = dest_buf,
++            .pic_w           = draw_buf->header.w,
++            .pic_h           = draw_buf->header.h,
++            .block_w         = lv_area_get_width(&dest_area),
++            .block_h         = lv_area_get_height(&dest_area),
++            .block_offset_x  = rel_dest.x1,
++            .block_offset_y  = rel_dest.y1,
++            .blend_cm        = lv_color_format_to_ppa_blend(dest_cf),
++        },
++        .bg_alpha_update_mode  = PPA_ALPHA_FIX_VALUE,
++        .bg_alpha_fix_val      = 0xFF,
++        .in_fg = {
++            .buffer          = (void *)mask->data,
++            .pic_w           = mask->header.stride,
++            .pic_h           = mask->header.h,
++            .block_w         = lv_area_get_width(&dest_area),
++            .block_h         = lv_area_get_height(&dest_area),
++            .block_offset_x  = mask_off_x,
++            .block_offset_y  = mask_off_y,
++            .blend_cm        = PPA_BLEND_COLOR_MODE_A8,
++        },
++        .fg_fix_rgb_val = { .r = c32.red, .g = c32.green, .b = c32.blue },
++        .fg_alpha_update_mode  = PPA_ALPHA_NO_CHANGE,
++        .out = {
++            .buffer          = dest_buf,
++            .buffer_size     = draw_buf->data_size,
++            .pic_w           = draw_buf->header.w,
++            .pic_h           = draw_buf->header.h,
++            .block_offset_x  = rel_dest.x1,
++            .block_offset_y  = rel_dest.y1,
++            .blend_cm        = lv_color_format_to_ppa_blend(dest_cf),
++        },
++        .mode      = PPA_TRANS_MODE_BLOCKING,
++        .user_data = u,
++    };
++
++    esp_err_t ret = ppa_do_blend(u->blend_client, &cfg);
++    if(ret != ESP_OK) {
++        LV_LOG_WARN("PPA label blend failed: %d", ret);
++    }
++}
++
++#endif /* LV_USE_PPA */

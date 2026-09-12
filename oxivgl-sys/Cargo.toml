@@ -1,6 +1,6 @@
 [package]
 name = "oxivgl-sys"
-version = "0.2.5"
+version = "0.2.6"
 edition = "2021"
 license = "MIT OR Apache-2.0"
 description = "Raw LVGL v9.5 FFI bindings for oxivgl — compiled from source with bindgen"
@@ -11,7 +11,7 @@ keywords = ["lvgl", "ffi", "embedded-gui", "esp32", "no-std"]
 categories = ["external-ffi-bindings", "no-std"]
 links = "lv"
 build = "build.rs"
-include = ["src/**", "shims/**", "riscv-shim/**", "default-conf/**", "bindings_docsrs.rs", "build.rs", "Cargo.toml", "LICENSE-*"]
+include = ["src/**", "shims/**", "patches/**", "default-conf/**", "bindings_docsrs.rs", "build.rs", "Cargo.toml", "LICENSE-*"]
 
 [features]
 default = ["use-string-functions"]
@@ -22,6 +22,9 @@ use-string-functions = []
 [build-dependencies]
 bindgen = { version = "0.72.1", features = ["experimental"] }
 cc = "1"
+# Applies oxivgl-sys/patches/**. Colour and binary-diff support are optional
+# upstream and stay off, so this adds one small dependency to the build graph.
+diffy = { version = "0.5", default-features = false, features = ["std"] }
 flate2 = "1"
 pkg-config = "0.3"
 sha2 = "0.10"

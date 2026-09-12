@@ -1,0 +1,31 @@
+benchmark: reset the per-scene accumulators on each run
+
+They live in the scenes[] table and lv_demo_benchmark() resets only scene_act,
+so a second run blends the first run's samples into its averages -- reading
+plausibly wrong rather than obviously wrong. Zeroing them at the top of a run
+makes each run independent.
+
+Applies after 0004, which also touches this file; that hunk is net-zero, so the
+offsets here are unchanged.
+
+Origin: 89f974b ("build: reset the benchmark's per-scene accumulators").
+
+--- a/demos/benchmark/lv_demo_benchmark.c
++++ b/demos/benchmark/lv_demo_benchmark.c
+@@ -502,6 +502,16 @@
+ {
+     scene_act = 0;
+ 
++    /*oxivgl-sys: without this a second run blends the first run's samples
++     *into its own averages.*/
++    for(uint32_t i = 0; scenes[i].create_cb; i++) {
++        scenes[i].cpu_avg_usage = 0;
++        scenes[i].fps_avg = 0;
++        scenes[i].render_avg_time = 0;
++        scenes[i].flush_avg_time = 0;
++        scenes[i].measurement_cnt = 0;
++    }
++
+     lv_obj_t * scr = lv_screen_active();
+     lv_obj_remove_style_all(scr);
+     lv_obj_set_style_bg_opa(scr, LV_OPA_COVER, 0);

@@ -40,14 +40,14 @@ use core::sync::atomic::{AtomicBool, Ordering};
 /// callback receives only a pointer, but Rust's deallocator needs the original
 /// size, so it is stashed immediately before the returned pointer — the same
 /// technique the draw-buffer guard uses in [`crate::mem`].
-const SIZE_HEADER: usize = core::mem::size_of::<usize>();
+pub(crate) const SIZE_HEADER: usize = core::mem::size_of::<usize>();
 
 /// Alignment of a returned block. LVGL uses the pointer as-is (it does not
 /// re-align this scratch afterward), so this must satisfy the largest scratch
 /// type's alignment directly. `usize` alignment (4 on the 32-bit targets, 8 on
 /// host) covers it: no routed scratch carries a member wider than a pointer on
 /// 32-bit. Matches `draw_buf_malloc`.
-const ALIGN: usize = core::mem::align_of::<usize>();
+pub(crate) const ALIGN: usize = core::mem::align_of::<usize>();
 
 /// Set once, before the first frame, when a runtime pool is registered.
 ///
@@ -70,7 +70,7 @@ pub(crate) fn activate() {
 /// Allocate `size` bytes from the Rust global allocator with a size header for
 /// [`free_internal`]. `zeroed` mirrors `lv_malloc` vs `lv_malloc_zeroed`.
 /// Returns NULL on overflow or allocation failure, as LVGL expects.
-fn alloc_internal(size: usize, zeroed: bool) -> *mut c_void {
+pub(crate) fn alloc_internal(size: usize, zeroed: bool) -> *mut c_void {
     let Some(total) = size.checked_add(SIZE_HEADER) else {
         return core::ptr::null_mut();
     };
@@ -101,7 +101,7 @@ fn alloc_internal(size: usize, zeroed: bool) -> *mut c_void {
 ///
 /// # Safety
 /// `ptr` must be a pointer returned by [`alloc_internal`] and not yet freed.
-unsafe fn free_internal(ptr: *mut c_void) {
+pub(crate) unsafe fn free_internal(ptr: *mut c_void) {
     // SAFETY: the header sits `SIZE_HEADER` bytes below the returned pointer and
     // records the total size passed to the allocator.
     unsafe {
@@ -110,6 +110,16 @@ unsafe fn free_internal(ptr: *mut c_void) {
         let layout = alloc::alloc::Layout::from_size_align_unchecked(total, ALIGN);
         alloc::alloc::dealloc(base, layout);
     }
+}
+
+/// User-visible size of a block from [`alloc_internal`].
+///
+/// # Safety
+/// `ptr` must be a live pointer returned by [`alloc_internal`].
+pub(crate) unsafe fn size_internal(ptr: *mut c_void) -> usize {
+    // SAFETY: the header sits `SIZE_HEADER` bytes below the returned pointer and
+    // records the TOTAL size, header included.
+    unsafe { ptr.cast::<u8>().sub(SIZE_HEADER).cast::<usize>().read() - SIZE_HEADER }
 }
 
 /// Allocate uninitialised render scratch. Replaces `lv_malloc` at the routed SW

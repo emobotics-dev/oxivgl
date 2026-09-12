@@ -1,0 +1,32 @@
+demos: let the memory guards see a second pool
+
+Both demos gate on LV_MEM_SIZE, which stopped meaning "the whole heap" once
+lv_mem_add_pool existed -- so a board with a small primary pool and the bulk in
+a registered overflow is refused while having the memory. Widened to include
+LV_MEM_POOL_EXPAND_SIZE, which is 0 for single-pool builds and therefore judges
+those exactly as before.
+
+Origin: 3a8150b ("build: let the demo memory guards see a second pool").
+
+--- a/demos/benchmark/lv_demo_benchmark.c
++++ b/demos/benchmark/lv_demo_benchmark.c
+@@ -30,7 +30,7 @@
+     #error "LV_USE_DEMO_WIDGETS needs to be enabled"
+ #endif
+ 
+-#if LV_USE_STDLIB_MALLOC == LV_STDLIB_BUILTIN && LV_MEM_SIZE < 128 * 1024
++#if LV_USE_STDLIB_MALLOC == LV_STDLIB_BUILTIN && (LV_MEM_SIZE + LV_MEM_POOL_EXPAND_SIZE) < 128 * 1024
+     #warning "It's recommended to have at least 128kB RAM for the benchmark"
+ #endif
+ 
+--- a/demos/widgets/lv_demo_widgets.c
++++ b/demos/widgets/lv_demo_widgets.c
+@@ -16,7 +16,7 @@
+ 
+ #include "../../lvgl_private.h"
+ 
+-#if LV_USE_STDLIB_MALLOC == LV_STDLIB_BUILTIN && LV_MEM_SIZE < (38ul * 1024ul)
++#if LV_USE_STDLIB_MALLOC == LV_STDLIB_BUILTIN && (LV_MEM_SIZE + LV_MEM_POOL_EXPAND_SIZE) < (38ul * 1024ul)
+     #error Insufficient memory for lv_demo_widgets. Please set LV_MEM_SIZE to at least 38KB (38ul * 1024ul).  48KB is recommended.
+ #endif
+ 

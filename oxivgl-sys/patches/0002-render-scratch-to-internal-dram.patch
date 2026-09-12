@@ -1,0 +1,501 @@
+draw: route render-transient scratch to the oxivgl allocator
+
+The software renderer allocates a scratch buffer per draw op, every frame,
+and frees it in the same call: draw-task descriptors, scanline masks (arc,
+line, fill, border, triangle, rect-mask), box-shadow blur/mask buffers, image
+mask/transform buffers, and the radius/circle mask cache. All of it goes
+through plain lv_malloc/lv_free with no callback hook, unlike draw buffers,
+which expose buf_malloc_cb. Once a runtime pool is registered LVGL's TLSF heap
+is one fungible arena, so this scratch lands in PSRAM and the renderer reads
+it per scanline.
+
+These sites are routed to oxivgl_render_scratch_*, which keeps them in
+internal DRAM. build.rs pins the number of allocation sites per file: a future
+LVGL that adds a non-render allocation here fails the build rather than
+silently half-routing.
+
+Origin: 325d34c ("fix(mem): Keep LVGL render-transient scratch in internal
+DRAM (#124)").
+
+--- a/src/draw/lv_draw.c
++++ b/src/draw/lv_draw.c
+@@ -1,3 +1,7 @@
++#include <stddef.h>
++extern void * oxivgl_render_scratch_malloc(size_t size);
++extern void * oxivgl_render_scratch_zalloc(size_t size);
++extern void oxivgl_render_scratch_free(void * ptr);
+ /**
+  * @file lv_draw.c
+  *
+@@ -102,7 +106,7 @@
+     LV_PROFILER_DRAW_BEGIN;
+     size_t dsc_size = get_draw_dsc_size(type);
+     LV_ASSERT_FORMAT_MSG(dsc_size > 0, "Draw task size is 0 for type %d", type);
+-    lv_draw_task_t * new_task = lv_malloc_zeroed(LV_ALIGN_UP(sizeof(lv_draw_task_t), 8) + dsc_size);
++    lv_draw_task_t * new_task = oxivgl_render_scratch_zalloc(LV_ALIGN_UP(sizeof(lv_draw_task_t), 8) + dsc_size);
+     LV_ASSERT_MALLOC(new_task);
+     new_task->area = *coords;
+     new_task->_real_area = *coords;
+@@ -728,7 +732,7 @@
+         draw_label_dsc->text = NULL;
+     }
+ 
+-    lv_free(t);
++    oxivgl_render_scratch_free(t);
+     LV_PROFILER_DRAW_END;
+ }
+ 
+--- a/src/draw/sw/lv_draw_sw_arc.c
++++ b/src/draw/sw/lv_draw_sw_arc.c
+@@ -1,3 +1,7 @@
++#include <stddef.h>
++extern void * oxivgl_render_scratch_malloc(size_t size);
++extern void * oxivgl_render_scratch_zalloc(size_t size);
++extern void oxivgl_render_scratch_free(void * ptr);
+ /**
+  * @file lv_draw_sw_arc.c
+  *
+@@ -113,7 +117,7 @@
+     int32_t blend_h = lv_area_get_height(&clipped_area);
+     int32_t blend_w = lv_area_get_width(&clipped_area);
+     int32_t h;
+-    lv_opa_t * mask_buf = lv_malloc(blend_w);
++    lv_opa_t * mask_buf = oxivgl_render_scratch_malloc(blend_w);
+ 
+     lv_area_t blend_area = clipped_area;
+     lv_area_t img_area;
+@@ -156,7 +160,7 @@
+     lv_area_t round_area_1;
+     lv_area_t round_area_2;
+     if(dsc->rounded) {
+-        circle_mask = lv_malloc(width * width);
++        circle_mask = oxivgl_render_scratch_malloc(width * width);
+         LV_ASSERT_MALLOC(circle_mask);
+         lv_memset(circle_mask, 0xff, width * width);
+         lv_area_t circle_area = {0, 0, width - 1, width - 1};
+@@ -231,9 +235,9 @@
+         lv_draw_sw_mask_free_param(&mask_in_param);
+     }
+ 
+-    lv_free(mask_buf);
++    oxivgl_render_scratch_free(mask_buf);
+     if(dsc->img_src) lv_image_decoder_close(&decoder_dsc);
+-    if(circle_mask) lv_free(circle_mask);
++    if(circle_mask) oxivgl_render_scratch_free(circle_mask);
+ #else
+     LV_LOG_WARN("Can't draw arc with LV_DRAW_SW_COMPLEX == 0");
+     LV_UNUSED(center);
+--- a/src/draw/sw/lv_draw_sw_border.c
++++ b/src/draw/sw/lv_draw_sw_border.c
+@@ -1,3 +1,7 @@
++#include <stddef.h>
++extern void * oxivgl_render_scratch_malloc(size_t size);
++extern void * oxivgl_render_scratch_zalloc(size_t size);
++extern void oxivgl_render_scratch_free(void * ptr);
+ /**
+  * @file lv_draw_sw_border.c
+  *
+@@ -99,7 +103,7 @@
+ 
+     lv_draw_sw_blend_dsc_t blend_dsc;
+     lv_memzero(&blend_dsc, sizeof(blend_dsc));
+-    lv_opa_t * mask_buf = lv_malloc(draw_area_w);
++    lv_opa_t * mask_buf = oxivgl_render_scratch_malloc(draw_area_w);
+     blend_dsc.mask_buf = mask_buf;
+ 
+     void * mask_list[3] = {0};
+@@ -281,7 +285,7 @@
+ 
+     lv_draw_sw_mask_free_param(&mask_rin_param);
+     if(rout > 0) lv_draw_sw_mask_free_param(&mask_rout_param);
+-    lv_free(mask_buf);
++    oxivgl_render_scratch_free(mask_buf);
+ 
+ #else
+     LV_UNUSED(t);
+--- a/src/draw/sw/lv_draw_sw_box_shadow.c
++++ b/src/draw/sw/lv_draw_sw_box_shadow.c
+@@ -1,3 +1,7 @@
++#include <stddef.h>
++extern void * oxivgl_render_scratch_malloc(size_t size);
++extern void * oxivgl_render_scratch_zalloc(size_t size);
++extern void oxivgl_render_scratch_free(void * ptr);
+ /**
+  * @file lv_draw_sw_box_shadow.c
+  *
+@@ -103,13 +107,13 @@
+     lv_draw_sw_shadow_cache_t * cache = &shadow_cache;
+     if(cache->cache_size == corner_size && cache->cache_r == r_sh) {
+         /*Use the cache if available*/
+-        sh_buf = lv_malloc(corner_size * corner_size);
++        sh_buf = oxivgl_render_scratch_malloc(corner_size * corner_size);
+         LV_ASSERT_MALLOC(sh_buf);
+         lv_memcpy(sh_buf, cache->cache, corner_size * corner_size);
+     }
+     else {
+         /*A larger buffer is required for calculation*/
+-        sh_buf = lv_malloc(corner_size * corner_size * sizeof(uint16_t));
++        sh_buf = oxivgl_render_scratch_malloc(corner_size * corner_size * sizeof(uint16_t));
+         LV_ASSERT_MALLOC(sh_buf);
+         shadow_draw_corner_buf(&core_area, (uint16_t *)sh_buf, dsc->width, r_sh);
+ 
+@@ -121,7 +125,7 @@
+         }
+     }
+ #else
+-    sh_buf = lv_malloc(corner_size * corner_size * sizeof(uint16_t));
++    sh_buf = oxivgl_render_scratch_malloc(corner_size * corner_size * sizeof(uint16_t));
+     LV_ASSERT_MALLOC(sh_buf);
+     shadow_draw_corner_buf(&core_area, (uint16_t *)sh_buf, dsc->width, r_sh);
+ #endif /*LV_DRAW_SW_SHADOW_CACHE_SIZE*/
+@@ -138,7 +142,7 @@
+         masks[0] = &mask_rout_param;
+     }
+ 
+-    lv_opa_t * mask_buf = lv_malloc(lv_area_get_width(&shadow_area));
++    lv_opa_t * mask_buf = oxivgl_render_scratch_malloc(lv_area_get_width(&shadow_area));
+     lv_area_t blend_area;
+     lv_area_t clip_area_sub;
+     lv_opa_t * sh_buf_tmp;
+@@ -555,8 +559,8 @@
+     if(!simple) {
+         lv_draw_sw_mask_free_param(&mask_rout_param);
+     }
+-    lv_free(sh_buf);
+-    lv_free(mask_buf);
++    oxivgl_render_scratch_free(sh_buf);
++    oxivgl_render_scratch_free(mask_buf);
+ }
+ 
+ /**********************
+@@ -594,7 +598,7 @@
+ #endif /*SHADOW_ENHANCE*/
+ 
+     int32_t y;
+-    lv_opa_t * mask_line = lv_malloc(size);
++    lv_opa_t * mask_line = oxivgl_render_scratch_malloc(size);
+     uint16_t * sh_ups_tmp_buf = (uint16_t *)sh_buf;
+     for(y = 0; y < size; y++) {
+         lv_memset(mask_line, 0xff, size);
+@@ -613,7 +617,7 @@
+ 
+         sh_ups_tmp_buf += size;
+     }
+-    lv_free(mask_line);
++    oxivgl_render_scratch_free(mask_line);
+ 
+     lv_draw_sw_mask_free_param(&mask_param);
+ 
+@@ -664,7 +668,7 @@
+     if((sw & 1) == 0) s_left--;
+ 
+     /*Horizontal blur*/
+-    uint16_t * sh_ups_blur_buf = lv_malloc(size * sizeof(uint16_t));
++    uint16_t * sh_ups_blur_buf = oxivgl_render_scratch_malloc(size * sizeof(uint16_t));
+ 
+     int32_t x;
+     int32_t y;
+@@ -727,7 +731,7 @@
+         }
+     }
+ 
+-    lv_free(sh_ups_blur_buf);
++    oxivgl_render_scratch_free(sh_ups_blur_buf);
+ }
+ 
+ #else /*LV_DRAW_SW_COMPLEX*/
+--- a/src/draw/sw/lv_draw_sw_fill.c
++++ b/src/draw/sw/lv_draw_sw_fill.c
+@@ -1,3 +1,7 @@
++#include <stddef.h>
++extern void * oxivgl_render_scratch_malloc(size_t size);
++extern void * oxivgl_render_scratch_zalloc(size_t size);
++extern void oxivgl_render_scratch_free(void * ptr);
+ /**
+  * @file lv_draw_sw_fill.c
+  *
+@@ -87,7 +91,7 @@
+     lv_draw_sw_mask_radius_param_t mask_rout_param;
+     void * mask_list[2] = {NULL, NULL};
+     if(rout > 0) {
+-        mask_buf = lv_malloc(clipped_w);
++        mask_buf = oxivgl_render_scratch_malloc(clipped_w);
+         lv_draw_sw_mask_radius_init(&mask_rout_param, &bg_coords, rout, false);
+         mask_list[0] = &mask_rout_param;
+     }
+@@ -320,7 +324,7 @@
+     }
+ 
+     if(mask_buf) {
+-        lv_free(mask_buf);
++        oxivgl_render_scratch_free(mask_buf);
+         lv_draw_sw_mask_free_param(&mask_rout_param);
+     }
+     if(grad) {
+--- a/src/draw/sw/lv_draw_sw_img.c
++++ b/src/draw/sw/lv_draw_sw_img.c
+@@ -1,3 +1,7 @@
++#include <stddef.h>
++extern void * oxivgl_render_scratch_malloc(size_t size);
++extern void * oxivgl_render_scratch_zalloc(size_t size);
++extern void oxivgl_render_scratch_free(void * ptr);
+ /**
+  * @file lv_draw_sw_img.c
+  *
+@@ -340,7 +344,7 @@
+     blend_area.y2 = blend_area.y1;
+ 
+     int32_t blend_w = lv_area_get_width(&blend_area);
+-    uint8_t * mask_buf = lv_malloc(blend_w);
++    uint8_t * mask_buf = oxivgl_render_scratch_malloc(blend_w);
+     blend_dsc.mask_buf = mask_buf;
+     blend_dsc.mask_area = &blend_area;
+     blend_dsc.mask_stride = blend_w;
+@@ -387,7 +391,7 @@
+         blend_area.y1 ++;
+         blend_area.y2 ++;
+     }
+-    lv_free(mask_buf);
++    oxivgl_render_scratch_free(mask_buf);
+ 
+ }
+ #endif /*LV_DRAW_SW_COMPLEX*/
+@@ -413,7 +417,7 @@
+     }
+     buf_h = MAX_BUF_SIZE / buf_stride;
+     if(buf_h > blend_h) buf_h = blend_h;
+-    tmp_buf = lv_malloc(buf_stride * buf_h);
++    tmp_buf = oxivgl_render_scratch_malloc(buf_stride * buf_h);
+     LV_ASSERT_MALLOC(tmp_buf);
+     if(!tmp_buf) {
+         LV_LOG_WARN("Failed to perform image recolor operation. Out of memory");
+@@ -457,7 +461,7 @@
+ 
+     }
+ 
+-    lv_free(tmp_buf);
++    oxivgl_render_scratch_free(tmp_buf);
+ 
+ }
+ 
+@@ -502,19 +506,19 @@
+         uint32_t buf_stride = blend_w * 3;
+         buf_h = MAX_BUF_SIZE / buf_stride;
+         if(buf_h > blend_h) buf_h = blend_h;
+-        transformed_buf = lv_malloc(buf_stride * buf_h);
++        transformed_buf = oxivgl_render_scratch_malloc(buf_stride * buf_h);
+     }
+     else if(cf_final == LV_COLOR_FORMAT_AL88) {
+         uint32_t buf_stride = blend_w;
+         buf_h = MAX_BUF_SIZE / (buf_stride * 2);
+         if(buf_h > blend_h) buf_h = blend_h;
+-        transformed_buf = lv_malloc(buf_stride * buf_h * 2);
++        transformed_buf = oxivgl_render_scratch_malloc(buf_stride * buf_h * 2);
+     }
+     else {
+         uint32_t buf_stride = blend_w * lv_color_format_get_size(cf_final);
+         buf_h = MAX_BUF_SIZE / buf_stride;
+         if(buf_h > blend_h) buf_h = blend_h;
+-        transformed_buf = lv_malloc(buf_stride * buf_h);
++        transformed_buf = oxivgl_render_scratch_malloc(buf_stride * buf_h);
+     }
+     LV_ASSERT_MALLOC(transformed_buf);
+ 
+@@ -593,7 +597,7 @@
+         }
+     }
+ 
+-    lv_free(transformed_buf);
++    oxivgl_render_scratch_free(transformed_buf);
+ }
+ 
+ static void colorkey_and_recolor(lv_area_t relative_area, uint8_t * src_buf, uint8_t * dest_buf, int32_t src_stride,
+--- a/src/draw/sw/lv_draw_sw_line.c
++++ b/src/draw/sw/lv_draw_sw_line.c
+@@ -1,3 +1,7 @@
++#include <stddef.h>
++extern void * oxivgl_render_scratch_malloc(size_t size);
++extern void * oxivgl_render_scratch_zalloc(size_t size);
++extern void oxivgl_render_scratch_free(void * ptr);
+ /**
+  * @file lv_draw_sw_line.c
+  *
+@@ -141,7 +145,7 @@
+ 
+         int32_t dash_start = blend_area.x1 % (dsc->dash_gap + dsc->dash_width);
+ 
+-        lv_opa_t * mask_buf = lv_malloc(blend_area_w);
++        lv_opa_t * mask_buf = oxivgl_render_scratch_malloc(blend_area_w);
+         blend_dsc.mask_buf = mask_buf;
+         blend_dsc.mask_area = &blend_area;
+         blend_dsc.mask_res = LV_DRAW_SW_MASK_RES_CHANGED;
+@@ -174,7 +178,7 @@
+             blend_area.y1++;
+             blend_area.y2++;
+         }
+-        lv_free(mask_buf);
++        oxivgl_render_scratch_free(mask_buf);
+     }
+ #endif /*LV_DRAW_SW_COMPLEX*/
+ }
+@@ -216,7 +220,7 @@
+         int32_t y2 = blend_area.y2;
+         blend_area.y2 = blend_area.y1;
+ 
+-        lv_opa_t * mask_buf = lv_malloc(draw_area_w);
++        lv_opa_t * mask_buf = oxivgl_render_scratch_malloc(draw_area_w);
+         blend_dsc.mask_buf = mask_buf;
+         blend_dsc.mask_area = &blend_area;
+         blend_dsc.mask_res = LV_DRAW_SW_MASK_RES_CHANGED;
+@@ -245,7 +249,7 @@
+             blend_area.y1++;
+             blend_area.y2++;
+         }
+-        lv_free(mask_buf);
++        oxivgl_render_scratch_free(mask_buf);
+     }
+ #endif /*LV_DRAW_SW_COMPLEX*/
+ }
+@@ -342,7 +346,7 @@
+     /*Draw the background line by line*/
+     int32_t h;
+     size_t mask_buf_size = LV_MIN((int32_t)lv_area_get_size(&blend_area), lv_area_get_width(&blend_area));
+-    lv_opa_t * mask_buf = lv_malloc(mask_buf_size);
++    lv_opa_t * mask_buf = oxivgl_render_scratch_malloc(mask_buf_size);
+ 
+     /*The real draw area is around the line.
+      *It's easy to calculate with steep lines, but the area can be very wide with very flat lines.
+@@ -392,7 +396,7 @@
+         lv_draw_sw_blend(t, &blend_dsc);
+     }
+ 
+-    lv_free(mask_buf);
++    oxivgl_render_scratch_free(mask_buf);
+ 
+     lv_draw_sw_mask_free_param(&mask_left_param);
+     lv_draw_sw_mask_free_param(&mask_right_param);
+--- a/src/draw/sw/lv_draw_sw_mask.c
++++ b/src/draw/sw/lv_draw_sw_mask.c
+@@ -1,3 +1,7 @@
++#include <stddef.h>
++extern void * oxivgl_render_scratch_malloc(size_t size);
++extern void * oxivgl_render_scratch_zalloc(size_t size);
++extern void oxivgl_render_scratch_free(void * ptr);
+ /**
+  * @file lv_draw_sw_mask.c
+  *
+@@ -115,8 +119,8 @@
+         lv_draw_sw_mask_radius_param_t * radius_p = (lv_draw_sw_mask_radius_param_t *) p;
+         if(radius_p->circle) {
+             if(radius_p->circle->life < 0) {
+-                lv_free(radius_p->circle->cir_opa);
+-                lv_free(radius_p->circle);
++                oxivgl_render_scratch_free(radius_p->circle->cir_opa);
++                oxivgl_render_scratch_free(radius_p->circle);
+             }
+             else {
+                 radius_p->circle->used_cnt--;
+@@ -132,7 +136,7 @@
+     uint8_t i;
+     for(i = 0; i < LV_DRAW_SW_CIRCLE_CACHE_SIZE; i++) {
+         if(_circle_cache[i].buf) {
+-            lv_free(_circle_cache[i].buf);
++            oxivgl_render_scratch_free(_circle_cache[i].buf);
+         }
+         lv_memzero(&(_circle_cache[i]), sizeof(_circle_cache[i]));
+     }
+@@ -337,7 +341,7 @@
+ 
+     /*There is no unused entry. Allocate one temporarily*/
+     if(!entry) {
+-        entry = lv_malloc_zeroed(sizeof(lv_draw_sw_mask_radius_circle_dsc_t));
++        entry = oxivgl_render_scratch_zalloc(sizeof(lv_draw_sw_mask_radius_circle_dsc_t));
+         LV_ASSERT_MALLOC(entry);
+         entry->life = -1;
+     }
+@@ -1074,9 +1078,9 @@
+     c->radius = radius;
+ 
+     /*Allocate buffers*/
+-    if(c->buf) lv_free(c->buf);
++    if(c->buf) oxivgl_render_scratch_free(c->buf);
+ 
+-    c->buf = lv_malloc(radius * 6 + 6);  /*Use uint16_t for opa_start_on_y and x_start_on_y*/
++    c->buf = oxivgl_render_scratch_malloc(radius * 6 + 6);  /*Use uint16_t for opa_start_on_y and x_start_on_y*/
+     LV_ASSERT_MALLOC(c->buf);
+     c->cir_opa = c->buf;
+     c->opa_start_on_y = (uint16_t *)(c->buf + 2 * radius + 2);
+@@ -1092,7 +1096,7 @@
+     }
+ 
+     const size_t cir_xy_size = (radius + 1) * 2 * 2 * sizeof(int32_t);
+-    int32_t * cir_x = lv_malloc_zeroed(cir_xy_size);
++    int32_t * cir_x = oxivgl_render_scratch_zalloc(cir_xy_size);
+     LV_ASSERT_MALLOC(cir_x);
+     int32_t * cir_y = &cir_x[(radius + 1) * 2];
+ 
+@@ -1215,7 +1219,7 @@
+         y++;
+     }
+ 
+-    lv_free(cir_x);
++    oxivgl_render_scratch_free(cir_x);
+ }
+ 
+ static lv_opa_t * get_next_line(lv_draw_sw_mask_radius_circle_dsc_t * c, int32_t y, int32_t * len,
+--- a/src/draw/sw/lv_draw_sw_mask_rect.c
++++ b/src/draw/sw/lv_draw_sw_mask_rect.c
+@@ -1,3 +1,7 @@
++#include <stddef.h>
++extern void * oxivgl_render_scratch_malloc(size_t size);
++extern void * oxivgl_render_scratch_zalloc(size_t size);
++extern void oxivgl_render_scratch_free(void * ptr);
+ /**
+  * @file lv_draw_sw_mask_rect.c
+  *
+@@ -87,7 +91,7 @@
+     masks[0] = &param;
+ 
+     uint32_t area_w = lv_area_get_width(&draw_area);
+-    lv_opa_t * mask_buf = lv_malloc(area_w);
++    lv_opa_t * mask_buf = oxivgl_render_scratch_malloc(area_w);
+ 
+     int32_t y;
+     for(y = draw_area.y1; y <= draw_area.y2; y++) {
+@@ -111,7 +115,7 @@
+         }
+     }
+ 
+-    lv_free(mask_buf);
++    oxivgl_render_scratch_free(mask_buf);
+     lv_draw_sw_mask_free_param(&param);
+ }
+ 
+--- a/src/draw/sw/lv_draw_sw_triangle.c
++++ b/src/draw/sw/lv_draw_sw_triangle.c
+@@ -1,3 +1,7 @@
++#include <stddef.h>
++extern void * oxivgl_render_scratch_malloc(size_t size);
++extern void * oxivgl_render_scratch_zalloc(size_t size);
++extern void oxivgl_render_scratch_free(void * ptr);
+ /**
+  * @file lv_draw_sw_triangle.c
+  *
+@@ -123,7 +127,7 @@
+     masks[1] = &mask_right;
+     masks[2] = &mask_bottom;
+     int32_t area_w = lv_area_get_width(&draw_area);
+-    lv_opa_t * mask_buf = lv_malloc(area_w);
++    lv_opa_t * mask_buf = oxivgl_render_scratch_malloc(area_w);
+ 
+     lv_area_t blend_area = draw_area;
+     blend_area.y2 = blend_area.y1;
+@@ -182,7 +186,7 @@
+         lv_draw_sw_blend(t, &blend_dsc);
+     }
+ 
+-    lv_free(mask_buf);
++    oxivgl_render_scratch_free(mask_buf);
+     lv_draw_sw_mask_free_param(&mask_bottom);
+     lv_draw_sw_mask_free_param(&mask_left);
+     lv_draw_sw_mask_free_param(&mask_right);
