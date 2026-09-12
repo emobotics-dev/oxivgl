@@ -550,9 +550,13 @@ fn main() {
     let riscv_include_s = riscv_sysroot
         .as_ref()
         .map(|p| p.join("include").to_string_lossy().into_owned());
+    // Name the target even when it is the host. Without this bindgen parses with
+    // whatever the loaded libclang defaults to, so a host build is correct only
+    // when that happens to be a host clang: an esp-clang LIBCLANG_PATH defaults
+    // to Xtensa and the host build dies on `left: 4, right: 8`.
+    cc_args.push("-target");
+    cc_args.push(clang_target.as_str());
     if target != host {
-        cc_args.push("-target");
-        cc_args.push(clang_target.as_str());
         if target.starts_with("riscv32imafc") {
             cc_args.push("-march=rv32imafc");
             cc_args.push("-mabi=ilp32f");
