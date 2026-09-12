@@ -478,6 +478,61 @@ fn timer_handler_passes_are_heap_neutral() {
     );
 }
 
+// ── Event-list allocator routing ────────────────────────────────────────────
+
+/// Exercises the event-list array through growth, partial removal and teardown.
+///
+/// Event-list memory comes from `oxivgl_event_*` rather than LVGL's heap, which
+/// replaced the array lifecycle for *every* object. Nothing else in this file
+/// reaches most of it: a widget body registers at most one or two callbacks, and
+/// the array starts at capacity 1 and grows by `LV_ARRAY_DEFAULT_CAPACITY`, so
+/// the resize path never runs and the compaction path never runs with survivors.
+///
+/// Twelve callbacks force three growths; removing every second one drives
+/// `cleanup_event_list_core` with `kept_count > 0`, which is the branch that
+/// keeps capacity while shrinking size; dropping the object takes the
+/// deinit-on-empty path. A leak in any of the three shows on the Rust heap,
+/// because that is where this memory now lives — under the old allocator this
+/// test would have measured the C side instead, which is the point.
+#[test]
+fn leak_event_list_growth_removal_teardown() {
+    run_isolated("event-list growth/removal/teardown", || {
+        let screen_ptr = unsafe { oxivgl_sys::lv_screen_active() };
+        unsafe extern "C" fn noop(_e: *mut oxivgl_sys::lv_event_t) {}
+
+        let cycle = || unsafe {
+            let obj = oxivgl_sys::lv_obj_create(screen_ptr);
+            let mut dscs = [core::ptr::null_mut(); 12];
+            for slot in &mut dscs {
+                *slot = oxivgl_sys::lv_obj_add_event_cb(
+                    obj,
+                    Some(noop),
+                    oxivgl_sys::lv_event_code_t_LV_EVENT_CLICKED,
+                    core::ptr::null_mut(),
+                );
+            }
+            // Every second one, so the array compacts with survivors rather
+            // than emptying — `lv_array_deinit` would otherwise hide the
+            // shrink path behind a free.
+            for slot in dscs.iter().step_by(2) {
+                oxivgl_sys::lv_obj_remove_event_dsc(obj, *slot);
+            }
+            oxivgl_sys::lv_obj_delete(obj);
+            oxivgl_sys::lv_refr_now(core::ptr::null_mut());
+        };
+
+        prime_parent(&screen());
+        start_tracking();
+        let (rust_before, c_before) = (total_alloc_bytes(), lv_used_bytes());
+        for _ in 0..MEASURE {
+            cycle();
+        }
+        let (rust_after, c_after) = (total_alloc_bytes(), lv_used_bytes());
+        stop_tracking();
+        (rust_after - rust_before, c_after - c_before)
+    });
+}
+
 // ── Negative control ────────────────────────────────────────────────────────
 
 /// Proves the C-side assertion can actually fail.
