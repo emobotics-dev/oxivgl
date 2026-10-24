@@ -10,15 +10,34 @@ use std::{
 
 use sha2::{Digest, Sha256};
 
-/// Xtensa ESP *and* RISC-V ESP (`riscv32imafc-unknown-none-elf` on S31).
+/// Xtensa ESP *and* RISC-V ESP (`riscv32imafc` on the S31, `riscv32imac` on the C6/H2,
+/// `riscv32imc` on the C3/C2 — all `-unknown-none-elf`).
 fn is_esp_target(target: &str) -> bool {
     target.starts_with("xtensa-") || (target.starts_with("riscv32") && target.contains("none-elf"))
 }
 
-/// libclang does not understand cargo's `riscv32imafc-unknown-none-elf` triple.
+/// `(-march, -mabi)` for a RISC-V ESP target, read from the Rust target triple.
+///
+/// LVGL's C must match the ISA and float ABI the Rust code is built for: rust-lld refuses to link
+/// soft- and hard-float objects, and instructions the core lacks (the C3 has neither the A nor the
+/// F extension) fault at run time. The S31 pair is the long-standing one, kept byte-identical.
+/// Keep in sync with `oxivgl-build`'s copy, which compiles image assets into the same binary.
+fn riscv_arch_flags(target: &str) -> Option<(&'static str, &'static str)> {
+    if target.starts_with("riscv32imafc") {
+        Some(("rv32imafc", "ilp32f"))
+    } else if target.starts_with("riscv32imac") {
+        Some(("rv32imac_zicsr_zifencei", "ilp32"))
+    } else if target.starts_with("riscv32imc") {
+        Some(("rv32imc_zicsr_zifencei", "ilp32"))
+    } else {
+        None
+    }
+}
+
+/// libclang does not understand cargo's `riscv32*-unknown-none-elf` triples.
 /// Espressif's GCC is `riscv32-esp-elf`; use that so newlib `include_next` works.
 fn bindgen_clang_target(target: &str) -> String {
-    if target.starts_with("riscv32imafc") {
+    if target.starts_with("riscv32") && target.contains("none-elf") {
         "riscv32-esp-elf".into()
     } else {
         target.into()
@@ -480,8 +499,17 @@ fn main() {
         println!("cargo:rerun-if-env-changed=RISCV32_ESP_ELF_GCC");
         println!("cargo:rerun-if-env-changed=IDF_TOOLS_PATH");
         cfg.compiler(&gcc);
-        cfg.flag("-march=rv32imafc");
-        cfg.flag("-mabi=ilp32f");
+        // Published as `DEP_LV_RISCV_GCC` so `oxivgl-build` compiles image assets with the same
+        // compiler instead of cc-rs' default `riscv32-unknown-elf-gcc`.
+        println!("cargo:riscv_gcc={}", gcc.display());
+        let (march, mabi) = riscv_arch_flags(&target_str).unwrap_or_else(|| {
+            panic!(
+                "no -march/-mabi known for {target_str}; add it to riscv_arch_flags \
+                 (and oxivgl-build's copy)"
+            )
+        });
+        cfg.flag(format!("-march={march}"));
+        cfg.flag(format!("-mabi={mabi}"));
     }
     if let Some(p) = &font_extra_src {
         add_c_files(&mut cfg, p)
@@ -566,6 +594,8 @@ fn main() {
     let riscv_include_s = riscv_sysroot
         .as_ref()
         .map(|p| p.join("include").to_string_lossy().into_owned());
+    let riscv_flags = riscv_arch_flags(&target)
+        .map(|(march, mabi)| (format!("-march={march}"), format!("-mabi={mabi}")));
     // Name the target even when it is the host. Without this bindgen parses with
     // whatever the loaded libclang defaults to, so a host build is correct only
     // when that happens to be a host clang: an esp-clang LIBCLANG_PATH defaults
@@ -573,9 +603,9 @@ fn main() {
     cc_args.push("-target");
     cc_args.push(clang_target.as_str());
     if target != host {
-        if target.starts_with("riscv32imafc") {
-            cc_args.push("-march=rv32imafc");
-            cc_args.push("-mabi=ilp32f");
+        if let Some((march, mabi)) = &riscv_flags {
+            cc_args.push(march);
+            cc_args.push(mabi);
             if let (Some(sys), Some(inc)) = (riscv_sysroot_s.as_deref(), riscv_include_s.as_deref())
             {
                 cc_args.push("--sysroot");

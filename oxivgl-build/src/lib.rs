@@ -98,16 +98,21 @@ impl ImageConfig {
         if let Ok(shim) = std::env::var("DEP_LV_RISCV_SHIM") {
             build.include(shim);
         }
-        // The RISC-V ESP targets are hard-float (`riscv32imafc` / `ilp32f`).
-        // Without these the asset compiles soft-float and rust-lld refuses the
-        // final link -- "cannot link object files with different floating-point
-        // ABI" -- so the failure lands on the consumer, far from its cause.
-        // `oxivgl-sys` already passes the same pair for LVGL's own sources;
-        // an image asset is linked into the same binary and must match.
+        // The asset must match the ISA and float ABI of LVGL's own sources
+        // (`oxivgl-sys` derives the same pair from the target): otherwise
+        // rust-lld refuses the final link -- "cannot link object files with
+        // different floating-point ABI" -- so the failure lands on the
+        // consumer, far from its cause.
         //
         // Guarded on TARGET, not `cfg!`, because a build script runs on the host.
-        if std::env::var("TARGET").unwrap_or_default().starts_with("riscv32") {
-            build.flag("-march=rv32imafc").flag("-mabi=ilp32f");
+        let target = std::env::var("TARGET").unwrap_or_default();
+        if let Some((march, mabi)) = riscv_arch_flags(&target) {
+            build.flag(format!("-march={march}")).flag(format!("-mabi={mabi}"));
+            // The Espressif GCC `oxivgl-sys` located for LVGL itself; cc-rs would otherwise look
+            // for `riscv32-unknown-elf-gcc` unless the application sets `CC_<target>`.
+            if let Ok(gcc) = std::env::var("DEP_LV_RISCV_GCC") {
+                build.compiler(gcc);
+            }
         }
         build.compile(&format!("lvgl_img_{name}"));
 
@@ -290,4 +295,19 @@ pub fn emit_identity_mark(prefix: &str, hash_len: usize) {
         println!("cargo:rerun-if-changed={dir}/HEAD");
     }
     println!("cargo:rustc-env=M5STACK_CORE_BUILD_MARK={mark}");
+}
+
+/// `(-march, -mabi)` for a RISC-V ESP target: `riscv32imafc` (S31, hard-float), `riscv32imac`
+/// (C6/H2) and `riscv32imc` (C3/C2, no A or F extension). Copy of `oxivgl-sys/build.rs`'s
+/// `riscv_arch_flags`; keep the two in sync.
+fn riscv_arch_flags(target: &str) -> Option<(&'static str, &'static str)> {
+    if target.starts_with("riscv32imafc") {
+        Some(("rv32imafc", "ilp32f"))
+    } else if target.starts_with("riscv32imac") {
+        Some(("rv32imac_zicsr_zifencei", "ilp32"))
+    } else if target.starts_with("riscv32imc") {
+        Some(("rv32imc_zicsr_zifencei", "ilp32"))
+    } else {
+        None
+    }
 }
