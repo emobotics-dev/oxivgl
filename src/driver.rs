@@ -12,7 +12,7 @@ pub struct LvglDriver;
 /// Shared LVGL init sequence: lv_init + log + tick callbacks.
 /// Called by all public constructors. Panics on second call.
 fn init_common() {
-    use core::sync::atomic::{AtomicBool, Ordering};
+    use portable_atomic::{AtomicBool, Ordering};
     static INITIALIZED: AtomicBool = AtomicBool::new(false);
     assert!(
         !INITIALIZED.swap(true, Ordering::SeqCst),

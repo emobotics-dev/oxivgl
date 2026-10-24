@@ -95,6 +95,12 @@ heapless = { version = "0.9.1", features = ["nightly"] }
 cfg-if = "1"
 thiserror-no-std = "2.0.2"
 critical-section = "1"
+# Atomic read-modify-write (swap, fetch_add, ...) on cores without the A extension, e.g. the
+# ESP32-C3 (`riscv32imc`), where core::sync::atomic only offers load/store. Native atomics are used
+# wherever the target has them. No backend is chosen here, as portable-atomic asks of libraries:
+# on cores without atomic CAS the application selects one — esp-hal's `esp32c3` feature already
+# enables `unsafe-assume-single-core`; other applications enable `portable-atomic/critical-section`.
+portable-atomic = { version = "1.11", default-features = false }
 esp-hal = { version = "1.2", features = ["unstable"], optional = true }
 # Scheduler *interface* only (cfg-if + esp-sync + portable-atomic — it depends on
 # neither esp-hal nor esp-rtos). See the `rtos-sem` feature comment above.

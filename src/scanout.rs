@@ -11,7 +11,7 @@
 use core::cell::RefCell;
 use core::ffi::c_void;
 use core::ptr::NonNull;
-use core::sync::atomic::{AtomicPtr, Ordering};
+use portable_atomic::{AtomicPtr, Ordering};
 
 use embassy_sync::blocking_mutex::{Mutex, raw::CriticalSectionRawMutex};
 use oxivgl_sys::{lv_area_t, lv_display_flush_is_last, lv_display_flush_ready, lv_display_t};

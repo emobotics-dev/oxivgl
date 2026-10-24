@@ -83,7 +83,7 @@
 use alloc::boxed::Box;
 use core::ffi::c_void;
 use core::marker::PhantomData;
-use core::sync::atomic::{AtomicBool, AtomicI32, AtomicU32, AtomicUsize, Ordering};
+use portable_atomic::{AtomicBool, AtomicI32, AtomicU32, AtomicUsize, Ordering};
 
 use embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
 use embassy_sync::signal::Signal;
